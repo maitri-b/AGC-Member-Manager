@@ -25,13 +25,26 @@ export async function GET() {
       .orderBy('createdAt', 'desc')
       .get();
 
-    const disputeRequests = disputes.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.() || doc.data().createdAt,
-      updatedAt: doc.data().updatedAt?.toDate?.() || doc.data().updatedAt,
-      resolvedAt: doc.data().resolvedAt?.toDate?.() || doc.data().resolvedAt,
-    }));
+    interface DisputeRequest {
+      id: string;
+      status: string;
+      createdAt: Date | null;
+      updatedAt: Date | null;
+      resolvedAt: Date | null;
+      [key: string]: unknown;
+    }
+
+    const disputeRequests: DisputeRequest[] = disputes.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        status: data.status || 'pending',
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        resolvedAt: data.resolvedAt?.toDate?.() || data.resolvedAt,
+      };
+    });
 
     const pending = disputeRequests.filter(r => r.status === 'pending');
     const processed = disputeRequests.filter(r => r.status !== 'pending');

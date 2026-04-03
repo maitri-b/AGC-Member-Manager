@@ -6,7 +6,9 @@
       "Bash(findstr:*)",
       "Bash(taskkill /F /PID 164336)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Agents Club Member Manager with LINE Login\n\nFeatures:\n- LINE OAuth login with NextAuth.js\n- Firebase Firestore for user management\n- Google Sheets integration for member data\n- Member self-service verification system\n- Admin panel for user management\n- Dispute resolution system for duplicate accounts\n- Role-based permissions \\(admin, committee, member, guest\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Agents Club Member Manager with LINE Login\n\nFeatures:\n- LINE OAuth login with NextAuth.js\n- Firebase Firestore for user management\n- Google Sheets integration for member data\n- Member self-service verification system\n- Admin panel for user management\n- Dispute resolution system for duplicate accounts\n- Role-based permissions \\(admin, committee, member, guest\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git branch:*)",
+      "Bash(git push:*)"
     ]
   }
 }

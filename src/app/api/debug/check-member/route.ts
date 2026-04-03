@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       memberId: member.memberId,
       nickname: member.nickname,
-      fullName: member.fullNameTH || member.fullName,
+      fullName: member.fullNameTH || '',
       lineUserId: member.lineUserId || 'NOT SET',
       lineUserIdLength: member.lineUserId?.length || 0,
       hasLineUserId: !!member.lineUserId,

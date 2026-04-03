@@ -26,12 +26,24 @@ export async function GET() {
       .orderBy('createdAt', 'desc')
       .get();
 
-    const verificationRequests = requests.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.() || doc.data().createdAt,
-      updatedAt: doc.data().updatedAt?.toDate?.() || doc.data().updatedAt,
-    }));
+    interface VerificationRequest {
+      id: string;
+      status: string;
+      createdAt: Date | null;
+      updatedAt: Date | null;
+      [key: string]: unknown;
+    }
+
+    const verificationRequests: VerificationRequest[] = requests.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        status: data.status || 'pending',
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+      };
+    });
 
     // Separate pending and processed
     const pending = verificationRequests.filter(r => r.status === 'pending');

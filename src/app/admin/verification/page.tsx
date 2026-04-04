@@ -233,16 +233,11 @@ export default function AdminVerificationPage() {
                       </div>
                     )}
 
-                    {/* Name and Info */}
+                    {/* Name and Info - LINE Profile only */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-gray-900 truncate">{request.lineDisplayName}</p>
-                        <span className="text-xs text-gray-400 whitespace-nowrap">
-                          {new Date(request.createdAt).toLocaleDateString('th-TH')}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500 truncate">
-                        รหัส: {request.memberId} • ใบอนุญาต: {request.licenseNumber || '-'}
+                      <p className="font-semibold text-gray-900 truncate">{request.lineDisplayName}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(request.createdAt).toLocaleDateString('th-TH')}
                       </p>
                     </div>
 
@@ -259,22 +254,48 @@ export default function AdminVerificationPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex items-center gap-1 sm:gap-2 ml-2 sm:ml-4">
                     {request.status === 'pending' && (
                       <>
+                        {/* Desktop buttons */}
                         <button
                           onClick={() => handleApprove(request.id)}
                           disabled={processingId === request.id}
-                          className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 transition-colors text-sm"
+                          className="hidden sm:flex bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 transition-colors text-sm"
                         >
                           {processingId === request.id ? '...' : 'อนุมัติ'}
                         </button>
                         <button
                           onClick={() => setShowRejectModal(request.id)}
                           disabled={processingId === request.id}
-                          className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-300 transition-colors text-sm"
+                          className="hidden sm:flex bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-300 transition-colors text-sm"
                         >
                           ปฏิเสธ
+                        </button>
+                        {/* Mobile icon buttons */}
+                        <button
+                          onClick={() => handleApprove(request.id)}
+                          disabled={processingId === request.id}
+                          className="sm:hidden p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 transition-colors"
+                          title="อนุมัติ"
+                        >
+                          {processingId === request.id ? (
+                            <span className="w-5 h-5 block text-center">...</span>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setShowRejectModal(request.id)}
+                          disabled={processingId === request.id}
+                          className="sm:hidden p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 transition-colors"
+                          title="ปฏิเสธ"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
                         </button>
                       </>
                     )}

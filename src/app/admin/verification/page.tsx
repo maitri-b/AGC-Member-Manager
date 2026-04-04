@@ -14,7 +14,6 @@ interface VerificationRequest {
   lineImage: string;
   memberId: string;
   licenseNumber: string;
-  companyNameSubmitted?: string;
   phone: string;
   memberInfo: {
     companyNameTH: string;
@@ -276,10 +275,6 @@ export default function AdminVerificationPage() {
                       ข้อมูลที่สมาชิกแจ้ง
                     </h4>
                     <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-xs text-gray-500">ชื่อบริษัท:</span>
-                        <span className="text-sm font-medium text-gray-900">{request.companyNameSubmitted || '-'}</span>
-                      </div>
                       <div className="flex justify-between">
                         <span className="text-xs text-gray-500">เลขใบอนุญาต:</span>
                         <span className="text-sm font-medium text-gray-900">{request.licenseNumber || '-'}</span>

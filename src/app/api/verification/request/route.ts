@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { memberId, licenseNumber, companyName, phone } = await request.json();
+    const { memberId, licenseNumber, phone } = await request.json();
 
     if (!memberId || !licenseNumber) {
       return NextResponse.json({ error: 'Member ID and License number are required' }, { status: 400 });
@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
       lineImage: session.user.image || '',
       memberId: memberId,
       licenseNumber: licenseNumber,
-      companyNameSubmitted: companyName || '', // Company name submitted by user for verification
       phone: phone || '',
       memberInfo: {
         companyNameTH: member.companyNameTH,

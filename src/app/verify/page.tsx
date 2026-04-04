@@ -34,7 +34,6 @@ export default function VerifyPage() {
   const router = useRouter();
   const [step, setStep] = useState<'check' | 'search' | 'confirm' | 'alreadyLinked' | 'dispute' | 'disputeSubmitted' | 'submitted' | 'verified'>('check');
   const [licenseNumber, setLicenseNumber] = useState('');
-  const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
@@ -87,7 +86,7 @@ export default function VerifyPage() {
       const res = await fetch('/api/verification/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ licenseNumber, companyName, phone }),
+        body: JSON.stringify({ licenseNumber, phone }),
       });
 
       const data = await res.json();
@@ -161,7 +160,6 @@ export default function VerifyPage() {
         body: JSON.stringify({
           memberId: memberInfo.memberId,
           licenseNumber: memberInfo.licenseNumber,
-          companyName,
           phone,
         }),
       });
@@ -256,24 +254,7 @@ export default function VerifyPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ชื่อบริษัท <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="ระบุชื่อบริษัท ภาษาไทย สะกดให้ถูกต้อง"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  ระบุชื่อบริษัทภาษาไทย สะกดให้ถูกต้องตามที่ระบุไว้กับกรมการท่องเที่ยว
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  เบอร์โทรศัพท์ (ไม่บังคับ)
+                  เบอร์โทรศัพท์ <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -281,9 +262,10 @@ export default function VerifyPage() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="เช่น 0812345678"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  สำหรับให้ทีมนายทะเบียนติดต่อกลับ
+                  สำหรับให้ Admin ติดต่อกลับ
                 </p>
               </div>
 
@@ -295,7 +277,7 @@ export default function VerifyPage() {
 
               <button
                 type="submit"
-                disabled={isLoading || !licenseNumber || !companyName}
+                disabled={isLoading || !licenseNumber || !phone}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading ? 'กำลังค้นหา...' : 'ค้นหาข้อมูลสมาชิก'}

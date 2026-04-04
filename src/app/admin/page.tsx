@@ -18,7 +18,6 @@ interface User {
   createdAt?: { _seconds: number };
   lastLoginAt?: { _seconds: number };
   licenseNumber?: string;
-  companyName?: string;
   phone?: string;
   verificationStatus?: string;
 }
@@ -221,9 +220,6 @@ export default function AdminPage() {
                     เลขใบอนุญาต
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ชื่อบริษัท
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     เบอร์โทร
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -271,11 +267,6 @@ export default function AdminPage() {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.licenseNumber || '-'}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-900">
-                      <div className="max-w-[200px] truncate" title={user.companyName || '-'}>
-                        {user.companyName || '-'}
-                      </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.phone || '-'}

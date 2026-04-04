@@ -24,7 +24,7 @@ export async function GET() {
 
     // Get all verification requests to join with users
     const verificationSnapshot = await db.collection('verificationRequests').get();
-    const verificationMap = new Map<string, { licenseNumber: string; companyName: string; phone: string; status: string }>();
+    const verificationMap = new Map<string, { licenseNumber: string; phone: string; status: string }>();
 
     verificationSnapshot.docs.forEach(doc => {
       const data = doc.data();
@@ -33,7 +33,6 @@ export async function GET() {
       if (!existing || (data.status === 'pending')) {
         verificationMap.set(data.userId, {
           licenseNumber: data.licenseNumber || '',
-          companyName: data.companyNameSubmitted || data.memberInfo?.companyNameTH || data.memberInfo?.companyNameEN || '',
           phone: data.phone || '',
           status: data.status || '',
         });
@@ -49,7 +48,6 @@ export async function GET() {
         ...userData,
         // Add verification data if available
         licenseNumber: verificationData?.licenseNumber || userData.licenseNumber || '',
-        companyName: verificationData?.companyName || userData.companyName || '',
         phone: verificationData?.phone || userData.phone || '',
         verificationStatus: verificationData?.status || userData.verificationStatus || '',
       };

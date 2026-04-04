@@ -206,8 +206,18 @@ export default function MemberDetailPage() {
             </h2>
             <dl className="space-y-3">
               <div>
-                <dt className="text-sm text-gray-500">สถานะ</dt>
-                <dd className="text-gray-900">{member.status || '-'}</dd>
+                <dt className="text-sm text-gray-500">สถานะไลน์กลุ่ม</dt>
+                <dd className="text-gray-900">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่')
+                      ? 'bg-green-100 text-green-800'
+                      : member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {member.lineGroupStatus || '-'}
+                  </span>
+                </dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-500">วันหมดอายุสมาชิก</dt>
@@ -228,14 +238,32 @@ export default function MemberDetailPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               ข้อมูลใบอนุญาต
             </h2>
             <dl className="space-y-3">
               <div>
-                <dt className="text-sm text-gray-500">เลขใบอนุญาตนำเที่ยว</dt>
+                <dt className="text-sm text-gray-500">ชื่อบริษัทตามที่จดทะเบียน</dt>
+                <dd className="text-gray-900">{member.companyNameTH || '-'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-gray-500">เลขที่ใบอนุญาตนำเที่ยว</dt>
                 <dd className="text-gray-900">{member.licenseNumber || '-'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-gray-500">สถานะ</dt>
+                <dd className="text-gray-900">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    member.status?.toLowerCase() === 'active' || member.status === 'ปกติ'
+                      ? 'bg-green-100 text-green-800'
+                      : member.status?.toLowerCase() === 'inactive' || member.status === 'ไม่ปกติ'
+                      ? 'bg-gray-100 text-gray-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {member.status || '-'}
+                  </span>
+                </dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>

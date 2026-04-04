@@ -178,22 +178,31 @@ export default function MembersPage() {
                 <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                      <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                        สถานะไลน์
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
                         รหัส
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                         ชื่อ
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         บริษัท
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                        ใบอนุญาตเลขที่
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                        ชื่อไลน์
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                         เบอร์โทร
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                        สถานะ
+                      <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                        สถานะใบอนุญาต
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                      <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                         Actions
                       </th>
                     </tr>
@@ -201,10 +210,21 @@ export default function MembersPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {members.map((member) => (
                       <tr key={member.memberId} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        <td className="px-3 py-3 text-center">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่')
+                              ? 'bg-green-100 text-green-800'
+                              : member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {member.lineGroupStatus || '-'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-sm font-medium text-gray-900">
                           {member.memberId}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-3">
                           <div className="text-sm font-medium text-gray-900">
                             {member.nickname || '-'}
                           </div>
@@ -212,15 +232,21 @@ export default function MembersPage() {
                             {member.fullNameTH || '-'}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-3">
                           <div className="text-sm text-gray-900 truncate">
                             {member.companyNameEN || member.companyNameTH || '-'}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-3 py-3 text-sm text-gray-600">
+                          {member.licenseNumber || '-'}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-gray-600">
+                          {member.lineName || '-'}
+                        </td>
+                        <td className="px-3 py-3 text-sm text-gray-600">
                           {member.mobile || member.phone || '-'}
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-3 py-3 text-center">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             member.status?.toLowerCase() === 'active' || member.status === 'ปกติ'
                               ? 'bg-green-100 text-green-800'
@@ -231,7 +257,7 @@ export default function MembersPage() {
                             {member.status || '-'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-3 py-3 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => router.push(`/members/${member.memberId}`)}

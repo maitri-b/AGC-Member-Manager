@@ -42,12 +42,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Build notification message
+    // Use membershipExpiry (column S - วันที่หมดอายุ) for license expiry date
     const message = `สวัสดีครับ คุณ${member.fullNameTH || member.nickname || ''}
 บริษัท ${member.companyNameTH || member.companyNameEN || ''}
 
 ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
 ใบอนุญาตธุรกิจนำเที่ยว เลขที่ ${member.licenseNumber || '-'}
-มีสถานะ ${member.status || '-'} (หมดอายุ ${member.licenseExpiry || '-'})
+มีสถานะ ${member.status || '-'} (หมดอายุ ${member.membershipExpiry || member.licenseExpiry || '-'})
 
 หากคุณได้ต่ออายุใบอนุญาตแล้ว หรือมีข้อมูลที่อัพเดท
 รบกวนส่งสำเนาใบอนุญาตใหม่มาทาง LINE นี้ด้วยนะครับ

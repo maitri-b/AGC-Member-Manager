@@ -267,7 +267,7 @@ export default function MemberDetailPage() {
               </div>
               <div>
                 <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
-                <dd className="text-gray-900">{member.licenseExpiry || '-'}</dd>
+                <dd className="text-gray-900">{member.membershipExpiry || member.licenseExpiry || '-'}</dd>
               </div>
             </dl>
           </div>

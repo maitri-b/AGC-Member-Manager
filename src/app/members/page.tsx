@@ -24,7 +24,7 @@ function NotificationModal({
 
 ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
 ใบอนุญาตธุรกิจนำเที่ยว เลขที่ ${member.licenseNumber || '-'}
-มีสถานะ ${member.status || '-'} (หมดอายุ ${member.licenseExpiry || '-'})
+มีสถานะ ${member.status || '-'} (หมดอายุ ${member.membershipExpiry || member.licenseExpiry || '-'})
 
 หากคุณได้ต่ออายุใบอนุญาตแล้ว หรือมีข้อมูลที่อัพเดท
 รบกวนส่งสำเนาใบอนุญาตใหม่มาทาง LINE นี้ด้วยนะครับ
@@ -188,10 +188,12 @@ export default function MembersPage() {
     return lineStatuses.sort();
   }, [allMembers]);
 
-  // Helper to check license expiry
+  // Helper to check license expiry - using membershipExpiry field which maps to column S (วันที่หมดอายุ)
   const getLicenseExpiryStatus = (member: Member): 'expired' | 'within45' | 'within90' | 'ok' | 'unknown' => {
-    if (!member.licenseExpiry) return 'unknown';
-    const expiry = parseThaiDate(member.licenseExpiry);
+    // Use membershipExpiry (column S - วันที่หมดอายุ) for license expiry filtering
+    const dateStr = member.membershipExpiry;
+    if (!dateStr) return 'unknown';
+    const expiry = parseThaiDate(dateStr);
     if (!expiry) return 'unknown';
 
     const today = new Date();

@@ -262,12 +262,12 @@ export default function VerifyPage() {
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="เช่น บริษัท เอบีซี จำกัด หรือ ABC Co., Ltd."
+                  placeholder="ระบุชื่อบริษัท ภาษาไทย สะกดให้ถูกต้อง"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  ชื่อบริษัทตามที่จดทะเบียน (ภาษาไทยหรืออังกฤษ)
+                  ระบุชื่อบริษัทภาษาไทย สะกดให้ถูกต้องตามที่ระบุไว้กับกรมการท่องเที่ยว
                 </p>
               </div>
 

@@ -279,11 +279,11 @@ export default function VerifyPage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="เช่น 081-234-5678"
+                  placeholder="เช่น 0812345678"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  สำหรับให้ทีมนายทะเบียนติดต่อกลับ (ไม่ใช้ในการค้นหา)
+                  สำหรับให้ทีมนายทะเบียนติดต่อกลับ
                 </p>
               </div>
 

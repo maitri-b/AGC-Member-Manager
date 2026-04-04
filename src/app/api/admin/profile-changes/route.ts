@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'pending';
 
-    let query = adminDb.collection('profileChangeRequests').orderBy('createdAt', 'desc');
+    let query = adminDb().collection('profileChangeRequests').orderBy('createdAt', 'desc');
 
     if (status !== 'all') {
       query = query.where('status', '==', status);
@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get the change request
-    const requestDoc = await adminDb.collection('profileChangeRequests').doc(requestId).get();
+    const requestDoc = await adminDb().collection('profileChangeRequests').doc(requestId).get();
 
     if (!requestDoc.exists) {
       return NextResponse.json({ error: 'Change request not found' }, { status: 404 });
@@ -95,7 +95,7 @@ export async function PUT(request: NextRequest) {
       }
 
       // Log the change history
-      await adminDb.collection('profileChangeHistory').add({
+      await adminDb().collection('profileChangeHistory').add({
         memberId: changeRequest.memberId,
         userId: changeRequest.userId,
         lineDisplayName: changeRequest.lineDisplayName,
@@ -109,7 +109,7 @@ export async function PUT(request: NextRequest) {
       });
 
       // Update the request status
-      await adminDb.collection('profileChangeRequests').doc(requestId).update({
+      await adminDb().collection('profileChangeRequests').doc(requestId).update({
         status: 'approved',
         processedBy: session.user.id,
         processedByName: session.user.name || 'Admin',
@@ -124,7 +124,7 @@ export async function PUT(request: NextRequest) {
       });
     } else {
       // Reject the request
-      await adminDb.collection('profileChangeRequests').doc(requestId).update({
+      await adminDb().collection('profileChangeRequests').doc(requestId).update({
         status: 'rejected',
         processedBy: session.user.id,
         processedByName: session.user.name || 'Admin',

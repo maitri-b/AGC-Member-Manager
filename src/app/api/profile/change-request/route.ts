@@ -14,7 +14,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const requestsSnapshot = await adminDb
+    const requestsSnapshot = await adminDb()
       .collection('profileChangeRequests')
       .where('userId', '==', session.user.id)
       .orderBy('createdAt', 'desc')
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for pending requests
-    const pendingRequests = await adminDb
+    const pendingRequests = await adminDb()
       .collection('profileChangeRequests')
       .where('userId', '==', session.user.id)
       .where('status', '==', 'pending')
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     };
 
-    const docRef = await adminDb.collection('profileChangeRequests').add(changeRequest);
+    const docRef = await adminDb().collection('profileChangeRequests').add(changeRequest);
 
     return NextResponse.json({
       success: true,

@@ -218,7 +218,9 @@ export default function MembersPage() {
                               ? 'bg-red-100 text-red-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {member.lineGroupStatus || '-'}
+                            {member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
+                              ? 'ออกแล้ว'
+                              : (member.lineGroupStatus || '-')}
                           </span>
                         </td>
                         <td className="px-3 py-3 text-sm font-medium text-gray-900">

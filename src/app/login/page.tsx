@@ -41,7 +41,7 @@ export default function LoginPage() {
             Agents Club
           </h1>
           <p className="text-gray-600 text-lg">
-            ระบบจัดการสมาชิกสมาคมตัวแทนท่องเที่ยว
+            ระบบจัดการสมาชิกชมรมเอเจ้นท์คลับ
           </p>
         </div>
 

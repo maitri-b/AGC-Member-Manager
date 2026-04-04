@@ -62,7 +62,7 @@ export async function GET() {
           licenseNumber: member.licenseNumber || '',
           lineName: member.lineName || '',
           mobile: member.mobile || member.phone || '',
-        } : null,
+        } : undefined,
       };
     });
 

@@ -34,6 +34,9 @@ interface VerificationRequest {
   approvedByName?: string;
   rejectedByName?: string;
   rejectionReason?: string;
+  hasDuplicatePending?: boolean;
+  duplicateCount?: number;
+  autoRejectedDueTo?: string;
 }
 
 export default function AdminVerificationPage() {
@@ -235,7 +238,18 @@ export default function AdminVerificationPage() {
 
                     {/* Name and Info - LINE Profile only */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{request.lineDisplayName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-900 truncate">{request.lineDisplayName}</p>
+                        {/* Duplicate warning badge */}
+                        {request.hasDuplicatePending && (
+                          <span className="flex-shrink-0 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            ซ้ำ {request.duplicateCount} ราย
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-400">
                         {new Date(request.createdAt).toLocaleDateString('th-TH')}
                       </p>
@@ -321,8 +335,36 @@ export default function AdminVerificationPage() {
                 {/* Expandable Details */}
                 {expandedIds.has(request.id) && (
                   <div className="px-4 pb-4 pt-2 border-t bg-gray-50">
+                    {/* Duplicate warning alert */}
+                    {request.hasDuplicatePending && (
+                      <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                        <div className="flex items-start gap-2">
+                          <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <div>
+                            <p className="text-sm font-medium text-amber-800">
+                              พบคำขอซ้ำ {request.duplicateCount} รายการสำหรับรหัสสมาชิก {request.memberId}
+                            </p>
+                            <p className="text-xs text-amber-600 mt-1">
+                              เมื่ออนุมัติรายนี้ คำขออื่นจะถูกปฏิเสธโดยอัตโนมัติ
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Auto-rejected notice */}
+                    {request.autoRejectedDueTo && (
+                      <div className="mb-4 p-3 rounded-lg bg-gray-100 border border-gray-200">
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">หมายเหตุ:</span> คำขอนี้ถูกปฏิเสธอัตโนมัติเนื่องจากมีผู้อื่นได้รับการอนุมัติสำหรับรหัสสมาชิกนี้แล้ว
+                        </p>
+                      </div>
+                    )}
+
                     {/* Status info for processed */}
-                    {request.status !== 'pending' && (
+                    {request.status !== 'pending' && !request.autoRejectedDueTo && (
                       <div className={`mb-4 p-3 rounded-lg ${
                         request.status === 'approved' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
                       }`}>

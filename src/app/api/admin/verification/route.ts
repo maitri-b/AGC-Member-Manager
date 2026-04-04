@@ -33,6 +33,7 @@ export async function GET() {
     interface VerificationRequest {
       id: string;
       status: string;
+      memberId: string;
       createdAt: Date | null;
       updatedAt: Date | null;
       systemData?: {
@@ -42,16 +43,34 @@ export async function GET() {
         lineName: string;
         mobile: string;
       };
+      hasDuplicatePending?: boolean;
+      duplicateCount?: number;
       [key: string]: unknown;
     }
+
+    // First pass: collect all pending requests by memberId
+    const pendingByMemberId = new Map<string, string[]>();
+    requests.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.status === 'pending' && data.memberId) {
+        const existing = pendingByMemberId.get(data.memberId) || [];
+        existing.push(doc.id);
+        pendingByMemberId.set(data.memberId, existing);
+      }
+    });
 
     const verificationRequests: VerificationRequest[] = requests.docs.map(doc => {
       const data = doc.data();
       const member = membersMap.get(data.memberId);
 
+      // Check if this memberId has duplicate pending requests
+      const duplicateRequestIds = pendingByMemberId.get(data.memberId) || [];
+      const hasDuplicatePending = data.status === 'pending' && duplicateRequestIds.length > 1;
+
       return {
         id: doc.id,
         ...data,
+        memberId: data.memberId,
         status: data.status || 'pending',
         createdAt: data.createdAt?.toDate?.() || data.createdAt,
         updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
@@ -63,6 +82,9 @@ export async function GET() {
           lineName: member.lineName || '',
           mobile: member.mobile || member.phone || '',
         } : undefined,
+        // Flag for duplicate detection
+        hasDuplicatePending,
+        duplicateCount: hasDuplicatePending ? duplicateRequestIds.length : undefined,
       };
     });
 
@@ -150,10 +172,48 @@ export async function PUT(request: NextRequest) {
         updatedBy: session.user.name || session.user.id,
       });
 
+      // Auto-reject other pending requests for the same memberId
+      const duplicateRequests = await db.collection('verificationRequests')
+        .where('memberId', '==', requestData.memberId)
+        .where('status', '==', 'pending')
+        .get();
+
+      const autoRejectPromises = duplicateRequests.docs
+        .filter(doc => doc.id !== requestId) // Exclude the approved request
+        .map(async (doc) => {
+          const duplicateData = doc.data();
+
+          // Update the duplicate request as rejected
+          await doc.ref.update({
+            status: 'rejected',
+            rejectionReason: 'มีผู้อื่นได้รับการยืนยันตัวตนสำหรับรหัสสมาชิกนี้แล้ว หากคุณเชื่อว่าเป็นข้อผิดพลาด กรุณาแจ้งปัญหาผ่านระบบ',
+            rejectedBy: 'system',
+            rejectedByName: 'ระบบอัตโนมัติ',
+            rejectedAt: now,
+            updatedAt: now,
+            autoRejectedDueTo: requestId,
+          });
+
+          // Update the user's verification status
+          if (duplicateData.userId) {
+            await db.collection('users').doc(duplicateData.userId).update({
+              verificationStatus: 'rejected',
+              updatedAt: now,
+            });
+          }
+        });
+
+      await Promise.all(autoRejectPromises);
+
+      const autoRejectedCount = duplicateRequests.docs.length - 1;
+
       return NextResponse.json({
         success: true,
-        message: 'อนุมัติคำขอยืนยันตัวตนเรียบร้อยแล้ว',
+        message: autoRejectedCount > 0
+          ? `อนุมัติคำขอยืนยันตัวตนเรียบร้อยแล้ว และปฏิเสธคำขอซ้ำอีก ${autoRejectedCount} รายการโดยอัตโนมัติ`
+          : 'อนุมัติคำขอยืนยันตัวตนเรียบร้อยแล้ว',
         memberId: requestData.memberId,
+        autoRejectedCount,
       });
 
     } else {

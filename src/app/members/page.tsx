@@ -272,8 +272,10 @@ export default function MembersPage() {
       if (filterExpiry) {
         const expiryStatus = getLicenseExpiryStatus(member);
         if (filterExpiry === 'expired' && expiryStatus !== 'expired') return false;
-        if (filterExpiry === 'within45' && expiryStatus !== 'within45' && expiryStatus !== 'expired') return false;
-        if (filterExpiry === 'within90' && expiryStatus !== 'within90' && expiryStatus !== 'within45' && expiryStatus !== 'expired') return false;
+        // within45 = expiring in 0-45 days from today (not expired yet)
+        if (filterExpiry === 'within45' && expiryStatus !== 'within45') return false;
+        // within90 = expiring in 0-90 days from today (includes within45, not expired yet)
+        if (filterExpiry === 'within90' && expiryStatus !== 'within90' && expiryStatus !== 'within45') return false;
       }
 
       return true;

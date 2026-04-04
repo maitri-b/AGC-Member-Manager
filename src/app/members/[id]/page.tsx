@@ -94,12 +94,12 @@ export default function MemberDetailPage() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex items-start gap-6">
             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center text-3xl text-gray-400">
-              {member.nickname?.charAt(0) || member.fullName?.charAt(0) || '?'}
+              {member.nickname?.charAt(0) || member.fullNameTH?.charAt(0) || '?'}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {member.nickname || member.nicknameEN}
+                  {member.nickname || '-'}
                 </h1>
                 <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
                   member.status === 'Active'
@@ -112,7 +112,7 @@ export default function MemberDetailPage() {
                 </span>
               </div>
               <p className="text-lg text-gray-600 mt-1">
-                {member.fullNameTH || member.fullName}
+                {member.fullNameTH || ''}
               </p>
               <p className="text-gray-500 mt-1">
                 รหัสสมาชิก: {member.memberId}
@@ -140,12 +140,12 @@ export default function MemberDetailPage() {
                 <dd className="text-gray-900">{member.companyNameEN || '-'}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">หมวดหมู่ธุรกิจ</dt>
-                <dd className="text-gray-900">{member.industry || '-'}</dd>
+                <dt className="text-sm text-gray-500">ตำแหน่งในบริษัท</dt>
+                <dd className="text-gray-900">{member.positionCompany || '-'}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">Powerteam</dt>
-                <dd className="text-gray-900">{member.powerteam || '-'}</dd>
+                <dt className="text-sm text-gray-500">ตำแหน่งในสมาคม</dt>
+                <dd className="text-gray-900">{member.positionClub || '-'}</dd>
               </div>
             </dl>
           </div>
@@ -184,11 +184,11 @@ export default function MemberDetailPage() {
                 <dd className="text-gray-900">{member.lineId || '-'}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">Facebook</dt>
+                <dt className="text-sm text-gray-500">เว็บไซต์</dt>
                 <dd className="text-gray-900">
-                  {member.facebook ? (
-                    <a href={member.facebook} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:text-red-800">
-                      {member.facebook}
+                  {member.website ? (
+                    <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:text-red-800">
+                      {member.website}
                     </a>
                   ) : '-'}
                 </dd>
@@ -206,75 +206,45 @@ export default function MemberDetailPage() {
             </h2>
             <dl className="space-y-3">
               <div>
-                <dt className="text-sm text-gray-500">อายุสมาชิก</dt>
-                <dd className="text-gray-900">{member.membershipAge ? `${member.membershipAge} ปี` : '-'}</dd>
+                <dt className="text-sm text-gray-500">สถานะ</dt>
+                <dd className="text-gray-900">{member.status || '-'}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">เดือนต่ออายุ</dt>
-                <dd className="text-gray-900">{member.renewMonth || '-'}</dd>
+                <dt className="text-sm text-gray-500">วันหมดอายุสมาชิก</dt>
+                <dd className="text-gray-900">{member.membershipExpiry || '-'}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">เดือนเกิด</dt>
-                <dd className="text-gray-900">{member.birthMonth || '-'}</dd>
+                <dt className="text-sm text-gray-500">ผู้รับรอง 1</dt>
+                <dd className="text-gray-900">{member.sponsor1 || '-'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-gray-500">ผู้รับรอง 2</dt>
+                <dd className="text-gray-900">{member.sponsor2 || '-'}</dd>
               </div>
             </dl>
           </div>
 
-          {/* Additional Info */}
+          {/* License Info */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              ข้อมูลเพิ่มเติม
+              ข้อมูลใบอนุญาต
             </h2>
             <dl className="space-y-3">
               <div>
-                <dt className="text-sm text-gray-500">เว็บไซต์</dt>
-                <dd className="text-gray-900">
-                  {member.website ? (
-                    <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:text-red-800">
-                      {member.website}
-                    </a>
-                  ) : '-'}
-                </dd>
+                <dt className="text-sm text-gray-500">เลขใบอนุญาตนำเที่ยว</dt>
+                <dd className="text-gray-900">{member.licenseNumber || '-'}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">ที่อยู่</dt>
-                <dd className="text-gray-900">{member.address || '-'}</dd>
+                <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
+                <dd className="text-gray-900">{member.licenseExpiry || '-'}</dd>
               </div>
             </dl>
           </div>
         </div>
 
-        {/* Ask & Give */}
-        {(member.askTH || member.askEN || member.giveTH || member.giveEN) && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Ask */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-2xl">🎯</span>
-                สิ่งที่ต้องการ (Ask)
-              </h2>
-              <div className="space-y-2">
-                {member.askTH && <p className="text-gray-900">{member.askTH}</p>}
-                {member.askEN && <p className="text-gray-600 text-sm">{member.askEN}</p>}
-              </div>
-            </div>
-
-            {/* Give */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-2xl">🎁</span>
-                สิ่งที่ให้ได้ (Give)
-              </h2>
-              <div className="space-y-2">
-                {member.giveTH && <p className="text-gray-900">{member.giveTH}</p>}
-                {member.giveEN && <p className="text-gray-600 text-sm">{member.giveEN}</p>}
-              </div>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );

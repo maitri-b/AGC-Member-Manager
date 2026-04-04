@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `ส่งข้อมูลสมาชิกไปยัง ${member.nickname || member.fullName} เรียบร้อยแล้ว`
+      message: `ส่งข้อมูลสมาชิกไปยัง ${member.nickname || member.fullNameTH || ''} เรียบร้อยแล้ว`
     });
   } catch (error) {
     console.error('Error sending LINE message:', error);

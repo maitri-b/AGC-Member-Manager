@@ -1,5 +1,6 @@
 // NextAuth Configuration with LINE Provider
 import { NextAuthOptions } from 'next-auth';
+import type { Provider } from 'next-auth/providers/index';
 import { adminDb } from './firebase-admin';
 import { ROLE_PERMISSIONS, UserRole } from '@/types/next-auth.d';
 
@@ -74,8 +75,9 @@ const LineProvider = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const authOptions: NextAuthOptions = {
-  providers: [LineProvider],
+  providers: [LineProvider as any],
 
   callbacks: {
     async signIn({ user, account }) {

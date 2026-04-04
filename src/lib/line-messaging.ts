@@ -58,7 +58,7 @@ export async function sendPushMessage(userId: string, messages: unknown[]): Prom
 export function createMemberProfileFlexMessage(member: Member): FlexMessage {
   return {
     type: 'flex',
-    altText: `ข้อมูลสมาชิก: ${member.nickname || member.fullName || 'Unknown'}`,
+    altText: `ข้อมูลสมาชิก: ${member.nickname || member.fullNameTH || 'Unknown'}`,
     contents: {
       type: 'bubble',
       header: {
@@ -69,14 +69,14 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
         contents: [
           {
             type: 'text',
-            text: member.nickname || member.fullName || 'Unknown',
+            text: member.nickname || member.fullNameTH || 'Unknown',
             weight: 'bold',
             size: 'xl',
             color: '#FFFFFF',
           },
           {
             type: 'text',
-            text: member.fullNameTH || member.fullName || '-',
+            text: member.fullNameTH || '-',
             size: 'sm',
             color: '#FFFFFF',
             margin: 'sm',
@@ -112,7 +112,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
           },
           {
             type: 'text',
-            text: member.industry || '-',
+            text: member.positionCompany || '-',
             size: 'xs',
             color: '#999999',
             margin: 'sm',
@@ -144,7 +144,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
               },
               {
                 type: 'text',
-                text: member.mobile || member.officeTel || '-',
+                text: member.mobile || member.phone || '-',
                 size: 'sm',
                 flex: 5,
                 wrap: true,
@@ -220,7 +220,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
               },
               {
                 type: 'text',
-                text: member.powerteam || '-',
+                text: member.positionClub || '-',
                 size: 'sm',
                 flex: 5,
                 wrap: true,
@@ -234,14 +234,14 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: 'อายุสมาชิก:',
+                text: 'หมดอายุสมาชิก:',
                 size: 'sm',
                 color: '#666666',
                 flex: 3,
               },
               {
                 type: 'text',
-                text: member.membershipAge ? `${member.membershipAge} ปี` : '-',
+                text: member.membershipExpiry || '-',
                 size: 'sm',
                 flex: 5,
               },
@@ -254,14 +254,14 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: 'ต่ออายุ:',
+                text: 'หมดอายุใบอนุญาต:',
                 size: 'sm',
                 color: '#666666',
                 flex: 3,
               },
               {
                 type: 'text',
-                text: member.renewByMonthName || '-',
+                text: member.licenseExpiry || '-',
                 size: 'sm',
                 flex: 5,
               },

@@ -445,7 +445,7 @@ export default function MembersPage() {
                       <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '50px' }}>
                         รหัส
                       </th>
-                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '140px' }}>
+                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '220px' }}>
                         ชื่อ
                       </th>
                       <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '180px' }}>
@@ -490,10 +490,10 @@ export default function MembersPage() {
                           {member.memberId}
                         </td>
                         <td className="px-2 py-2">
-                          <div className="text-sm font-medium text-gray-900 truncate" style={{ maxWidth: '130px' }}>
+                          <div className="text-sm font-medium text-gray-900 truncate" style={{ maxWidth: '210px' }}>
                             {member.nickname || '-'}
                           </div>
-                          <div className="text-xs text-gray-500 truncate" style={{ maxWidth: '130px' }}>
+                          <div className="text-xs text-gray-500 truncate" style={{ maxWidth: '210px' }}>
                             {member.fullNameTH || '-'}
                           </div>
                         </td>

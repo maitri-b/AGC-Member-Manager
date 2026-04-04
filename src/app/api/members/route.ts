@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check permission
-    if (!hasPermission(session.user.permissions || [], 'member:read')) {
+    // Check permission - only admin and committee can view all members list
+    if (!hasPermission(session.user.permissions || [], 'members:list')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 

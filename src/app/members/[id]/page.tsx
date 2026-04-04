@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { Member } from '@/types/member';
 import Navbar from '@/components/Navbar';
+import { hasPermission } from '@/lib/permissions';
 
 export default function MemberDetailPage() {
   const { data: session, status } = useSession();
@@ -19,8 +20,13 @@ export default function MemberDetailPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
+    } else if (status === 'authenticated' && session?.user) {
+      // Check if user has permission to view members list
+      if (!hasPermission(session.user.permissions || [], 'members:list')) {
+        router.push('/unauthorized');
+      }
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   useEffect(() => {
     if (memberId) {

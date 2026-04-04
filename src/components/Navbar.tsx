@@ -13,7 +13,7 @@ export default function Navbar() {
   if (!session) return null;
 
   const canAccessAdmin = hasPermission(session.user.permissions, 'admin:access');
-  const canViewMembers = hasPermission(session.user.permissions, 'member:read');
+  const canViewMembers = hasPermission(session.user.permissions, 'members:list');
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {

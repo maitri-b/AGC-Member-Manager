@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Member, parseThaiDate } from '@/types/member';
 import Navbar from '@/components/Navbar';
 import { Toast, useToast } from '@/components/Toast';
+import { hasPermission } from '@/lib/permissions';
 
 // Notification Modal Component
 function NotificationModal({
@@ -152,8 +153,13 @@ export default function MembersPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
+    } else if (status === 'authenticated' && session?.user) {
+      // Check if user has permission to view members list
+      if (!hasPermission(session.user.permissions || [], 'members:list')) {
+        router.push('/unauthorized');
+      }
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   useEffect(() => {
     fetchAllMembers();

@@ -47,6 +47,7 @@ export interface Permission {
 
 export const PERMISSIONS = {
   // Member permissions
+  'members:list': 'View all members list',
   'member:read': 'View member profiles',
   'member:write': 'Edit member profiles',
   'member:delete': 'Delete member profiles',
@@ -66,6 +67,7 @@ export const PERMISSIONS = {
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   admin: Object.keys(PERMISSIONS),
   committee: [
+    'members:list',
     'member:read',
     'member:write',
     'member:create',
@@ -73,7 +75,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'report:export',
   ],
   member: [
-    'member:read', // Can only read their own profile
+    // Members can only view their own profile via /profile page
   ],
   guest: [],
 };

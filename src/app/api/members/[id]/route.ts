@@ -16,7 +16,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPermission(session.user.permissions || [], 'member:read')) {
+    // Only admin and committee can view member details
+    if (!hasPermission(session.user.permissions || [], 'members:list')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 

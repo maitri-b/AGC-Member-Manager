@@ -7,7 +7,7 @@ import { getToken } from 'next-auth/jwt';
 const protectedRoutes = ['/dashboard', '/members', '/profile', '/admin', '/reports'];
 
 // Routes that are always public
-const publicRoutes = ['/login', '/unauthorized', '/api/auth'];
+const publicRoutes = ['/', '/login', '/unauthorized', '/api/auth', '/verify'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

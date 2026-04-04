@@ -286,10 +286,6 @@ export default function ProfilePage() {
                         <dt className="text-sm text-gray-500">ตำแหน่งในบริษัท</dt>
                         <dd className="text-gray-900">{member.positionCompany || '-'}</dd>
                       </div>
-                      <div>
-                        <dt className="text-sm text-gray-500">ตำแหน่งในสมาคม</dt>
-                        <dd className="text-gray-900">{member.positionClub || '-'}</dd>
-                      </div>
                     </dl>
                   </div>
                   <div>

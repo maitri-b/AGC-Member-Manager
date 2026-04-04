@@ -220,7 +220,6 @@ export default function AdminVerificationPage() {
                     )}
                     <div>
                       <p className="font-semibold text-gray-900">{request.lineDisplayName}</p>
-                      <p className="text-sm text-gray-500">รหัสสมาชิก: <span className="font-bold text-blue-600">{request.memberId}</span></p>
                       <p className="text-xs text-gray-400">{new Date(request.createdAt).toLocaleString('th-TH')}</p>
                     </div>
                   </div>
@@ -296,47 +295,52 @@ export default function AdminVerificationPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      ข้อมูลจากระบบ (Google Sheet)
+                      ข้อมูลจากระบบ
                     </h4>
                     {request.systemData ? (
                       <div className="space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-xs text-gray-500">ชื่อบริษัท (Q):</span>
+                          <span className="text-xs text-gray-500">รหัสสมาชิก:</span>
+                          <span className="text-sm font-bold text-blue-600">{request.memberId}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">ชื่อผู้ติดต่อ:</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {request.memberInfo.fullNameTH}
+                            {request.memberInfo.nickname && ` (${request.memberInfo.nickname})`}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">ชื่อบริษัท:</span>
                           <span className="text-sm font-medium text-gray-900">{request.systemData.companyNameTH || request.systemData.companyNameEN || '-'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-xs text-gray-500">เลขใบอนุญาต (I):</span>
+                          <span className="text-xs text-gray-500">เลขใบอนุญาต:</span>
                           <span className="text-sm font-medium text-gray-900">{request.systemData.licenseNumber || '-'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-xs text-gray-500">เบอร์มือถือ (H):</span>
+                          <span className="text-xs text-gray-500">เบอร์มือถือ:</span>
                           <span className="text-sm font-medium text-gray-900">{request.systemData.mobile || '-'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-xs text-gray-500">ชื่อ LINE (F):</span>
+                          <span className="text-xs text-gray-500">ชื่อ LINE:</span>
                           <span className="text-sm font-medium text-gray-900">{request.systemData.lineName || '-'}</span>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500">ไม่พบข้อมูลสมาชิกในระบบ</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Additional Member Info */}
-                <div className="mt-4 pt-4 border-t">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-xs text-gray-500">ชื่อผู้ติดต่อ</p>
-                      <p className="font-medium text-gray-900">
-                        {request.memberInfo.fullNameTH}
-                        {request.memberInfo.nickname && ` (${request.memberInfo.nickname})`}
-                      </p>
-                    </div>
-                    {request.memberInfo.positionClub && (
-                      <div>
-                        <p className="text-xs text-gray-500">ตำแหน่งในสมาคม</p>
-                        <p className="font-medium text-gray-900">{request.memberInfo.positionClub}</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">รหัสสมาชิก:</span>
+                          <span className="text-sm font-bold text-blue-600">{request.memberId}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">ชื่อผู้ติดต่อ:</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {request.memberInfo.fullNameTH}
+                            {request.memberInfo.nickname && ` (${request.memberInfo.nickname})`}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">ไม่พบข้อมูลเพิ่มเติมในระบบ</p>
                       </div>
                     )}
                   </div>

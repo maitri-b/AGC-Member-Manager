@@ -18,7 +18,9 @@ interface User {
   createdAt?: { _seconds: number };
   lastLoginAt?: { _seconds: number };
   licenseNumber?: string;
+  companyName?: string;
   phone?: string;
+  verificationStatus?: string;
 }
 
 export default function AdminPage() {
@@ -219,6 +221,9 @@ export default function AdminPage() {
                     เลขใบอนุญาต
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ชื่อบริษัท
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     เบอร์โทร
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -267,15 +272,27 @@ export default function AdminPage() {
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.licenseNumber || '-'}
                     </td>
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      <div className="max-w-[200px] truncate" title={user.companyName || '-'}>
+                        {user.companyName || '-'}
+                      </div>
+                    </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.phone || '-'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {user.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {user.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        {user.verificationStatus === 'pending' && (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            รออนุมัติ
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(user.lastLoginAt)}

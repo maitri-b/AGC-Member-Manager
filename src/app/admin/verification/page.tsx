@@ -14,6 +14,7 @@ interface VerificationRequest {
   lineImage: string;
   memberId: string;
   licenseNumber: string;
+  companyNameSubmitted?: string;
   phone: string;
   memberInfo: {
     companyNameTH: string;
@@ -21,6 +22,13 @@ interface VerificationRequest {
     fullNameTH: string;
     nickname: string;
     positionClub: string;
+  };
+  systemData?: {
+    companyNameTH: string;
+    companyNameEN: string;
+    licenseNumber: string;
+    lineName: string;
+    mobile: string;
   };
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
@@ -193,106 +201,150 @@ export default function AdminVerificationPage() {
           ) : (
             (activeTab === 'pending' ? requests.pending : requests.processed).map((request) => (
               <div key={request.id} className="bg-white rounded-xl shadow-sm p-6">
-                <div className="flex flex-col md:flex-row md:items-start gap-6">
-                  {/* LINE Profile */}
+                {/* Header with LINE Profile and Member ID */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b">
                   <div className="flex items-center gap-4">
                     {request.lineImage ? (
                       <Image
                         src={request.lineImage}
                         alt={request.lineDisplayName}
-                        width={64}
-                        height={64}
+                        width={56}
+                        height={56}
                         className="rounded-full"
                       />
                     ) : (
-                      <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
-                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center">
+                        <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                       </div>
                     )}
                     <div>
-                      <p className="font-medium text-gray-900">{request.lineDisplayName}</p>
-                      <p className="text-sm text-gray-500">LINE Account</p>
+                      <p className="font-semibold text-gray-900">{request.lineDisplayName}</p>
+                      <p className="text-sm text-gray-500">รหัสสมาชิก: <span className="font-bold text-blue-600">{request.memberId}</span></p>
+                      <p className="text-xs text-gray-400">{new Date(request.createdAt).toLocaleString('th-TH')}</p>
                     </div>
-                  </div>
-
-                  {/* Member Info */}
-                  <div className="flex-1">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500">รหัสสมาชิก</p>
-                        <p className="font-bold text-blue-600">{request.memberId}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">เลขใบอนุญาต</p>
-                        <p className="font-medium text-gray-900">{request.licenseNumber}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">ชื่อบริษัท</p>
-                        <p className="font-medium text-gray-900">
-                          {request.memberInfo.companyNameTH || request.memberInfo.companyNameEN}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">ชื่อผู้ติดต่อ</p>
-                        <p className="font-medium text-gray-900">
-                          {request.memberInfo.fullNameTH}
-                          {request.memberInfo.nickname && ` (${request.memberInfo.nickname})`}
-                        </p>
-                      </div>
-                      {request.phone && (
-                        <div>
-                          <p className="text-xs text-gray-500">เบอร์โทรที่ระบุ</p>
-                          <p className="font-medium text-gray-900">{request.phone}</p>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-xs text-gray-500">วันที่ส่งคำขอ</p>
-                        <p className="font-medium text-gray-900">
-                          {new Date(request.createdAt).toLocaleString('th-TH')}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Status for processed requests */}
-                    {request.status !== 'pending' && (
-                      <div className={`mt-4 p-3 rounded-lg ${
-                        request.status === 'approved' ? 'bg-green-50' : 'bg-red-50'
-                      }`}>
-                        <p className={`font-medium ${
-                          request.status === 'approved' ? 'text-green-700' : 'text-red-700'
-                        }`}>
-                          {request.status === 'approved' ? '✓ อนุมัติแล้ว' : '✗ ปฏิเสธแล้ว'}
-                          {request.approvedByName && ` โดย ${request.approvedByName}`}
-                          {request.rejectedByName && ` โดย ${request.rejectedByName}`}
-                        </p>
-                        {request.rejectionReason && (
-                          <p className="text-sm text-red-600 mt-1">เหตุผล: {request.rejectionReason}</p>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   {/* Actions */}
                   {request.status === 'pending' && (
-                    <div className="flex gap-2 md:flex-col">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => handleApprove(request.id)}
                         disabled={processingId === request.id}
-                        className="flex-1 md:flex-none bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 transition-colors"
+                        className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 transition-colors"
                       >
                         {processingId === request.id ? '...' : 'อนุมัติ'}
                       </button>
                       <button
                         onClick={() => setShowRejectModal(request.id)}
                         disabled={processingId === request.id}
-                        className="flex-1 md:flex-none bg-red-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-300 transition-colors"
+                        className="bg-red-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-300 transition-colors"
                       >
                         ปฏิเสธ
                       </button>
                     </div>
                   )}
+
+                  {/* Status for processed requests */}
+                  {request.status !== 'pending' && (
+                    <div className={`px-4 py-2 rounded-lg ${
+                      request.status === 'approved' ? 'bg-green-50' : 'bg-red-50'
+                    }`}>
+                      <p className={`font-medium ${
+                        request.status === 'approved' ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {request.status === 'approved' ? '✓ อนุมัติแล้ว' : '✗ ปฏิเสธแล้ว'}
+                        {request.approvedByName && ` โดย ${request.approvedByName}`}
+                        {request.rejectedByName && ` โดย ${request.rejectedByName}`}
+                      </p>
+                      {request.rejectionReason && (
+                        <p className="text-sm text-red-600 mt-1">เหตุผล: {request.rejectionReason}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Comparison Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Section: ข้อมูลที่สมาชิกแจ้ง */}
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      ข้อมูลที่สมาชิกแจ้ง
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-500">ชื่อบริษัท:</span>
+                        <span className="text-sm font-medium text-gray-900">{request.companyNameSubmitted || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-500">เลขใบอนุญาต:</span>
+                        <span className="text-sm font-medium text-gray-900">{request.licenseNumber || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-500">เบอร์มือถือ:</span>
+                        <span className="text-sm font-medium text-gray-900">{request.phone || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-500">ชื่อ LINE:</span>
+                        <span className="text-sm font-medium text-gray-900">{request.lineDisplayName || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: ข้อมูลจากระบบ */}
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      ข้อมูลจากระบบ (Google Sheet)
+                    </h4>
+                    {request.systemData ? (
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">ชื่อบริษัท (Q):</span>
+                          <span className="text-sm font-medium text-gray-900">{request.systemData.companyNameTH || request.systemData.companyNameEN || '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">เลขใบอนุญาต (I):</span>
+                          <span className="text-sm font-medium text-gray-900">{request.systemData.licenseNumber || '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">เบอร์มือถือ (H):</span>
+                          <span className="text-sm font-medium text-gray-900">{request.systemData.mobile || '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-500">ชื่อ LINE (F):</span>
+                          <span className="text-sm font-medium text-gray-900">{request.systemData.lineName || '-'}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">ไม่พบข้อมูลสมาชิกในระบบ</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Additional Member Info */}
+                <div className="mt-4 pt-4 border-t">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-xs text-gray-500">ชื่อผู้ติดต่อ</p>
+                      <p className="font-medium text-gray-900">
+                        {request.memberInfo.fullNameTH}
+                        {request.memberInfo.nickname && ` (${request.memberInfo.nickname})`}
+                      </p>
+                    </div>
+                    {request.memberInfo.positionClub && (
+                      <div>
+                        <p className="text-xs text-gray-500">ตำแหน่งในสมาคม</p>
+                        <p className="font-medium text-gray-900">{request.memberInfo.positionClub}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))

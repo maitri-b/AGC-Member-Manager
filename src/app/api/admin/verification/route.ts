@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
-import { updateMember } from '@/lib/google-sheets';
+import { updateMember, getAllMembers } from '@/lib/google-sheets';
 
 // GET: List all verification requests
 export async function GET() {
@@ -26,22 +26,43 @@ export async function GET() {
       .orderBy('createdAt', 'desc')
       .get();
 
+    // Get all members from Google Sheet for comparison
+    const allMembers = await getAllMembers();
+    const membersMap = new Map(allMembers.map(m => [m.memberId, m]));
+
     interface VerificationRequest {
       id: string;
       status: string;
       createdAt: Date | null;
       updatedAt: Date | null;
+      systemData?: {
+        companyNameTH: string;
+        companyNameEN: string;
+        licenseNumber: string;
+        lineName: string;
+        mobile: string;
+      };
       [key: string]: unknown;
     }
 
     const verificationRequests: VerificationRequest[] = requests.docs.map(doc => {
       const data = doc.data();
+      const member = membersMap.get(data.memberId);
+
       return {
         id: doc.id,
         ...data,
         status: data.status || 'pending',
         createdAt: data.createdAt?.toDate?.() || data.createdAt,
         updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        // Add system data from Google Sheet for comparison
+        systemData: member ? {
+          companyNameTH: member.companyNameTH || '',
+          companyNameEN: member.companyNameEN || '',
+          licenseNumber: member.licenseNumber || '',
+          lineName: member.lineName || '',
+          mobile: member.mobile || member.phone || '',
+        } : null,
       };
     });
 

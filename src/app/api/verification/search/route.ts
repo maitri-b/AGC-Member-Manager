@@ -12,49 +12,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { licenseNumber, phone } = await request.json();
+    const { licenseNumber, companyName, phone } = await request.json();
 
     if (!licenseNumber) {
       return NextResponse.json({ error: 'License number is required' }, { status: 400 });
     }
 
+    if (!companyName) {
+      return NextResponse.json({ error: 'Company name is required' }, { status: 400 });
+    }
+
     // Get all members and search
     const members = await getAllMembers();
 
-    // Search by license number (exact or partial match)
+    // Search by license number AND company name (both required for validation)
     const normalizedLicense = licenseNumber.trim().replace(/\s+/g, '');
+    const normalizedCompanyName = companyName.trim().toLowerCase();
 
     const matchedMembers = members.filter(member => {
       const memberLicense = (member.licenseNumber || '').trim().replace(/\s+/g, '');
 
-      // Check license number match
+      // Check license number match (exact or partial)
       const licenseMatch = memberLicense === normalizedLicense ||
                           memberLicense.includes(normalizedLicense) ||
                           normalizedLicense.includes(memberLicense);
 
       if (!licenseMatch) return false;
 
-      // If phone is provided, also verify phone
-      if (phone) {
-        const normalizedPhone = phone.replace(/[-\s]/g, '');
-        const memberMobile = (member.mobile || '').replace(/[-\s]/g, '');
-        const memberPhone = (member.phone || '').replace(/[-\s]/g, '');
+      // Check company name match (required for validation)
+      const memberCompanyTH = (member.companyNameTH || '').toLowerCase();
+      const memberCompanyEN = (member.companyNameEN || '').toLowerCase();
 
-        const phoneMatch = memberMobile.includes(normalizedPhone) ||
-                          memberPhone.includes(normalizedPhone) ||
-                          normalizedPhone.includes(memberMobile) ||
-                          normalizedPhone.includes(memberPhone);
+      // Check if company name partially matches (either TH or EN)
+      const companyMatch = memberCompanyTH.includes(normalizedCompanyName) ||
+                          memberCompanyEN.includes(normalizedCompanyName) ||
+                          normalizedCompanyName.includes(memberCompanyTH) ||
+                          normalizedCompanyName.includes(memberCompanyEN);
 
-        return phoneMatch;
-      }
-
-      return true;
+      return companyMatch;
     });
 
     if (matchedMembers.length === 0) {
       return NextResponse.json({
         found: false,
-        message: 'ไม่พบข้อมูลสมาชิกที่ตรงกับเลขใบอนุญาตนี้'
+        message: 'ไม่พบข้อมูลที่ตรงกัน กรุณาตรวจสอบเลขใบอนุญาตและชื่อบริษัทให้ถูกต้อง'
       });
     }
 

@@ -34,6 +34,7 @@ export default function VerifyPage() {
   const router = useRouter();
   const [step, setStep] = useState<'check' | 'search' | 'confirm' | 'alreadyLinked' | 'dispute' | 'disputeSubmitted' | 'submitted' | 'verified'>('check');
   const [licenseNumber, setLicenseNumber] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
@@ -86,7 +87,7 @@ export default function VerifyPage() {
       const res = await fetch('/api/verification/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ licenseNumber, phone }),
+        body: JSON.stringify({ licenseNumber, companyName, phone }),
       });
 
       const data = await res.json();
@@ -160,6 +161,7 @@ export default function VerifyPage() {
         body: JSON.stringify({
           memberId: memberInfo.memberId,
           licenseNumber: memberInfo.licenseNumber,
+          companyName,
           phone,
         }),
       });
@@ -254,6 +256,23 @@ export default function VerifyPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ชื่อบริษัท <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="เช่น บริษัท เอบีซี จำกัด หรือ ABC Co., Ltd."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ชื่อบริษัทตามที่จดทะเบียน (ภาษาไทยหรืออังกฤษ)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   เบอร์โทรศัพท์ (ไม่บังคับ)
                 </label>
                 <input
@@ -264,7 +283,7 @@ export default function VerifyPage() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  หากมีข้อมูลหลายรายการที่ตรงกัน กรุณาระบุเบอร์โทรเพื่อยืนยัน
+                  สำหรับให้ทีมนายทะเบียนติดต่อกลับ (ไม่ใช้ในการค้นหา)
                 </p>
               </div>
 
@@ -276,7 +295,7 @@ export default function VerifyPage() {
 
               <button
                 type="submit"
-                disabled={isLoading || !licenseNumber}
+                disabled={isLoading || !licenseNumber || !companyName}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading ? 'กำลังค้นหา...' : 'ค้นหาข้อมูลสมาชิก'}

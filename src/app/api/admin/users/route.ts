@@ -22,10 +22,38 @@ export async function GET() {
     const db = adminDb();
     const usersSnapshot = await db.collection('users').get();
 
-    const users = usersSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    // Get all verification requests to join with users
+    const verificationSnapshot = await db.collection('verificationRequests').get();
+    const verificationMap = new Map<string, { licenseNumber: string; companyName: string; phone: string; status: string }>();
+
+    verificationSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      // Store the latest verification request for each user
+      const existing = verificationMap.get(data.userId);
+      if (!existing || (data.status === 'pending')) {
+        verificationMap.set(data.userId, {
+          licenseNumber: data.licenseNumber || '',
+          companyName: data.companyNameSubmitted || data.memberInfo?.companyNameTH || data.memberInfo?.companyNameEN || '',
+          phone: data.phone || '',
+          status: data.status || '',
+        });
+      }
+    });
+
+    const users = usersSnapshot.docs.map(doc => {
+      const userData = doc.data();
+      const verificationData = verificationMap.get(doc.id);
+
+      return {
+        id: doc.id,
+        ...userData,
+        // Add verification data if available
+        licenseNumber: verificationData?.licenseNumber || userData.licenseNumber || '',
+        companyName: verificationData?.companyName || userData.companyName || '',
+        phone: verificationData?.phone || userData.phone || '',
+        verificationStatus: verificationData?.status || userData.verificationStatus || '',
+      };
+    });
 
     return NextResponse.json({ users });
   } catch (error) {

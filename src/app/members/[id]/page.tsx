@@ -220,10 +220,6 @@ export default function MemberDetailPage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">วันหมดอายุสมาชิก</dt>
-                <dd className="text-gray-900">{member.membershipExpiry || '-'}</dd>
-              </div>
-              <div>
                 <dt className="text-sm text-gray-500">ผู้รับรอง 1</dt>
                 <dd className="text-gray-900">{member.sponsor1 || '-'}</dd>
               </div>

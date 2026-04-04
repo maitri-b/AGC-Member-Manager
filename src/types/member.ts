@@ -139,15 +139,16 @@ export function isLicenseExpired(member: Member): boolean {
   return expiry < new Date();
 }
 
-// Parse Thai date format (DD/MM/YYYY or other common formats)
+// Parse date format from Google Sheet column S (วันที่หมดอายุ)
+// Format is mm/dd/yyyy (e.g., 10/2/2569 means October 2, 2569 BE = October 2, 2026 CE)
 export function parseThaiDate(dateStr: string): Date | null {
   if (!dateStr) return null;
 
-  // Try DD/MM/YYYY format
+  // Try mm/dd/yyyy format (Google Sheet format)
   const parts = dateStr.split('/');
   if (parts.length === 3) {
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
+    const month = parseInt(parts[0], 10) - 1; // Month is first
+    const day = parseInt(parts[1], 10);       // Day is second
     let year = parseInt(parts[2], 10);
 
     // Convert Buddhist year to Gregorian if needed

@@ -439,31 +439,31 @@ export default function MembersPage() {
                 <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '70px' }}>
                         สถานะไลน์
                       </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '50px' }}>
                         รหัส
                       </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '140px' }}>
                         ชื่อ
                       </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '180px' }}>
                         บริษัท
                       </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
-                        ใบอนุญาตเลขที่
+                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px' }}>
+                        ใบอนุญาต
                       </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '100px' }}>
                         ชื่อไลน์
                       </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '100px' }}>
                         เบอร์โทร
                       </th>
-                      <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
-                        สถานะใบอนุญาต
+                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '70px' }}>
+                        สถานะ
                       </th>
-                      <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '90px' }}>
                         Actions
                       </th>
                     </tr>
@@ -471,8 +471,8 @@ export default function MembersPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredMembers.map((member) => (
                       <tr key={member.memberId} className="hover:bg-gray-50">
-                        <td className="px-3 py-3 text-center">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        <td className="px-2 py-2 text-center">
+                          <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full ${
                             member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่')
                               ? 'bg-green-100 text-green-800'
                               : member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
@@ -481,26 +481,28 @@ export default function MembersPage() {
                           }`}>
                             {member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
                               ? 'ออกแล้ว'
+                              : member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่')
+                              ? 'อยู่'
                               : (member.lineGroupStatus || '-')}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-sm font-medium text-gray-900">
+                        <td className="px-2 py-2 text-sm font-medium text-gray-900">
                           {member.memberId}
                         </td>
-                        <td className="px-3 py-3">
-                          <div className="text-sm font-medium text-gray-900">
+                        <td className="px-2 py-2">
+                          <div className="text-sm font-medium text-gray-900 truncate" style={{ maxWidth: '130px' }}>
                             {member.nickname || '-'}
                           </div>
-                          <div className="text-xs text-gray-500 truncate">
+                          <div className="text-xs text-gray-500 truncate" style={{ maxWidth: '130px' }}>
                             {member.fullNameTH || '-'}
                           </div>
                         </td>
-                        <td className="px-3 py-3">
-                          <div className="text-sm text-gray-900 truncate">
+                        <td className="px-2 py-2">
+                          <div className="text-sm text-gray-900 truncate" style={{ maxWidth: '200px' }}>
                             {member.companyNameEN || member.companyNameTH || '-'}
                           </div>
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-2 py-2">
                           <div className="text-sm text-gray-600">
                             {member.licenseNumber || '-'}
                           </div>
@@ -515,14 +517,14 @@ export default function MembersPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-sm text-gray-600">
+                        <td className="px-2 py-2 text-sm text-gray-600 truncate" style={{ maxWidth: '100px' }}>
                           {member.lineName || '-'}
                         </td>
-                        <td className="px-3 py-3 text-sm text-gray-600">
+                        <td className="px-2 py-2 text-sm text-gray-600">
                           {member.mobile || member.phone || '-'}
                         </td>
-                        <td className="px-3 py-3 text-center">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        <td className="px-2 py-2 text-center">
+                          <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full ${
                             member.status?.toLowerCase() === 'active' || member.status === 'ปกติ'
                               ? 'bg-green-100 text-green-800'
                               : member.status?.toLowerCase() === 'inactive' || member.status === 'ไม่ปกติ'
@@ -532,13 +534,13 @@ export default function MembersPage() {
                             {member.status || '-'}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-2 py-2 text-center">
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => router.push(`/members/${member.memberId}`)}
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              className="text-blue-600 hover:text-blue-800 text-xs font-medium"
                             >
-                              ดูข้อมูล
+                              ดู
                             </button>
 
                             {/* Notification button for non-normal status */}

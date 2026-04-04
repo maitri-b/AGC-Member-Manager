@@ -328,16 +328,9 @@ export default function ProfilePage() {
                       <dd className="text-gray-900">{member.licenseNumber || '-'}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm text-gray-500">วันหมดอายุ</dt>
-                      <dd className="text-gray-900">{member.licenseExpiry || '-'}</dd>
+                      <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
+                      <dd className="text-gray-900">{member.membershipExpiry || '-'}</dd>
                     </div>
-                  </dl>
-                </div>
-
-                {/* Membership Info */}
-                <div className="pt-4 border-t">
-                  <h3 className="font-medium text-gray-900 mb-3">ข้อมูลสมาชิกภาพ</h3>
-                  <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <dt className="text-sm text-gray-500">สถานะ</dt>
                       <dd>
@@ -350,10 +343,13 @@ export default function ProfilePage() {
                         </span>
                       </dd>
                     </div>
-                    <div>
-                      <dt className="text-sm text-gray-500">วันหมดอายุสมาชิกภาพ</dt>
-                      <dd className="text-gray-900">{member.membershipExpiry || '-'}</dd>
-                    </div>
+                  </dl>
+                </div>
+
+                {/* Sponsor Info */}
+                <div className="pt-4 border-t">
+                  <h3 className="font-medium text-gray-900 mb-3">ผู้รับรองสมาชิก</h3>
+                  <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <dt className="text-sm text-gray-500">ผู้รับรอง 1</dt>
                       <dd className="text-gray-900">{member.sponsor1 || '-'}</dd>

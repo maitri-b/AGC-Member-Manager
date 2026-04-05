@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { updateMember, getAllMembers } from '@/lib/google-sheets';
+import { ROLE_PERMISSIONS } from '@/types/next-auth.d';
 
 // GET: List all verification requests
 export async function GET() {
@@ -165,6 +166,9 @@ export async function PUT(request: NextRequest) {
         verifiedAt: now,
         verifiedBy: session.user.id,
         updatedAt: now,
+        // Update role to member and set permissions
+        role: 'member',
+        permissions: ROLE_PERMISSIONS.member,
       });
 
       // Get LINE info from multiple sources (request data or user data)

@@ -96,9 +96,11 @@ export interface MemberAttendance {
   companyName: string;              // ชื่อบริษัท
   licenseNumber: string;            // เลขใบอนุญาต
   eventsAttended: EventAttendanceRecord[];  // รายการกิจกรรมที่เข้าร่วม
-  totalEventsThisYear: number;      // จำนวนกิจกรรมที่เข้าร่วมในปีนี้
+  totalEventsThisYear: number;      // จำนวนกิจกรรมที่เข้าร่วมในปีนี้ (legacy - for backward compatibility)
+  eventsLast12Months: number;       // จำนวนกิจกรรมใน 12 เดือนที่ผ่านมา
   lastAttendedEvent: string;        // กิจกรรมล่าสุดที่เข้าร่วม
-  lastAttendedDate: string;         // วันที่เข้าร่วมล่าสุด
+  lastAttendedDate: string;         // วันที่เข้าร่วมล่าสุด (DD/MM/YYYY)
+  noActivityWarning: boolean;       // แจ้งเตือนว่าไม่มีกิจกรรมใน 12 เดือนที่ผ่านมา
 }
 
 // Individual event attendance record
@@ -192,7 +194,42 @@ export const TRACKED_EVENTS = DEFAULT_EVENTS;
 
 // Helper to check if a member meets minimum attendance requirement
 export function meetsAttendanceRequirement(attendance: MemberAttendance, minEvents: number = 1): boolean {
-  return attendance.totalEventsThisYear >= minEvents;
+  return attendance.eventsLast12Months >= minEvents;
+}
+
+// Helper to parse date from DD/MM/YYYY or YYYY format
+export function parseEventDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+
+  // Try DD/MM/YYYY format
+  const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const [, day, month, year] = ddmmyyyyMatch;
+    // Convert Buddhist year to Gregorian if year > 2500
+    const gregorianYear = parseInt(year) > 2500 ? parseInt(year) - 543 : parseInt(year);
+    return new Date(gregorianYear, parseInt(month) - 1, parseInt(day));
+  }
+
+  // Try YYYY format (year only - assume Jan 1)
+  const yearMatch = dateStr.match(/^(\d{4})$/);
+  if (yearMatch) {
+    const year = parseInt(yearMatch[1]);
+    const gregorianYear = year > 2500 ? year - 543 : year;
+    return new Date(gregorianYear, 0, 1);
+  }
+
+  return null;
+}
+
+// Helper to check if a date is within last N months
+export function isWithinLastMonths(dateStr: string, months: number = 12): boolean {
+  const date = parseEventDate(dateStr);
+  if (!date) return false;
+
+  const now = new Date();
+  const cutoffDate = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+
+  return date >= cutoffDate;
 }
 
 // Helper to get current year (พ.ศ.)

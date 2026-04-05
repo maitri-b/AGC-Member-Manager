@@ -34,8 +34,10 @@ interface MemberAttendance {
   memberId: string;
   eventsAttended: EventAttendanceRecord[];
   totalEventsThisYear: number;
+  eventsLast12Months: number;
   lastAttendedEvent: string;
   lastAttendedDate: string;
+  noActivityWarning: boolean;
 }
 
 interface VerificationStatus {
@@ -313,6 +315,53 @@ function DashboardContent() {
             </div>
           )}
         </div>
+        )}
+
+        {/* Activity Warning for Members */}
+        {session.user.role !== 'guest' && session.user.memberId && !loadingAttendance && attendance?.noActivityWarning && (
+          <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-orange-800">แจ้งเตือน: ขาดการเข้าร่วมกิจกรรม</h3>
+                <p className="text-sm text-orange-700 mt-1">
+                  คุณยังไม่ได้เข้าร่วมกิจกรรมของชมรมใน 12 เดือนที่ผ่านมา
+                  กรุณาเข้าร่วมกิจกรรมเพื่อรักษาสถานะสมาชิก
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Attendance Summary for Members */}
+        {session.user.role !== 'guest' && session.user.memberId && !loadingAttendance && attendance && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">สถิติการเข้าร่วมกิจกรรม</h2>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <p className="text-3xl font-bold text-blue-600">{attendance.eventsLast12Months}</p>
+                  <p className="text-sm text-gray-600 mt-1">กิจกรรมใน 12 เดือน</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <p className="text-3xl font-bold text-green-600">{attendance.eventsAttended.length}</p>
+                  <p className="text-sm text-gray-600 mt-1">กิจกรรมทั้งหมด</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg col-span-2">
+                  <p className="text-lg font-semibold text-purple-700">
+                    {attendance.lastAttendedEvent || '-'}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    กิจกรรมล่าสุด {attendance.lastAttendedDate ? `(${attendance.lastAttendedDate})` : ''}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Quick Actions */}

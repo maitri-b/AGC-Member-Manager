@@ -26,11 +26,22 @@ export async function GET() {
     const verificationSnapshot = await db.collection('verificationRequests').get();
     const verificationMap = new Map<string, { licenseNumber: string; phone: string; status: string }>();
 
+    // Priority order: approved > pending > rejected
+    // This ensures that if user was rejected first, then approved, we show approved
+    const statusPriority: Record<string, number> = {
+      'approved': 3,
+      'pending': 2,
+      'rejected': 1,
+    };
+
     verificationSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      // Store the latest verification request for each user
       const existing = verificationMap.get(data.userId);
-      if (!existing || (data.status === 'pending')) {
+      const currentPriority = statusPriority[data.status] || 0;
+      const existingPriority = existing ? (statusPriority[existing.status] || 0) : 0;
+
+      // Store if no existing or current has higher priority
+      if (!existing || currentPriority > existingPriority) {
         verificationMap.set(data.userId, {
           licenseNumber: data.licenseNumber || '',
           phone: data.phone || '',
@@ -42,6 +53,19 @@ export async function GET() {
     const users = usersSnapshot.docs.map(doc => {
       const userData = doc.data();
       const verificationData = verificationMap.get(doc.id);
+
+      // Determine verification status:
+      // 1. If user role is 'member' or higher, they are verified
+      // 2. Otherwise use the highest priority status from verification requests
+      // 3. Fall back to user document's verificationStatus
+      let finalVerificationStatus = '';
+      if (userData.role === 'member' || userData.role === 'committee' || userData.role === 'admin') {
+        finalVerificationStatus = 'verified';
+      } else if (verificationData?.status) {
+        finalVerificationStatus = verificationData.status;
+      } else {
+        finalVerificationStatus = userData.verificationStatus || '';
+      }
 
       return {
         id: doc.id,
@@ -55,7 +79,7 @@ export async function GET() {
         // Add verification data if available
         licenseNumber: verificationData?.licenseNumber || userData.licenseNumber || '',
         phone: verificationData?.phone || userData.phone || '',
-        verificationStatus: verificationData?.status || userData.verificationStatus || '',
+        verificationStatus: finalVerificationStatus,
       };
     });
 

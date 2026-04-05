@@ -7,6 +7,8 @@ import {
   DEFAULT_EVENTS,
   MemberAttendance,
   EventAttendanceRecord,
+  parseEventDate,
+  isWithinLastMonths,
 } from '@/types/event';
 import { getAllMembers } from './google-sheets';
 import { adminDb } from './firebase-admin';
@@ -198,8 +200,10 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
   const currentYear = new Date().getFullYear();
   const eventsAttended: EventAttendanceRecord[] = [];
   let eventsThisYear = 0;
+  let eventsLast12Months = 0;
   let lastEventName = '';
   let lastEventDate = '';
+  let lastEventParsedDate: Date | null = null;
 
   const events = await getTrackedEventsFromFirestore();
 
@@ -231,17 +235,36 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
 
       eventsAttended.push(attendanceRecord);
 
-      // Check if this event is in current year
+      // Check if this event is in current year (legacy - for backward compatibility)
       const eventYear = event.year ? event.year - 543 : currentYear;
       if (eventYear === currentYear) {
         eventsThisYear++;
       }
 
-      // Track last event
-      lastEventName = record.eventName;
-      lastEventDate = event.eventDate;
+      // Check if this event is within last 12 months (new logic)
+      if (isWithinLastMonths(event.eventDate, 12)) {
+        eventsLast12Months++;
+      }
+
+      // Track last event (find the most recent one by date)
+      const eventParsedDate = parseEventDate(event.eventDate);
+      if (eventParsedDate && (!lastEventParsedDate || eventParsedDate > lastEventParsedDate)) {
+        lastEventName = record.eventName;
+        lastEventDate = event.eventDate;
+        lastEventParsedDate = eventParsedDate;
+      }
     }
   }
+
+  // Sort eventsAttended by date (most recent first)
+  eventsAttended.sort((a, b) => {
+    const dateA = parseEventDate(a.eventDate);
+    const dateB = parseEventDate(b.eventDate);
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return dateB.getTime() - dateA.getTime();
+  });
 
   return {
     memberId: member.memberId,
@@ -250,8 +273,10 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
     licenseNumber: member.licenseNumber,
     eventsAttended,
     totalEventsThisYear: eventsThisYear,
+    eventsLast12Months,
     lastAttendedEvent: lastEventName,
     lastAttendedDate: lastEventDate,
+    noActivityWarning: eventsLast12Months === 0,
   };
 }
 
@@ -351,8 +376,8 @@ export async function getYearlyAttendanceReport(year: number): Promise<{
     }
   }
 
-  const membersWithAttendance = attendanceData.filter(a => a.totalEventsThisYear > 0).length;
-  const membersMeetingRequirement = attendanceData.filter(a => a.totalEventsThisYear >= 1).length;
+  const membersWithAttendance = attendanceData.filter(a => a.eventsLast12Months > 0).length;
+  const membersMeetingRequirement = attendanceData.filter(a => a.eventsLast12Months >= 1).length;
 
   return {
     year,

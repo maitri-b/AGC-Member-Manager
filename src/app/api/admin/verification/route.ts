@@ -154,8 +154,11 @@ export async function PUT(request: NextRequest) {
         updatedAt: now,
       });
 
-      // Update user in Firestore
+      // Update user in Firestore and get LINE info
       const userRef = db.collection('users').doc(requestData.userId);
+      const userDoc = await userRef.get();
+      const userData = userDoc.data();
+
       await userRef.update({
         memberId: requestData.memberId,
         verificationStatus: 'verified',
@@ -164,10 +167,21 @@ export async function PUT(request: NextRequest) {
         updatedAt: now,
       });
 
+      // Get LINE info from multiple sources (request data or user data)
+      const lineUserId = requestData.lineUserId || userData?.lineUserId || requestData.userId;
+      const lineDisplayName = requestData.lineDisplayName || userData?.lineDisplayName || userData?.name || '';
+
+      console.log('Updating Google Sheet with LINE info:', {
+        memberId: requestData.memberId,
+        lineUserId,
+        lineDisplayName,
+        source: requestData.lineDisplayName ? 'request' : (userData?.lineDisplayName ? 'user.lineDisplayName' : 'user.name'),
+      });
+
       // Update Google Sheet with LINE info
       await updateMember(requestData.memberId, {
-        lineUserId: requestData.lineUserId,
-        lineDisplayName: requestData.lineDisplayName,
+        lineUserId: lineUserId,
+        lineDisplayName: lineDisplayName,
         lastUpdated: now.toISOString(),
         updatedBy: session.user.name || session.user.id,
       });

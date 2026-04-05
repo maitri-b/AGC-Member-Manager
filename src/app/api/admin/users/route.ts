@@ -46,6 +46,9 @@ export async function GET() {
       return {
         id: doc.id,
         ...userData,
+        // Normalize LINE profile fields for frontend
+        displayName: userData.lineDisplayName || userData.name || userData.displayName || '',
+        pictureUrl: userData.lineProfilePicture || userData.image || userData.pictureUrl || '',
         // Add verification data if available
         licenseNumber: verificationData?.licenseNumber || userData.licenseNumber || '',
         phone: verificationData?.phone || userData.phone || '',

@@ -3,6 +3,7 @@ import { NextAuthOptions } from 'next-auth';
 import type { Provider } from 'next-auth/providers/index';
 import { adminDb } from './firebase-admin';
 import { ROLE_PERMISSIONS, UserRole } from '@/types/next-auth.d';
+import { updateMember } from './google-sheets';
 
 // Custom LINE Provider that handles HS256 JWT algorithm issue
 // LINE uses HS256 for ID tokens but openid-client expects RS256
@@ -88,11 +89,13 @@ export const authOptions: NextAuthOptions = {
           const userDoc = await userRef.get();
 
           // Log user data for debugging
+          console.log('=== LINE signIn callback triggered ===');
           console.log('LINE signIn - User data:', {
             id: user.id,
             name: user.name,
             image: user.image,
             email: user.email,
+            timestamp: new Date().toISOString(),
           });
 
           if (!userDoc.exists) {
@@ -129,7 +132,25 @@ export const authOptions: NextAuthOptions = {
               updateData.lineUserId = user.id;
             }
 
+            console.log('LINE signIn - Updating user with:', updateData);
             await userRef.update(updateData);
+            console.log('LINE signIn - User updated successfully');
+
+            // Also update Google Sheet if user has memberId
+            if (existingData?.memberId && user.name) {
+              try {
+                console.log('LINE signIn - Updating Google Sheet for memberId:', existingData.memberId);
+                await updateMember(existingData.memberId, {
+                  lineDisplayName: user.name,
+                  lastUpdated: new Date().toISOString(),
+                  updatedBy: 'LINE_LOGIN_SYNC',
+                });
+                console.log('LINE signIn - Google Sheet updated successfully');
+              } catch (sheetError) {
+                // Don't fail login if sheet update fails
+                console.error('Error updating Google Sheet:', sheetError);
+              }
+            }
           }
           return true;
         } catch (error) {

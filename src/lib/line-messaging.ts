@@ -59,9 +59,81 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
   // URL to profile page for editing
   const profileUrl = process.env.NEXTAUTH_URL || 'https://agentsclub.vercel.app';
 
+  // Check if member is verified (has lineUserId)
+  const isVerified = !!member.lineUserId;
+
+  // Header contents - build dynamically based on verification status
+  const headerContents: unknown[] = [
+    {
+      type: 'text',
+      text: 'Agents Club',
+      weight: 'bold',
+      size: 'md',
+      color: '#FFFFFF',
+    },
+    {
+      type: 'text',
+      text: member.nickname || '-',
+      weight: 'bold',
+      size: 'xl',
+      color: '#FFFFFF',
+      margin: 'md',
+    },
+    {
+      type: 'text',
+      text: member.fullNameTH || '-',
+      size: 'sm',
+      color: '#FFFFFF',
+      margin: 'sm',
+    },
+    {
+      type: 'text',
+      text: `รหัสสมาชิก: ${member.memberId}`,
+      size: 'xs',
+      color: '#FFFFFF',
+      margin: 'sm',
+    },
+  ];
+
+  // Add verified badge if member is verified
+  if (isVerified) {
+    headerContents.push({
+      type: 'box',
+      layout: 'horizontal',
+      margin: 'md',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          backgroundColor: '#DC2626',
+          cornerRadius: 'md',
+          paddingAll: '5px',
+          paddingStart: '10px',
+          paddingEnd: '10px',
+          contents: [
+            {
+              type: 'text',
+              text: '✓',
+              size: 'sm',
+              color: '#FFFFFF',
+              weight: 'bold',
+            },
+            {
+              type: 'text',
+              text: 'ยืนยันตัวตนแล้ว',
+              size: 'xs',
+              color: '#FFFFFF',
+              margin: 'sm',
+            },
+          ],
+        },
+      ],
+    });
+  }
+
   return {
     type: 'flex',
-    altText: `ข้อมูลสมาชิก Agents Club: ${member.companyNameEN || member.companyNameTH || 'Unknown'}`,
+    altText: `ข้อมูลสมาชิก Agents Club: ${member.nickname || member.fullNameTH || 'Unknown'}`,
     contents: {
       type: 'bubble',
       header: {
@@ -69,22 +141,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
         layout: 'vertical',
         backgroundColor: '#1E40AF',
         paddingAll: '20px',
-        contents: [
-          {
-            type: 'text',
-            text: 'Agents Club',
-            weight: 'bold',
-            size: 'lg',
-            color: '#FFFFFF',
-          },
-          {
-            type: 'text',
-            text: 'ข้อมูลสมาชิก',
-            size: 'sm',
-            color: '#FFFFFF',
-            margin: 'sm',
-          },
-        ],
+        contents: headerContents,
       },
       body: {
         type: 'box',
@@ -312,7 +369,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             type: 'button',
             action: {
               type: 'uri',
-              label: 'แก้ไขข้อมูล',
+              label: 'ดู/แก้ไข Profile',
               uri: `${profileUrl}/profile`,
             },
             style: 'primary',

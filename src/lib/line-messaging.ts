@@ -258,7 +258,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
               },
               {
                 type: 'text',
-                text: member.lineName || member.lineDisplayName || '-',
+                text: member.lineDisplayName || '-',
                 size: 'sm',
                 flex: 5,
                 wrap: true,

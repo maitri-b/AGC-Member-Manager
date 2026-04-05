@@ -8,8 +8,8 @@ import { hasPermission } from '@/lib/permissions';
 
 interface User {
   id: string;
-  displayName?: string;
-  pictureUrl?: string;
+  lineDisplayName?: string;
+  lineProfilePicture?: string;
   lineUserId: string;
   role: string;
   memberId?: string;
@@ -311,21 +311,21 @@ export default function AdminPage() {
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        {user.pictureUrl ? (
+                        {user.lineProfilePicture ? (
                           <img
-                            src={user.pictureUrl}
-                            alt={user.displayName || 'User'}
+                            src={user.lineProfilePicture}
+                            alt={user.lineDisplayName || 'User'}
                             className="w-10 h-10 rounded-full object-cover"
                           />
                         ) : (
                           <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                             <span className="text-gray-500 text-sm">
-                              {user.displayName?.charAt(0) || '?'}
+                              {user.lineDisplayName?.charAt(0) || '?'}
                             </span>
                           </div>
                         )}
                         <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-900">{user.displayName || 'Unknown'}</p>
+                          <p className="text-sm font-medium text-gray-900">{user.lineDisplayName || 'Unknown'}</p>
                           <p className="text-xs text-gray-500">ID: {user.id.slice(0, 8)}...</p>
                         </div>
                       </div>
@@ -409,19 +409,19 @@ export default function AdminPage() {
               </div>
               <div className="p-6 space-y-4">
                 <div className="flex items-center gap-4 mb-4">
-                  {editingUser.pictureUrl ? (
+                  {editingUser.lineProfilePicture ? (
                     <img
-                      src={editingUser.pictureUrl}
-                      alt={editingUser.displayName || 'User'}
+                      src={editingUser.lineProfilePicture}
+                      alt={editingUser.lineDisplayName || 'User'}
                       className="w-12 h-12 rounded-full object-cover"
                     />
                   ) : (
                     <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-gray-500">{editingUser.displayName?.charAt(0) || '?'}</span>
+                      <span className="text-gray-500">{editingUser.lineDisplayName?.charAt(0) || '?'}</span>
                     </div>
                   )}
                   <div>
-                    <p className="font-medium text-gray-900">{editingUser.displayName}</p>
+                    <p className="font-medium text-gray-900">{editingUser.lineDisplayName}</p>
                     <p className="text-sm text-gray-500">LINE ID: {editingUser.id.slice(0, 12)}...</p>
                   </div>
                 </div>

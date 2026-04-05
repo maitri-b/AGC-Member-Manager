@@ -71,11 +71,10 @@ export async function GET() {
         id: doc.id,
         ...userData,
         // Normalize LINE profile fields for frontend
-        // Auth saves as: displayName, pictureUrl
-        // Verification saves as: lineDisplayName, lineProfilePicture
-        // Also check: name, image
-        displayName: userData.displayName || userData.lineDisplayName || userData.name || '',
-        pictureUrl: userData.pictureUrl || userData.lineProfilePicture || userData.image || '',
+        // Use consistent field names: lineDisplayName, lineProfilePicture
+        // Check multiple sources for backward compatibility with old data
+        lineDisplayName: userData.lineDisplayName || userData.displayName || userData.name || '',
+        lineProfilePicture: userData.lineProfilePicture || userData.pictureUrl || userData.image || '',
         // Add verification data if available
         licenseNumber: verificationData?.licenseNumber || userData.licenseNumber || '',
         phone: verificationData?.phone || userData.phone || '',
@@ -149,7 +148,8 @@ export async function PUT(request: NextRequest) {
       try {
         const userData = userDoc.data();
         const lineUserId = userData?.lineUserId || userId; // LINE User ID from Firestore
-        const lineDisplayName = userData?.name || userData?.displayName || ''; // LINE Display Name
+        // Use consistent field name priority: lineDisplayName > displayName > name
+        const lineDisplayName = userData?.lineDisplayName || userData?.displayName || userData?.name || '';
 
         await updateMember(memberId, {
           lineUserId: lineUserId,

@@ -63,7 +63,8 @@ export async function POST(request: NextRequest) {
     if (!currentLinkedUserQuery.empty) {
       const currentUser = currentLinkedUserQuery.docs[0].data();
       currentLinkedUserInfo = {
-        displayName: currentUser.displayName || currentUser.name || 'Unknown',
+        // Use consistent field name: lineDisplayName
+        lineDisplayName: currentUser.lineDisplayName || currentUser.displayName || currentUser.name || 'Unknown',
         lineUserId: member.lineUserId,
       };
     }

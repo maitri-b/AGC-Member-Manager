@@ -25,7 +25,7 @@ interface DisputeRequest {
     positionClub: string;
   };
   currentLinkedUserInfo?: {
-    displayName: string;
+    lineDisplayName: string;
     lineUserId: string;
   };
   status: 'pending' | 'approved' | 'rejected';
@@ -245,12 +245,12 @@ export default function AdminDisputesPage() {
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
                         <span className="text-red-600 font-medium">
-                          {dispute.currentLinkedUserInfo?.displayName?.charAt(0) || '?'}
+                          {dispute.currentLinkedUserInfo?.lineDisplayName?.charAt(0) || '?'}
                         </span>
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">
-                          {dispute.currentLinkedUserInfo?.displayName || 'Unknown'}
+                          {dispute.currentLinkedUserInfo?.lineDisplayName || 'Unknown'}
                         </p>
                         <p className="text-xs text-gray-500">LINE Account ปัจจุบัน</p>
                       </div>

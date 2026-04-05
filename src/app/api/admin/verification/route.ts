@@ -161,11 +161,13 @@ export async function PUT(request: NextRequest) {
       const userData = userDoc.data();
 
       // Get LINE info from multiple sources (request data or user data)
+      // Priority: request data > user lineDisplayName > user displayName > user name
       const lineUserId = requestData.lineUserId || userData?.lineUserId || requestData.userId;
       const lineDisplayName = requestData.lineDisplayName || userData?.lineDisplayName || userData?.displayName || userData?.name || '';
-      const lineImage = requestData.lineImage || userData?.pictureUrl || userData?.image || '';
+      const lineProfilePicture = requestData.lineImage || userData?.lineProfilePicture || userData?.pictureUrl || userData?.image || '';
 
       // Build update object with LINE profile info
+      // Use consistent field names: lineDisplayName, lineProfilePicture
       const userUpdateData: Record<string, unknown> = {
         memberId: requestData.memberId,
         verificationStatus: 'verified',
@@ -175,16 +177,16 @@ export async function PUT(request: NextRequest) {
         // Update role to member and set permissions
         role: 'member',
         permissions: ROLE_PERMISSIONS.member,
-        // Update LINE info from verification request if available
+        // Update LINE info with consistent field names
         lineUserId: lineUserId,
       };
 
-      // Only update displayName and pictureUrl if we have values
+      // Always use lineDisplayName and lineProfilePicture (consistent naming)
       if (lineDisplayName) {
-        userUpdateData.displayName = lineDisplayName;
+        userUpdateData.lineDisplayName = lineDisplayName;
       }
-      if (lineImage) {
-        userUpdateData.pictureUrl = lineImage;
+      if (lineProfilePicture) {
+        userUpdateData.lineProfilePicture = lineProfilePicture;
       }
 
       await userRef.update(userUpdateData);

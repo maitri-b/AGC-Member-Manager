@@ -38,6 +38,19 @@ interface MemberAttendance {
   lastAttendedDate: string;
 }
 
+interface VerificationStatus {
+  hasRequest: boolean;
+  status: 'pending' | 'approved' | 'rejected' | null;
+  memberId?: string;
+  memberInfo?: {
+    companyNameTH: string;
+    companyNameEN: string;
+    fullNameTH: string;
+    nickname: string;
+  };
+  rejectionReason?: string;
+}
+
 export default function DashboardPage() {
   return (
     <ProtectedRoute>
@@ -52,17 +65,46 @@ function DashboardContent() {
   const [attendance, setAttendance] = useState<MemberAttendance | null>(null);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
+  const [loadingVerification, setLoadingVerification] = useState(true);
 
   useEffect(() => {
     if (session) {
-      fetchEvents();
+      // Only fetch events for members and above (not guests)
+      if (session.user.role !== 'guest') {
+        fetchEvents();
+      } else {
+        setLoadingEvents(false);
+      }
+
       if (session.user.memberId) {
         fetchAttendance();
       } else {
         setLoadingAttendance(false);
       }
+
+      // Fetch verification status for guests
+      if (session.user.role === 'guest') {
+        fetchVerificationStatus();
+      } else {
+        setLoadingVerification(false);
+      }
     }
   }, [session]);
+
+  const fetchVerificationStatus = async () => {
+    try {
+      const response = await fetch('/api/verification/request');
+      if (response.ok) {
+        const data = await response.json();
+        setVerificationStatus(data);
+      }
+    } catch (err) {
+      console.error('Error fetching verification status:', err);
+    } finally {
+      setLoadingVerification(false);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -132,7 +174,8 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Events Summary Section */}
+        {/* Events Summary Section - Only for members and above */}
+        {session.user.role !== 'guest' && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-800">กิจกรรมของชมรม</h2>
@@ -269,6 +312,7 @@ function DashboardContent() {
             </div>
           )}
         </div>
+        )}
 
         {/* Quick Actions */}
         <h2 className="text-xl font-semibold text-gray-800 mb-4">เมนูลัด</h2>
@@ -333,31 +377,97 @@ function DashboardContent() {
           )}
         </div>
 
-        {/* Guest Message - Prompt to verify */}
+        {/* Guest Message - Verification Status */}
         {session.user.role === 'guest' && (
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
+          <div className="mt-8">
+            {loadingVerification ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400"></div>
+                  <span className="text-gray-500">กำลังโหลดข้อมูล...</span>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-blue-800">ยืนยันตัวตนสมาชิก</h3>
-                <p className="text-sm text-blue-700 mt-1 mb-3">
-                  เชื่อมบัญชี LINE ของคุณกับข้อมูลสมาชิก Agents Club เพื่อเข้าถึงข้อมูลและบริการต่างๆ
-                </p>
-                <Link
-                  href="/verify"
-                  className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  ยืนยันตัวตนเลย
-                </Link>
+            ) : verificationStatus?.status === 'pending' ? (
+              /* Pending Verification Request */
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-yellow-800">รอการพิจารณาคำขอยืนยันตัวตน</h3>
+                    <p className="text-sm text-yellow-700 mt-1 mb-3">
+                      ทาง Agents Club ได้รับคำขอยืนยันตัวตนของคุณแล้ว และอยู่ระหว่างการพิจารณา
+                      กรุณารอการอนุมัติจากผู้ดูแลระบบ
+                    </p>
+                    {verificationStatus.memberInfo && (
+                      <div className="bg-yellow-100 rounded-lg p-3 text-sm">
+                        <p className="text-yellow-800">
+                          <span className="font-medium">รหัสสมาชิกที่ขอยืนยัน:</span> {verificationStatus.memberId}
+                        </p>
+                        <p className="text-yellow-800 mt-1">
+                          <span className="font-medium">ชื่อบริษัท:</span> {verificationStatus.memberInfo.companyNameTH}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : verificationStatus?.status === 'rejected' ? (
+              /* Rejected Verification Request */
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-red-800">คำขอยืนยันตัวตนถูกปฏิเสธ</h3>
+                    <p className="text-sm text-red-700 mt-1 mb-3">
+                      {verificationStatus.rejectionReason || 'คำขอยืนยันตัวตนของคุณไม่ผ่านการพิจารณา'}
+                    </p>
+                    <Link
+                      href="/verify"
+                      className="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      ส่งคำขอใหม่
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* No Verification Request - Show verify button */
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-blue-800">ยืนยันตัวตนสมาชิก</h3>
+                    <p className="text-sm text-blue-700 mt-1 mb-3">
+                      เชื่อมบัญชี LINE ของคุณกับข้อมูลสมาชิก Agents Club เพื่อเข้าถึงข้อมูลและบริการต่างๆ
+                    </p>
+                    <Link
+                      href="/verify"
+                      className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      ยืนยันตัวตนเลย
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

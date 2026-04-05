@@ -179,7 +179,7 @@ export const DEFAULT_EVENTS: Event[] = [
     eventDate: '2025',
     location: 'TBD',
     description: 'งานครบรอบ 10 ปี Agents Club',
-    sheetName: '10 Yearth Meeting registration',
+    sheetName: '10 Yearth Meeting',
     year: 2568,
     isActive: true,
     createdAt: new Date().toISOString(),

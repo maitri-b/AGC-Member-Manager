@@ -207,10 +207,9 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
     const event = events.find(e => e.eventId === record.eventId);
     if (!event) continue;
 
-    // Check if confirmed/attended
-    const isConfirmed = ['confirmed', 'attended', 'ยืนยันแล้ว'].includes(
-      record.registration.status?.toLowerCase() || ''
-    );
+    // Check if confirmed/attended - include Thai status values
+    const statusLower = record.registration.status?.toLowerCase() || '';
+    const isConfirmed = ['confirmed', 'attended', 'ยืนยันแล้ว', 'ตรวจสอบแล้ว'].includes(statusLower);
 
     if (isConfirmed) {
       const attendanceRecord: EventAttendanceRecord = {
@@ -303,7 +302,7 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
   });
 
   const confirmedCount = agentRegistrations.filter(r =>
-    ['confirmed', 'attended', 'ยืนยันแล้ว'].includes(r.status?.toLowerCase() || '')
+    ['confirmed', 'attended', 'ยืนยันแล้ว', 'ตรวจสอบแล้ว'].includes(r.status?.toLowerCase() || '')
   ).length;
 
   return {

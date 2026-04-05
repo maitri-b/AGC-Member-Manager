@@ -2,6 +2,7 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import { hasPermission } from '@/lib/permissions';
 
@@ -48,8 +49,15 @@ export default function Navbar() {
           {/* Logo & Brand */}
           <div className="flex items-center">
             <Link href="/dashboard" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#1e3a5f] to-[#2d5a87] rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">AC</span>
+              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                <Image
+                  src="/images/Logo Agents club-01_0_0.jpg"
+                  alt="Agents Club Logo"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                  priority
+                />
               </div>
               <div className="hidden sm:block">
                 <span className="font-bold text-gray-800">Agents Club</span>

@@ -95,7 +95,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
     },
   ];
 
-  // Add verified badge if member is verified
+  // Add verified text if member is verified (simple text, no badge background)
   if (isVerified) {
     headerContents.push({
       type: 'box',
@@ -103,29 +103,20 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
       margin: 'md',
       contents: [
         {
-          type: 'box',
-          layout: 'horizontal',
-          backgroundColor: '#DC2626',
-          cornerRadius: 'md',
-          paddingAll: '5px',
-          paddingStart: '10px',
-          paddingEnd: '10px',
-          contents: [
-            {
-              type: 'text',
-              text: '✓',
-              size: 'sm',
-              color: '#FFFFFF',
-              weight: 'bold',
-            },
-            {
-              type: 'text',
-              text: 'ยืนยันตัวตนแล้ว',
-              size: 'xs',
-              color: '#FFFFFF',
-              margin: 'sm',
-            },
-          ],
+          type: 'text',
+          text: '✓',
+          size: 'sm',
+          color: '#FFFFFF',
+          weight: 'bold',
+          flex: 0,
+        },
+        {
+          type: 'text',
+          text: 'ยืนยันตัวตนแล้ว',
+          size: 'xs',
+          color: '#FFFFFF',
+          margin: 'sm',
+          flex: 0,
         },
       ],
     });

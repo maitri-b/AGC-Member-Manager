@@ -91,8 +91,18 @@ export default function VerifyPage() {
 
       const data = await res.json();
 
+      // Handle locked account or HTTP errors
+      if (!res.ok) {
+        if (data.locked) {
+          setError(data.message || 'บัญชีถูกระงับการค้นหา กรุณาติดต่อ Admin');
+        } else {
+          setError(data.error || data.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+        }
+        return;
+      }
+
       if (!data.found) {
-        setError(data.message);
+        setError(data.message || 'ไม่พบข้อมูลสมาชิก');
         return;
       }
 
@@ -107,7 +117,8 @@ export default function VerifyPage() {
 
       setStep('confirm');
     } catch (err) {
-      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+      console.error('Search error:', err);
+      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsLoading(false);
     }

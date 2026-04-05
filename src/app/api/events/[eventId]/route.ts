@@ -1,9 +1,10 @@
-// API Route for Event Detail - Get event attendees
+// API Route for Event Detail - Get event attendees with LINE profiles
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
 import { getEventAttendanceSummary, getEventById } from '@/lib/event-sheets';
+import { adminDb } from '@/lib/firebase-admin';
 
 export async function GET(
   request: NextRequest,
@@ -34,6 +35,55 @@ export async function GET(
 
     const summary = await getEventAttendanceSummary(eventId);
 
+    // Get LINE profiles from users collection
+    const db = adminDb();
+    const usersSnapshot = await db.collection('users').get();
+
+    // Build a map of memberId -> LINE profile
+    const lineProfilesMap = new Map<string, { lineDisplayName: string; lineProfilePicture: string }>();
+    usersSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.memberId) {
+        lineProfilesMap.set(data.memberId, {
+          lineDisplayName: data.lineDisplayName || data.name || '',
+          lineProfilePicture: data.lineProfilePicture || data.image || '',
+        });
+      }
+    });
+
+    // Enrich attendees with LINE profile data
+    const attendeesWithProfile = summary.attendees.map(attendee => {
+      const lineProfile = attendee.member?.memberId
+        ? lineProfilesMap.get(attendee.member.memberId)
+        : null;
+
+      // Check status for confirmed
+      const status = attendee.registration.status || '';
+      const statusLower = status.toLowerCase();
+      const isConfirmed =
+        statusLower === 'confirmed' ||
+        statusLower === 'attended' ||
+        status.includes('ยืนยัน') ||
+        status.includes('ตรวจสอบแล้ว');
+
+      return {
+        registration: {
+          registrationId: attendee.registration.registrationId,
+          companyName: attendee.registration.companyName,
+          contactName: attendee.registration.contactName,
+          licenseNumber: attendee.registration.licenseNumber,
+          attendeeCount: attendee.registration.attendeeCount,
+          attendeeNames: attendee.registration.attendeeNames,
+          status: attendee.registration.status,
+          checkinSections: attendee.registration.checkinSections,
+          tableNumber: attendee.registration.tableNumber,
+        },
+        member: attendee.member,
+        lineProfile: lineProfile || null,
+        isConfirmed,
+      };
+    });
+
     return NextResponse.json({
       event: {
         eventId: event.eventId,
@@ -49,7 +99,7 @@ export async function GET(
         agentRegistrations: summary.agentRegistrations,
         confirmedCount: summary.confirmedCount,
       },
-      attendees: summary.attendees,
+      attendees: attendeesWithProfile,
     });
   } catch (error) {
     console.error('Error fetching event details:', error);

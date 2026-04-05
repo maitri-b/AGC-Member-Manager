@@ -57,8 +57,9 @@ export async function GET(
         ? lineProfilesMap.get(attendee.member.memberId)
         : null;
 
-      // Check status for confirmed
-      const status = attendee.registration.status || '';
+      // Check status for confirmed - ensure status is a string
+      const rawStatus = attendee.registration.status;
+      const status = typeof rawStatus === 'string' ? rawStatus : String(rawStatus || '');
       const statusLower = status.toLowerCase();
       const isConfirmed =
         statusLower === 'confirmed' ||
@@ -68,15 +69,15 @@ export async function GET(
 
       return {
         registration: {
-          registrationId: attendee.registration.registrationId,
-          companyName: attendee.registration.companyName,
-          contactName: attendee.registration.contactName,
-          licenseNumber: attendee.registration.licenseNumber,
-          attendeeCount: attendee.registration.attendeeCount,
-          attendeeNames: attendee.registration.attendeeNames,
-          status: attendee.registration.status,
-          checkinSections: attendee.registration.checkinSections,
-          tableNumber: attendee.registration.tableNumber,
+          registrationId: String(attendee.registration.registrationId || ''),
+          companyName: String(attendee.registration.companyName || ''),
+          contactName: String(attendee.registration.contactName || ''),
+          licenseNumber: String(attendee.registration.licenseNumber || ''),
+          attendeeCount: Number(attendee.registration.attendeeCount) || 0,
+          attendeeNames: String(attendee.registration.attendeeNames || ''),
+          status: status,
+          checkinSections: String(attendee.registration.checkinSections || ''),
+          tableNumber: String(attendee.registration.tableNumber || ''),
         },
         member: attendee.member,
         lineProfile: lineProfile || null,

@@ -346,7 +346,8 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
   });
 
   const confirmedCount = agentRegistrations.filter(r => {
-    const status = r.status || '';
+    const rawStatus = r.status;
+    const status = typeof rawStatus === 'string' ? rawStatus : String(rawStatus || '');
     const statusLower = status.toLowerCase();
     return (
       statusLower === 'confirmed' ||

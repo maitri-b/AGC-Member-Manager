@@ -95,8 +95,9 @@ function DashboardContent() {
   const fetchVerificationStatus = async () => {
     try {
       const response = await fetch('/api/verification/request');
+      const data = await response.json();
+      console.log('Verification status response:', data);
       if (response.ok) {
-        const data = await response.json();
         setVerificationStatus(data);
       }
     } catch (err) {

@@ -103,11 +103,9 @@ export async function GET() {
 
     const db = adminDb();
 
-    // Get user's verification requests
+    // Get user's verification requests (without orderBy to avoid index requirement)
     const requests = await db.collection('verificationRequests')
       .where('userId', '==', session.user.id)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
       .get();
 
     if (requests.empty) {
@@ -117,12 +115,19 @@ export async function GET() {
       });
     }
 
-    const request = requests.docs[0];
-    const data = request.data();
+    // Sort by createdAt in memory to get the latest request
+    const sortedDocs = requests.docs.sort((a, b) => {
+      const aDate = a.data().createdAt?.toDate?.() || new Date(0);
+      const bDate = b.data().createdAt?.toDate?.() || new Date(0);
+      return bDate.getTime() - aDate.getTime();
+    });
+
+    const latestRequest = sortedDocs[0];
+    const data = latestRequest.data();
 
     return NextResponse.json({
       hasRequest: true,
-      requestId: request.id,
+      requestId: latestRequest.id,
       status: data.status,
       memberId: data.memberId,
       memberInfo: data.memberInfo,

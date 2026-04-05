@@ -31,6 +31,23 @@ interface ChangeRequest {
   adminNote?: string;
 }
 
+interface EventAttendanceRecord {
+  eventId: string;
+  eventName: string;
+  eventDate: string;
+  attendeeCount: number;
+  status: string;
+  checkedIn: boolean;
+}
+
+interface MemberAttendance {
+  memberId: string;
+  eventsAttended: EventAttendanceRecord[];
+  totalEventsThisYear: number;
+  lastAttendedEvent: string;
+  lastAttendedDate: string;
+}
+
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -67,6 +84,10 @@ export default function ProfilePage() {
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
 
+  // Event attendance
+  const [attendance, setAttendance] = useState<MemberAttendance | null>(null);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
@@ -76,6 +97,7 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchProfile();
     fetchChangeRequests();
+    fetchAttendance();
   }, []);
 
   const fetchProfile = async () => {
@@ -121,6 +143,21 @@ export default function ProfilePage() {
       console.error('Error fetching change requests:', err);
     } finally {
       setLoadingRequests(false);
+    }
+  };
+
+  const fetchAttendance = async () => {
+    setLoadingAttendance(true);
+    try {
+      const response = await fetch('/api/events/attendance');
+      if (response.ok) {
+        const data = await response.json();
+        setAttendance(data.attendance);
+      }
+    } catch (err) {
+      console.error('Error fetching attendance:', err);
+    } finally {
+      setLoadingAttendance(false);
     }
   };
 
@@ -594,6 +631,101 @@ export default function ProfilePage() {
                       </div>
                     </dl>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Event Attendance Summary */}
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">กิจกรรมที่เข้าร่วม</h2>
+
+              {loadingAttendance ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : attendance && attendance.eventsAttended.length > 0 ? (
+                <div>
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-blue-50 rounded-lg p-4 text-center">
+                      <p className="text-3xl font-bold text-blue-600">{attendance.totalEventsThisYear}</p>
+                      <p className="text-sm text-blue-700">กิจกรรมปีนี้</p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4 text-center">
+                      <p className="text-3xl font-bold text-green-600">{attendance.eventsAttended.length}</p>
+                      <p className="text-sm text-green-700">กิจกรรมทั้งหมด</p>
+                    </div>
+                    {attendance.lastAttendedEvent && (
+                      <div className="bg-purple-50 rounded-lg p-4 text-center col-span-2 md:col-span-1">
+                        <p className="text-sm font-medium text-purple-600 truncate">{attendance.lastAttendedEvent}</p>
+                        <p className="text-xs text-purple-700">กิจกรรมล่าสุด</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Attendance Requirement Status */}
+                  <div className={`rounded-lg p-4 mb-6 ${
+                    attendance.totalEventsThisYear >= 1
+                      ? 'bg-green-50 border border-green-200'
+                      : 'bg-red-50 border border-red-200'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      {attendance.totalEventsThisYear >= 1 ? (
+                        <>
+                          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div>
+                            <p className="font-medium text-green-800">ผ่านเกณฑ์การเข้าร่วมกิจกรรมประจำปี</p>
+                            <p className="text-sm text-green-700">สมาชิกต้องเข้าร่วมกิจกรรมอย่างน้อย 1 ครั้งต่อปี</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <div>
+                            <p className="font-medium text-red-800">ยังไม่ผ่านเกณฑ์การเข้าร่วมกิจกรรมประจำปี</p>
+                            <p className="text-sm text-red-700">กรุณาเข้าร่วมกิจกรรมอย่างน้อย 1 ครั้งในปีนี้</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Events List */}
+                  <h3 className="font-medium text-gray-900 mb-3">รายการกิจกรรม</h3>
+                  <div className="space-y-3">
+                    {attendance.eventsAttended.map((event, index) => (
+                      <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{event.eventName}</h4>
+                            <p className="text-sm text-gray-500">ปี พ.ศ. {event.eventDate}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              event.checkedIn
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {event.checkedIn ? 'เข้าร่วมแล้ว' : 'ลงทะเบียนแล้ว'}
+                            </span>
+                            <p className="text-sm text-gray-500 mt-1">{event.attendeeCount} คน</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-gray-500">ยังไม่มีประวัติการเข้าร่วมกิจกรรม</p>
+                  <p className="text-sm text-gray-400 mt-1">กิจกรรมที่คุณเข้าร่วมจะแสดงที่นี่</p>
                 </div>
               )}
             </div>

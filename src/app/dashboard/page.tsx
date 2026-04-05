@@ -236,11 +236,13 @@ function DashboardContent() {
                                     ? 'bg-green-100 text-green-800'
                                     : 'bg-blue-100 text-blue-800'
                                 }`}>
-                                  {userAttendance.checkedIn ? 'เข้าร่วมแล้ว' : 'ลงทะเบียนแล้ว'}
+                                  {userAttendance.checkedIn ? 'เข้าร่วมแล้ว' : 'ยืนยันแล้ว'}
                                 </span>
-                                <span className="text-sm text-gray-500">
-                                  {userAttendance.attendeeCount} คน
-                                </span>
+                                {userAttendance.attendeeCount > 0 && (
+                                  <span className="text-sm text-gray-500">
+                                    ผู้เข้าร่วมจากบริษัท {userAttendance.attendeeCount} คน
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ) : (

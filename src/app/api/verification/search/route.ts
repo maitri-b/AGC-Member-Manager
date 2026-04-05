@@ -45,12 +45,12 @@ export async function POST(request: NextRequest) {
 
     // Check if user has reached search limit
     if (currentSearchCount >= MAX_SEARCH_ATTEMPTS) {
-      // Lock the user
-      await userRef.update({
+      // Lock the user (use set with merge to handle new users)
+      await userRef.set({
         isSearchLocked: true,
         lockedAt: new Date(),
         lockedReason: 'ค้นหาเกินจำนวนครั้งที่กำหนด (3 ครั้ง)',
-      });
+      }, { merge: true });
 
       return NextResponse.json({
         found: false,
@@ -70,11 +70,11 @@ export async function POST(request: NextRequest) {
       attemptNumber: currentSearchCount + 1,
     });
 
-    // Increment search count
-    await userRef.update({
+    // Increment search count (use set with merge to handle new users)
+    await userRef.set({
       searchCount: currentSearchCount + 1,
       lastSearchAt: new Date(),
-    });
+    }, { merge: true });
 
     // Get all members and search
     const members = await getAllMembers();

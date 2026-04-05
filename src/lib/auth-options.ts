@@ -87,6 +87,14 @@ export const authOptions: NextAuthOptions = {
           const userRef = db.collection('users').doc(user.id);
           const userDoc = await userRef.get();
 
+          // Log user data for debugging
+          console.log('LINE signIn - User data:', {
+            id: user.id,
+            name: user.name,
+            image: user.image,
+            email: user.email,
+          });
+
           if (!userDoc.exists) {
             // Create new user document
             await userRef.set({
@@ -102,12 +110,25 @@ export const authOptions: NextAuthOptions = {
               lastLoginAt: new Date(),
             });
           } else {
-            // Update last login
-            await userRef.update({
+            // Update last login and profile info if available
+            const updateData: Record<string, unknown> = {
               lastLoginAt: new Date(),
-              displayName: user.name || null,
-              pictureUrl: user.image || null,
-            });
+            };
+
+            // Only update displayName if we have a value and current is empty
+            const existingData = userDoc.data();
+            if (user.name && (!existingData?.displayName || existingData.displayName === null)) {
+              updateData.displayName = user.name;
+            }
+            if (user.image && (!existingData?.pictureUrl || existingData.pictureUrl === null)) {
+              updateData.pictureUrl = user.image;
+            }
+            // Always update lineUserId to ensure it's set
+            if (!existingData?.lineUserId) {
+              updateData.lineUserId = user.id;
+            }
+
+            await userRef.update(updateData);
           }
           return true;
         } catch (error) {

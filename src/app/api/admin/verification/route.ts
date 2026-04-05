@@ -160,7 +160,13 @@ export async function PUT(request: NextRequest) {
       const userDoc = await userRef.get();
       const userData = userDoc.data();
 
-      await userRef.update({
+      // Get LINE info from multiple sources (request data or user data)
+      const lineUserId = requestData.lineUserId || userData?.lineUserId || requestData.userId;
+      const lineDisplayName = requestData.lineDisplayName || userData?.lineDisplayName || userData?.displayName || userData?.name || '';
+      const lineImage = requestData.lineImage || userData?.pictureUrl || userData?.image || '';
+
+      // Build update object with LINE profile info
+      const userUpdateData: Record<string, unknown> = {
         memberId: requestData.memberId,
         verificationStatus: 'verified',
         verifiedAt: now,
@@ -169,11 +175,19 @@ export async function PUT(request: NextRequest) {
         // Update role to member and set permissions
         role: 'member',
         permissions: ROLE_PERMISSIONS.member,
-      });
+        // Update LINE info from verification request if available
+        lineUserId: lineUserId,
+      };
 
-      // Get LINE info from multiple sources (request data or user data)
-      const lineUserId = requestData.lineUserId || userData?.lineUserId || requestData.userId;
-      const lineDisplayName = requestData.lineDisplayName || userData?.lineDisplayName || userData?.name || '';
+      // Only update displayName and pictureUrl if we have values
+      if (lineDisplayName) {
+        userUpdateData.displayName = lineDisplayName;
+      }
+      if (lineImage) {
+        userUpdateData.pictureUrl = lineImage;
+      }
+
+      await userRef.update(userUpdateData);
 
       console.log('Updating Google Sheet with LINE info:', {
         memberId: requestData.memberId,

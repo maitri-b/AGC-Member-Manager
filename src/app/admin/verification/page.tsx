@@ -52,6 +52,8 @@ export default function AdminVerificationPage() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [activeTab, setActiveTab] = useState<'pending' | 'processed'>('pending');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [sendingLineId, setSendingLineId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -143,6 +145,75 @@ export default function AdminVerificationPage() {
       alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  // Generate reply message for copying
+  const generateReplyMessage = (request: VerificationRequest) => {
+    if (request.status === 'approved') {
+      return `🎉 ยินดีด้วย! คำขอยืนยันตัวตนของคุณได้รับการอนุมัติแล้ว
+
+คุณสามารถเข้าถึงข้อมูลและบริการต่างๆ ของ Agents Club ได้แล้วครับ
+
+📌 รหัสสมาชิก: ${request.memberId}
+🏢 บริษัท: ${request.memberInfo.companyNameTH || request.memberInfo.companyNameEN || '-'}
+
+ขอบคุณที่เป็นส่วนหนึ่งของ Agents Club ครับ
+Helping & Sharing`;
+    } else {
+      return `ขออภัย คำขอยืนยันตัวตนของคุณไม่ผ่านการอนุมัติ
+
+📋 เหตุผล: ${request.rejectionReason || 'ไม่ผ่านการตรวจสอบข้อมูล'}
+
+หากคุณเชื่อว่าเป็นข้อผิดพลาด หรือต้องการส่งคำขอใหม่ กรุณาเข้าสู่ระบบและยืนยันตัวตนอีกครั้ง
+
+หากมีข้อสงสัย สามารถติดต่อทีมงาน Agents Club ได้เลยครับ`;
+    }
+  };
+
+  // Copy message to clipboard
+  const handleCopyMessage = async (request: VerificationRequest) => {
+    const message = generateReplyMessage(request);
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopiedId(request.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      alert('ไม่สามารถคัดลอกข้อความได้');
+    }
+  };
+
+  // Send LINE notification
+  const handleSendLine = async (request: VerificationRequest) => {
+    if (!request.lineUserId) {
+      alert('ไม่พบ LINE User ID');
+      return;
+    }
+
+    setSendingLineId(request.id);
+    try {
+      const res = await fetch('/api/line/send-verification-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lineUserId: request.lineUserId,
+          memberId: request.memberId,
+          status: request.status,
+          rejectionReason: request.rejectionReason,
+          lineDisplayName: request.lineDisplayName,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'ส่งข้อความสำเร็จ');
+      } else {
+        alert(data.error || 'เกิดข้อผิดพลาดในการส่งข้อความ');
+      }
+    } catch (error) {
+      alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
+    } finally {
+      setSendingLineId(null);
     }
   };
 
@@ -374,6 +445,60 @@ export default function AdminVerificationPage() {
                         {request.rejectionReason && (
                           <p className="text-sm text-red-600 mt-1">เหตุผล: {request.rejectionReason}</p>
                         )}
+
+                        {/* Action buttons for processed requests */}
+                        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200">
+                          {/* Copy Message Button */}
+                          <button
+                            onClick={() => handleCopyMessage(request)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                              copiedId === request.id
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {copiedId === request.id ? (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                คัดลอกแล้ว
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                คัดลอกข้อความตอบกลับ
+                              </>
+                            )}
+                          </button>
+
+                          {/* Send LINE Button */}
+                          <button
+                            onClick={() => handleSendLine(request)}
+                            disabled={sendingLineId === request.id}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                              request.status === 'approved'
+                                ? 'bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300'
+                                : 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300'
+                            }`}
+                          >
+                            {sendingLineId === request.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                กำลังส่ง...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 2C6.48 2 2 6.48 2 12c0 5.52 4.48 10 10 10s10-4.48 10-10c0-5.52-4.48-10-10-10zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.66-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 3.98-1.73 6.64-2.87 7.97-3.43 3.8-1.57 4.59-1.85 5.1-1.85.11 0 .37.03.54.17.14.12.18.28.2.45-.01.06.01.24 0 .38z"/>
+                                </svg>
+                                ส่ง LINE แจ้งผล{request.status === 'approved' ? ' + Profile' : ''}
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )}
 

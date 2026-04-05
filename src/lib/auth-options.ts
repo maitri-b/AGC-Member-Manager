@@ -140,14 +140,19 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account }) {
+      // On initial sign in, set the lineUserId and accessToken
       if (account && user) {
         token.lineUserId = user.id;
         token.accessToken = account.access_token;
+      }
 
-        // Get user data from Firestore
+      // Always fetch latest role/permissions from Firestore
+      // This ensures changes made by admin (like verification approval) are reflected immediately
+      const userId = token.lineUserId || token.sub;
+      if (userId) {
         try {
           const db = adminDb();
-          const userDoc = await db.collection('users').doc(user.id).get();
+          const userDoc = await db.collection('users').doc(userId).get();
 
           if (userDoc.exists) {
             const userData = userDoc.data();
@@ -159,12 +164,16 @@ export const authOptions: NextAuthOptions = {
             token.permissions = ROLE_PERMISSIONS[role] || [];
           } else {
             token.role = 'guest';
+            token.memberId = undefined;
             token.permissions = ROLE_PERMISSIONS.guest;
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
-          token.role = 'guest';
-          token.permissions = ROLE_PERMISSIONS.guest;
+          // Keep existing values on error, don't downgrade to guest
+          if (!token.role) {
+            token.role = 'guest';
+            token.permissions = ROLE_PERMISSIONS.guest;
+          }
         }
       }
       return token;

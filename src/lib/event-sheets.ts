@@ -208,8 +208,14 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
     if (!event) continue;
 
     // Check if confirmed/attended - include Thai status values
-    const statusLower = record.registration.status?.toLowerCase() || '';
-    const isConfirmed = ['confirmed', 'attended', 'ยืนยันแล้ว', 'ตรวจสอบแล้ว'].includes(statusLower);
+    const status = record.registration.status || '';
+    const statusLower = status.toLowerCase();
+    // Use includes() for Thai text to handle potential encoding differences
+    const isConfirmed =
+      statusLower === 'confirmed' ||
+      statusLower === 'attended' ||
+      status.includes('ยืนยัน') ||
+      status.includes('ตรวจสอบแล้ว');
 
     if (isConfirmed) {
       const attendanceRecord: EventAttendanceRecord = {
@@ -301,9 +307,16 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
     };
   });
 
-  const confirmedCount = agentRegistrations.filter(r =>
-    ['confirmed', 'attended', 'ยืนยันแล้ว', 'ตรวจสอบแล้ว'].includes(r.status?.toLowerCase() || '')
-  ).length;
+  const confirmedCount = agentRegistrations.filter(r => {
+    const status = r.status || '';
+    const statusLower = status.toLowerCase();
+    return (
+      statusLower === 'confirmed' ||
+      statusLower === 'attended' ||
+      status.includes('ยืนยัน') ||
+      status.includes('ตรวจสอบแล้ว')
+    );
+  }).length;
 
   return {
     event,

@@ -95,7 +95,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
     },
   ];
 
-  // Add verified text if member is verified (simple text, no badge background)
+  // Add verified text if member is verified (green circle icon with text)
   if (isVerified) {
     headerContents.push({
       type: 'box',
@@ -103,12 +103,25 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
       margin: 'md',
       contents: [
         {
-          type: 'text',
-          text: '✓',
-          size: 'sm',
-          color: '#FFFFFF',
-          weight: 'bold',
+          type: 'box',
+          layout: 'vertical',
+          width: '18px',
+          height: '18px',
+          backgroundColor: '#22C55E',
+          cornerRadius: '50px',
+          justifyContent: 'center',
+          alignItems: 'center',
           flex: 0,
+          contents: [
+            {
+              type: 'text',
+              text: '✓',
+              size: 'xxs',
+              color: '#FFFFFF',
+              weight: 'bold',
+              align: 'center',
+            },
+          ],
         },
         {
           type: 'text',

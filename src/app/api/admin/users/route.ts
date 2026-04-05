@@ -47,8 +47,11 @@ export async function GET() {
         id: doc.id,
         ...userData,
         // Normalize LINE profile fields for frontend
-        displayName: userData.lineDisplayName || userData.name || userData.displayName || '',
-        pictureUrl: userData.lineProfilePicture || userData.image || userData.pictureUrl || '',
+        // Auth saves as: displayName, pictureUrl
+        // Verification saves as: lineDisplayName, lineProfilePicture
+        // Also check: name, image
+        displayName: userData.displayName || userData.lineDisplayName || userData.name || '',
+        pictureUrl: userData.pictureUrl || userData.lineProfilePicture || userData.image || '',
         // Add verification data if available
         licenseNumber: verificationData?.licenseNumber || userData.licenseNumber || '',
         phone: verificationData?.phone || userData.phone || '',

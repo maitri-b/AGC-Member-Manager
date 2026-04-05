@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -50,8 +50,9 @@ interface EventData {
   attendees: Attendee[];
 }
 
-export default function EventDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
-  const resolvedParams = use(params);
+export default function EventDetailPage() {
+  const params = useParams();
+  const eventId = params.eventId as string;
   const { data: session, status } = useSession();
   const router = useRouter();
   const [eventData, setEventData] = useState<EventData | null>(null);
@@ -67,14 +68,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   }, [status, router]);
 
   useEffect(() => {
-    if (resolvedParams.eventId) {
+    if (eventId) {
       fetchEventData();
     }
-  }, [resolvedParams.eventId]);
+  }, [eventId]);
 
   const fetchEventData = async () => {
     try {
-      const response = await fetch(`/api/events/${resolvedParams.eventId}`);
+      const response = await fetch(`/api/events/${eventId}`);
       if (!response.ok) {
         if (response.status === 403) {
           setError('ไม่มีสิทธิ์เข้าถึงข้อมูลนี้');

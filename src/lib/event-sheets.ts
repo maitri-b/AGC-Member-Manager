@@ -38,10 +38,23 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
       return DEFAULT_EVENTS;
     }
 
-    const events = eventsSnapshot.docs.map(doc => ({
-      eventId: doc.id,
-      ...doc.data(),
-    })) as Event[];
+    const events = eventsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        eventId: doc.id,
+        eventName: data.eventName || '',
+        eventNameEN: data.eventNameEN || '',
+        eventDate: data.eventDate || '',
+        location: data.location || '',
+        description: data.description || '',
+        sheetName: data.sheetName || '',
+        year: data.year || 0,
+        isActive: data.isActive ?? true,
+        // Convert Firestore Timestamps to ISO strings
+        createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
+        updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
+      };
+    }) as Event[];
 
     eventsCache = events;
     eventsCacheTime = Date.now();

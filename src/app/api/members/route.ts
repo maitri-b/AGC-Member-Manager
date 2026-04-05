@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { getAllMembers, searchMembers, getMembersByStatus, getMemberStats } from '@/lib/google-sheets';
 import { hasPermission } from '@/lib/permissions';
+import { adminDb } from '@/lib/firebase-admin';
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,6 +34,31 @@ export async function GET(request: NextRequest) {
       members = await getAllMembers();
     }
 
+    // Get LINE profiles from Firestore users collection
+    const db = adminDb();
+    const usersSnapshot = await db.collection('users').get();
+
+    // Build a map of memberId -> LINE profile
+    const lineProfilesMap = new Map<string, { lineDisplayName: string; lineProfilePicture: string }>();
+    usersSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.memberId) {
+        lineProfilesMap.set(data.memberId, {
+          lineDisplayName: data.lineDisplayName || data.name || '',
+          lineProfilePicture: data.lineProfilePicture || data.image || '',
+        });
+      }
+    });
+
+    // Enrich members with LINE profile data
+    const membersWithProfile = members.map(member => {
+      const lineProfile = member.memberId ? lineProfilesMap.get(member.memberId) : null;
+      return {
+        ...member,
+        lineProfile: lineProfile || null,
+      };
+    });
+
     // Optionally include stats
     let stats = null;
     if (includeStats) {
@@ -40,8 +66,8 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      members,
-      total: members.length,
+      members: membersWithProfile,
+      total: membersWithProfile.length,
       ...(stats && { stats })
     });
   } catch (error) {

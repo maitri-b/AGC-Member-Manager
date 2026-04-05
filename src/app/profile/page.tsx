@@ -13,8 +13,8 @@ interface UserProfile {
   role: string;
   memberId?: string;
   permissions: string[];
-  displayName?: string;
-  pictureUrl?: string;
+  lineDisplayName?: string;
+  lineProfilePicture?: string;
   email?: string;
   createdAt?: { _seconds: number };
   lastLoginAt?: { _seconds: number };
@@ -308,9 +308,9 @@ export default function ProfilePage() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">ข้อมูลบัญชี</h2>
           <div className="flex items-start gap-6">
-            {user?.pictureUrl || session?.user?.image ? (
+            {user?.lineProfilePicture || session?.user?.image ? (
               <img
-                src={user?.pictureUrl || session?.user?.image || ''}
+                src={user?.lineProfilePicture || session?.user?.image || ''}
                 alt="Profile"
                 className="w-20 h-20 rounded-full object-cover"
               />
@@ -320,7 +320,7 @@ export default function ProfilePage() {
               </div>
             )}
             <div className="flex-1">
-              <h3 className="text-xl font-semibold text-gray-900">{user?.displayName || session?.user?.name}</h3>
+              <h3 className="text-xl font-semibold text-gray-900">{user?.lineDisplayName || session?.user?.name}</h3>
               <p className="text-gray-500">LINE Account</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${

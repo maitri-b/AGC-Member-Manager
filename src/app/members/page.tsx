@@ -8,6 +8,14 @@ import Navbar from '@/components/Navbar';
 import { Toast, useToast } from '@/components/Toast';
 import { hasPermission } from '@/lib/permissions';
 
+// Extended Member type with LINE profile from Firestore
+interface MemberWithProfile extends Member {
+  lineProfile?: {
+    lineDisplayName: string;
+    lineProfilePicture: string;
+  } | null;
+}
+
 // Notification Modal Component
 function NotificationModal({
   member,
@@ -139,14 +147,14 @@ function NotificationModal({
 export default function MembersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [allMembers, setAllMembers] = useState<Member[]>([]);
+  const [allMembers, setAllMembers] = useState<MemberWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterLineStatus, setFilterLineStatus] = useState('');
   const [filterExpiry, setFilterExpiry] = useState('');
   const [sendingTo, setSendingTo] = useState<string | null>(null);
-  const [notifyMember, setNotifyMember] = useState<Member | null>(null);
+  const [notifyMember, setNotifyMember] = useState<MemberWithProfile | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
   const toast = useToast();
 
@@ -499,8 +507,8 @@ export default function MembersPage() {
                       <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '120px' }}>
                         ใบอนุญาต
                       </th>
-                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '100px' }}>
-                        ชื่อไลน์
+                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '140px' }}>
+                        LINE Profile
                       </th>
                       <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '100px' }}>
                         เบอร์โทร
@@ -572,8 +580,29 @@ export default function MembersPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-2 py-2 text-sm text-gray-600 truncate" style={{ maxWidth: '100px' }}>
-                          {member.lineName || '-'}
+                        <td className="px-2 py-2">
+                          {member.lineProfile ? (
+                            <div className="flex items-center gap-2">
+                              {member.lineProfile.lineProfilePicture ? (
+                                <img
+                                  src={member.lineProfile.lineProfilePicture}
+                                  alt=""
+                                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                                  </svg>
+                                </div>
+                              )}
+                              <span className="text-sm text-gray-900 truncate" style={{ maxWidth: '90px' }}>
+                                {member.lineProfile.lineDisplayName || '-'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-2 py-2 text-sm text-gray-600">
                           {member.mobile || member.phone || '-'}

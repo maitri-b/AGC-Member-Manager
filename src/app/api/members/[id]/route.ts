@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { getMemberById, updateMember } from '@/lib/google-sheets';
 import { hasPermission } from '@/lib/permissions';
+import { adminDb } from '@/lib/firebase-admin';
 
 export async function GET(
   request: NextRequest,
@@ -28,7 +29,28 @@ export async function GET(
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ member });
+    // Get LINE profile from Firestore if member has been verified
+    let lineProfile = null;
+    const db = adminDb();
+    const usersSnapshot = await db.collection('users')
+      .where('memberId', '==', id)
+      .limit(1)
+      .get();
+
+    if (!usersSnapshot.empty) {
+      const userData = usersSnapshot.docs[0].data();
+      lineProfile = {
+        lineDisplayName: userData.lineDisplayName || userData.name || '',
+        lineProfilePicture: userData.lineProfilePicture || userData.image || '',
+        lineUserId: userData.lineUserId || '',
+        verifiedAt: userData.verifiedAt?.toDate?.()?.toISOString() || null,
+      };
+    }
+
+    return NextResponse.json({
+      member,
+      lineProfile,
+    });
   } catch (error) {
     console.error('Error fetching member:', error);
     return NextResponse.json({ error: 'Failed to fetch member' }, { status: 500 });

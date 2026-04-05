@@ -7,6 +7,13 @@ import { Member } from '@/types/member';
 import Navbar from '@/components/Navbar';
 import { hasPermission } from '@/lib/permissions';
 
+interface LineProfile {
+  lineDisplayName: string;
+  lineProfilePicture: string;
+  lineUserId: string;
+  verifiedAt: string | null;
+}
+
 export default function MemberDetailPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -14,6 +21,7 @@ export default function MemberDetailPage() {
   const memberId = params.id as string;
 
   const [member, setMember] = useState<Member | null>(null);
+  const [lineProfile, setLineProfile] = useState<LineProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +51,7 @@ export default function MemberDetailPage() {
       }
       const data = await response.json();
       setMember(data.member);
+      setLineProfile(data.lineProfile);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -99,16 +108,32 @@ export default function MemberDetailPage() {
         {/* Member Header */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex items-start gap-6">
-            <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center text-3xl text-gray-400">
-              {member.nickname?.charAt(0) || member.fullNameTH?.charAt(0) || '?'}
-            </div>
+            {lineProfile?.lineProfilePicture ? (
+              <img
+                src={lineProfile.lineProfilePicture}
+                alt=""
+                className="w-24 h-24 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center text-3xl text-gray-400">
+                {member.nickname?.charAt(0) || member.fullNameTH?.charAt(0) || '?'}
+              </div>
+            )}
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-gray-900">
                   {member.nickname || '-'}
                 </h1>
+                {lineProfile && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    ยืนยันตัวตนแล้ว
+                  </span>
+                )}
                 <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                  member.status === 'Active'
+                  member.status === 'Active' || member.status === 'ปกติ'
                     ? 'bg-green-100 text-green-800'
                     : member.status === 'Inactive'
                     ? 'bg-gray-100 text-gray-800'
@@ -123,6 +148,14 @@ export default function MemberDetailPage() {
               <p className="text-gray-500 mt-1">
                 รหัสสมาชิก: {member.memberId}
               </p>
+              {lineProfile?.lineDisplayName && (
+                <p className="text-green-600 mt-1 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                  </svg>
+                  {lineProfile.lineDisplayName}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -182,10 +215,6 @@ export default function MemberDetailPage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">LINE ID</dt>
-                <dd className="text-gray-900">{member.lineId || '-'}</dd>
-              </div>
-              <div>
                 <dt className="text-sm text-gray-500">เว็บไซต์</dt>
                 <dd className="text-gray-900">
                   {member.website ? (
@@ -196,6 +225,66 @@ export default function MemberDetailPage() {
                 </dd>
               </div>
             </dl>
+          </div>
+
+          {/* LINE Info from Google Sheet (member reported) */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+              </svg>
+              ข้อมูล LINE
+            </h2>
+
+            {/* Verified LINE Profile */}
+            {lineProfile ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium text-green-800">ยืนยันตัวตนแล้ว (ข้อมูลจากระบบ)</span>
+                </div>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex">
+                    <dt className="w-24 text-green-700">ชื่อ LINE:</dt>
+                    <dd className="text-green-900 font-medium">{lineProfile.lineDisplayName || '-'}</dd>
+                  </div>
+                  {lineProfile.verifiedAt && (
+                    <div className="flex">
+                      <dt className="w-24 text-green-700">ยืนยันเมื่อ:</dt>
+                      <dd className="text-green-900">{new Date(lineProfile.verifiedAt).toLocaleDateString('th-TH')}</dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+            ) : null}
+
+            {/* Member Reported LINE Info */}
+            {(member.lineName || member.lineId) && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-600">ข้อมูลที่สมาชิกแจ้งมา</span>
+                </div>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex">
+                    <dt className="w-24 text-gray-500">ชื่อ LINE:</dt>
+                    <dd className="text-gray-700">{member.lineName || '-'}</dd>
+                  </div>
+                  <div className="flex">
+                    <dt className="w-24 text-gray-500">LINE ID:</dt>
+                    <dd className="text-gray-700">{member.lineId || '-'}</dd>
+                  </div>
+                </dl>
+              </div>
+            )}
+
+            {!lineProfile && !member.lineName && !member.lineId && (
+              <p className="text-gray-400 text-sm">ไม่มีข้อมูล LINE</p>
+            )}
           </div>
 
           {/* Membership Info */}

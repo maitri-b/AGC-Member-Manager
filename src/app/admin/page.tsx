@@ -20,6 +20,18 @@ interface User {
   licenseNumber?: string;
   phone?: string;
   verificationStatus?: string;
+  isSearchLocked?: boolean;
+  searchCount?: number;
+  lockedAt?: { _seconds: number };
+  lockedReason?: string;
+}
+
+interface SearchLog {
+  id: string;
+  searchQuery: string;
+  searchType: string;
+  searchedAt: string;
+  attemptNumber: number;
 }
 
 export default function AdminPage() {
@@ -35,6 +47,8 @@ export default function AdminPage() {
     memberId: '',
     isActive: true,
   });
+  const [searchLogs, setSearchLogs] = useState<SearchLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -64,13 +78,54 @@ export default function AdminPage() {
     }
   };
 
-  const handleEditUser = (user: User) => {
+  const handleEditUser = async (user: User) => {
     setEditingUser(user);
     setEditForm({
       role: user.role,
       memberId: user.memberId || '',
       isActive: user.isActive,
     });
+    setSearchLogs([]);
+
+    // Fetch search logs for this user
+    if (user.searchCount && user.searchCount > 0) {
+      setLoadingLogs(true);
+      try {
+        const response = await fetch(`/api/admin/users/${user.id}/search-logs`);
+        if (response.ok) {
+          const data = await response.json();
+          setSearchLogs(data.logs || []);
+        }
+      } catch (err) {
+        console.error('Error fetching search logs:', err);
+      } finally {
+        setLoadingLogs(false);
+      }
+    }
+  };
+
+  const handleUnlockSearch = async () => {
+    if (!editingUser) return;
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: editingUser.id,
+          unlockSearch: true,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to unlock user');
+
+      setSuccess('ปลดล็อคการค้นหาเรียบร้อยแล้ว');
+      setEditingUser(null);
+      setSearchLogs([]);
+      fetchUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
   };
 
   const handleSaveUser = async () => {
@@ -292,6 +347,11 @@ export default function AdminPage() {
                             รออนุมัติ
                           </span>
                         )}
+                        {user.isSearchLocked && (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                            🔒 Locked
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -314,8 +374,8 @@ export default function AdminPage() {
 
         {/* Edit Modal */}
         {editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 my-auto">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">แก้ไขข้อมูลผู้ใช้</h3>
               </div>
@@ -375,6 +435,79 @@ export default function AdminPage() {
                     <span className="text-sm font-medium text-gray-700">เปิดใช้งาน (Active)</span>
                   </label>
                 </div>
+
+                {/* Search Lock Section */}
+                {(editingUser.isSearchLocked || (editingUser.searchCount && editingUser.searchCount > 0)) && (
+                  <div className="border-t border-gray-200 pt-4 mt-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      สถานะการค้นหา
+                    </h4>
+
+                    <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600">จำนวนครั้งที่ค้นหา:</span>
+                        <span className="text-sm font-medium">{editingUser.searchCount || 0} / 3 ครั้ง</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">สถานะ:</span>
+                        {editingUser.isSearchLocked ? (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                            🔒 ถูกล็อค
+                          </span>
+                        ) : (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            ปกติ
+                          </span>
+                        )}
+                      </div>
+                      {editingUser.lockedReason && (
+                        <div className="mt-2 text-xs text-orange-600">
+                          สาเหตุ: {editingUser.lockedReason}
+                        </div>
+                      )}
+                    </div>
+
+                    {editingUser.isSearchLocked && (
+                      <button
+                        onClick={handleUnlockSearch}
+                        className="w-full px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                        ปลดล็อคการค้นหา
+                      </button>
+                    )}
+
+                    {/* Search History */}
+                    {searchLogs.length > 0 && (
+                      <div className="mt-4">
+                        <h5 className="text-xs font-semibold text-gray-700 mb-2">ประวัติการค้นหา:</h5>
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {searchLogs.map((log) => (
+                            <div key={log.id} className="text-xs bg-white border border-gray-200 rounded px-2 py-1">
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-800">ครั้งที่ {log.attemptNumber}:</span>
+                                <span className="text-gray-500">
+                                  {new Date(log.searchedAt).toLocaleString('th-TH')}
+                                </span>
+                              </div>
+                              <div className="text-gray-600">
+                                ค้นหา: <span className="font-mono">{log.searchQuery}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {loadingLogs && (
+                      <div className="mt-2 text-xs text-gray-500 text-center">กำลังโหลดประวัติ...</div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
                 <button

@@ -72,7 +72,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { userId, role, memberId, isActive } = await request.json();
+    const { userId, role, memberId, isActive, unlockSearch } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -102,6 +102,14 @@ export async function PUT(request: NextRequest) {
 
     if (isActive !== undefined) {
       updates.isActive = isActive;
+    }
+
+    // Handle unlock search
+    if (unlockSearch === true) {
+      updates.isSearchLocked = false;
+      updates.searchCount = 0;
+      updates.unlockedAt = new Date();
+      updates.unlockedBy = session.user.id;
     }
 
     await userRef.update(updates);

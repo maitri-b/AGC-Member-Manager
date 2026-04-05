@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { getAllMembers } from '@/lib/google-sheets';
+import { adminDb } from '@/lib/firebase-admin';
+
+const MAX_SEARCH_ATTEMPTS = 3;
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,11 +15,66 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = session.user.id || session.user.lineUserId;
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID not found' }, { status: 400 });
+    }
+
+    const db = adminDb();
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    const userData = userDoc.exists ? userDoc.data() : {};
+
+    // Check if user is locked
+    if (userData?.isSearchLocked) {
+      return NextResponse.json({
+        found: false,
+        locked: true,
+        message: 'บัญชีของคุณถูกระงับการค้นหา กรุณาติดต่อ Admin เพื่อปลดล็อค'
+      }, { status: 403 });
+    }
+
     const { licenseNumber } = await request.json();
 
     if (!licenseNumber) {
       return NextResponse.json({ error: 'License number is required' }, { status: 400 });
     }
+
+    // Get current search count
+    const currentSearchCount = userData?.searchCount || 0;
+
+    // Check if user has reached search limit
+    if (currentSearchCount >= MAX_SEARCH_ATTEMPTS) {
+      // Lock the user
+      await userRef.update({
+        isSearchLocked: true,
+        lockedAt: new Date(),
+        lockedReason: 'ค้นหาเกินจำนวนครั้งที่กำหนด (3 ครั้ง)',
+      });
+
+      return NextResponse.json({
+        found: false,
+        locked: true,
+        message: 'คุณค้นหาครบ 3 ครั้งแล้ว บัญชีของคุณถูกระงับการค้นหา กรุณาติดต่อ Admin เพื่อปลดล็อค'
+      }, { status: 403 });
+    }
+
+    // Log the search attempt
+    await db.collection('searchLogs').add({
+      userId: userId,
+      userDisplayName: session.user.name || 'Unknown',
+      userPictureUrl: session.user.image || '',
+      searchQuery: licenseNumber,
+      searchType: 'licenseNumber',
+      searchedAt: new Date(),
+      attemptNumber: currentSearchCount + 1,
+    });
+
+    // Increment search count
+    await userRef.update({
+      searchCount: currentSearchCount + 1,
+      lastSearchAt: new Date(),
+    });
 
     // Get all members and search
     const members = await getAllMembers();
@@ -33,10 +91,14 @@ export async function POST(request: NextRequest) {
              normalizedLicense.includes(memberLicense);
     });
 
+    // Calculate remaining attempts for response
+    const remainingAttemptsForError = MAX_SEARCH_ATTEMPTS - (currentSearchCount + 1);
+
     if (matchedMembers.length === 0) {
       return NextResponse.json({
         found: false,
-        message: 'ไม่พบข้อมูลที่ตรงกัน กรุณาตรวจสอบเลขใบอนุญาตให้ถูกต้อง'
+        remainingAttempts: remainingAttemptsForError,
+        message: `ไม่พบข้อมูลที่ตรงกัน กรุณาตรวจสอบเลขใบอนุญาตให้ถูกต้อง (เหลือโอกาสค้นหาอีก ${remainingAttemptsForError} ครั้ง)`
       });
     }
 
@@ -44,6 +106,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         found: false,
         multiple: true,
+        remainingAttempts: remainingAttemptsForError,
         message: 'พบข้อมูลหลายรายการ กรุณาติดต่อ Admin'
       });
     }
@@ -71,8 +134,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Return member info for confirmation (hide sensitive data)
+    // Also return remaining search attempts
+    const remainingAttempts = MAX_SEARCH_ATTEMPTS - (currentSearchCount + 1);
+
     return NextResponse.json({
       found: true,
+      remainingAttempts,
       member: {
         memberId: member.memberId,
         companyNameTH: member.companyNameTH,

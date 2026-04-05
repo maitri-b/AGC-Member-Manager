@@ -54,37 +54,33 @@ export async function sendPushMessage(userId: string, messages: unknown[]): Prom
   return true;
 }
 
-// Create Member Profile Flex Message - Simplified version
+// Create Member Profile Flex Message for Agents Club
 export function createMemberProfileFlexMessage(member: Member): FlexMessage {
+  // URL to profile page for editing
+  const profileUrl = process.env.NEXTAUTH_URL || 'https://agentsclub.vercel.app';
+
   return {
     type: 'flex',
-    altText: `ข้อมูลสมาชิก: ${member.nickname || member.fullNameTH || 'Unknown'}`,
+    altText: `ข้อมูลสมาชิก Agents Club: ${member.companyNameEN || member.companyNameTH || 'Unknown'}`,
     contents: {
       type: 'bubble',
       header: {
         type: 'box',
         layout: 'vertical',
-        backgroundColor: '#CC0000',
+        backgroundColor: '#1E40AF',
         paddingAll: '20px',
         contents: [
           {
             type: 'text',
-            text: member.nickname || member.fullNameTH || 'Unknown',
+            text: 'Agents Club',
             weight: 'bold',
-            size: 'xl',
+            size: 'lg',
             color: '#FFFFFF',
           },
           {
             type: 'text',
-            text: member.fullNameTH || '-',
+            text: 'ข้อมูลสมาชิก',
             size: 'sm',
-            color: '#FFFFFF',
-            margin: 'sm',
-          },
-          {
-            type: 'text',
-            text: `รหัสสมาชิก: ${member.memberId}`,
-            size: 'xs',
             color: '#FFFFFF',
             margin: 'sm',
           },
@@ -100,22 +96,16 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             type: 'text',
             text: 'ข้อมูลบริษัท',
             weight: 'bold',
-            color: '#CC0000',
+            color: '#1E40AF',
             size: 'sm',
           },
           {
             type: 'text',
-            text: member.companyNameTH || member.companyNameEN || '-',
-            size: 'sm',
+            text: member.companyNameEN || '-',
+            size: 'md',
             wrap: true,
             margin: 'sm',
-          },
-          {
-            type: 'text',
-            text: member.positionCompany || '-',
-            size: 'xs',
-            color: '#999999',
-            margin: 'sm',
+            weight: 'bold',
           },
           {
             type: 'separator',
@@ -126,7 +116,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             type: 'text',
             text: 'ข้อมูลติดต่อ',
             weight: 'bold',
-            color: '#CC0000',
+            color: '#1E40AF',
             size: 'sm',
             margin: 'lg',
           },
@@ -137,14 +127,14 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: 'โทร:',
+                text: 'โทรมือถือ:',
                 size: 'sm',
                 color: '#666666',
-                flex: 2,
+                flex: 3,
               },
               {
                 type: 'text',
-                text: member.mobile || member.phone || '-',
+                text: member.mobile || '-',
                 size: 'sm',
                 flex: 5,
                 wrap: true,
@@ -161,7 +151,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
                 text: 'Email:',
                 size: 'sm',
                 color: '#666666',
-                flex: 2,
+                flex: 3,
               },
               {
                 type: 'text',
@@ -179,10 +169,10 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: 'LINE:',
+                text: 'LINE ID:',
                 size: 'sm',
                 color: '#666666',
-                flex: 2,
+                flex: 3,
               },
               {
                 type: 'text',
@@ -194,15 +184,36 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             ],
           },
           {
+            type: 'box',
+            layout: 'horizontal',
+            margin: 'sm',
+            contents: [
+              {
+                type: 'text',
+                text: 'ชื่อใน LINE:',
+                size: 'sm',
+                color: '#666666',
+                flex: 3,
+              },
+              {
+                type: 'text',
+                text: member.lineName || member.lineDisplayName || '-',
+                size: 'sm',
+                flex: 5,
+                wrap: true,
+              },
+            ],
+          },
+          {
             type: 'separator',
             margin: 'lg',
           },
-          // BNI Section
+          // License Section
           {
             type: 'text',
-            text: 'ข้อมูล BNI',
+            text: 'ข้อมูลใบอนุญาต',
             weight: 'bold',
-            color: '#CC0000',
+            color: '#1E40AF',
             size: 'sm',
             margin: 'lg',
           },
@@ -213,14 +224,14 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: 'Powerteam:',
+                text: 'ชื่อบริษัท:',
                 size: 'sm',
                 color: '#666666',
                 flex: 3,
               },
               {
                 type: 'text',
-                text: member.positionClub || '-',
+                text: member.companyNameTH || '-',
                 size: 'sm',
                 flex: 5,
                 wrap: true,
@@ -234,7 +245,27 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: 'หมดอายุสมาชิก:',
+                text: 'เลขที่ใบอนุญาต:',
+                size: 'sm',
+                color: '#666666',
+                flex: 3,
+              },
+              {
+                type: 'text',
+                text: member.licenseNumber || '-',
+                size: 'sm',
+                flex: 5,
+              },
+            ],
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            margin: 'sm',
+            contents: [
+              {
+                type: 'text',
+                text: 'วันที่หมดอายุ:',
                 size: 'sm',
                 color: '#666666',
                 flex: 3,
@@ -254,16 +285,18 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: 'หมดอายุใบอนุญาต:',
+                text: 'สถานะ:',
                 size: 'sm',
                 color: '#666666',
                 flex: 3,
               },
               {
                 type: 'text',
-                text: member.licenseExpiry || '-',
+                text: member.status || '-',
                 size: 'sm',
                 flex: 5,
+                color: member.status === 'ปกติ' ? '#16A34A' : '#DC2626',
+                weight: 'bold',
               },
             ],
           },
@@ -272,14 +305,26 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
       footer: {
         type: 'box',
         layout: 'vertical',
-        paddingAll: '10px',
+        paddingAll: '15px',
+        spacing: 'sm',
         contents: [
           {
+            type: 'button',
+            action: {
+              type: 'uri',
+              label: 'แก้ไขข้อมูล',
+              uri: `${profileUrl}/profile`,
+            },
+            style: 'primary',
+            color: '#1E40AF',
+          },
+          {
             type: 'text',
-            text: 'BNI Excellence - Member Manager',
+            text: 'Agents Club',
             size: 'xs',
             color: '#AAAAAA',
             align: 'center',
+            margin: 'md',
           },
         ],
       },

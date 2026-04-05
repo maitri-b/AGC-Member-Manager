@@ -182,12 +182,6 @@ export default function MembersPage() {
     }
   };
 
-  // Calculate all unique statuses from all members (not filtered)
-  const allStatuses = useMemo(() => {
-    const statuses = [...new Set(allMembers.map((m) => m.status).filter(Boolean))] as string[];
-    return statuses.sort();
-  }, [allMembers]);
-
   // Calculate all unique LINE statuses (excluding unwanted options)
   const allLineStatuses = useMemo(() => {
     const excludedStatuses = ['ยกเลิกข้อมูล/ลงทะเบียนใหม่แล้ว', 'ข้อมูลซ้ำ'];
@@ -309,16 +303,20 @@ export default function MembersPage() {
         // If one has date and other doesn't, prioritize the one with date
         if (dateA && !dateB) return -1;
         if (!dateA && dateB) return 1;
-        // If neither has date, sort by memberId
-        return (a.memberId || '').localeCompare(b.memberId || '');
+        // If neither has date, sort by memberId as number (high to low)
+        const numA = parseInt(a.memberId || '0', 10);
+        const numB = parseInt(b.memberId || '0', 10);
+        return numB - numA;
       }
 
       // "รอนำเข้า" comes first
       if (aIsPending && !bIsPending) return -1;
       if (!aIsPending && bIsPending) return 1;
 
-      // Neither is "รอนำเข้า" - sort by MemberID
-      return (a.memberId || '').localeCompare(b.memberId || '');
+      // Neither is "รอนำเข้า" - sort by MemberID as number (high to low)
+      const numA = parseInt(a.memberId || '0', 10);
+      const numB = parseInt(b.memberId || '0', 10);
+      return numB - numA; // descending (high to low)
     });
   }, [allMembers, search, filterStatus, filterLineStatus, filterExpiry]);
 

@@ -99,8 +99,8 @@ export const authOptions: NextAuthOptions = {
             // Create new user document
             await userRef.set({
               lineUserId: user.id,
-              displayName: user.name || null,
-              pictureUrl: user.image || null,
+              lineDisplayName: user.name || null,
+              lineProfilePicture: user.image || null,
               email: user.email || null,
               role: 'guest',
               permissions: ROLE_PERMISSIONS.guest,
@@ -115,13 +115,14 @@ export const authOptions: NextAuthOptions = {
               lastLoginAt: new Date(),
             };
 
-            // Only update displayName if we have a value and current is empty
+            // Always update LINE profile from latest login data
+            // This ensures profile changes (name, picture) are synced on every login
             const existingData = userDoc.data();
-            if (user.name && (!existingData?.displayName || existingData.displayName === null)) {
-              updateData.displayName = user.name;
+            if (user.name) {
+              updateData.lineDisplayName = user.name;
             }
-            if (user.image && (!existingData?.pictureUrl || existingData.pictureUrl === null)) {
-              updateData.pictureUrl = user.image;
+            if (user.image) {
+              updateData.lineProfilePicture = user.image;
             }
             // Always update lineUserId to ensure it's set
             if (!existingData?.lineUserId) {

@@ -173,14 +173,14 @@ export const COLUMN_TO_EVENT_REGISTRATION_MAP = Object.fromEntries(
 // These will be migrated to Firestore on first admin access
 export const DEFAULT_EVENTS: Event[] = [
   {
-    eventId: '10yearth-meeting-2025',
+    eventId: '10yearth-meeting-2026',
     eventName: '10 Yearth Meeting',
     eventNameEN: '10th Anniversary Meeting',
-    eventDate: '2025',
+    eventDate: '2569',  // พ.ศ.
     location: 'TBD',
     description: 'งานครบรอบ 10 ปี Agents Club',
     sheetName: '10 Yearth Meeting',
-    year: 2568,
+    year: 2569,  // พ.ศ. 2569 = ค.ศ. 2026
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

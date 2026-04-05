@@ -188,10 +188,13 @@ export default function MembersPage() {
     return statuses.sort();
   }, [allMembers]);
 
-  // Calculate all unique LINE statuses
+  // Calculate all unique LINE statuses (excluding unwanted options)
   const allLineStatuses = useMemo(() => {
+    const excludedStatuses = ['ยกเลิกข้อมูล/ลงทะเบียนใหม่แล้ว', 'ข้อมูลซ้ำ'];
     const lineStatuses = [...new Set(allMembers.map((m) => m.lineGroupStatus).filter(Boolean))] as string[];
-    return lineStatuses.sort();
+    return lineStatuses
+      .filter(s => !excludedStatuses.includes(s))
+      .sort();
   }, [allMembers]);
 
   // Thai month names (abbreviated)
@@ -238,7 +241,7 @@ export default function MembersPage() {
 
   // Filter members based on all criteria
   const filteredMembers = useMemo(() => {
-    return allMembers.filter((member) => {
+    const filtered = allMembers.filter((member) => {
       // Search filter
       if (search) {
         const searchLower = search.toLowerCase();
@@ -255,7 +258,17 @@ export default function MembersPage() {
       }
 
       // Status filter
-      if (filterStatus && member.status !== filterStatus) return false;
+      if (filterStatus) {
+        if (filterStatus === 'ปกติ') {
+          // Show only "ปกติ" status
+          if (member.status !== 'ปกติ') return false;
+        } else if (filterStatus === '__not_normal__') {
+          // Show all statuses except "ปกติ"
+          if (member.status === 'ปกติ') return false;
+        } else if (member.status !== filterStatus) {
+          return false;
+        }
+      }
 
       // LINE status filter
       if (filterLineStatus) {
@@ -279,6 +292,33 @@ export default function MembersPage() {
       }
 
       return true;
+    });
+
+    // Sort: "รอนำเข้า" first (by lineGroupJoinDate oldest to newest), then by MemberID
+    return filtered.sort((a, b) => {
+      const aIsPending = a.status === 'รอนำเข้า';
+      const bIsPending = b.status === 'รอนำเข้า';
+
+      // Both are "รอนำเข้า" - sort by lineGroupJoinDate (oldest first)
+      if (aIsPending && bIsPending) {
+        const dateA = parseThaiDate(a.lineGroupJoinDate);
+        const dateB = parseThaiDate(b.lineGroupJoinDate);
+        if (dateA && dateB) {
+          return dateA.getTime() - dateB.getTime(); // oldest first
+        }
+        // If one has date and other doesn't, prioritize the one with date
+        if (dateA && !dateB) return -1;
+        if (!dateA && dateB) return 1;
+        // If neither has date, sort by memberId
+        return (a.memberId || '').localeCompare(b.memberId || '');
+      }
+
+      // "รอนำเข้า" comes first
+      if (aIsPending && !bIsPending) return -1;
+      if (!aIsPending && bIsPending) return 1;
+
+      // Neither is "รอนำเข้า" - sort by MemberID
+      return (a.memberId || '').localeCompare(b.memberId || '');
     });
   }, [allMembers, search, filterStatus, filterLineStatus, filterExpiry]);
 
@@ -382,9 +422,8 @@ export default function MembersPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">ทั้งหมด</option>
-                {allStatuses.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
+                <option value="ปกติ">ปกติ</option>
+                <option value="__not_normal__">ไม่ปกติ</option>
               </select>
             </div>
 
@@ -480,19 +519,29 @@ export default function MembersPage() {
                     {filteredMembers.map((member) => (
                       <tr key={member.memberId} className="hover:bg-gray-50">
                         <td className="px-2 py-2 text-center">
-                          <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full ${
-                            member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่')
-                              ? 'bg-green-100 text-green-800'
-                              : member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
-                              ? 'ออกแล้ว'
-                              : member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่')
-                              ? 'อยู่'
-                              : (member.lineGroupStatus || '-')}
-                          </span>
+                          <div className="flex items-center justify-center gap-1">
+                            {/* Verified icon - show if member has lineUserId (verified identity) */}
+                            {member.lineUserId && (
+                              <span title="ยืนยันตัวตนแล้ว">
+                                <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              </span>
+                            )}
+                            <span className={`inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full ${
+                              member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่')
+                                ? 'bg-green-100 text-green-800'
+                                : member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
+                                ? 'ออกแล้ว'
+                                : member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่')
+                                ? 'อยู่'
+                                : (member.lineGroupStatus || '-')}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-2 py-2 text-sm font-medium text-gray-900">
                           {member.memberId}

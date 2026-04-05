@@ -34,8 +34,12 @@ export default function LoginPage() {
         {/* Logo & Header */}
         <div className="text-center mb-8">
           {/* Agents Club Logo */}
-          <div className="mx-auto w-24 h-24 bg-gradient-to-br from-[#1e3a5f] to-[#2d5a87] rounded-full flex items-center justify-center mb-6 shadow-lg">
-            <span className="text-white font-bold text-2xl">AC</span>
+          <div className="mx-auto w-28 h-28 mb-6">
+            <img
+              src="/images/Logo Agents club-01_0_0.jpg"
+              alt="Agents Club Logo"
+              className="w-full h-full object-contain rounded-full shadow-lg"
+            />
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             Agents Club

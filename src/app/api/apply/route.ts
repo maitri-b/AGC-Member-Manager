@@ -133,7 +133,12 @@ export async function POST(request: NextRequest) {
       businessCardFileUrl = uploadResult.businessCardFileUrl;
     } catch (uploadError) {
       console.error('Error uploading files to Google Drive:', uploadError);
-      return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์' }, { status: 500 });
+      const errorMessage = uploadError instanceof Error ? uploadError.message : 'Unknown error';
+      console.error('Upload error details:', errorMessage);
+      return NextResponse.json({
+        error: 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      }, { status: 500 });
     }
 
     // Create application document in Firestore

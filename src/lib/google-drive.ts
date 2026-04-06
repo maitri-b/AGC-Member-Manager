@@ -1,5 +1,6 @@
 // Google Drive Service for File Storage
 import { google } from 'googleapis';
+import { Readable } from 'stream';
 
 const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
@@ -49,7 +50,7 @@ export async function uploadFile(
     },
     media: {
       mimeType,
-      body: require('stream').Readable.from(fileBuffer),
+      body: Readable.from(fileBuffer),
     },
     fields: 'id, webViewLink, webContentLink',
   });

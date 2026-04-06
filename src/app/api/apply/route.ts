@@ -3,11 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { uploadApplicationDocumentsToStorage } from '@/lib/firebase-storage';
-import { uploadApplicationDocuments } from '@/lib/google-drive';
-
-const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,23 +12,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'กรุณาล็อกอินด้วย LINE ก่อนส่งใบสมัคร' }, { status: 401 });
     }
 
-    const formData = await request.formData();
+    const body = await request.json();
 
     // Extract form fields
     const applicationData = {
-      companyNameEN: formData.get('companyNameEN') as string || '',
-      companyNameTH: formData.get('companyNameTH') as string || '',
-      nickname: formData.get('nickname') as string || '',
-      positionCompany: formData.get('positionCompany') as string || '',
-      licenseNumber: formData.get('licenseNumber') as string || '',
-      lineId: formData.get('lineId') as string || '',
-      lineName: formData.get('lineName') as string || '',
-      email: formData.get('email') as string || '',
-      phone: formData.get('phone') as string || '',
-      mobile: formData.get('mobile') as string || '',
-      website: formData.get('website') as string || '',
-      sponsor1: formData.get('sponsor1') as string || '',
-      sponsor2: formData.get('sponsor2') as string || '',
+      companyNameEN: body.companyNameEN || '',
+      companyNameTH: body.companyNameTH || '',
+      nickname: body.nickname || '',
+      positionCompany: body.positionCompany || '',
+      licenseNumber: body.licenseNumber || '',
+      lineId: body.lineId || '',
+      lineName: body.lineName || '',
+      email: body.email || '',
+      phone: body.phone || '',
+      mobile: body.mobile || '',
+      website: body.website || '',
+      sponsor1: body.sponsor1 || '',
+      sponsor2: body.sponsor2 || '',
     };
 
     // Validate required fields
@@ -60,24 +55,6 @@ export async function POST(request: NextRequest) {
     // Validate email format
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(applicationData.email)) {
       return NextResponse.json({ error: 'กรุณากรอกอีเมลให้ถูกต้อง' }, { status: 400 });
-    }
-
-    // Get files
-    const licenseFile = formData.get('licenseFile') as File | null;
-    const businessCardFile = formData.get('businessCardFile') as File | null;
-
-    if (!licenseFile || !businessCardFile) {
-      return NextResponse.json({ error: 'กรุณาแนบเอกสารให้ครบถ้วน' }, { status: 400 });
-    }
-
-    // Validate files
-    for (const file of [licenseFile, businessCardFile]) {
-      if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-        return NextResponse.json({ error: 'รองรับเฉพาะไฟล์ .jpg, .png, .pdf เท่านั้น' }, { status: 400 });
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        return NextResponse.json({ error: 'ขนาดไฟล์ต้องไม่เกิน 2MB' }, { status: 400 });
-      }
     }
 
     const db = adminDb();
@@ -108,81 +85,15 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const applicationId = `APP-${timestamp}`;
 
-    // Upload files - try Firebase Storage first, then Google Drive as fallback
-    let licenseFileUrl = '';
-    let businessCardFileUrl = '';
-
-    const licenseBuffer = Buffer.from(await licenseFile.arrayBuffer());
-    const businessCardBuffer = Buffer.from(await businessCardFile.arrayBuffer());
-
-    const fileData = {
-      license: {
-        buffer: licenseBuffer,
-        name: licenseFile.name,
-        type: licenseFile.type,
-      },
-      businessCard: {
-        buffer: businessCardBuffer,
-        name: businessCardFile.name,
-        type: businessCardFile.type,
-      },
-    };
-
-    // Try Firebase Storage first (if bucket is configured)
-    const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-
-    if (storageBucket) {
-      try {
-        console.log('[Upload] Trying Firebase Storage...');
-        const storageResult = await uploadApplicationDocumentsToStorage(
-          applicationId,
-          fileData.license,
-          fileData.businessCard
-        );
-        licenseFileUrl = storageResult.licenseFileUrl;
-        businessCardFileUrl = storageResult.businessCardFileUrl;
-        console.log('[Upload] Firebase Storage upload successful');
-      } catch (storageError) {
-        console.error('[Upload] Firebase Storage failed:', storageError);
-        // Will try Google Drive next
-      }
-    }
-
-    // If Firebase Storage failed or not configured, try Google Drive
-    if (!licenseFileUrl || !businessCardFileUrl) {
-      try {
-        console.log('[Upload] Trying Google Drive...');
-        const driveResult = await uploadApplicationDocuments(
-          applicationId,
-          fileData.license,
-          fileData.businessCard
-        );
-        licenseFileUrl = driveResult.licenseFileUrl;
-        businessCardFileUrl = driveResult.businessCardFileUrl;
-        console.log('[Upload] Google Drive upload successful');
-      } catch (driveError) {
-        console.error('[Upload] Google Drive failed:', driveError);
-        // Will try Data URL fallback next
-      }
-    }
-
-    // If both failed, use Data URL (store file content as base64 in Firestore)
-    if (!licenseFileUrl || !businessCardFileUrl) {
-      console.log('[Upload] Using Data URL fallback...');
-      licenseFileUrl = `data:${fileData.license.type};base64,${fileData.license.buffer.toString('base64')}`;
-      businessCardFileUrl = `data:${fileData.businessCard.type};base64,${fileData.businessCard.buffer.toString('base64')}`;
-      console.log('[Upload] Data URL fallback successful');
-    }
-
     // Create application document in Firestore
+    // Note: Documents (license + business card) will be sent via LINE separately
     const applicationDoc = {
       applicationId,
       ...applicationData,
       lineUserId: session.user.id,
       lineDisplayName: session.user.name || '',
       lineProfilePicture: session.user.image || '',
-      licenseFileUrl,
-      businessCardFileUrl,
+      documentStatus: 'pending', // pending = waiting for documents via LINE
       status: 'pending', // pending, approved, rejected
       lineGroupStatus: 'รอนำเข้ากลุ่ม', // Default status
       createdAt: new Date(),
@@ -233,6 +144,7 @@ export async function GET(request: NextRequest) {
       application: {
         id: appDoc.id,
         status: appData.status,
+        documentStatus: appData.documentStatus,
         companyNameEN: appData.companyNameEN,
         nickname: appData.nickname,
         createdAt: appData.createdAt?.toDate?.() || appData.createdAt,

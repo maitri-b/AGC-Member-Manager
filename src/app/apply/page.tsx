@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import LineLoginButton from '@/components/LineLoginButton';
@@ -43,8 +43,8 @@ const initialFormData: ApplicationForm = {
   sponsor2: '',
 };
 
-const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+// LINE OA link for document submission
+const LINE_OA_LINK = 'https://lin.ee/YahadVz';
 
 export default function ApplyPage() {
   const { data: session, status } = useSession();
@@ -52,15 +52,10 @@ export default function ApplyPage() {
   const toast = useToast();
 
   const [formData, setFormData] = useState<ApplicationForm>(initialFormData);
-  const [licenseFile, setLicenseFile] = useState<File | null>(null);
-  const [businessCardFile, setBusinessCardFile] = useState<File | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const licenseInputRef = useRef<HTMLInputElement>(null);
-  const businessCardInputRef = useRef<HTMLInputElement>(null);
 
   // Pre-fill LINE name from session
   useEffect(() => {
@@ -78,36 +73,6 @@ export default function ApplyPage() {
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const validateFile = (file: File): string | null => {
-    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-      return 'กรุณาอัปโหลดไฟล์ .jpg, .png หรือ .pdf เท่านั้น';
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return 'ขนาดไฟล์ต้องไม่เกิน 2MB';
-    }
-    return null;
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'license' | 'businessCard') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const error = validateFile(file);
-    if (error) {
-      toast.error(error);
-      e.target.value = '';
-      return;
-    }
-
-    if (type === 'license') {
-      setLicenseFile(file);
-      setErrors(prev => ({ ...prev, licenseFile: '' }));
-    } else {
-      setBusinessCardFile(file);
-      setErrors(prev => ({ ...prev, businessCardFile: '' }));
     }
   };
 
@@ -137,10 +102,6 @@ export default function ApplyPage() {
       newErrors.licenseNumber = 'กรุณากรอกในรูปแบบ xx/xxxxx เช่น 11/12345';
     }
 
-    // File validation
-    if (!licenseFile) newErrors.licenseFile = 'กรุณาอัปโหลดใบอนุญาตประกอบธุรกิจนำเที่ยว';
-    if (!businessCardFile) newErrors.businessCardFile = 'กรุณาอัปโหลดนามบัตร';
-
     // Terms acceptance
     if (!acceptedTerms) newErrors.acceptedTerms = 'กรุณายอมรับเงื่อนไขและกฎกติกาของชมรม';
 
@@ -159,21 +120,12 @@ export default function ApplyPage() {
     setSubmitting(true);
 
     try {
-      // Create FormData for file upload
-      const submitData = new FormData();
-
-      // Add form fields
-      Object.entries(formData).forEach(([key, value]) => {
-        submitData.append(key, value);
-      });
-
-      // Add files
-      if (licenseFile) submitData.append('licenseFile', licenseFile);
-      if (businessCardFile) submitData.append('businessCardFile', businessCardFile);
-
       const response = await fetch('/api/apply', {
         method: 'POST',
-        body: submitData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -250,8 +202,8 @@ export default function ApplyPage() {
                   <ol className="list-decimal list-inside space-y-1 text-xs">
                     <li>ล็อกอินด้วย LINE Account</li>
                     <li>กรอกข้อมูลบริษัทและข้อมูลติดต่อ</li>
-                    <li>แนบเอกสาร (ใบอนุญาตนำเที่ยว + นามบัตร)</li>
                     <li>ยอมรับเงื่อนไขและส่งใบสมัคร</li>
+                    <li>ส่งเอกสาร (ใบอนุญาตนำเที่ยว + นามบัตร) ทาง LINE</li>
                     <li>รอการอนุมัติจากคณะกรรมการ</li>
                   </ol>
                 </div>
@@ -281,8 +233,8 @@ export default function ApplyPage() {
   // Submitted successfully
   if (submitted) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 px-4">
-        <div className="w-full max-w-md text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 px-4 py-8">
+        <div className="w-full max-w-lg text-center">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -296,11 +248,60 @@ export default function ApplyPage() {
               ทีมนายทะเบียนจะตรวจสอบข้อมูลและติดต่อกลับภายใน 3-5 วันทำการ
             </p>
 
+            {/* Document Submission Notice */}
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 text-left">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-orange-800 mb-2">
+                    เอกสารที่ต้องจัดส่งเพิ่มเติม
+                  </h3>
+                  <p className="text-sm text-orange-700 mb-3">
+                    กรุณาจัดส่งเอกสารดังต่อไปนี้ให้กับนายทะเบียนชมรม:
+                  </p>
+                  <ul className="text-sm text-orange-700 space-y-1 mb-4">
+                    <li className="flex items-start gap-2">
+                      <span className="font-medium">1.</span>
+                      <span><strong>ใบอนุญาตประกอบธุรกิจนำเที่ยว</strong> ฉบับปัจจุบัน (ต้องไม่หมดอายุ)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-medium">2.</span>
+                      <span><strong>นามบัตร</strong> ของผู้สมัคร</span>
+                    </li>
+                  </ul>
+                  <div className="bg-white rounded-lg p-3 border border-orange-200">
+                    <p className="text-sm text-gray-700 mb-2">
+                      <strong>ช่องทางการส่งเอกสาร:</strong>
+                    </p>
+                    <p className="text-sm text-gray-600 mb-3">
+                      กรุณาส่งเอกสารผ่านทาง LINE ของนายทะเบียนชมรม
+                    </p>
+                    <a
+                      href={LINE_OA_LINK}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                      </svg>
+                      ส่งเอกสารทาง LINE
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-blue-50 rounded-lg p-4 mb-6">
               <p className="text-sm text-blue-800">
                 <strong>ขั้นตอนถัดไป:</strong><br />
-                คณะกรรมการจะพิจารณาใบสมัครและติดต่อผู้รับรอง
-                หากผ่านการอนุมัติจะได้รับเชิญเข้ากลุ่ม LINE ของชมรม
+                1. ส่งเอกสารให้นายทะเบียนตามช่องทางด้านบน<br />
+                2. คณะกรรมการจะพิจารณาใบสมัครและติดต่อผู้รับรอง<br />
+                3. หากผ่านการอนุมัติจะได้รับเชิญเข้ากลุ่ม LINE ของชมรม
               </p>
             </div>
 
@@ -311,18 +312,6 @@ export default function ApplyPage() {
               >
                 กลับหน้าหลัก
               </button>
-
-              <div className="text-sm text-gray-500">
-                <p className="mb-2">หากมีคำถาม ติดต่อทีมนายทะเบียน</p>
-                <a href="https://lin.ee/YahadVz" target="_blank" rel="noopener noreferrer">
-                  <img
-                    src="https://scdn.line-apps.com/n/line_add_friends/btn/th.png"
-                    alt="เพิ่มเพื่อน"
-                    height="36"
-                    className="inline-block"
-                  />
-                </a>
-              </div>
             </div>
           </div>
         </div>
@@ -609,86 +598,37 @@ export default function ApplyPage() {
             </div>
           </div>
 
-          {/* Section 4: Documents */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Section 4: Document Notice */}
+          <div className="bg-orange-50 border border-orange-200 rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-orange-800 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              เอกสารแนบ
+              เอกสารที่ต้องจัดส่งเพิ่มเติม
             </h2>
 
-            <p className="text-sm text-gray-500 mb-4">
-              รองรับไฟล์ .jpg, .png, .pdf ขนาดไม่เกิน 2MB
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ใบอนุญาตประกอบธุรกิจนำเที่ยว <span className="text-red-500">*</span>
-                </label>
-                <div
-                  onClick={() => licenseInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors ${errors.licenseFile ? 'border-red-500 bg-red-50' : licenseFile ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}
-                >
-                  <input
-                    ref={licenseInputRef}
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    onChange={(e) => handleFileChange(e, 'license')}
-                    className="hidden"
-                  />
-                  {licenseFile ? (
-                    <div className="flex items-center justify-center gap-2 text-green-600">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="text-sm">{licenseFile.name}</span>
-                    </div>
-                  ) : (
-                    <div className="text-gray-500">
-                      <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-sm">คลิกเพื่อเลือกไฟล์</span>
-                    </div>
-                  )}
-                </div>
-                {errors.licenseFile && <p className="text-red-500 text-xs mt-1">{errors.licenseFile}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  นามบัตร <span className="text-red-500">*</span>
-                </label>
-                <div
-                  onClick={() => businessCardInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors ${errors.businessCardFile ? 'border-red-500 bg-red-50' : businessCardFile ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}
-                >
-                  <input
-                    ref={businessCardInputRef}
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    onChange={(e) => handleFileChange(e, 'businessCard')}
-                    className="hidden"
-                  />
-                  {businessCardFile ? (
-                    <div className="flex items-center justify-center gap-2 text-green-600">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="text-sm">{businessCardFile.name}</span>
-                    </div>
-                  ) : (
-                    <div className="text-gray-500">
-                      <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-sm">คลิกเพื่อเลือกไฟล์</span>
-                    </div>
-                  )}
-                </div>
-                {errors.businessCardFile && <p className="text-red-500 text-xs mt-1">{errors.businessCardFile}</p>}
+            <div className="bg-white rounded-lg p-4 border border-orange-200">
+              <p className="text-sm text-gray-700 mb-3">
+                <strong>หลังจากส่งใบสมัครแล้ว</strong> กรุณาจัดส่งเอกสารดังต่อไปนี้ให้กับนายทะเบียนชมรม:
+              </p>
+              <ul className="text-sm text-gray-700 space-y-2 mb-4">
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span><strong>ใบอนุญาตประกอบธุรกิจนำเที่ยว</strong> ฉบับปัจจุบัน (ต้องไม่หมดอายุ)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span><strong>นามบัตร</strong> ของผู้สมัคร</span>
+                </li>
+              </ul>
+              <div className="bg-orange-50 rounded-lg p-3">
+                <p className="text-sm text-orange-800">
+                  <strong>ช่องทางการส่งเอกสาร:</strong> กรุณาส่งเอกสารผ่านทาง LINE ของนายทะเบียนชมรม (จะแสดงลิงก์หลังส่งใบสมัครเรียบร้อย)
+                </p>
               </div>
             </div>
           </div>

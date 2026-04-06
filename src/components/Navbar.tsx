@@ -51,7 +51,7 @@ export default function Navbar() {
             <Link href="/dashboard" className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
                 <Image
-                  src="/images/Logo Agents club-01_0_0.jpg"
+                  src="/images/Logo Agents club-01_0_0.png"
                   alt="Agents Club Logo"
                   width={40}
                   height={40}

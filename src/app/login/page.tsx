@@ -36,7 +36,7 @@ export default function LoginPage() {
           {/* Agents Club Logo */}
           <div className="mx-auto w-28 h-28 mb-6">
             <img
-              src="/images/Logo Agents club-01_0_0.jpg"
+              src="/images/Logo Agents club-01_0_0.png"
               alt="Agents Club Logo"
               className="w-full h-full object-contain rounded-full shadow-lg"
             />

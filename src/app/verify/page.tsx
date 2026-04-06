@@ -218,7 +218,7 @@ export default function VerifyPage() {
         <div className="text-center mb-8">
           <div className="w-20 h-20 rounded-2xl overflow-hidden mx-auto mb-4 shadow-lg">
             <Image
-              src="/images/Logo Agents club-01_0_0.jpg"
+              src="/images/Logo Agents club-01_0_0.png"
               alt="Agents Club Logo"
               width={80}
               height={80}

@@ -34,6 +34,7 @@ export default function VerifyPage() {
   const router = useRouter();
   const [step, setStep] = useState<'check' | 'search' | 'confirm' | 'alreadyLinked' | 'dispute' | 'disputeSubmitted' | 'submitted' | 'verified'>('check');
   const [licenseNumber, setLicenseNumber] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
@@ -171,6 +172,7 @@ export default function VerifyPage() {
         body: JSON.stringify({
           memberId: memberInfo.memberId,
           licenseNumber: memberInfo.licenseNumber,
+          companyNameInput: companyName,
           phone,
         }),
       });
@@ -265,6 +267,23 @@ export default function VerifyPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ชื่อบริษัท/ร้าน <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="กรอกชื่อบริษัทหรือร้านของคุณ"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ใช้เพื่อยืนยันตัวตนกับทีมนายทะเบียน
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   เบอร์โทรศัพท์ <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -288,7 +307,7 @@ export default function VerifyPage() {
 
               <button
                 type="submit"
-                disabled={isLoading || !licenseNumber || !phone}
+                disabled={isLoading || !licenseNumber || !companyName || !phone}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading ? 'กำลังค้นหา...' : 'ค้นหาข้อมูลสมาชิก'}

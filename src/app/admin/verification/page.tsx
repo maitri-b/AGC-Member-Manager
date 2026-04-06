@@ -14,6 +14,7 @@ interface VerificationRequest {
   lineImage: string;
   memberId: string;
   licenseNumber: string;
+  companyNameInput?: string; // User input for admin comparison
   phone: string;
   memberInfo: {
     companyNameTH: string;
@@ -516,6 +517,10 @@ Helping & Sharing`;
                           <div className="flex justify-between">
                             <span className="text-xs text-gray-500">เลขใบอนุญาต:</span>
                             <span className="text-sm font-medium text-gray-900">{request.licenseNumber || '-'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-xs text-gray-500">ชื่อบริษัท (กรอกมา):</span>
+                            <span className="text-sm font-medium text-blue-700">{request.companyNameInput || '-'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-xs text-gray-500">เบอร์มือถือ:</span>

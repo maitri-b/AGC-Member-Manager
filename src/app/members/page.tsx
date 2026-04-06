@@ -16,6 +16,47 @@ interface MemberWithProfile extends Member {
   } | null;
 }
 
+// Contact Request types
+interface ContactRequest {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberCompany: string;
+  topic: 'license_expired' | 'inactive_member' | 'complaint' | 'line_not_found' | 'other';
+  topicLabel: string;
+  message: string;
+  complaintAgainst?: string;
+  complaintCompany?: string;
+  assigneeId: string;
+  assigneeName: string;
+  contactDate: string;
+  status: 'pending' | 'completed';
+  createdAt: string;
+  createdBy: string;
+  createdByName: string;
+  resolution?: string;
+  resolvedBy?: string;
+  resolvedByName?: string;
+  resolvedAt?: string;
+}
+
+interface StaffMember {
+  id: string;
+  lineDisplayName: string;
+  lineProfilePicture?: string;
+  role: string;
+}
+
+type ContactTopic = 'license_expired' | 'inactive_member' | 'complaint' | 'line_not_found' | 'other';
+
+const CONTACT_TOPICS: { value: ContactTopic; label: string }[] = [
+  { value: 'license_expired', label: 'ใบอนุญาตหมดอายุ/ถูกเพิกถอน' },
+  { value: 'inactive_member', label: 'สมาชิกไม่ได้เข้าร่วมกิจกรรม/ขาดการติดต่อ' },
+  { value: 'complaint', label: 'แจ้งข้อร้องเรียนระหว่างสมาชิก' },
+  { value: 'line_not_found', label: 'ไม่พบข้อมูลไลน์ของสมาชิก' },
+  { value: 'other', label: 'อื่นๆ' },
+];
+
 // Notification Modal Component
 function NotificationModal({
   member,
@@ -144,6 +185,506 @@ function NotificationModal({
   );
 }
 
+// Contact Modal Component
+function ContactModal({
+  member,
+  onClose,
+  staffList,
+  onSuccess,
+}: {
+  member: MemberWithProfile;
+  onClose: () => void;
+  staffList: StaffMember[];
+  onSuccess: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [contacts, setContacts] = useState<{ pending: ContactRequest[]; completed: ContactRequest[] }>({ pending: [], completed: [] });
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // New contact form state
+  const [selectedTopic, setSelectedTopic] = useState<ContactTopic | ''>('');
+  const [message, setMessage] = useState('');
+  const [complaintAgainst, setComplaintAgainst] = useState('');
+  const [complaintCompany, setComplaintCompany] = useState('');
+  const [assigneeId, setAssigneeId] = useState('');
+  const [contactDate, setContactDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Resolution form state
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [resolution, setResolution] = useState('');
+  const [resolvedById, setResolvedById] = useState('');
+
+  const [copied, setCopied] = useState(false);
+
+  // Fetch contacts for this member
+  useEffect(() => {
+    fetchContacts();
+  }, [member.memberId]);
+
+  const fetchContacts = async () => {
+    setLoadingContacts(true);
+    try {
+      const response = await fetch(`/api/admin/contacts?memberId=${member.memberId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setContacts({ pending: data.pending || [], completed: data.completed || [] });
+      }
+    } catch (err) {
+      console.error('Error fetching contacts:', err);
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  // Generate message based on topic
+  const generateMessage = (topic: ContactTopic) => {
+    const nickname = member.nickname || member.fullNameTH || '';
+    const companyName = member.companyNameTH || member.companyNameEN || '';
+
+    switch (topic) {
+      case 'license_expired':
+        return `สวัสดีครับ คุณ${nickname}
+บริษัท ${companyName}
+
+ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
+ใบอนุญาตธุรกิจนำเที่ยว เลขที่ ${member.licenseNumber || '-'}
+มีสถานะ ${member.status || '-'} (หมดอายุ ${member.membershipExpiry || '-'})
+
+หากคุณได้ต่ออายุใบอนุญาตแล้ว หรือมีข้อมูลที่อัพเดท
+รบกวนส่งสำเนาใบอนุญาตใหม่มาทาง LINE นี้ด้วยนะครับ
+
+เนื่องจากนโยบายของชมรม อนุญาตให้เฉพาะสมาชิกที่มีใบอนุญาตที่ยังไม่หมดอายุอยู่ในกลุ่ม
+หากไม่ได้รับการติดต่อกลับ ทางทีมทะเบียนจะขอนำชื่อออกจาก LINE กลุ่มไว้ก่อนนะครับ
+
+ถ้าทีมทะเบียนได้รับข้อมูลอัพเดทและตรวจสอบเรียบร้อยแล้ว
+ทางทีมงานจะนำกลับเข้ากลุ่มให้ทันทีครับ
+
+ขอบคุณครับ
+ทีมทะเบียนชมรม Agents Club`;
+
+      case 'inactive_member':
+        return `สวัสดีครับ คุณ${nickname}
+บริษัท ${companyName}
+
+ทางชมรม Agents Club พบว่าท่านไม่ได้เข้าร่วมกิจกรรมของชมรมมาเกิน 12 เดือนแล้ว
+
+เราอยากทราบว่าท่านยังประกอบธุรกิจนำเที่ยวอยู่หรือไม่
+และยังสนใจเข้าร่วมกิจกรรมกับชมรมอยู่มั้ยครับ
+
+ชมรม Agents Club เน้นการมีส่วนร่วมของสมาชิก
+การไม่เข้าร่วมกิจกรรมเป็นเวลานานจะมีผลต่อการอยู่ในกลุ่ม LINE ของชมรม
+
+รบกวนตอบกลับมาทาง LINE นี้ด้วยนะครับ
+
+ขอบคุณครับ
+ทีมทะเบียนชมรม Agents Club`;
+
+      case 'complaint':
+        return `เรียนคุณ${nickname} ${companyName}
+
+ทางคณะกรรมการ ได้รับการร้องเรียนจากสมาชิกของชมรม ${complaintAgainst || '[ชื่อคู่กรณี]'} (${complaintCompany || '[บริษัทคู่กรณี]'}) ตามหนังสือที่แนบมาด้วย
+
+ทางชมรมจึงขอให้สมาชิกได้เคลียร์กันให้เรียบร้อยตามที่มีเรื่องร้องเรียนมา หรือสามารถชี้แจงมาที่คณะกรรมการของชมรมได้ครับ
+
+ในกรณีที่ไม่สามารถเคลียร์กันได้ ทางคณะกรรมการและทีมทะเบียนจะต้องนำท่านออกจากห้องชมรมก่อน
+
+เมื่อเคลียร์กันเรียบร้อยแล้ว ทางทีมทะเบียนจะนำ LINE ของท่านกลับมาในห้องไลน์กลุ่มชมรมอีกครั้ง
+
+#คณะกรรมการชมรม Agents Club`;
+
+      case 'line_not_found':
+        return `สวัสดีครับ คุณ${nickname}
+บริษัท ${companyName}
+
+ทางทีมทะเบียนชมรม Agents Club ไม่พบไลน์ที่ท่านเคยลงทะเบียนไว้ในกลุ่มชมรม
+
+ไม่ทราบว่า:
+- ท่านยังอยู่ในกลุ่มอยู่หรือไม่
+- มีการเปลี่ยนชื่อไลน์หรือไม่
+- หรือมีการเปลี่ยนตัว LINE Account ที่เข้าร่วมหรือไม่
+
+รบกวนช่วยอัพเดทข้อมูลให้ทีมทะเบียนด้วยนะครับ
+เพื่อทางทีมจะได้อัพเดทในระบบต่อไป
+
+ขอบคุณครับ
+ทีมทะเบียนชมรม Agents Club`;
+
+      case 'other':
+      default:
+        return '';
+    }
+  };
+
+  // Update message when topic or complaint fields change
+  useEffect(() => {
+    if (selectedTopic && selectedTopic !== 'other') {
+      setMessage(generateMessage(selectedTopic));
+    }
+  }, [selectedTopic, complaintAgainst, complaintCompany]);
+
+  const handleCopyMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedTopic || !message || !assigneeId) {
+      alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const selectedStaff = staffList.find(s => s.id === assigneeId);
+      const response = await fetch('/api/admin/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberId: member.memberId,
+          memberName: member.nickname || member.fullNameTH || '',
+          memberCompany: member.companyNameTH || member.companyNameEN || '',
+          topic: selectedTopic,
+          topicLabel: CONTACT_TOPICS.find(t => t.value === selectedTopic)?.label || '',
+          message,
+          complaintAgainst: selectedTopic === 'complaint' ? complaintAgainst : null,
+          complaintCompany: selectedTopic === 'complaint' ? complaintCompany : null,
+          assigneeId,
+          assigneeName: selectedStaff?.lineDisplayName || '',
+          contactDate,
+          previousLineStatus: member.lineGroupStatus,
+          updateLineStatus: selectedTopic === 'license_expired',
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to create contact');
+      }
+
+      // Reset form and refresh
+      setShowNewForm(false);
+      setSelectedTopic('');
+      setMessage('');
+      setComplaintAgainst('');
+      setComplaintCompany('');
+      setAssigneeId('');
+      fetchContacts();
+      onSuccess();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResolve = async () => {
+    if (!resolvingId || !resolution) {
+      alert('กรุณากรอกผลการดำเนินการ');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const selectedStaff = staffList.find(s => s.id === resolvedById);
+      const response = await fetch('/api/admin/contacts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: resolvingId,
+          resolution,
+          resolvedById: resolvedById || undefined,
+          resolvedByName: selectedStaff?.lineDisplayName || '',
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to resolve contact');
+      }
+
+      setResolvingId(null);
+      setResolution('');
+      setResolvedById('');
+      fetchContacts();
+      onSuccess();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">ติดต่อสมาชิก</h3>
+            <p className="text-sm text-gray-500">{member.nickname || member.fullNameTH} - {member.companyNameTH || member.companyNameEN}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="px-6 py-3 border-b border-gray-200 flex items-center gap-4 flex-shrink-0">
+          <button
+            onClick={() => { setActiveTab('pending'); setShowNewForm(false); setResolvingId(null); }}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium ${activeTab === 'pending' && !showNewForm ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'}`}
+          >
+            กำลังดำเนินการ ({contacts.pending.length})
+          </button>
+          <button
+            onClick={() => { setActiveTab('completed'); setShowNewForm(false); setResolvingId(null); }}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium ${activeTab === 'completed' && !showNewForm ? 'bg-green-100 text-green-700' : 'text-gray-600 hover:bg-gray-100'}`}
+          >
+            เสร็จสิ้น ({contacts.completed.length})
+          </button>
+          <button
+            onClick={() => { setShowNewForm(true); setResolvingId(null); }}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium ${showNewForm ? 'bg-blue-100 text-blue-700' : 'text-blue-600 hover:bg-blue-50'}`}
+          >
+            + สร้างการติดต่อใหม่
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {showNewForm ? (
+            /* New Contact Form */
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">หัวข้อเรื่อง *</label>
+                <select
+                  value={selectedTopic}
+                  onChange={(e) => setSelectedTopic(e.target.value as ContactTopic)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">เลือกหัวข้อ...</option>
+                  {CONTACT_TOPICS.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Complaint-specific fields */}
+              {selectedTopic === 'complaint' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อคู่กรณี *</label>
+                    <input
+                      type="text"
+                      value={complaintAgainst}
+                      onChange={(e) => setComplaintAgainst(e.target.value)}
+                      placeholder="ชื่อผู้ร้องเรียน"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">บริษัทคู่กรณี *</label>
+                    <input
+                      type="text"
+                      value={complaintCompany}
+                      onChange={(e) => setComplaintCompany(e.target.value)}
+                      placeholder="ชื่อบริษัทผู้ร้องเรียน"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ข้อความ *</label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={8}
+                  placeholder={selectedTopic === 'other' ? 'พิมพ์ข้อความที่ต้องการส่ง...' : 'ข้อความจะถูกสร้างอัตโนมัติ'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                />
+                <button
+                  onClick={handleCopyMessage}
+                  className={`mt-2 px-3 py-1.5 rounded-md text-sm flex items-center gap-1 ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  {copied ? (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      คัดลอกแล้ว
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Copy ข้อความ
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ผู้รับผิดชอบ *</label>
+                  <select
+                    value={assigneeId}
+                    onChange={(e) => setAssigneeId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">เลือกผู้รับผิดชอบ...</option>
+                    {staffList.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.lineDisplayName} ({s.role === 'admin' ? 'Admin' : 'Committee'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">วันที่ติดต่อ *</label>
+                  <input
+                    type="date"
+                    value={contactDate}
+                    onChange={(e) => setContactDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {selectedTopic === 'license_expired' && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                  <p className="text-sm text-yellow-800">
+                    <strong>หมายเหตุ:</strong> เมื่อบันทึก สถานะไลน์ของสมาชิกจะถูกเปลี่ยนเป็น &quot;รอผลการติดต่อ&quot;
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : resolvingId ? (
+            /* Resolution Form */
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-900">สรุปผลดำเนินการ</h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ผลการดำเนินการ *</label>
+                <textarea
+                  value={resolution}
+                  onChange={(e) => setResolution(e.target.value)}
+                  rows={4}
+                  placeholder="สรุปผลการติดต่อ..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ผู้สรุปผล</label>
+                <select
+                  value={resolvedById}
+                  onChange={(e) => setResolvedById(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">เลือกผู้สรุปผล (หรือใช้ตัวเอง)</option>
+                  {staffList.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.lineDisplayName} ({s.role === 'admin' ? 'Admin' : 'Committee'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            /* Contact List */
+            <div className="space-y-3">
+              {loadingContacts ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-500 text-sm">กำลังโหลด...</p>
+                </div>
+              ) : (activeTab === 'pending' ? contacts.pending : contacts.completed).length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {activeTab === 'pending' ? 'ไม่มีเรื่องที่กำลังดำเนินการ' : 'ไม่มีเรื่องที่เสร็จสิ้น'}
+                </div>
+              ) : (
+                (activeTab === 'pending' ? contacts.pending : contacts.completed).map(c => (
+                  <div key={c.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">{c.topicLabel}</span>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                          <span>วันที่: {formatDate(c.contactDate)}</span>
+                          <span>•</span>
+                          <span>ผู้รับผิดชอบ: {c.assigneeName}</span>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                        {c.status === 'pending' ? 'กำลังดำเนินการ' : 'เสร็จสิ้น'}
+                      </span>
+                    </div>
+                    <div className="mt-3 p-3 bg-gray-50 rounded text-sm text-gray-700 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                      {c.message}
+                    </div>
+                    {c.resolution && (
+                      <div className="mt-2 p-3 bg-green-50 rounded text-sm text-green-800">
+                        <strong>ผลดำเนินการ:</strong> {c.resolution}
+                        <div className="text-xs text-green-600 mt-1">
+                          โดย {c.resolvedByName} เมื่อ {formatDate(c.resolvedAt || '')}
+                        </div>
+                      </div>
+                    )}
+                    {c.status === 'pending' && (
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => { setResolvingId(c.id); setResolution(''); setResolvedById(''); }}
+                          className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
+                        >
+                          สรุปผล
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {(showNewForm || resolvingId) && (
+          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+            <button
+              onClick={() => { setShowNewForm(false); setResolvingId(null); }}
+              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              ยกเลิก
+            </button>
+            <button
+              onClick={showNewForm ? handleSubmit : handleResolve}
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saving ? 'กำลังบันทึก...' : showNewForm ? 'บันทึกการติดต่อ' : 'บันทึกผลดำเนินการ'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MembersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -156,6 +697,16 @@ export default function MembersPage() {
   const [notifyMember, setNotifyMember] = useState<MemberWithProfile | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
   const toast = useToast();
+
+  // Contact Modal state
+  const [contactMember, setContactMember] = useState<MemberWithProfile | null>(null);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+
+  // Action menu state
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Copy state
+  const [copiedIds, setCopiedIds] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -170,7 +721,21 @@ export default function MembersPage() {
 
   useEffect(() => {
     fetchAllMembers();
+    fetchStaff();
   }, []);
+
+  // Fetch staff list for contact modal
+  const fetchStaff = async () => {
+    try {
+      const response = await fetch('/api/admin/staff');
+      if (response.ok) {
+        const data = await response.json();
+        setStaffList(data.staff || []);
+      }
+    } catch (err) {
+      console.error('Error fetching staff:', err);
+    }
+  };
 
   const fetchAllMembers = async () => {
     setLoading(true);
@@ -364,6 +929,31 @@ export default function MembersPage() {
     return !normalStatuses.includes(status);
   };
 
+  // Handle copy member IDs
+  const handleCopyMemberIds = async () => {
+    const ids = filteredMembers.map(m => m.memberId).filter(Boolean).join(',');
+    try {
+      await navigator.clipboard.writeText(ids);
+      setCopiedIds(true);
+      toast.success(`คัดลอก ${filteredMembers.length} รหัสสมาชิกแล้ว`);
+      setTimeout(() => setCopiedIds(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      toast.error('ไม่สามารถคัดลอกได้');
+    }
+  };
+
+  // Handle click outside menu to close it
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (openMenuId && !(e.target as Element).closest('.action-menu')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openMenuId]);
+
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
     // Total registered members
@@ -536,6 +1126,35 @@ export default function MembersPage() {
           </div>
         </div>
 
+        {/* Toolbar */}
+        <div className="bg-white rounded-lg shadow p-3 mb-6 flex items-center gap-3">
+          <button
+            onClick={handleCopyMemberIds}
+            disabled={filteredMembers.length === 0}
+            className={`px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors ${
+              copiedIds
+                ? 'bg-green-100 text-green-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+            }`}
+          >
+            {copiedIds ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                คัดลอกแล้ว
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Copy รหัสสมาชิก ({filteredMembers.length} รายการ)
+              </>
+            )}
+          </button>
+        </div>
+
         {/* Members Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {loading ? (
@@ -697,18 +1316,34 @@ export default function MembersPage() {
                         </td>
                         <td className="px-2 py-2 text-center">
                           <div className="flex items-center justify-center gap-1">
+                            {/* View detail button - icon only on mobile */}
                             <button
                               onClick={() => router.push(`/members/${member.memberId}`)}
-                              className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                              title="ดูรายละเอียด"
                             >
-                              ดู
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+
+                            {/* Contact member button */}
+                            <button
+                              onClick={() => setContactMember(member)}
+                              className="text-purple-600 hover:text-purple-800 p-1"
+                              title="ติดต่อสมาชิก"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
                             </button>
 
                             {/* Notification button for non-normal status */}
                             {isStatusNotNormal(member.status) && (
                               <button
                                 onClick={() => setNotifyMember(member)}
-                                className="text-orange-600 hover:text-orange-800 text-sm font-medium ml-1"
+                                className="text-orange-600 hover:text-orange-800 p-1"
                                 title="แจ้งเตือนสมาชิก"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -736,6 +1371,19 @@ export default function MembersPage() {
           onClose={() => setNotifyMember(null)}
           onSend={handleSendNotification}
           sending={sendingNotification}
+        />
+      )}
+
+      {/* Contact Modal */}
+      {contactMember && (
+        <ContactModal
+          member={contactMember}
+          onClose={() => setContactMember(null)}
+          staffList={staffList}
+          onSuccess={() => {
+            toast.success('บันทึกเรียบร้อยแล้ว');
+            fetchAllMembers(); // Refresh members in case LINE status changed
+          }}
         />
       )}
 

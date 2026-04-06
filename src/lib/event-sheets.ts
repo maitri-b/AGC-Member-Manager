@@ -321,8 +321,9 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
   }
 
   const allRegistrations = await getEventRegistrations(event.sheetName);
+  // Only count registrations with attendanceType = 'agent' (exclude empty values)
   const agentRegistrations = allRegistrations.filter(r =>
-    r.attendanceType?.toLowerCase() === 'agent' || !r.attendanceType
+    r.attendanceType?.toLowerCase() === 'agent'
   );
 
   const members = await getAllMembers();

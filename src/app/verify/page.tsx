@@ -184,6 +184,17 @@ export default function VerifyPage() {
         return;
       }
 
+      // Update verificationStatus with the new request info
+      setVerificationStatus({
+        hasRequest: true,
+        status: 'pending',
+        memberId: memberInfo.memberId,
+        memberInfo: {
+          companyNameTH: memberInfo.companyNameTH,
+          fullNameTH: memberInfo.fullNameTH,
+        },
+      });
+
       setStep('submitted');
     } catch (err) {
       setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
@@ -205,8 +216,14 @@ export default function VerifyPage() {
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">AC</span>
+          <div className="w-20 h-20 rounded-2xl overflow-hidden mx-auto mb-4 shadow-lg">
+            <Image
+              src="/images/Logo Agents club-01_0_0.jpg"
+              alt="Agents Club Logo"
+              width={80}
+              height={80}
+              className="w-full h-full object-cover"
+            />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">ยืนยันตัวตนสมาชิก</h1>
           <p className="text-gray-600 mt-2">Agents Club Member Verification</p>
@@ -315,9 +332,15 @@ export default function VerifyPage() {
             </form>
 
             <div className="mt-6 pt-6 border-t border-gray-200">
-              <p className="text-sm text-gray-500 text-center">
+              <p className="text-sm text-gray-500 text-center mb-4">
                 ไม่พบข้อมูล? กรุณาติดต่อ Admin
               </p>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                กลับไปหน้าหลัก
+              </button>
             </div>
           </div>
         )}

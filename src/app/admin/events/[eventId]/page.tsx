@@ -46,6 +46,7 @@ interface EventData {
     totalRegistrations: number;
     agentRegistrations: number;
     confirmedCount: number;
+    verifiedMemberCount: number;
   };
   attendees: Attendee[];
 }
@@ -204,18 +205,22 @@ export default function EventDetailPage() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <p className="text-3xl font-bold text-blue-600">{eventData.summary.totalRegistrations}</p>
             <p className="text-sm text-gray-500">ลงทะเบียนทั้งหมด</p>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <p className="text-3xl font-bold text-purple-600">{eventData.summary.agentRegistrations}</p>
-            <p className="text-sm text-gray-500">สมาชิก Agent Club</p>
+            <p className="text-sm text-gray-500">เอเจ้นท์ที่เข้าร่วม</p>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <p className="text-3xl font-bold text-green-600">{eventData.summary.confirmedCount}</p>
-            <p className="text-sm text-gray-500">ยืนยันแล้ว</p>
+            <p className="text-sm text-gray-500">ยืนยันเข้าร่วม</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center border-2 border-cyan-200">
+            <p className="text-3xl font-bold text-cyan-600">{eventData.summary.verifiedMemberCount}</p>
+            <p className="text-sm text-gray-500">สมาชิก AC ยืนยันตัวตน</p>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <p className="text-3xl font-bold text-orange-600">

@@ -20,6 +20,14 @@ interface Event {
   createdBy?: string;
 }
 
+interface EventSummary {
+  eventId: string;
+  totalRegistrations: number;
+  agentRegistrations: number;
+  confirmedCount: number;
+  verifiedMemberCount: number;
+}
+
 interface EventFormData {
   eventName: string;
   eventNameEN: string;
@@ -46,7 +54,9 @@ export default function AdminEventsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
+  const [summaries, setSummaries] = useState<Map<string, EventSummary>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadingSummaries, setLoadingSummaries] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -68,6 +78,7 @@ export default function AdminEventsPage() {
 
   useEffect(() => {
     fetchEvents();
+    fetchSummaries();
   }, []);
 
   const fetchEvents = async () => {
@@ -84,6 +95,25 @@ export default function AdminEventsPage() {
       setError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSummaries = async () => {
+    setLoadingSummaries(true);
+    try {
+      const response = await fetch('/api/admin/events/summary');
+      if (response.ok) {
+        const data = await response.json();
+        const summaryMap = new Map<string, EventSummary>();
+        (data.summaries || []).forEach((s: EventSummary) => {
+          summaryMap.set(s.eventId, s);
+        });
+        setSummaries(summaryMap);
+      }
+    } catch (err) {
+      console.error('Error fetching summaries:', err);
+    } finally {
+      setLoadingSummaries(false);
     }
   };
 
@@ -307,6 +337,9 @@ export default function AdminEventsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Sheet Name
                 </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  ผู้เข้าร่วม / สมาชิก AC
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   สถานะ
                 </th>
@@ -318,7 +351,7 @@ export default function AdminEventsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {events.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     ยังไม่มีกิจกรรม กดปุ่ม &quot;เพิ่มกิจกรรมใหม่&quot; เพื่อเริ่มต้น
                   </td>
                 </tr>
@@ -347,6 +380,24 @@ export default function AdminEventsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <code className="text-xs bg-gray-100 px-2 py-1 rounded">{event.sheetName}</code>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {loadingSummaries ? (
+                        <span className="text-gray-400 text-sm">กำลังโหลด...</span>
+                      ) : summaries.has(event.eventId) ? (
+                        <div className="text-sm">
+                          <span className="font-semibold text-blue-600">
+                            {summaries.get(event.eventId)?.agentRegistrations || 0}
+                          </span>
+                          <span className="text-gray-400 mx-1">/</span>
+                          <span className="font-semibold text-cyan-600">
+                            {summaries.get(event.eventId)?.verifiedMemberCount || 0}
+                          </span>
+                          <span className="text-gray-500 text-xs ml-1">คน</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button

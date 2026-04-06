@@ -51,11 +51,18 @@ export async function GET(
       }
     });
 
-    // Enrich attendees with LINE profile data
+    // Enrich attendees with LINE profile data and count verified members
+    let verifiedMemberCount = 0;
+
     const attendeesWithProfile = summary.attendees.map(attendee => {
       const lineProfile = attendee.member?.memberId
         ? lineProfilesMap.get(attendee.member.memberId)
         : null;
+
+      // Count verified members (has LINE profile = verified through the system)
+      if (lineProfile) {
+        verifiedMemberCount++;
+      }
 
       // Check status for confirmed - ensure status is a string
       const rawStatus = attendee.registration.status;
@@ -99,6 +106,7 @@ export async function GET(
         totalRegistrations: summary.totalRegistrations,
         agentRegistrations: summary.agentRegistrations,
         confirmedCount: summary.confirmedCount,
+        verifiedMemberCount, // Members who verified identity through LINE
       },
       attendees: attendeesWithProfile,
     });

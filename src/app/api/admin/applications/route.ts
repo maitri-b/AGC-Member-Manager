@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
+import { addMember, getNextMemberId } from '@/lib/google-sheets';
+import { Member } from '@/types/member';
 
 // GET - List all membership applications
 export async function GET(request: NextRequest) {
@@ -23,15 +25,10 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status'); // pending, approved, rejected, all
 
     const db = adminDb();
-    let query = db.collection('membershipApplications').orderBy('createdAt', 'desc');
+    // Fetch all applications without orderBy to avoid composite index requirement
+    const snapshot = await db.collection('membershipApplications').get();
 
-    if (status && status !== 'all') {
-      query = query.where('status', '==', status);
-    }
-
-    const snapshot = await query.limit(100).get();
-
-    const applications = snapshot.docs.map(doc => {
+    let applications = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -40,6 +37,21 @@ export async function GET(request: NextRequest) {
         updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
       };
     });
+
+    // Filter by status in memory
+    if (status && status !== 'all') {
+      applications = applications.filter(app => app.status === status);
+    }
+
+    // Sort by createdAt descending in memory
+    applications.sort((a, b) => {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt || 0);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    // Limit to 100
+    applications = applications.slice(0, 100);
 
     return NextResponse.json({ applications });
   } catch (error) {
@@ -93,6 +105,56 @@ export async function PUT(request: NextRequest) {
         updateData.approvedAt = new Date();
         updateData.approvedBy = session.user.id;
         updateData.approvedByName = session.user.name || '';
+
+        // Save to Google Sheet when approved
+        const applicationData = doc.data();
+        try {
+          // Generate new member ID
+          const memberId = await getNextMemberId(new Date().getFullYear());
+
+          // Map application data to Member format
+          const newMember: Partial<Member> = {
+            memberId,
+            companyNameEN: applicationData?.companyNameEN || '',
+            companyNameTH: applicationData?.companyNameTH || '',
+            fullNameTH: '', // Not collected in application form
+            nickname: applicationData?.nickname || '',
+            lineId: applicationData?.lineId || '',
+            lineName: applicationData?.lineName || '',
+            phone: applicationData?.phone || '',
+            mobile: applicationData?.mobile || '',
+            email: applicationData?.email || '',
+            website: applicationData?.website || '',
+            licenseNumber: applicationData?.licenseNumber || '',
+            licenseExpiry: '', // Will be updated later by admin
+            positionCompany: applicationData?.positionCompany || '',
+            positionClub: '', // New member, no club position yet
+            membershipExpiry: '', // Will be set by admin
+            status: 'ปกติ',
+            sponsor1: applicationData?.sponsor1 || '',
+            sponsor2: applicationData?.sponsor2 || '',
+            lineGroupStatus: 'รอนำเข้ากลุ่ม',
+            lineGroupJoinDate: '',
+            lineGroupJoinBy: '',
+            lineGroupLeaveDate: '',
+            lineGroupLeaveBy: '',
+            lineUserId: applicationData?.lineUserId || '',
+            lineDisplayName: applicationData?.lineDisplayName || '',
+            lastUpdated: new Date().toISOString(),
+            updatedBy: session.user.name || session.user.id,
+          };
+
+          const savedMemberId = await addMember(newMember);
+          if (savedMemberId) {
+            updateData.memberId = savedMemberId;
+            console.log(`Application ${applicationId} approved - Member ${savedMemberId} created in Google Sheet`);
+          } else {
+            console.error(`Failed to save member to Google Sheet for application ${applicationId}`);
+          }
+        } catch (sheetError) {
+          console.error('Error saving to Google Sheet:', sheetError);
+          // Don't fail the approval, but log the error
+        }
       } else if (status === 'rejected') {
         updateData.rejectedAt = new Date();
         updateData.rejectedBy = session.user.id;

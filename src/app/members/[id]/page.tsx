@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
-import { Member } from '@/types/member';
+import { Member, parseThaiDate } from '@/types/member';
 import Navbar from '@/components/Navbar';
 import { hasPermission } from '@/lib/permissions';
 import { Toast, useToast } from '@/components/Toast';
@@ -15,6 +15,47 @@ interface LineProfile {
   verifiedAt: string | null;
 }
 
+// Thai month names
+const THAI_MONTHS = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+// Format date for display: เดือนภาษาไทย ปี ค.ศ. (e.g., "มีนาคม 2025")
+function formatThaiMonthYear(dateStr: string): string {
+  if (!dateStr) return '-';
+  const date = parseThaiDate(dateStr);
+  if (!date) return dateStr;
+
+  const month = THAI_MONTHS[date.getMonth()];
+  const year = date.getFullYear(); // Gregorian year (ค.ศ.)
+  return `${month} ${year}`;
+}
+
+// Convert date string (mm/dd/yyyy or yyyy-mm-dd) to yyyy-mm-dd for date picker
+function toDatePickerFormat(dateStr: string): string {
+  if (!dateStr) return '';
+  const date = parseThaiDate(dateStr);
+  if (!date) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Convert yyyy-mm-dd (from date picker) to mm/dd/yyyy (for Google Sheet)
+function toGoogleSheetFormat(dateStr: string): string {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  return `${month}/${day}/${year}`;
+}
+
 // Editable fields for admin
 const EDITABLE_FIELDS = [
   { key: 'nickname', label: 'ชื่อเล่น', type: 'text' },
@@ -22,14 +63,14 @@ const EDITABLE_FIELDS = [
   { key: 'companyNameTH', label: 'ชื่อบริษัท (ไทย)', type: 'text' },
   { key: 'companyNameEN', label: 'ชื่อบริษัท (EN)', type: 'text' },
   { key: 'licenseNumber', label: 'เลขที่ใบอนุญาต', type: 'text' },
-  { key: 'status', label: 'สถานะใบอนุญาต', type: 'select', options: ['ปกติ', 'หมดอายุ', 'ยกเลิก', 'เพิกถอน', 'พักใช้', 'รอนำเข้า'] },
-  { key: 'lineGroupStatus', label: 'สถานะไลน์กลุ่ม', type: 'select', options: ['ปกติ', 'อยู่ในกลุ่ม', 'ออกจากกลุ่ม', 'รอนำเข้ากลุ่ม', 'รอผลการติดต่อ'] },
+  { key: 'status', label: 'สถานะใบอนุญาต', type: 'select', options: ['ปกติ', 'ยกเลิก', 'เพิกถอน', 'หมดอายุตามกฏหมาย'] },
+  { key: 'lineGroupStatus', label: 'สถานะไลน์กลุ่ม', type: 'select', options: ['ปกติ', 'ออกจากกลุ่มแล้ว', 'รอนำเข้ากลุ่ม', 'รอผลการติดต่อ'] },
   { key: 'phone', label: 'โทรศัพท์', type: 'text' },
   { key: 'mobile', label: 'มือถือ', type: 'text' },
   { key: 'email', label: 'อีเมล', type: 'email' },
   { key: 'lineName', label: 'ชื่อ LINE (ที่แจ้งมา)', type: 'text' },
   { key: 'lineId', label: 'LINE ID', type: 'text' },
-  { key: 'membershipExpiry', label: 'วันหมดอายุใบอนุญาต', type: 'text' },
+  { key: 'membershipExpiry', label: 'วันหมดอายุใบอนุญาต', type: 'date' },
   { key: 'sponsor1', label: 'ผู้รับรอง 1', type: 'text' },
   { key: 'sponsor2', label: 'ผู้รับรอง 2', type: 'text' },
 ] as const;
@@ -79,7 +120,13 @@ export default function MemberDetailPage() {
     if (!member) return;
     const data: Record<string, string> = {};
     EDITABLE_FIELDS.forEach(field => {
-      data[field.key] = ((member as unknown) as Record<string, unknown>)[field.key]?.toString() || '';
+      const value = ((member as unknown) as Record<string, unknown>)[field.key]?.toString() || '';
+      // Convert date fields to yyyy-mm-dd for date picker
+      if (field.type === 'date' && value) {
+        data[field.key] = toDatePickerFormat(value);
+      } else {
+        data[field.key] = value;
+      }
     });
     setEditData(data);
     setShowEditModal(true);
@@ -90,10 +137,18 @@ export default function MemberDetailPage() {
     if (!member) return;
     setSaving(true);
     try {
+      // Convert date fields back to mm/dd/yyyy format for Google Sheet
+      const dataToSave = { ...editData };
+      EDITABLE_FIELDS.forEach(field => {
+        if (field.type === 'date' && dataToSave[field.key]) {
+          dataToSave[field.key] = toGoogleSheetFormat(dataToSave[field.key]);
+        }
+      });
+
       const response = await fetch(`/api/members/${memberId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editData),
+        body: JSON.stringify(dataToSave),
       });
       if (!response.ok) {
         const data = await response.json();
@@ -434,7 +489,7 @@ export default function MemberDetailPage() {
               </div>
               <div>
                 <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
-                <dd className="text-gray-900">{member.membershipExpiry || member.licenseExpiry || '-'}</dd>
+                <dd className="text-gray-900">{formatThaiMonthYear(member.membershipExpiry || member.licenseExpiry || '')}</dd>
               </div>
             </dl>
           </div>

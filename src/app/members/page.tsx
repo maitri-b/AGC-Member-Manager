@@ -216,6 +216,7 @@ function ContactModal({
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolution, setResolution] = useState('');
   const [resolvedById, setResolvedById] = useState('');
+  const [resolvedLineStatus, setResolvedLineStatus] = useState<string>('');
 
   const [copied, setCopied] = useState(false);
 
@@ -400,6 +401,11 @@ function ContactModal({
       return;
     }
 
+    if (!resolvedLineStatus) {
+      alert('กรุณาเลือกผลสถานะไลน์');
+      return;
+    }
+
     setSaving(true);
     try {
       const selectedStaff = staffList.find(s => s.id === resolvedById);
@@ -411,6 +417,8 @@ function ContactModal({
           resolution,
           resolvedById: resolvedById || undefined,
           resolvedByName: selectedStaff?.lineDisplayName || '',
+          memberId: member.memberId,
+          resolvedLineStatus,
         }),
       });
 
@@ -422,6 +430,7 @@ function ContactModal({
       setResolvingId(null);
       setResolution('');
       setResolvedById('');
+      setResolvedLineStatus('');
       fetchContacts();
       onSuccess();
     } catch (err) {
@@ -617,6 +626,50 @@ function ContactModal({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
+              {/* LINE Status Radio Buttons */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">ผลสถานะไลน์ *</label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="resolvedLineStatus"
+                      value="ปกติ"
+                      checked={resolvedLineStatus === 'ปกติ'}
+                      onChange={(e) => setResolvedLineStatus(e.target.value)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">ปกติ</span>
+                    <span className="text-xs text-gray-500">(อยู่ในกลุ่ม LINE ตามปกติ)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="resolvedLineStatus"
+                      value="รอผลการติดต่อ"
+                      checked={resolvedLineStatus === 'รอผลการติดต่อ'}
+                      onChange={(e) => setResolvedLineStatus(e.target.value)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">รอผลการติดต่อ</span>
+                    <span className="text-xs text-gray-500">(ยังติดต่อไม่ได้/รอการตอบกลับ)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="resolvedLineStatus"
+                      value="ออกจากกลุ่มแล้ว"
+                      checked={resolvedLineStatus === 'ออกจากกลุ่มแล้ว'}
+                      onChange={(e) => setResolvedLineStatus(e.target.value)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">ออกจากกลุ่มแล้ว</span>
+                    <span className="text-xs text-gray-500">(นำออกจากกลุ่ม LINE แล้ว)</span>
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">ผู้สรุปผล</label>
                 <select
@@ -675,7 +728,7 @@ function ContactModal({
                     {c.status === 'pending' && (
                       <div className="mt-3 flex gap-2">
                         <button
-                          onClick={() => { setResolvingId(c.id); setResolution(''); setResolvedById(''); }}
+                          onClick={() => { setResolvingId(c.id); setResolution(''); setResolvedById(''); setResolvedLineStatus(''); }}
                           className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
                         >
                           สรุปผล

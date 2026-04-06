@@ -216,10 +216,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { requestId, resolution, resolvedById, resolvedByName } = body;
+    const { requestId, resolution, resolvedById, resolvedByName, memberId, resolvedLineStatus } = body;
 
     if (!requestId || !resolution) {
       return NextResponse.json({ error: 'requestId and resolution are required' }, { status: 400 });
+    }
+
+    if (!resolvedLineStatus) {
+      return NextResponse.json({ error: 'resolvedLineStatus is required' }, { status: 400 });
     }
 
     const db = adminDb();
@@ -235,13 +239,30 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'This request has already been completed' }, { status: 400 });
     }
 
+    // Update contact request document
     await docRef.update({
       status: 'completed',
       resolution,
       resolvedBy: resolvedById || session.user.id,
       resolvedByName: resolvedByName || session.user.name || '',
       resolvedAt: new Date(),
+      resolvedLineStatus,
     });
+
+    // Update member's LINE status in Google Sheet
+    if (memberId && resolvedLineStatus) {
+      try {
+        await updateMember(memberId, {
+          lineGroupStatus: resolvedLineStatus,
+          lastUpdated: new Date().toISOString(),
+          updatedBy: session.user.name || session.user.id,
+        });
+        console.log(`Updated LINE status to '${resolvedLineStatus}' for member ${memberId}`);
+      } catch (sheetError) {
+        console.error('Error updating LINE status in Google Sheet:', sheetError);
+        // Don't fail the whole request, but log the error
+      }
+    }
 
     return NextResponse.json({
       success: true,

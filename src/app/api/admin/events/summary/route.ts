@@ -11,6 +11,7 @@ interface EventSummary {
   totalRegistrations: number;
   agentRegistrations: number;
   confirmedCount: number;
+  clubMemberCount: number;
   verifiedMemberCount: number;
 }
 
@@ -48,11 +49,17 @@ export async function GET() {
       try {
         const summary = await getEventAttendanceSummary(event.eventId);
 
-        // Count verified members (attendees with LINE profile)
+        // Count club members and verified members
+        let clubMemberCount = 0;
         let verifiedMemberCount = 0;
         for (const attendee of summary.attendees) {
-          if (attendee.member?.memberId && lineProfilesMap.has(attendee.member.memberId)) {
-            verifiedMemberCount++;
+          // Club member = has member record in AGC_Membership
+          if (attendee.member?.memberId) {
+            clubMemberCount++;
+            // Verified member = also has LINE profile (logged in through system)
+            if (lineProfilesMap.has(attendee.member.memberId)) {
+              verifiedMemberCount++;
+            }
           }
         }
 
@@ -61,6 +68,7 @@ export async function GET() {
           totalRegistrations: summary.totalRegistrations,
           agentRegistrations: summary.agentRegistrations,
           confirmedCount: summary.confirmedCount,
+          clubMemberCount,
           verifiedMemberCount,
         });
       } catch (error) {
@@ -70,6 +78,7 @@ export async function GET() {
           totalRegistrations: 0,
           agentRegistrations: 0,
           confirmedCount: 0,
+          clubMemberCount: 0,
           verifiedMemberCount: 0,
         });
       }

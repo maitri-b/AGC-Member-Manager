@@ -25,6 +25,7 @@ interface EventSummary {
   totalRegistrations: number;
   agentRegistrations: number;
   confirmedCount: number;
+  clubMemberCount: number;
   verifiedMemberCount: number;
 }
 
@@ -338,7 +339,7 @@ export default function AdminEventsPage() {
                   Sheet Name
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ผู้เข้าร่วม / สมาชิก AC
+                  เข้าร่วม / สมาชิก / ยืนยัน
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   สถานะ
@@ -386,14 +387,17 @@ export default function AdminEventsPage() {
                         <span className="text-gray-400 text-sm">กำลังโหลด...</span>
                       ) : summaries.has(event.eventId) ? (
                         <div className="text-sm">
-                          <span className="font-semibold text-blue-600">
+                          <span className="font-semibold text-blue-600" title="ผู้เข้าร่วมทั้งหมด">
                             {summaries.get(event.eventId)?.agentRegistrations || 0}
                           </span>
                           <span className="text-gray-400 mx-1">/</span>
-                          <span className="font-semibold text-cyan-600">
+                          <span className="font-semibold text-purple-600" title="สมาชิกชมรม">
+                            {summaries.get(event.eventId)?.clubMemberCount || 0}
+                          </span>
+                          <span className="text-gray-400 mx-1">/</span>
+                          <span className="font-semibold text-green-600" title="สมาชิกยืนยันแล้ว">
                             {summaries.get(event.eventId)?.verifiedMemberCount || 0}
                           </span>
-                          <span className="text-gray-500 text-xs ml-1">คน</span>
                         </div>
                       ) : (
                         <span className="text-gray-400 text-sm">-</span>

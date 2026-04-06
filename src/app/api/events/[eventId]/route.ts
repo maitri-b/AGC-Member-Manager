@@ -53,11 +53,17 @@ export async function GET(
 
     // Enrich attendees with LINE profile data and count verified members
     let verifiedMemberCount = 0;
+    let clubMemberCount = 0;
 
     const attendeesWithProfile = summary.attendees.map(attendee => {
       const lineProfile = attendee.member?.memberId
         ? lineProfilesMap.get(attendee.member.memberId)
         : null;
+
+      // Count club members (has member record = is in AGC_Membership)
+      if (attendee.member?.memberId) {
+        clubMemberCount++;
+      }
 
       // Count verified members (has LINE profile = verified through the system)
       if (lineProfile) {
@@ -106,6 +112,7 @@ export async function GET(
         totalRegistrations: summary.totalRegistrations,
         agentRegistrations: summary.agentRegistrations,
         confirmedCount: summary.confirmedCount,
+        clubMemberCount, // Attendees who are AGC members
         verifiedMemberCount, // Members who verified identity through LINE
       },
       attendees: attendeesWithProfile,

@@ -28,7 +28,15 @@ export async function GET(request: NextRequest) {
     // Fetch all applications without orderBy to avoid composite index requirement
     const snapshot = await db.collection('membershipApplications').get();
 
-    let applications = snapshot.docs.map(doc => {
+    interface ApplicationDoc {
+      id: string;
+      status?: string;
+      createdAt?: Date | string;
+      updatedAt?: Date | string;
+      [key: string]: unknown;
+    }
+
+    let applications: ApplicationDoc[] = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -45,8 +53,8 @@ export async function GET(request: NextRequest) {
 
     // Sort by createdAt descending in memory
     applications.sort((a, b) => {
-      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt || 0);
-      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt || 0);
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt as string || 0);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt as string || 0);
       return dateB.getTime() - dateA.getTime();
     });
 

@@ -153,7 +153,6 @@ export default function MembersPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterLineStatus, setFilterLineStatus] = useState('');
   const [filterExpiry, setFilterExpiry] = useState('');
-  const [sendingTo, setSendingTo] = useState<string | null>(null);
   const [notifyMember, setNotifyMember] = useState<MemberWithProfile | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
   const toast = useToast();
@@ -335,26 +334,6 @@ export default function MembersPage() {
     setFilterExpiry('');
   };
 
-  const handleSendProfile = async (memberId: string, memberName: string) => {
-    setSendingTo(memberId);
-    try {
-      const response = await fetch('/api/line/send-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send message');
-      }
-      toast.success(`ส่งข้อมูลไปยัง ${memberName} เรียบร้อยแล้ว`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการส่งข้อความ');
-    } finally {
-      setSendingTo(null);
-    }
-  };
-
   const handleSendNotification = async () => {
     if (!notifyMember) return;
 
@@ -385,6 +364,32 @@ export default function MembersPage() {
     return !normalStatuses.includes(status);
   };
 
+  // Calculate summary statistics
+  const summaryStats = useMemo(() => {
+    // Total registered members
+    const totalMembers = allMembers.length;
+
+    // Members with normal LINE status (column U: อยู่ในกลุ่ม)
+    const normalLineStatusCount = allMembers.filter(
+      (m) => m.lineGroupStatus === 'อยู่ในกลุ่ม' || m.lineGroupStatus?.includes('อยู่')
+    ).length;
+
+    // Members who have verified identity (have lineUserId)
+    const verifiedMembersCount = allMembers.filter((m) => m.lineUserId).length;
+
+    // Verified members with normal license status (column R: ปกติ)
+    const verifiedWithNormalLicenseCount = allMembers.filter(
+      (m) => m.lineUserId && m.status === 'ปกติ'
+    ).length;
+
+    return {
+      totalMembers,
+      normalLineStatusCount,
+      verifiedMembersCount,
+      verifiedWithNormalLicenseCount,
+    };
+  }, [allMembers]);
+
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -404,6 +409,65 @@ export default function MembersPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">รายชื่อสมาชิก</h1>
           <p className="text-gray-600 mt-1">สมาชิก Agents Club ทั้งหมด</p>
+        </div>
+
+        {/* Summary Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">ลงทะเบียนทั้งหมด</p>
+                <p className="text-2xl font-bold text-gray-900">{summaryStats.totalMembers.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">อยู่ในกลุ่ม LINE</p>
+                <p className="text-2xl font-bold text-gray-900">{summaryStats.normalLineStatusCount.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">ยืนยันตัวตนแล้ว</p>
+                <p className="text-2xl font-bold text-gray-900">{summaryStats.verifiedMembersCount.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">ยืนยัน+ใบอนุญาตปกติ</p>
+                <p className="text-2xl font-bold text-gray-900">{summaryStats.verifiedWithNormalLicenseCount.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -539,6 +603,8 @@ export default function MembersPage() {
                                 ? 'bg-green-100 text-green-800'
                                 : member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
                                 ? 'bg-red-100 text-red-800'
+                                : member.lineGroupStatus === 'รอนำเข้ากลุ่ม' || member.lineGroupStatus?.includes('รอนำเข้า')
+                                ? 'bg-orange-100 text-orange-800'
                                 : 'bg-gray-100 text-gray-800'
                             }`}>
                               {member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
@@ -651,25 +717,6 @@ export default function MembersPage() {
                               </button>
                             )}
 
-                            {member.lineUserId && (
-                              <button
-                                onClick={() => handleSendProfile(member.memberId, member.nickname || member.fullNameTH)}
-                                disabled={sendingTo === member.memberId}
-                                className="inline-flex items-center text-green-600 hover:text-green-800 text-sm font-medium disabled:opacity-50 ml-1"
-                                title="ส่งข้อมูลสมาชิกผ่าน LINE"
-                              >
-                                {sendingTo === member.memberId ? (
-                                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                  </svg>
-                                ) : (
-                                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
-                                  </svg>
-                                )}
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>

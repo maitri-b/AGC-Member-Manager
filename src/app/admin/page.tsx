@@ -6,6 +6,16 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { hasPermission } from '@/lib/permissions';
 
+interface LineHistoryEntry {
+  lineUserId: string;
+  lineDisplayName: string;
+  lineProfilePicture?: string;
+  resetAt: { _seconds: number } | string;
+  resetBy: string;
+  resetByName?: string;
+  reason?: string;
+}
+
 interface User {
   id: string;
   lineDisplayName?: string;
@@ -24,6 +34,7 @@ interface User {
   searchCount?: number;
   lockedAt?: { _seconds: number };
   lockedReason?: string;
+  lineHistory?: LineHistoryEntry[];
 }
 
 interface SearchLog {
@@ -49,6 +60,9 @@ export default function AdminPage() {
   });
   const [searchLogs, setSearchLogs] = useState<SearchLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [showResetLineModal, setShowResetLineModal] = useState(false);
+  const [resetLineReason, setResetLineReason] = useState('');
+  const [resetLineLoading, setResetLineLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -126,6 +140,45 @@ export default function AdminPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
+  };
+
+  const handleResetLineConnection = async () => {
+    if (!editingUser) return;
+
+    setResetLineLoading(true);
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: editingUser.id,
+          resetLineConnection: true,
+          resetReason: resetLineReason || 'เปลี่ยน LINE Account',
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to reset LINE connection');
+      }
+
+      setSuccess(`รีเซ็ตการเชื่อมต่อ LINE สำหรับ ${editingUser.lineDisplayName} เรียบร้อยแล้ว สมาชิกสามารถล็อกอินด้วย LINE Account ใหม่และยืนยันตัวตนใหม่ได้`);
+      setShowResetLineModal(false);
+      setResetLineReason('');
+      setEditingUser(null);
+      fetchUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setResetLineLoading(false);
+    }
+  };
+
+  const formatLineHistoryDate = (timestamp: { _seconds: number } | string) => {
+    if (typeof timestamp === 'string') {
+      return new Date(timestamp).toLocaleString('th-TH');
+    }
+    return new Date(timestamp._seconds * 1000).toLocaleString('th-TH');
   };
 
   const handleSaveUser = async () => {
@@ -464,6 +517,59 @@ export default function AdminPage() {
                   </label>
                 </div>
 
+                {/* Reset LINE Connection Section - Only for verified members with memberId */}
+                {editingUser.memberId && (editingUser.verificationStatus === 'verified' || editingUser.role === 'member' || editingUser.role === 'committee' || editingUser.role === 'admin') && (
+                  <div className="border-t border-gray-200 pt-4 mt-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      เปลี่ยน LINE Account
+                    </h4>
+                    <div className="bg-purple-50 rounded-lg p-3 mb-3">
+                      <p className="text-sm text-purple-800">
+                        หากสมาชิกต้องการเปลี่ยน LINE Account ที่ใช้เข้าระบบ
+                        กดปุ่มด้านล่างเพื่อรีเซ็ตการเชื่อมต่อ LINE
+                      </p>
+                      <p className="text-xs text-purple-600 mt-1">
+                        รหัสสมาชิก: <span className="font-semibold">{editingUser.memberId}</span> จะยังคงอยู่
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => setShowResetLineModal(true)}
+                      className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      รีเซ็ตการเชื่อมต่อ LINE
+                    </button>
+
+                    {/* LINE History */}
+                    {editingUser.lineHistory && editingUser.lineHistory.length > 0 && (
+                      <div className="mt-4">
+                        <h5 className="text-xs font-semibold text-gray-700 mb-2">ประวัติ LINE Account เดิม:</h5>
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {editingUser.lineHistory.map((entry, index) => (
+                            <div key={index} className="text-xs bg-white border border-gray-200 rounded px-2 py-1">
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-800">{entry.lineDisplayName}</span>
+                                <span className="text-gray-500">
+                                  {formatLineHistoryDate(entry.resetAt)}
+                                </span>
+                              </div>
+                              {entry.reason && (
+                                <div className="text-gray-500 mt-0.5">เหตุผล: {entry.reason}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Search Lock Section */}
                 {(editingUser.isSearchLocked || (editingUser.searchCount && editingUser.searchCount > 0)) && (
                   <div className="border-t border-gray-200 pt-4 mt-4">
@@ -555,6 +661,87 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* Reset LINE Connection Confirmation Modal */}
+      {showResetLineModal && editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="px-6 py-4 border-b border-gray-200 bg-purple-50">
+              <h3 className="text-lg font-semibold text-purple-900 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                ยืนยันการรีเซ็ต LINE
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-yellow-800 font-medium mb-2">การดำเนินการนี้จะ:</p>
+                <ul className="text-sm text-yellow-700 list-disc list-inside space-y-1">
+                  <li>ลบการเชื่อมต่อ LINE Account ปัจจุบัน</li>
+                  <li>เก็บประวัติ LINE เดิมไว้</li>
+                  <li>คงรหัสสมาชิก <span className="font-semibold">{editingUser.memberId}</span> และสิทธิ์เดิมไว้</li>
+                  <li>ล้างข้อมูล LINE ใน Google Sheet</li>
+                </ul>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-700 mb-2">
+                  หลังจากรีเซ็ต สมาชิกต้อง:
+                </p>
+                <ol className="text-sm text-gray-600 list-decimal list-inside space-y-1">
+                  <li>ล็อกอินด้วย LINE Account ใหม่</li>
+                  <li>ยืนยันตัวตนใหม่ด้วยรหัสสมาชิกเดิม ({editingUser.memberId})</li>
+                </ol>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  เหตุผล (ไม่บังคับ)
+                </label>
+                <input
+                  type="text"
+                  value={resetLineReason}
+                  onChange={(e) => setResetLineReason(e.target.value)}
+                  placeholder="เช่น เปลี่ยนเบอร์โทรศัพท์"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowResetLineModal(false);
+                  setResetLineReason('');
+                }}
+                disabled={resetLineLoading}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleResetLineConnection}
+                disabled={resetLineLoading}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {resetLineLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    กำลังดำเนินการ...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    ยืนยันรีเซ็ต
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

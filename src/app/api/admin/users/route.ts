@@ -101,7 +101,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { userId, role, memberId, isActive, unlockSearch } = await request.json();
+    const { userId, role, memberId, isActive, unlockSearch, resetLineConnection, resetReason } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -139,6 +139,58 @@ export async function PUT(request: NextRequest) {
       updates.searchCount = 0;
       updates.unlockedAt = new Date();
       updates.unlockedBy = session.user.id;
+    }
+
+    // Handle reset LINE connection
+    if (resetLineConnection === true) {
+      const userData = userDoc.data();
+
+      // Only allow reset for users with memberId (verified members)
+      if (!userData?.memberId) {
+        return NextResponse.json({ error: 'User has no memberId - cannot reset LINE connection' }, { status: 400 });
+      }
+
+      // Store current LINE info in history
+      const lineHistoryEntry = {
+        lineUserId: userData.lineUserId || userId,
+        lineDisplayName: userData.lineDisplayName || userData.displayName || userData.name || '',
+        lineProfilePicture: userData.lineProfilePicture || userData.pictureUrl || userData.image || '',
+        resetAt: new Date(),
+        resetBy: session.user.id,
+        resetByName: session.user.name || '',
+        reason: resetReason || '',
+      };
+
+      const existingHistory = userData.lineHistory || [];
+      updates.lineHistory = [...existingHistory, lineHistoryEntry];
+
+      // Clear LINE fields
+      updates.lineUserId = null;
+      updates.lineDisplayName = null;
+      updates.lineProfilePicture = null;
+      updates.displayName = null;
+      updates.name = null;
+      updates.pictureUrl = null;
+      updates.image = null;
+
+      // Set verification status to 'reset'
+      updates.verificationStatus = 'reset';
+
+      // Clear LINE data in Google Sheet
+      try {
+        await updateMember(userData.memberId, {
+          lineUserId: '',
+          lineDisplayName: '',
+          lastUpdated: new Date().toISOString(),
+          updatedBy: session.user.name || session.user.id,
+        });
+        console.log(`Reset LINE connection: Cleared Google Sheet for member ${userData.memberId}`);
+      } catch (sheetError) {
+        console.error('Error clearing LINE data in Google Sheet:', sheetError);
+        // Don't fail the whole request if Google Sheet update fails
+      }
+
+      console.log(`Reset LINE connection for user ${userId} (Member: ${userData.memberId}) by admin ${session.user.id}`);
     }
 
     await userRef.update(updates);

@@ -2,6 +2,7 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 let adminApp: App;
 
@@ -14,6 +15,7 @@ function getAdminApp(): App {
         // Replace escaped newlines in private key
         privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       }),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
   } else {
     adminApp = getApps()[0];
@@ -23,4 +25,5 @@ function getAdminApp(): App {
 
 export const adminAuth = () => getAuth(getAdminApp());
 export const adminDb = () => getFirestore(getAdminApp());
+export const adminStorage = () => getStorage(getAdminApp());
 export default getAdminApp;

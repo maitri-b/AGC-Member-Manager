@@ -161,8 +161,12 @@ export async function POST(request: NextRequest) {
 
     const docRef = await db.collection('contactRequests').add(contactRequest);
 
-    // Update LINE status in Google Sheet if requested (for license_expired topic)
-    if (updateLineStatus && memberId && topic === 'license_expired') {
+    // Update LINE status in Google Sheet
+    // For all topics except 'other', always update LINE status
+    // For 'other' topic, only update if updateLineStatus is true (checkbox checked)
+    const shouldUpdateLineStatus = topic !== 'other' || updateLineStatus;
+
+    if (shouldUpdateLineStatus && memberId) {
       try {
         await updateMember(memberId, {
           lineGroupStatus: 'รอผลการติดต่อ',

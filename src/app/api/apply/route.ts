@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-import { adminDb, adminStorage } from '@/lib/firebase-admin';
-import { addMember, getNextMemberId } from '@/lib/google-sheets';
+import { adminDb } from '@/lib/firebase-admin';
+import { uploadApplicationDocuments } from '@/lib/google-drive';
 
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -80,8 +80,6 @@ export async function POST(request: NextRequest) {
     }
 
     const db = adminDb();
-    const storage = adminStorage();
-    const bucket = storage.bucket();
 
     // Check if user has already applied
     const existingApplication = await db.collection('membershipApplications')
@@ -109,43 +107,32 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const applicationId = `APP-${timestamp}`;
 
-    // Upload files to Firebase Storage
+    // Upload files to Google Drive
     let licenseFileUrl = '';
     let businessCardFileUrl = '';
 
     try {
-      // Upload license file
       const licenseBuffer = Buffer.from(await licenseFile.arrayBuffer());
-      const licenseExt = licenseFile.name.split('.').pop() || 'jpg';
-      const licensePath = `applications/${applicationId}/license.${licenseExt}`;
-      const licenseFileRef = bucket.file(licensePath);
-
-      await licenseFileRef.save(licenseBuffer, {
-        metadata: {
-          contentType: licenseFile.type,
-        },
-      });
-
-      // Make the file publicly accessible
-      await licenseFileRef.makePublic();
-      licenseFileUrl = `https://storage.googleapis.com/${bucket.name}/${licensePath}`;
-
-      // Upload business card file
       const businessCardBuffer = Buffer.from(await businessCardFile.arrayBuffer());
-      const businessCardExt = businessCardFile.name.split('.').pop() || 'jpg';
-      const businessCardPath = `applications/${applicationId}/business-card.${businessCardExt}`;
-      const businessCardFileRef = bucket.file(businessCardPath);
 
-      await businessCardFileRef.save(businessCardBuffer, {
-        metadata: {
-          contentType: businessCardFile.type,
+      const uploadResult = await uploadApplicationDocuments(
+        applicationId,
+        {
+          buffer: licenseBuffer,
+          name: licenseFile.name,
+          type: licenseFile.type,
         },
-      });
+        {
+          buffer: businessCardBuffer,
+          name: businessCardFile.name,
+          type: businessCardFile.type,
+        }
+      );
 
-      await businessCardFileRef.makePublic();
-      businessCardFileUrl = `https://storage.googleapis.com/${bucket.name}/${businessCardPath}`;
+      licenseFileUrl = uploadResult.licenseFileUrl;
+      businessCardFileUrl = uploadResult.businessCardFileUrl;
     } catch (uploadError) {
-      console.error('Error uploading files:', uploadError);
+      console.error('Error uploading files to Google Drive:', uploadError);
       return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์' }, { status: 500 });
     }
 

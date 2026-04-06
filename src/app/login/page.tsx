@@ -86,7 +86,7 @@ export default function LoginPage() {
               <div className="text-sm text-gray-600">
                 <p className="font-medium text-gray-700 mb-1">ข้อมูลสำคัญ</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>ใช้ LINE Account ที่ลงทะเบียนกับ Agents Club</li>
+                  <li className="text-sm font-semibold text-red-600">⚠️ ใช้ LINE Account ที่ลงทะเบียนกับ Agents Club เท่านั้น</li>
                   <li>ผู้ดูแลระบบจะตรวจสอบสิทธิ์การเข้าถึง</li>
                   <li>หากมีปัญหาติดต่อผู้ดูแลระบบ</li>
                 </ul>

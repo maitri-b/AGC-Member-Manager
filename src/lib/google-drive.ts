@@ -42,6 +42,8 @@ export async function uploadFile(
 ): Promise<{ fileId: string; webViewLink: string; webContentLink: string }> {
   const drive = getGoogleDriveClient();
 
+  console.log(`Uploading file: ${fileName}, size: ${fileBuffer.length}, mimeType: ${mimeType}, folderId: ${folderId || FOLDER_ID}`);
+
   // Create the file
   const response = await drive.files.create({
     requestBody: {
@@ -55,27 +57,29 @@ export async function uploadFile(
     fields: 'id, webViewLink, webContentLink',
   });
 
+  console.log(`File uploaded successfully: ${response.data.id}`);
+
   const fileId = response.data.id || '';
 
   // Make the file publicly accessible (anyone with the link can view)
-  await drive.permissions.create({
-    fileId,
-    requestBody: {
-      role: 'reader',
-      type: 'anyone',
-    },
-  });
+  // This may fail if sharing is restricted, but we'll continue anyway
+  try {
+    await drive.permissions.create({
+      fileId,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
+      },
+    });
+  } catch (permError) {
+    console.warn('Could not set public permission, file will be accessible only to shared users:', permError);
+  }
 
-  // Get the file links again after setting permissions
-  const fileInfo = await drive.files.get({
-    fileId,
-    fields: 'webViewLink, webContentLink',
-  });
-
+  // Return direct link format that works for shared files
   return {
     fileId,
-    webViewLink: fileInfo.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
-    webContentLink: fileInfo.data.webContentLink || `https://drive.google.com/uc?id=${fileId}&export=download`,
+    webViewLink: `https://drive.google.com/file/d/${fileId}/view`,
+    webContentLink: `https://drive.google.com/uc?id=${fileId}&export=download`,
   };
 }
 
@@ -89,26 +93,35 @@ export async function uploadApplicationDocuments(
   licenseFileUrl: string;
   businessCardFileUrl: string;
 }> {
+  console.log(`Starting upload for application: ${applicationId}`);
+  console.log(`License file: ${licenseFile.name}, size: ${licenseFile.buffer.length}`);
+  console.log(`Business card file: ${businessCardFile.name}, size: ${businessCardFile.buffer.length}`);
+
   // Create a subfolder for this application
   const folderId = await createSubfolder(`Application-${applicationId}`);
+  console.log(`Created subfolder: ${folderId}`);
 
   // Upload license file
   const licenseExt = licenseFile.name.split('.').pop() || 'jpg';
+  console.log(`Uploading license file with ext: ${licenseExt}`);
   const licenseResult = await uploadFile(
     `license.${licenseExt}`,
     licenseFile.buffer,
     licenseFile.type,
     folderId
   );
+  console.log(`License uploaded: ${licenseResult.fileId}`);
 
   // Upload business card file
   const businessCardExt = businessCardFile.name.split('.').pop() || 'jpg';
+  console.log(`Uploading business card file with ext: ${businessCardExt}`);
   const businessCardResult = await uploadFile(
     `business-card.${businessCardExt}`,
     businessCardFile.buffer,
     businessCardFile.type,
     folderId
   );
+  console.log(`Business card uploaded: ${businessCardResult.fileId}`);
 
   return {
     folderId,

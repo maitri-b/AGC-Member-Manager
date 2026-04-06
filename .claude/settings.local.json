@@ -12,7 +12,10 @@
       "Bash(npm run build:*)",
       "Bash(powershell -Command:*)",
       "Bash(git commit:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ]
   }
 }

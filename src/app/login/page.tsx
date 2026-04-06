@@ -63,14 +63,14 @@ export default function LoginPage() {
           {/* LINE Login Button */}
           <LineLoginButton callbackUrl="/dashboard" />
 
-          {/* Divider */}
+          {/* Warning */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-400">
-                เฉพาะสมาชิก Agents Club เท่านั้น
+              <span className="px-4 bg-white font-semibold text-red-600">
+                ⚠️ ใช้ LINE Account ที่ลงทะเบียนกับ Agents Club เท่านั้น
               </span>
             </div>
           </div>
@@ -86,7 +86,6 @@ export default function LoginPage() {
               <div className="text-sm text-gray-600">
                 <p className="font-medium text-gray-700 mb-1">ข้อมูลสำคัญ</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li className="text-sm font-semibold text-red-600">⚠️ ใช้ LINE Account ที่ลงทะเบียนกับ Agents Club เท่านั้น</li>
                   <li>ผู้ดูแลระบบจะตรวจสอบสิทธิ์การเข้าถึง</li>
                   <li>หากมีปัญหาติดต่อผู้ดูแลระบบ</li>
                 </ul>

@@ -3,6 +3,7 @@ import { google } from 'googleapis';
 import { Readable } from 'stream';
 
 const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+const OWNER_EMAIL = process.env.GOOGLE_DRIVE_OWNER_EMAIL; // Your email to transfer ownership
 
 // Initialize Google Drive API
 function getGoogleDriveClient() {

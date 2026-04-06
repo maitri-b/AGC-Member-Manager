@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
+import { uploadApplicationDocumentsToStorage } from '@/lib/firebase-storage';
 import { uploadApplicationDocuments } from '@/lib/google-drive';
 
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
@@ -107,38 +108,70 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const applicationId = `APP-${timestamp}`;
 
-    // Upload files to Google Drive
+    // Upload files - try Firebase Storage first, then Google Drive as fallback
     let licenseFileUrl = '';
     let businessCardFileUrl = '';
 
-    try {
-      const licenseBuffer = Buffer.from(await licenseFile.arrayBuffer());
-      const businessCardBuffer = Buffer.from(await businessCardFile.arrayBuffer());
+    const licenseBuffer = Buffer.from(await licenseFile.arrayBuffer());
+    const businessCardBuffer = Buffer.from(await businessCardFile.arrayBuffer());
 
-      const uploadResult = await uploadApplicationDocuments(
-        applicationId,
-        {
-          buffer: licenseBuffer,
-          name: licenseFile.name,
-          type: licenseFile.type,
-        },
-        {
-          buffer: businessCardBuffer,
-          name: businessCardFile.name,
-          type: businessCardFile.type,
-        }
-      );
+    const fileData = {
+      license: {
+        buffer: licenseBuffer,
+        name: licenseFile.name,
+        type: licenseFile.type,
+      },
+      businessCard: {
+        buffer: businessCardBuffer,
+        name: businessCardFile.name,
+        type: businessCardFile.type,
+      },
+    };
 
-      licenseFileUrl = uploadResult.licenseFileUrl;
-      businessCardFileUrl = uploadResult.businessCardFileUrl;
-    } catch (uploadError) {
-      console.error('Error uploading files to Google Drive:', uploadError);
-      const errorMessage = uploadError instanceof Error ? uploadError.message : 'Unknown error';
-      console.error('Upload error details:', errorMessage);
-      return NextResponse.json({
-        error: 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
-      }, { status: 500 });
+    // Try Firebase Storage first (if bucket is configured)
+    const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+    if (storageBucket) {
+      try {
+        console.log('[Upload] Trying Firebase Storage...');
+        const storageResult = await uploadApplicationDocumentsToStorage(
+          applicationId,
+          fileData.license,
+          fileData.businessCard
+        );
+        licenseFileUrl = storageResult.licenseFileUrl;
+        businessCardFileUrl = storageResult.businessCardFileUrl;
+        console.log('[Upload] Firebase Storage upload successful');
+      } catch (storageError) {
+        console.error('[Upload] Firebase Storage failed:', storageError);
+        // Will try Google Drive next
+      }
+    }
+
+    // If Firebase Storage failed or not configured, try Google Drive
+    if (!licenseFileUrl || !businessCardFileUrl) {
+      try {
+        console.log('[Upload] Trying Google Drive...');
+        const driveResult = await uploadApplicationDocuments(
+          applicationId,
+          fileData.license,
+          fileData.businessCard
+        );
+        licenseFileUrl = driveResult.licenseFileUrl;
+        businessCardFileUrl = driveResult.businessCardFileUrl;
+        console.log('[Upload] Google Drive upload successful');
+      } catch (driveError) {
+        console.error('[Upload] Google Drive failed:', driveError);
+        // Will try Data URL fallback next
+      }
+    }
+
+    // If both failed, use Data URL (store file content as base64 in Firestore)
+    if (!licenseFileUrl || !businessCardFileUrl) {
+      console.log('[Upload] Using Data URL fallback...');
+      licenseFileUrl = `data:${fileData.license.type};base64,${fileData.license.buffer.toString('base64')}`;
+      businessCardFileUrl = `data:${fileData.businessCard.type};base64,${fileData.businessCard.buffer.toString('base64')}`;
+      console.log('[Upload] Data URL fallback successful');
     }
 
     // Create application document in Firestore

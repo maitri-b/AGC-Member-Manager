@@ -53,11 +53,11 @@ export async function GET(request: NextRequest) {
     }
 
     const db = adminDb();
-    let query = db.collection('contactRequests')
+    // Query without orderBy to avoid needing composite index
+    // We'll sort in memory instead
+    const snapshot = await db.collection('contactRequests')
       .where('memberId', '==', memberId)
-      .orderBy('createdAt', 'desc');
-
-    const snapshot = await query.get();
+      .get();
 
     const requests: ContactRequest[] = [];
     snapshot.forEach(doc => {
@@ -88,9 +88,16 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // Filter by status if specified
-    let pending = requests.filter(r => r.status === 'pending');
-    let completed = requests.filter(r => r.status === 'completed');
+    // Sort by createdAt descending (in memory)
+    requests.sort((a, b) => {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    // Filter by status
+    const pending = requests.filter(r => r.status === 'pending');
+    const completed = requests.filter(r => r.status === 'completed');
 
     return NextResponse.json({
       pending,

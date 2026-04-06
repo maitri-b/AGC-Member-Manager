@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Member } from '@/types/member';
 import Navbar from '@/components/Navbar';
 import { hasPermission } from '@/lib/permissions';
+import { Toast, useToast } from '@/components/Toast';
 
 interface LineProfile {
   lineDisplayName: string;
@@ -14,16 +15,47 @@ interface LineProfile {
   verifiedAt: string | null;
 }
 
+// Editable fields for admin
+const EDITABLE_FIELDS = [
+  { key: 'nickname', label: 'ชื่อเล่น', type: 'text' },
+  { key: 'fullNameTH', label: 'ชื่อ-สกุล (ไทย)', type: 'text' },
+  { key: 'companyNameTH', label: 'ชื่อบริษัท (ไทย)', type: 'text' },
+  { key: 'companyNameEN', label: 'ชื่อบริษัท (EN)', type: 'text' },
+  { key: 'licenseNumber', label: 'เลขที่ใบอนุญาต', type: 'text' },
+  { key: 'status', label: 'สถานะใบอนุญาต', type: 'select', options: ['ปกติ', 'หมดอายุ', 'ยกเลิก', 'เพิกถอน', 'พักใช้', 'รอนำเข้า'] },
+  { key: 'lineGroupStatus', label: 'สถานะไลน์กลุ่ม', type: 'select', options: ['ปกติ', 'อยู่ในกลุ่ม', 'ออกจากกลุ่ม', 'รอนำเข้ากลุ่ม', 'รอผลการติดต่อ'] },
+  { key: 'phone', label: 'โทรศัพท์', type: 'text' },
+  { key: 'mobile', label: 'มือถือ', type: 'text' },
+  { key: 'email', label: 'อีเมล', type: 'email' },
+  { key: 'lineName', label: 'ชื่อ LINE (ที่แจ้งมา)', type: 'text' },
+  { key: 'lineId', label: 'LINE ID', type: 'text' },
+  { key: 'membershipExpiry', label: 'วันหมดอายุใบอนุญาต', type: 'text' },
+  { key: 'sponsor1', label: 'ผู้รับรอง 1', type: 'text' },
+  { key: 'sponsor2', label: 'ผู้รับรอง 2', type: 'text' },
+] as const;
+
 export default function MemberDetailPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
   const memberId = params.id as string;
+  const toast = useToast();
 
   const [member, setMember] = useState<Member | null>(null);
   const [lineProfile, setLineProfile] = useState<LineProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editData, setEditData] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  // Check if user can edit members
+  const canEdit = session?.user?.permissions?.includes('admin:users') ||
+                  session?.user?.permissions?.includes('members:edit') ||
+                  session?.user?.role === 'admin' ||
+                  session?.user?.role === 'committee';
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -41,6 +73,41 @@ export default function MemberDetailPage() {
       fetchMember();
     }
   }, [memberId]);
+
+  // Open edit modal with current member data
+  const openEditModal = () => {
+    if (!member) return;
+    const data: Record<string, string> = {};
+    EDITABLE_FIELDS.forEach(field => {
+      data[field.key] = ((member as unknown) as Record<string, unknown>)[field.key]?.toString() || '';
+    });
+    setEditData(data);
+    setShowEditModal(true);
+  };
+
+  // Save edited data
+  const handleSave = async () => {
+    if (!member) return;
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/members/${memberId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editData),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update member');
+      }
+      toast.success('บันทึกข้อมูลเรียบร้อยแล้ว');
+      setShowEditModal(false);
+      fetchMember(); // Refresh data
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const fetchMember = async () => {
     setLoading(true);
@@ -94,16 +161,29 @@ export default function MemberDetailPage() {
       <Navbar />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
-        <button
-          onClick={() => router.push('/members')}
-          className="mb-6 text-red-600 hover:text-red-800 flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          กลับไปหน้ารายชื่อสมาชิก
-        </button>
+        {/* Back Button and Edit Button */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => router.push('/members')}
+            className="text-red-600 hover:text-red-800 flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            กลับไปหน้ารายชื่อสมาชิก
+          </button>
+          {canEdit && (
+            <button
+              onClick={openEditModal}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              แก้ไขข้อมูล
+            </button>
+          )}
+        </div>
 
         {/* Member Header */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -361,6 +441,73 @@ export default function MemberDetailPage() {
         </div>
 
       </main>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+              <h3 className="text-lg font-semibold text-gray-900">แก้ไขข้อมูลสมาชิก</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {EDITABLE_FIELDS.map(field => (
+                  <div key={field.key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+                    {field.type === 'select' ? (
+                      <select
+                        value={editData[field.key] || ''}
+                        onChange={(e) => setEditData({ ...editData, [field.key]: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">-- เลือก --</option>
+                        {field.options?.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type}
+                        value={editData[field.key] || ''}
+                        onChange={(e) => setEditData({ ...editData, [field.key]: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notifications */}
+      <Toast toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );
 }

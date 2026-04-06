@@ -68,7 +68,11 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPermission(session.user.permissions || [], 'member:write')) {
+    // Allow admin:users, members:edit, or member:write
+    const canEdit = hasPermission(session.user.permissions || [], 'admin:users') ||
+                    hasPermission(session.user.permissions || [], 'members:edit') ||
+                    hasPermission(session.user.permissions || [], 'member:write');
+    if (!canEdit) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 

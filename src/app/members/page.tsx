@@ -986,9 +986,9 @@ export default function MembersPage() {
     // Total registered members
     const totalMembers = allMembers.length;
 
-    // Members with normal LINE status (column U: อยู่ในกลุ่ม)
+    // Members with normal LINE status (column U: ปกติ or อยู่ในกลุ่ม)
     const normalLineStatusCount = allMembers.filter(
-      (m) => m.lineGroupStatus === 'อยู่ในกลุ่ม' || m.lineGroupStatus?.includes('อยู่')
+      (m) => m.lineGroupStatus === 'ปกติ' || m.lineGroupStatus === 'อยู่ในกลุ่ม' || m.lineGroupStatus?.includes('อยู่')
     ).length;
 
     // Members who have verified identity (have lineUserId)

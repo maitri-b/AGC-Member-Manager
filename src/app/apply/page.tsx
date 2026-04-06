@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import LineLoginButton from '@/components/LineLoginButton';
 import { Toast, useToast } from '@/components/Toast';
@@ -352,18 +352,30 @@ export default function ApplyPage() {
         </div>
 
         {/* User Info Banner */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center gap-4">
-          {session.user.image && (
-            <img
-              src={session.user.image}
-              alt=""
-              className="w-12 h-12 rounded-full"
-            />
-          )}
-          <div>
-            <p className="text-sm text-green-600">ล็อกอินด้วย LINE แล้ว</p>
-            <p className="font-medium text-green-800">{session.user.name}</p>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {session.user.image && (
+              <img
+                src={session.user.image}
+                alt=""
+                className="w-12 h-12 rounded-full"
+              />
+            )}
+            <div>
+              <p className="text-sm text-green-600">ล็อกอินด้วย LINE แล้ว</p>
+              <p className="font-medium text-green-800">{session.user.name}</p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: '/apply' })}
+            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            เปลี่ยน LINE
+          </button>
         </div>
 
         {/* Application Form */}

@@ -415,3 +415,176 @@ export async function getEventById(eventId: string): Promise<Event | undefined> 
   const events = await getTrackedEventsFromFirestore();
   return events.find(e => e.eventId === eventId);
 }
+
+// ============================================================================
+// ATTENDANCE CACHE SYSTEM
+// Pre-compute attendance data to avoid N*M queries (members * events)
+// ============================================================================
+
+interface AttendanceCacheEntry {
+  memberId: string;
+  licenseNumber: string;
+  hasRecentActivity: boolean;
+  eventsLast12Months: number;
+  lastUpdated: string;
+}
+
+interface AttendanceCacheDoc {
+  attendance: Record<string, AttendanceCacheEntry>;
+  builtAt: string;
+  eventCount: number;
+  memberCount: number;
+}
+
+const ATTENDANCE_CACHE_COLLECTION = 'cache';
+const ATTENDANCE_CACHE_DOC_ID = 'memberAttendance';
+
+/**
+ * Get cached attendance data from Firestore
+ * Returns null if cache doesn't exist or is stale
+ */
+export async function getAttendanceCache(): Promise<Record<string, AttendanceCacheEntry> | null> {
+  try {
+    const db = adminDb();
+    const cacheDoc = await db.collection(ATTENDANCE_CACHE_COLLECTION).doc(ATTENDANCE_CACHE_DOC_ID).get();
+
+    if (!cacheDoc.exists) {
+      return null;
+    }
+
+    const data = cacheDoc.data() as AttendanceCacheDoc;
+
+    // Check if cache is older than 24 hours
+    const builtAt = new Date(data.builtAt);
+    const now = new Date();
+    const hoursSinceBuilt = (now.getTime() - builtAt.getTime()) / (1000 * 60 * 60);
+
+    if (hoursSinceBuilt > 24) {
+      console.log('Attendance cache is stale (>24 hours old)');
+      return null;
+    }
+
+    return data.attendance;
+  } catch (error) {
+    console.error('Error reading attendance cache:', error);
+    return null;
+  }
+}
+
+/**
+ * Build and store attendance cache
+ * This reads all event registrations once and maps them to members by license number
+ */
+export async function buildAttendanceCache(): Promise<{ success: boolean; memberCount: number; eventCount: number }> {
+  try {
+    const db = adminDb();
+
+    // 1. Get all members (to map license -> memberId)
+    const members = await getAllMembers();
+    const licenseToMemberMap: Record<string, { memberId: string; licenseNumber: string }> = {};
+
+    for (const member of members) {
+      if (member.licenseNumber) {
+        const normalizedLicense = member.licenseNumber.trim().replace(/\s+/g, '');
+        licenseToMemberMap[normalizedLicense] = {
+          memberId: member.memberId,
+          licenseNumber: member.licenseNumber,
+        };
+      }
+    }
+
+    // 2. Get all events
+    const events = await getTrackedEventsFromFirestore();
+
+    // 3. Build attendance count per license number
+    const licenseAttendance: Record<string, number> = {};
+
+    for (const event of events) {
+      if (!event.sheetName || !event.isActive) continue;
+
+      // Check if event is within last 12 months
+      if (!isWithinLastMonths(event.eventDate, 12)) continue;
+
+      try {
+        const registrations = await getEventRegistrations(event.sheetName);
+
+        for (const reg of registrations) {
+          if (!reg.licenseNumber) continue;
+
+          // Check if confirmed/attended
+          const status = reg.status || '';
+          const statusLower = status.toLowerCase();
+          const isConfirmed =
+            statusLower === 'confirmed' ||
+            statusLower === 'attended' ||
+            status.includes('ยืนยัน') ||
+            status.includes('ตรวจสอบแล้ว');
+
+          if (isConfirmed) {
+            const normalizedLicense = reg.licenseNumber.trim().replace(/\s+/g, '');
+            licenseAttendance[normalizedLicense] = (licenseAttendance[normalizedLicense] || 0) + 1;
+          }
+        }
+      } catch (err) {
+        console.error(`Error processing event ${event.eventId}:`, err);
+      }
+    }
+
+    // 4. Build cache entries for all members
+    const attendanceCache: Record<string, AttendanceCacheEntry> = {};
+    const now = new Date().toISOString();
+
+    for (const member of members) {
+      const normalizedLicense = member.licenseNumber?.trim().replace(/\s+/g, '') || '';
+      const eventsLast12Months = normalizedLicense ? (licenseAttendance[normalizedLicense] || 0) : 0;
+
+      attendanceCache[member.memberId] = {
+        memberId: member.memberId,
+        licenseNumber: member.licenseNumber || '',
+        hasRecentActivity: eventsLast12Months > 0,
+        eventsLast12Months,
+        lastUpdated: now,
+      };
+    }
+
+    // 5. Save to Firestore
+    const cacheDoc: AttendanceCacheDoc = {
+      attendance: attendanceCache,
+      builtAt: now,
+      eventCount: events.filter(e => e.isActive && isWithinLastMonths(e.eventDate, 12)).length,
+      memberCount: members.length,
+    };
+
+    await db.collection(ATTENDANCE_CACHE_COLLECTION).doc(ATTENDANCE_CACHE_DOC_ID).set(cacheDoc);
+
+    console.log(`Attendance cache built: ${members.length} members, ${cacheDoc.eventCount} recent events`);
+
+    return {
+      success: true,
+      memberCount: members.length,
+      eventCount: cacheDoc.eventCount,
+    };
+  } catch (error) {
+    console.error('Error building attendance cache:', error);
+    return { success: false, memberCount: 0, eventCount: 0 };
+  }
+}
+
+/**
+ * Get attendance status for all members (using cache)
+ * If cache doesn't exist, builds it first
+ */
+export async function getAllMembersAttendanceStatus(): Promise<Record<string, AttendanceCacheEntry>> {
+  // Try to get from cache first
+  let cache = await getAttendanceCache();
+
+  if (!cache) {
+    console.log('Attendance cache miss - building cache...');
+    const result = await buildAttendanceCache();
+    if (result.success) {
+      cache = await getAttendanceCache();
+    }
+  }
+
+  return cache || {};
+}

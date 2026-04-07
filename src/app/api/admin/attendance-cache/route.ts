@@ -1,0 +1,72 @@
+// API Route for Attendance Cache Management
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-options';
+import { hasPermission } from '@/lib/permissions';
+import { buildAttendanceCache, getAttendanceCache } from '@/lib/event-sheets';
+
+// GET - Get cache status
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
+    const cache = await getAttendanceCache();
+
+    if (!cache) {
+      return NextResponse.json({
+        exists: false,
+        message: 'Cache does not exist or is stale',
+      });
+    }
+
+    return NextResponse.json({
+      exists: true,
+      memberCount: Object.keys(cache).length,
+      message: 'Cache is valid',
+    });
+  } catch (error) {
+    console.error('Error checking attendance cache:', error);
+    return NextResponse.json({ error: 'Failed to check cache' }, { status: 500 });
+  }
+}
+
+// POST - Rebuild cache
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
+    console.log(`Rebuilding attendance cache requested by ${session.user.name || session.user.id}`);
+
+    const result = await buildAttendanceCache();
+
+    if (result.success) {
+      return NextResponse.json({
+        success: true,
+        memberCount: result.memberCount,
+        eventCount: result.eventCount,
+        message: `Cache rebuilt successfully: ${result.memberCount} members, ${result.eventCount} recent events`,
+      });
+    } else {
+      return NextResponse.json({ error: 'Failed to build cache' }, { status: 500 });
+    }
+  } catch (error) {
+    console.error('Error rebuilding attendance cache:', error);
+    return NextResponse.json({ error: 'Failed to rebuild cache' }, { status: 500 });
+  }
+}

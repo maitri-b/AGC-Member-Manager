@@ -1,11 +1,10 @@
 // API Route for Member Attendance Status (batch)
+// Uses cached attendance data to avoid N*M queries
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
-import { getAllMembers } from '@/lib/google-sheets';
-import { getRegistrationsByLicense, getTrackedEventsFromFirestore } from '@/lib/event-sheets';
-import { isWithinLastMonths, parseEventDate } from '@/types/event';
+import { getAllMembersAttendanceStatus } from '@/lib/event-sheets';
 
 interface AttendanceStatus {
   memberId: string;
@@ -29,68 +28,33 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const memberIds = searchParams.get('ids')?.split(',').filter(Boolean) || [];
 
-    // If specific IDs requested, filter; otherwise get all
-    const members = await getAllMembers();
-    const filteredMembers = memberIds.length > 0
-      ? members.filter(m => memberIds.includes(m.memberId))
-      : members;
+    // Get attendance from cache (builds if needed)
+    const cachedAttendance = await getAllMembersAttendanceStatus();
 
-    const events = await getTrackedEventsFromFirestore();
-    const attendanceStatuses: AttendanceStatus[] = [];
+    // Convert to response format
+    const attendanceMap: Record<string, AttendanceStatus> = {};
 
-    // Process each member
-    for (const member of filteredMembers) {
-      if (!member.licenseNumber) {
-        attendanceStatuses.push({
-          memberId: member.memberId,
-          hasRecentActivity: false,
-          eventsLast12Months: 0,
-        });
-        continue;
-      }
-
-      try {
-        const eventRecords = await getRegistrationsByLicense(member.licenseNumber);
-        let eventsLast12Months = 0;
-
-        for (const record of eventRecords) {
-          const event = events.find(e => e.eventId === record.eventId);
-          if (!event) continue;
-
-          // Check if confirmed/attended
-          const status = record.registration.status || '';
-          const statusLower = status.toLowerCase();
-          const isConfirmed =
-            statusLower === 'confirmed' ||
-            statusLower === 'attended' ||
-            status.includes('ยืนยัน') ||
-            status.includes('ตรวจสอบแล้ว');
-
-          if (isConfirmed && isWithinLastMonths(event.eventDate, 12)) {
-            eventsLast12Months++;
-          }
+    // If specific IDs requested, filter; otherwise return all
+    if (memberIds.length > 0) {
+      for (const memberId of memberIds) {
+        const cached = cachedAttendance[memberId];
+        if (cached) {
+          attendanceMap[memberId] = {
+            memberId: cached.memberId,
+            hasRecentActivity: cached.hasRecentActivity,
+            eventsLast12Months: cached.eventsLast12Months,
+          };
         }
-
-        attendanceStatuses.push({
-          memberId: member.memberId,
-          hasRecentActivity: eventsLast12Months > 0,
-          eventsLast12Months,
-        });
-      } catch (err) {
-        console.error(`Error processing attendance for member ${member.memberId}:`, err);
-        attendanceStatuses.push({
-          memberId: member.memberId,
-          hasRecentActivity: false,
-          eventsLast12Months: 0,
-        });
+      }
+    } else {
+      for (const [memberId, cached] of Object.entries(cachedAttendance)) {
+        attendanceMap[memberId] = {
+          memberId: cached.memberId,
+          hasRecentActivity: cached.hasRecentActivity,
+          eventsLast12Months: cached.eventsLast12Months,
+        };
       }
     }
-
-    // Convert to map for easier lookup
-    const attendanceMap: Record<string, AttendanceStatus> = {};
-    attendanceStatuses.forEach(a => {
-      attendanceMap[a.memberId] = a;
-    });
 
     return NextResponse.json({ attendance: attendanceMap });
   } catch (error) {

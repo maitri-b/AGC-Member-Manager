@@ -44,8 +44,9 @@ interface EventData {
   event: Event;
   summary: {
     totalRegistrations: number;
-    agentRegistrations: number;
-    confirmedCount: number;
+    agentRegistrations: number;    // Unique companies (by license)
+    confirmedCount: number;         // Unique confirmed companies
+    totalAttendees: number;         // Total people (sum of attendeeCount)
     clubMemberCount: number;
     verifiedMemberCount: number;
   };
@@ -206,14 +207,14 @@ export default function EventDetailPage() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4 text-center">
-            <p className="text-3xl font-bold text-blue-600">{eventData.summary.totalRegistrations}</p>
-            <p className="text-sm text-gray-500">ลงทะเบียนทั้งหมด</p>
+            <p className="text-3xl font-bold text-blue-600">{eventData.summary.agentRegistrations}</p>
+            <p className="text-sm text-gray-500">บริษัทลงทะเบียน</p>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
-            <p className="text-3xl font-bold text-indigo-600">{eventData.summary.agentRegistrations}</p>
-            <p className="text-sm text-gray-500">เอเจ้นท์เข้าร่วม</p>
+            <p className="text-3xl font-bold text-indigo-600">{eventData.summary.totalAttendees || 0}</p>
+            <p className="text-sm text-gray-500">จำนวนผู้เข้าร่วม</p>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center border-2 border-purple-200">
             <p className="text-3xl font-bold text-purple-600">{eventData.summary.clubMemberCount || 0}</p>
@@ -225,13 +226,17 @@ export default function EventDetailPage() {
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <p className="text-3xl font-bold text-teal-600">{eventData.summary.confirmedCount}</p>
-            <p className="text-sm text-gray-500">ยืนยันเข้าร่วม</p>
+            <p className="text-sm text-gray-500">บริษัทยืนยันแล้ว</p>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <p className="text-3xl font-bold text-orange-600">
               {eventData.summary.agentRegistrations - eventData.summary.confirmedCount}
             </p>
             <p className="text-sm text-gray-500">รอดำเนินการ</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center bg-gray-50">
+            <p className="text-2xl font-bold text-gray-500">{eventData.summary.totalRegistrations}</p>
+            <p className="text-xs text-gray-400">รายการทั้งหมด</p>
           </div>
         </div>
 

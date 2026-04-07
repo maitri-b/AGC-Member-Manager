@@ -27,9 +27,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Count members with recent activity
+    let activeCount = 0;
+    const activeSamples: { memberId: string; eventsLast12Months: number }[] = [];
+    for (const [memberId, entry] of Object.entries(cache)) {
+      if (entry.hasRecentActivity) {
+        activeCount++;
+        if (activeSamples.length < 10) {
+          activeSamples.push({ memberId, eventsLast12Months: entry.eventsLast12Months });
+        }
+      }
+    }
+
     return NextResponse.json({
       exists: true,
       memberCount: Object.keys(cache).length,
+      activeCount,
+      activeSamples,
       message: 'Cache is valid',
     });
   } catch (error) {

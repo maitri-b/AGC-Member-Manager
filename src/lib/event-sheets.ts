@@ -293,12 +293,27 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
   };
 }
 
+// Helper to check if a registration is confirmed/attended
+function isRegistrationConfirmed(reg: EventRegistration): boolean {
+  const rawStatus = reg.status;
+  const status = typeof rawStatus === 'string' ? rawStatus : String(rawStatus || '');
+  const statusLower = status.toLowerCase();
+  return (
+    statusLower === 'confirmed' ||
+    statusLower === 'attended' ||
+    status.includes('ยืนยัน') ||
+    status.includes('ตรวจสอบแล้ว')
+  );
+}
+
 // Get all members' attendance summary for an event
+// This function deduplicates by license number - same company counts as 1
 export async function getEventAttendanceSummary(eventId: string): Promise<{
   event: Event | undefined;
-  totalRegistrations: number;
-  agentRegistrations: number;
-  confirmedCount: number;
+  totalRegistrations: number;        // Total rows in sheet
+  agentRegistrations: number;        // Unique companies (by license number)
+  confirmedCount: number;            // Unique confirmed companies
+  totalAttendees: number;            // Sum of all attendeeCount (total people)
   attendees: {
     registration: EventRegistration;
     member: {
@@ -316,53 +331,117 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
       totalRegistrations: 0,
       agentRegistrations: 0,
       confirmedCount: 0,
+      totalAttendees: 0,
       attendees: [],
     };
   }
 
   const allRegistrations = await getEventRegistrations(event.sheetName);
   // Only count registrations with attendanceType = 'agent' (exclude empty values)
-  const agentRegistrations = allRegistrations.filter(r =>
+  const agentRegistrationsRaw = allRegistrations.filter(r =>
     r.attendanceType?.toLowerCase() === 'agent'
   );
 
   const members = await getAllMembers();
 
-  // Map registrations to members
-  const attendees = agentRegistrations.map(reg => {
-    const normalizedLicense = (reg.licenseNumber || '').trim().replace(/\s+/g, '');
+  // Deduplicate by license number - keep only first registration per license
+  // But merge attendee counts and names from duplicate registrations
+  const licenseMap = new Map<string, {
+    registration: EventRegistration;
+    mergedAttendeeCount: number;
+    mergedAttendeeNames: string[];
+    isConfirmed: boolean;
+  }>();
+
+  for (const reg of agentRegistrationsRaw) {
+    const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber || '');
+
+    // Skip registrations without license number
+    if (!normalizedLicense) {
+      // For registrations without license, use registration ID as key
+      const key = `NO_LICENSE_${reg.registrationId}`;
+      if (!licenseMap.has(key)) {
+        licenseMap.set(key, {
+          registration: reg,
+          mergedAttendeeCount: reg.attendeeCount || 0,
+          mergedAttendeeNames: reg.attendeeNames ? [reg.attendeeNames] : [],
+          isConfirmed: isRegistrationConfirmed(reg),
+        });
+      }
+      continue;
+    }
+
+    if (licenseMap.has(normalizedLicense)) {
+      // Merge with existing entry
+      const existing = licenseMap.get(normalizedLicense)!;
+      existing.mergedAttendeeCount += reg.attendeeCount || 0;
+      if (reg.attendeeNames) {
+        existing.mergedAttendeeNames.push(reg.attendeeNames);
+      }
+      // If any registration is confirmed, mark as confirmed
+      if (isRegistrationConfirmed(reg)) {
+        existing.isConfirmed = true;
+      }
+    } else {
+      // First registration for this license
+      licenseMap.set(normalizedLicense, {
+        registration: reg,
+        mergedAttendeeCount: reg.attendeeCount || 0,
+        mergedAttendeeNames: reg.attendeeNames ? [reg.attendeeNames] : [],
+        isConfirmed: isRegistrationConfirmed(reg),
+      });
+    }
+  }
+
+  // Build deduplicated attendees list
+  const attendees: {
+    registration: EventRegistration;
+    member: {
+      memberId: string;
+      fullNameTH: string;
+      companyNameTH: string;
+    } | null;
+  }[] = [];
+
+  let confirmedCount = 0;
+  let totalAttendees = 0;
+
+  for (const [, entry] of licenseMap) {
+    // Create a merged registration with combined attendee info
+    const mergedReg: EventRegistration = {
+      ...entry.registration,
+      attendeeCount: entry.mergedAttendeeCount,
+      attendeeNames: entry.mergedAttendeeNames.join(', '),
+    };
+
+    // Find matching member
+    const normalizedLicense = normalizeLicenseNumber(entry.registration.licenseNumber || '');
     const member = members.find(m => {
-      const memberLicense = (m.licenseNumber || '').trim().replace(/\s+/g, '');
-      return memberLicense === normalizedLicense;
+      const memberLicense = normalizeLicenseNumber(m.licenseNumber || '');
+      return memberLicense && memberLicense === normalizedLicense;
     });
 
-    return {
-      registration: reg,
+    attendees.push({
+      registration: mergedReg,
       member: member ? {
         memberId: member.memberId,
         fullNameTH: member.fullNameTH,
         companyNameTH: member.companyNameTH,
       } : null,
-    };
-  });
+    });
 
-  const confirmedCount = agentRegistrations.filter(r => {
-    const rawStatus = r.status;
-    const status = typeof rawStatus === 'string' ? rawStatus : String(rawStatus || '');
-    const statusLower = status.toLowerCase();
-    return (
-      statusLower === 'confirmed' ||
-      statusLower === 'attended' ||
-      status.includes('ยืนยัน') ||
-      status.includes('ตรวจสอบแล้ว')
-    );
-  }).length;
+    if (entry.isConfirmed) {
+      confirmedCount++;
+    }
+    totalAttendees += entry.mergedAttendeeCount;
+  }
 
   return {
     event,
     totalRegistrations: allRegistrations.length,
-    agentRegistrations: agentRegistrations.length,
-    confirmedCount,
+    agentRegistrations: licenseMap.size,  // Unique companies count
+    confirmedCount,                        // Unique confirmed companies
+    totalAttendees,                        // Total people (sum of attendeeCount)
     attendees,
   };
 }

@@ -9,8 +9,9 @@ import { adminDb } from '@/lib/firebase-admin';
 interface EventSummary {
   eventId: string;
   totalRegistrations: number;
-  agentRegistrations: number;
-  confirmedCount: number;
+  agentRegistrations: number;    // Unique companies (by license)
+  confirmedCount: number;         // Unique confirmed companies
+  totalAttendees: number;         // Total people (sum of attendeeCount)
   clubMemberCount: number;
   verifiedMemberCount: number;
 }
@@ -66,8 +67,9 @@ export async function GET() {
         summaries.push({
           eventId: event.eventId,
           totalRegistrations: summary.totalRegistrations,
-          agentRegistrations: summary.agentRegistrations,
-          confirmedCount: summary.confirmedCount,
+          agentRegistrations: summary.agentRegistrations,  // Unique companies
+          confirmedCount: summary.confirmedCount,          // Unique confirmed
+          totalAttendees: summary.totalAttendees || 0,     // Total people
           clubMemberCount,
           verifiedMemberCount,
         });
@@ -78,6 +80,7 @@ export async function GET() {
           totalRegistrations: 0,
           agentRegistrations: 0,
           confirmedCount: 0,
+          totalAttendees: 0,
           clubMemberCount: 0,
           verifiedMemberCount: 0,
         });

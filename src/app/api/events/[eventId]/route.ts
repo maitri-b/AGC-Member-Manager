@@ -110,8 +110,9 @@ export async function GET(
       },
       summary: {
         totalRegistrations: summary.totalRegistrations,
-        agentRegistrations: summary.agentRegistrations,
-        confirmedCount: summary.confirmedCount,
+        agentRegistrations: summary.agentRegistrations, // Unique companies
+        confirmedCount: summary.confirmedCount,         // Unique confirmed companies
+        totalAttendees: summary.totalAttendees || 0,    // Total people (sum of attendeeCount)
         clubMemberCount, // Attendees who are AGC members
         verifiedMemberCount, // Members who verified identity through LINE
       },

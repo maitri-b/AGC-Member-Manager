@@ -52,13 +52,6 @@ interface PendingCounts {
   disputes: number;
 }
 
-interface AttendanceCacheStatus {
-  exists: boolean;
-  memberCount?: number;
-  activeCount?: number;
-  message?: string;
-}
-
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -83,9 +76,6 @@ export default function AdminPage() {
     profileChanges: 0,
     disputes: 0,
   });
-  const [cacheStatus, setCacheStatus] = useState<AttendanceCacheStatus | null>(null);
-  const [cacheLoading, setCacheLoading] = useState(false);
-  const [cacheMessage, setCacheMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -99,52 +89,8 @@ export default function AdminPage() {
     if (session && hasPermission(session.user.permissions || [], 'admin:users')) {
       fetchUsers();
       fetchPendingCounts();
-      fetchCacheStatus();
     }
   }, [session]);
-
-  const fetchCacheStatus = async () => {
-    try {
-      const response = await fetch('/api/admin/attendance-cache');
-      if (response.ok) {
-        const data = await response.json();
-        setCacheStatus(data);
-      }
-    } catch (err) {
-      console.error('Error fetching cache status:', err);
-    }
-  };
-
-  const handleRebuildCache = async () => {
-    setCacheLoading(true);
-    setCacheMessage(null);
-    try {
-      const response = await fetch('/api/admin/attendance-cache', {
-        method: 'POST',
-      });
-      const data = await response.json();
-
-      if (response.ok) {
-        setCacheMessage({
-          type: 'success',
-          text: `สร้าง Cache สำเร็จ: ${data.memberCount} สมาชิก, ${data.eventCount} กิจกรรม, ${data.confirmedCount} การลงทะเบียนยืนยัน`,
-        });
-        fetchCacheStatus();
-      } else {
-        setCacheMessage({
-          type: 'error',
-          text: data.error || 'ไม่สามารถสร้าง Cache ได้',
-        });
-      }
-    } catch (err) {
-      setCacheMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
-      });
-    } finally {
-      setCacheLoading(false);
-    }
-  };
 
   const fetchPendingCounts = async () => {
     try {
@@ -449,71 +395,6 @@ export default function AdminPage() {
             </svg>
             จัดการกิจกรรม
           </a>
-        </div>
-
-        {/* System Tools Section */}
-        <div className="mb-6 bg-white rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            เครื่องมือระบบ
-          </h3>
-
-          {/* Attendance Cache */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="font-medium text-gray-900">Attendance Cache</h4>
-                <p className="text-sm text-gray-500 mt-1">
-                  Cache สำหรับแสดงไอคอนกิจกรรมในหน้ารายชื่อสมาชิก
-                </p>
-                {cacheStatus && (
-                  <div className="mt-2 text-sm">
-                    {cacheStatus.exists ? (
-                      <span className="text-green-600">
-                        มี Cache อยู่แล้ว: {cacheStatus.memberCount} สมาชิก, {cacheStatus.activeCount} คนเข้าร่วมกิจกรรม
-                      </span>
-                    ) : (
-                      <span className="text-yellow-600">
-                        ยังไม่มี Cache หรือ Cache หมดอายุ
-                      </span>
-                    )}
-                  </div>
-                )}
-                {cacheMessage && (
-                  <div className={`mt-2 text-sm ${cacheMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                    {cacheMessage.text}
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={handleRebuildCache}
-                disabled={cacheLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {cacheLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    กำลังสร้าง...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Rebuild Cache
-                  </>
-                )}
-              </button>
-            </div>
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600">
-                <strong>หมายเหตุ:</strong> ควร Rebuild Cache หลังจากสร้างกิจกรรมใหม่ หรือเมื่อต้องการอัพเดทข้อมูลการเข้าร่วมกิจกรรมของสมาชิก
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Pending Summary Card */}

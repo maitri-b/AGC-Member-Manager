@@ -185,7 +185,7 @@ export async function linkLineUserToMember(
   });
 }
 
-// Get the next member ID for a given year
+// Get the next member ID for a given year (DEPRECATED - use getNextRunningMemberId instead)
 export async function getNextMemberId(year: number): Promise<string> {
   const members = await getAllMembers();
   const yearPrefix = year.toString().slice(-2);
@@ -205,6 +205,26 @@ export async function getNextMemberId(year: number): Promise<string> {
   // Generate next ID
   const nextRunning = (maxRunning + 1).toString().padStart(3, '0');
   return `${yearPrefix}${nextRunning}`;
+}
+
+// Get the next member ID as a simple running number
+// Returns the highest existing member ID + 1
+export async function getNextRunningMemberId(): Promise<string> {
+  const members = await getAllMembers();
+
+  // Find the highest member ID (treating all IDs as numbers)
+  let maxId = 0;
+  members.forEach((m) => {
+    if (m.memberId) {
+      const numericId = parseInt(m.memberId, 10);
+      if (!isNaN(numericId) && numericId > maxId) {
+        maxId = numericId;
+      }
+    }
+  });
+
+  // Return next ID (no padding, just the number)
+  return String(maxId + 1);
 }
 
 // Add a new member

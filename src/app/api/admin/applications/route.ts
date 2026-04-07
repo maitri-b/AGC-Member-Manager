@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
-import { addMember, getNextMemberId } from '@/lib/google-sheets';
+import { addMember, getNextRunningMemberId } from '@/lib/google-sheets';
 import { Member } from '@/types/member';
 
 // GET - List all membership applications
@@ -117,15 +117,16 @@ export async function PUT(request: NextRequest) {
         // Save to Google Sheet when approved
         const applicationData = doc.data();
         try {
-          // Generate new member ID
-          const memberId = await getNextMemberId(new Date().getFullYear());
+          // Generate new member ID (running number)
+          const memberId = await getNextRunningMemberId();
 
           // Map application data to Member format
+          // Note: companyNameTH in application form is actually fullNameTH (ชื่อ-นามสกุล)
           const newMember: Partial<Member> = {
             memberId,
             companyNameEN: applicationData?.companyNameEN || '',
-            companyNameTH: applicationData?.companyNameTH || '',
-            fullNameTH: '', // Not collected in application form
+            companyNameTH: '', // Will be updated by admin later (company name Thai)
+            fullNameTH: applicationData?.companyNameTH || '', // This is actually fullName from form
             nickname: applicationData?.nickname || '',
             lineId: applicationData?.lineId || '',
             lineName: applicationData?.lineName || '',
@@ -138,7 +139,7 @@ export async function PUT(request: NextRequest) {
             positionCompany: applicationData?.positionCompany || '',
             positionClub: '', // New member, no club position yet
             membershipExpiry: '', // Will be set by admin
-            status: 'ปกติ',
+            status: 'รอตรวจสอบ', // Pending verification via skycrbber
             sponsor1: applicationData?.sponsor1 || '',
             sponsor2: applicationData?.sponsor2 || '',
             lineGroupStatus: 'รอนำเข้ากลุ่ม',
@@ -156,6 +157,30 @@ export async function PUT(request: NextRequest) {
           if (savedMemberId) {
             updateData.memberId = savedMemberId;
             console.log(`Application ${applicationId} approved - Member ${savedMemberId} created in Google Sheet`);
+
+            // Create user in Firestore
+            try {
+              const userRef = db.collection('users').doc(applicationData?.lineUserId || applicationId);
+              await userRef.set({
+                memberId: savedMemberId,
+                name: applicationData?.lineDisplayName || applicationData?.nickname || '',
+                email: applicationData?.email || '',
+                image: applicationData?.lineProfilePicture || '',
+                lineUserId: applicationData?.lineUserId || '',
+                lineDisplayName: applicationData?.lineDisplayName || '',
+                lineProfilePicture: applicationData?.lineProfilePicture || '',
+                role: 'member',
+                permissions: ['members:self', 'events:view'],
+                status: 'approved',
+                verifiedAt: new Date().toISOString(),
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              }, { merge: true });
+              console.log(`User created/updated in Firestore for member ${savedMemberId}`);
+            } catch (firestoreError) {
+              console.error('Error creating user in Firestore:', firestoreError);
+              // Don't fail the approval, just log the error
+            }
           } else {
             console.error(`Failed to save member to Google Sheet for application ${applicationId}`);
           }

@@ -121,6 +121,10 @@ export async function PUT(request: NextRequest) {
     };
 
     if (role !== undefined) {
+      // Check if user has permission to change roles
+      if (!hasPermission(session.user.permissions || [], 'admin:roles')) {
+        return NextResponse.json({ error: 'Permission denied - cannot change user roles' }, { status: 403 });
+      }
       updates.role = role;
       updates.permissions = ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS] || [];
     }

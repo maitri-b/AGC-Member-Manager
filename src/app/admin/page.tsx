@@ -185,18 +185,28 @@ export default function AdminPage() {
     if (!editingUser) return;
 
     try {
+      // Build update payload - only include role if user has admin:roles permission
+      const payload: Record<string, unknown> = {
+        userId: editingUser.id,
+        memberId: editForm.memberId || null,
+        isActive: editForm.isActive,
+      };
+
+      // Only include role if user has permission to change roles
+      if (hasPermission(session?.user?.permissions || [], 'admin:roles')) {
+        payload.role = editForm.role;
+      }
+
       const response = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: editingUser.id,
-          role: editForm.role,
-          memberId: editForm.memberId || null,
-          isActive: editForm.isActive,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error('Failed to update user');
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update user');
+      }
 
       setSuccess('บันทึกข้อมูลเรียบร้อยแล้ว');
       setEditingUser(null);
@@ -488,19 +498,30 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">บทบาท</label>
-                  <select
-                    value={editForm.role}
-                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    <option value="guest">ผู้เยี่ยมชม (Guest)</option>
-                    <option value="member">สมาชิก (Member)</option>
-                    <option value="committee">กรรมการ (Committee)</option>
-                    <option value="admin">ผู้ดูแลระบบ (Admin)</option>
-                  </select>
-                </div>
+                {/* Role selection - only show if user has admin:roles permission */}
+                {hasPermission(session?.user?.permissions || [], 'admin:roles') ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">บทบาท</label>
+                    <select
+                      value={editForm.role}
+                      onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="guest">ผู้เยี่ยมชม (Guest)</option>
+                      <option value="member">สมาชิก (Member)</option>
+                      <option value="committee">กรรมการ (Committee)</option>
+                      <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">บทบาท</label>
+                    <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700">
+                      {getRoleDisplayName(editForm.role)}
+                      <span className="text-xs text-gray-500 ml-2">(ไม่สามารถแก้ไขได้)</span>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">รหัสสมาชิก</label>

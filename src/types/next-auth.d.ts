@@ -73,6 +73,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'member:create',
     'report:view',
     'report:export',
+    'admin:access', // Access admin panel
+    'admin:users',  // Manage users (except roles)
+    // Note: 'admin:roles' is NOT included - committee cannot change user roles
   ],
   member: [
     // Members can only view their own profile via /profile page

@@ -45,6 +45,13 @@ interface SearchLog {
   attemptNumber: number;
 }
 
+interface PendingCounts {
+  applications: number;
+  verifications: number;
+  profileChanges: number;
+  disputes: number;
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -63,6 +70,12 @@ export default function AdminPage() {
   const [showResetLineModal, setShowResetLineModal] = useState(false);
   const [resetLineReason, setResetLineReason] = useState('');
   const [resetLineLoading, setResetLineLoading] = useState(false);
+  const [pendingCounts, setPendingCounts] = useState<PendingCounts>({
+    applications: 0,
+    verifications: 0,
+    profileChanges: 0,
+    disputes: 0,
+  });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -75,8 +88,49 @@ export default function AdminPage() {
   useEffect(() => {
     if (session && hasPermission(session.user.permissions || [], 'admin:users')) {
       fetchUsers();
+      fetchPendingCounts();
     }
   }, [session]);
+
+  const fetchPendingCounts = async () => {
+    try {
+      // Fetch all pending counts in parallel
+      const [applicationsRes, verificationsRes, profileChangesRes, disputesRes] = await Promise.all([
+        fetch('/api/admin/applications?status=pending'),
+        fetch('/api/admin/verification?status=pending'),
+        fetch('/api/admin/profile-changes?status=pending'),
+        fetch('/api/admin/disputes?status=pending'),
+      ]);
+
+      const counts: PendingCounts = {
+        applications: 0,
+        verifications: 0,
+        profileChanges: 0,
+        disputes: 0,
+      };
+
+      if (applicationsRes.ok) {
+        const data = await applicationsRes.json();
+        counts.applications = data.applications?.length || 0;
+      }
+      if (verificationsRes.ok) {
+        const data = await verificationsRes.json();
+        counts.verifications = data.requests?.length || 0;
+      }
+      if (profileChangesRes.ok) {
+        const data = await profileChangesRes.json();
+        counts.profileChanges = data.requests?.length || 0;
+      }
+      if (disputesRes.ok) {
+        const data = await disputesRes.json();
+        counts.disputes = data.requests?.length || 0;
+      }
+
+      setPendingCounts(counts);
+    } catch (err) {
+      console.error('Error fetching pending counts:', err);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -278,39 +332,59 @@ export default function AdminPage() {
         <div className="mb-6 flex flex-wrap gap-3">
           <a
             href="/admin/applications"
-            className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            className="relative inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             ใบสมัครสมาชิก
+            {pendingCounts.applications > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
+                {pendingCounts.applications}
+              </span>
+            )}
           </a>
           <a
             href="/admin/verification"
-            className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="relative inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             คำขอยืนยันตัวตน
+            {pendingCounts.verifications > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
+                {pendingCounts.verifications}
+              </span>
+            )}
           </a>
           <a
             href="/admin/profile-changes"
-            className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+            className="relative inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
             คำขอแก้ไขข้อมูล
+            {pendingCounts.profileChanges > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
+                {pendingCounts.profileChanges}
+              </span>
+            )}
           </a>
           <a
             href="/admin/disputes"
-            className="inline-flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+            className="relative inline-flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             คำร้องแจ้งปัญหา
+            {pendingCounts.disputes > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
+                {pendingCounts.disputes}
+              </span>
+            )}
           </a>
           <a
             href="/admin/events"
@@ -322,6 +396,29 @@ export default function AdminPage() {
             จัดการกิจกรรม
           </a>
         </div>
+
+        {/* Pending Summary Card */}
+        {(pendingCounts.applications + pendingCounts.verifications + pendingCounts.profileChanges + pendingCounts.disputes) > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-yellow-800">คำร้องรอดำเนินการ</h3>
+                <p className="text-sm text-yellow-700">
+                  รวมทั้งหมด {pendingCounts.applications + pendingCounts.verifications + pendingCounts.profileChanges + pendingCounts.disputes} รายการ
+                  {pendingCounts.applications > 0 && ` • ใบสมัคร ${pendingCounts.applications}`}
+                  {pendingCounts.verifications > 0 && ` • ยืนยันตัวตน ${pendingCounts.verifications}`}
+                  {pendingCounts.profileChanges > 0 && ` • แก้ไขข้อมูล ${pendingCounts.profileChanges}`}
+                  {pendingCounts.disputes > 0 && ` • แจ้งปัญหา ${pendingCounts.disputes}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">

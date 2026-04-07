@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { getTrackedEventsFromFirestore } from '@/lib/event-sheets';
 import { getAllMembers } from '@/lib/google-sheets';
 import { google } from 'googleapis';
+import { isWithinLastMonths, parseEventDate } from '@/types/event';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 
@@ -43,12 +44,19 @@ export async function GET() {
       },
       memberFound: !!currentUserMember,
       memberLicenseNumber: currentUserMember?.licenseNumber || 'NOT FOUND',
-      trackedEvents: events.map(e => ({
-        eventId: e.eventId,
-        eventName: e.eventName,
-        sheetName: e.sheetName,
-        isActive: e.isActive,
-      })),
+      currentDate: new Date().toISOString(),
+      trackedEvents: events.map(e => {
+        const parsedDate = parseEventDate(e.eventDate);
+        return {
+          eventId: e.eventId,
+          eventName: e.eventName,
+          sheetName: e.sheetName,
+          eventDate: e.eventDate,
+          parsedDate: parsedDate?.toISOString() || 'FAILED TO PARSE',
+          isActive: e.isActive,
+          isWithin12Months: isWithinLastMonths(e.eventDate, 12),
+        };
+      }),
       sheetHeaders: {} as Record<string, unknown>,
       eventRegistrations: {} as Record<string, unknown>,
     };

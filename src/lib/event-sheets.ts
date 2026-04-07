@@ -588,6 +588,13 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
     const events = await getTrackedEventsFromFirestore();
     console.log(`buildAttendanceCache: Found ${events.length} events`);
 
+    // Debug: show each event's date and parse result
+    for (const event of events) {
+      const parsedDate = parseEventDate(event.eventDate);
+      const withinMonths = isWithinLastMonths(event.eventDate, months);
+      console.log(`buildAttendanceCache: Event "${event.eventName}" date="${event.eventDate}" parsed=${parsedDate?.toISOString()} withinMonths=${withinMonths}`);
+    }
+
     // 3. Build attendance count per license number
     const licenseAttendance: Record<string, number> = {};
     let totalConfirmed = 0;
@@ -669,7 +676,7 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
     const cacheDoc: AttendanceCacheDoc = {
       attendance: attendanceCache,
       builtAt: now,
-      eventCount: events.filter(e => e.isActive && isWithinLastMonths(e.eventDate, 12)).length,
+      eventCount: events.filter(e => isWithinLastMonths(e.eventDate, months)).length,
       memberCount: members.length,
     };
 

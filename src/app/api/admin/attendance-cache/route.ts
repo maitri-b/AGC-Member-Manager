@@ -65,9 +65,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    console.log(`Rebuilding attendance cache requested by ${session.user.name || session.user.id}`);
+    // Get months parameter from request body
+    let months = 12; // default
+    try {
+      const body = await request.json();
+      if (body.months && typeof body.months === 'number' && body.months >= 1 && body.months <= 60) {
+        months = body.months;
+      }
+    } catch {
+      // If no body or invalid JSON, use default
+    }
 
-    const result = await buildAttendanceCache();
+    console.log(`Rebuilding attendance cache requested by ${session.user.name || session.user.id} for ${months} months`);
+
+    const result = await buildAttendanceCache(months);
 
     if (result.success) {
       return NextResponse.json({

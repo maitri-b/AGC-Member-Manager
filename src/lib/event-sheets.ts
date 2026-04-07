@@ -560,8 +560,9 @@ function normalizeLicenseNumber(license: string): string {
 /**
  * Build and store attendance cache
  * This reads all event registrations once and maps them to members by license number
+ * @param months - Number of months to look back (default: 12)
  */
-export async function buildAttendanceCache(): Promise<{ success: boolean; memberCount: number; eventCount: number; confirmedCount: number }> {
+export async function buildAttendanceCache(months: number = 12): Promise<{ success: boolean; memberCount: number; eventCount: number; confirmedCount: number }> {
   try {
     const db = adminDb();
 
@@ -581,7 +582,7 @@ export async function buildAttendanceCache(): Promise<{ success: boolean; member
       }
     }
 
-    console.log(`buildAttendanceCache: ${members.length} members, ${Object.keys(licenseToMemberMap).length} with license`);
+    console.log(`buildAttendanceCache: ${members.length} members, ${Object.keys(licenseToMemberMap).length} with license, looking back ${months} months`);
 
     // 2. Get all events
     const events = await getTrackedEventsFromFirestore();
@@ -592,14 +593,14 @@ export async function buildAttendanceCache(): Promise<{ success: boolean; member
     let totalConfirmed = 0;
 
     for (const event of events) {
-      if (!event.sheetName || !event.isActive) {
-        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - no sheetName or inactive`);
+      if (!event.sheetName) {
+        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - no sheetName`);
         continue;
       }
 
-      // Check if event is within last 12 months
-      if (!isWithinLastMonths(event.eventDate, 12)) {
-        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - not within 12 months (date: ${event.eventDate})`);
+      // Check if event is within the specified months (regardless of isActive status)
+      if (!isWithinLastMonths(event.eventDate, months)) {
+        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - not within ${months} months (date: ${event.eventDate})`);
         continue;
       }
 

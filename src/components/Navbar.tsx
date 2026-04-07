@@ -13,6 +13,7 @@ export default function Navbar() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [cacheLoading, setCacheLoading] = useState(false);
   const [cacheMessage, setCacheMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [cacheMonths, setCacheMonths] = useState(12);
 
   if (!session) return null;
 
@@ -51,6 +52,8 @@ export default function Navbar() {
     try {
       const response = await fetch('/api/admin/attendance-cache', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ months: cacheMonths }),
       });
       const data = await response.json();
 
@@ -180,7 +183,18 @@ export default function Navbar() {
                           )}
                         </button>
                       </div>
-                      <p className="text-xs text-gray-400 mb-2">* เฉพาะกิจกรรมที่สถานะ Active เท่านั้น</p>
+                      <div className="flex items-center gap-2 mb-2">
+                        <label className="text-xs text-gray-500">ย้อนหลัง</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={cacheMonths}
+                          onChange={(e) => setCacheMonths(Math.max(1, Math.min(60, parseInt(e.target.value) || 12)))}
+                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <span className="text-xs text-gray-500">เดือน</span>
+                      </div>
                       {cacheMessage && (
                         <div className={`text-xs p-2 rounded ${cacheMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                           {cacheMessage.text}

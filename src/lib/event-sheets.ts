@@ -471,11 +471,18 @@ export async function getAttendanceCache(): Promise<Record<string, AttendanceCac
   }
 }
 
+// Helper to normalize license number for matching
+// Removes all non-alphanumeric characters and converts to uppercase
+function normalizeLicenseNumber(license: string): string {
+  if (!license) return '';
+  return license.trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+}
+
 /**
  * Build and store attendance cache
  * This reads all event registrations once and maps them to members by license number
  */
-export async function buildAttendanceCache(): Promise<{ success: boolean; memberCount: number; eventCount: number }> {
+export async function buildAttendanceCache(): Promise<{ success: boolean; memberCount: number; eventCount: number; confirmedCount: number }> {
   try {
     const db = adminDb();
 
@@ -485,29 +492,45 @@ export async function buildAttendanceCache(): Promise<{ success: boolean; member
 
     for (const member of members) {
       if (member.licenseNumber) {
-        const normalizedLicense = member.licenseNumber.trim().replace(/\s+/g, '');
-        licenseToMemberMap[normalizedLicense] = {
-          memberId: member.memberId,
-          licenseNumber: member.licenseNumber,
-        };
+        const normalizedLicense = normalizeLicenseNumber(member.licenseNumber);
+        if (normalizedLicense) {
+          licenseToMemberMap[normalizedLicense] = {
+            memberId: member.memberId,
+            licenseNumber: member.licenseNumber,
+          };
+        }
       }
     }
 
+    console.log(`buildAttendanceCache: ${members.length} members, ${Object.keys(licenseToMemberMap).length} with license`);
+
     // 2. Get all events
     const events = await getTrackedEventsFromFirestore();
+    console.log(`buildAttendanceCache: Found ${events.length} events`);
 
     // 3. Build attendance count per license number
     const licenseAttendance: Record<string, number> = {};
+    let totalConfirmed = 0;
 
     for (const event of events) {
-      if (!event.sheetName || !event.isActive) continue;
+      if (!event.sheetName || !event.isActive) {
+        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - no sheetName or inactive`);
+        continue;
+      }
 
       // Check if event is within last 12 months
-      if (!isWithinLastMonths(event.eventDate, 12)) continue;
+      if (!isWithinLastMonths(event.eventDate, 12)) {
+        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - not within 12 months (date: ${event.eventDate})`);
+        continue;
+      }
+
+      console.log(`buildAttendanceCache: Processing event ${event.eventId} (${event.eventName})`);
 
       try {
         const registrations = await getEventRegistrations(event.sheetName);
+        console.log(`buildAttendanceCache: Found ${registrations.length} registrations for ${event.sheetName}`);
 
+        let confirmedInEvent = 0;
         for (const reg of registrations) {
           if (!reg.licenseNumber) continue;
 
@@ -521,22 +544,35 @@ export async function buildAttendanceCache(): Promise<{ success: boolean; member
             status.includes('ตรวจสอบแล้ว');
 
           if (isConfirmed) {
-            const normalizedLicense = reg.licenseNumber.trim().replace(/\s+/g, '');
-            licenseAttendance[normalizedLicense] = (licenseAttendance[normalizedLicense] || 0) + 1;
+            const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber);
+            if (normalizedLicense) {
+              licenseAttendance[normalizedLicense] = (licenseAttendance[normalizedLicense] || 0) + 1;
+              confirmedInEvent++;
+              totalConfirmed++;
+            }
           }
         }
+        console.log(`buildAttendanceCache: ${confirmedInEvent} confirmed registrations in ${event.eventName}`);
       } catch (err) {
         console.error(`Error processing event ${event.eventId}:`, err);
       }
     }
 
+    console.log(`buildAttendanceCache: Total confirmed registrations: ${totalConfirmed}`);
+    console.log(`buildAttendanceCache: Unique licenses with attendance: ${Object.keys(licenseAttendance).length}`);
+
     // 4. Build cache entries for all members
     const attendanceCache: Record<string, AttendanceCacheEntry> = {};
     const now = new Date().toISOString();
+    let membersWithActivity = 0;
 
     for (const member of members) {
-      const normalizedLicense = member.licenseNumber?.trim().replace(/\s+/g, '') || '';
+      const normalizedLicense = normalizeLicenseNumber(member.licenseNumber || '');
       const eventsLast12Months = normalizedLicense ? (licenseAttendance[normalizedLicense] || 0) : 0;
+
+      if (eventsLast12Months > 0) {
+        membersWithActivity++;
+      }
 
       attendanceCache[member.memberId] = {
         memberId: member.memberId,
@@ -546,6 +582,8 @@ export async function buildAttendanceCache(): Promise<{ success: boolean; member
         lastUpdated: now,
       };
     }
+
+    console.log(`buildAttendanceCache: ${membersWithActivity} members with recent activity`);
 
     // 5. Save to Firestore
     const cacheDoc: AttendanceCacheDoc = {
@@ -557,16 +595,17 @@ export async function buildAttendanceCache(): Promise<{ success: boolean; member
 
     await db.collection(ATTENDANCE_CACHE_COLLECTION).doc(ATTENDANCE_CACHE_DOC_ID).set(cacheDoc);
 
-    console.log(`Attendance cache built: ${members.length} members, ${cacheDoc.eventCount} recent events`);
+    console.log(`Attendance cache built: ${members.length} members, ${cacheDoc.eventCount} recent events, ${membersWithActivity} with activity`);
 
     return {
       success: true,
       memberCount: members.length,
       eventCount: cacheDoc.eventCount,
+      confirmedCount: totalConfirmed,
     };
   } catch (error) {
     console.error('Error building attendance cache:', error);
-    return { success: false, memberCount: 0, eventCount: 0 };
+    return { success: false, memberCount: 0, eventCount: 0, confirmedCount: 0 };
   }
 }
 

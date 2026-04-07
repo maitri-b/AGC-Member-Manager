@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
         success: true,
         memberCount: result.memberCount,
         eventCount: result.eventCount,
-        message: `Cache rebuilt successfully: ${result.memberCount} members, ${result.eventCount} recent events`,
+        confirmedCount: result.confirmedCount,
+        message: `Cache rebuilt successfully: ${result.memberCount} members, ${result.eventCount} recent events, ${result.confirmedCount} confirmed registrations`,
       });
     } else {
       return NextResponse.json({ error: 'Failed to build cache' }, { status: 500 });

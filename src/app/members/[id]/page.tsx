@@ -15,6 +15,30 @@ interface LineProfile {
   verifiedAt: string | null;
 }
 
+interface EventAttendanceRecord {
+  eventId: string;
+  eventName: string;
+  eventDate: string;
+  registrationId: string;
+  attendeeNames: string;
+  attendeeCount: number;
+  status: string;
+  checkedIn: boolean;
+}
+
+interface MemberAttendance {
+  memberId: string;
+  memberName: string;
+  companyName: string;
+  licenseNumber: string;
+  eventsAttended: EventAttendanceRecord[];
+  totalEventsThisYear: number;
+  eventsLast12Months: number;
+  lastAttendedEvent: string;
+  lastAttendedDate: string;
+  noActivityWarning: boolean;
+}
+
 // Thai month names
 const THAI_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -84,6 +108,7 @@ export default function MemberDetailPage() {
 
   const [member, setMember] = useState<Member | null>(null);
   const [lineProfile, setLineProfile] = useState<LineProfile | null>(null);
+  const [attendance, setAttendance] = useState<MemberAttendance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -174,6 +199,7 @@ export default function MemberDetailPage() {
       const data = await response.json();
       setMember(data.member);
       setLineProfile(data.lineProfile);
+      setAttendance(data.attendance);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -493,6 +519,86 @@ export default function MemberDetailPage() {
               </div>
             </dl>
           </div>
+        </div>
+
+        {/* Event Attendance Section */}
+        <div className="bg-white rounded-lg shadow p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            กิจกรรมที่เข้าร่วม
+          </h2>
+
+          {attendance ? (
+            <>
+              {/* Summary */}
+              <div className="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">12 เดือนที่ผ่านมา:</span>
+                  <span className={`font-semibold ${attendance.eventsLast12Months > 0 ? 'text-teal-600' : 'text-orange-600'}`}>
+                    {attendance.eventsLast12Months} กิจกรรม
+                  </span>
+                  {attendance.noActivityWarning && (
+                    <span className="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                      ไม่มีกิจกรรม
+                    </span>
+                  )}
+                </div>
+                {attendance.lastAttendedEvent && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">ล่าสุด:</span>
+                    <span className="text-sm font-medium text-gray-900">{attendance.lastAttendedEvent}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Event List */}
+              {attendance.eventsAttended.length > 0 ? (
+                <div className="space-y-2">
+                  {attendance.eventsAttended.map((event, index) => (
+                    <div
+                      key={`${event.eventId}-${index}`}
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-teal-100 rounded-lg">
+                          <svg className="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{event.eventName}</p>
+                          <p className="text-xs text-gray-500">
+                            {event.eventDate}
+                            {event.attendeeCount > 1 && ` • ${event.attendeeCount} คน`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {event.checkedIn && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                            Check-in แล้ว
+                          </span>
+                        )}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          event.status?.includes('ยืนยัน') || event.status?.toLowerCase() === 'confirmed'
+                            ? 'bg-teal-100 text-teal-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {event.status || 'ลงทะเบียน'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-4">ยังไม่มีประวัติเข้าร่วมกิจกรรม</p>
+              )}
+            </>
+          ) : (
+            <p className="text-gray-500 text-sm text-center py-4">กำลังโหลดข้อมูลกิจกรรม...</p>
+          )}
         </div>
 
       </main>

@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { getMemberById, updateMember } from '@/lib/google-sheets';
 import { hasPermission } from '@/lib/permissions';
 import { adminDb } from '@/lib/firebase-admin';
+import { getMemberAttendanceSummary } from '@/lib/event-sheets';
 
 export async function GET(
   request: NextRequest,
@@ -47,9 +48,18 @@ export async function GET(
       };
     }
 
+    // Get member attendance summary
+    let attendance = null;
+    try {
+      attendance = await getMemberAttendanceSummary(id);
+    } catch (err) {
+      console.error('Error fetching attendance summary:', err);
+    }
+
     return NextResponse.json({
       member,
       lineProfile,
+      attendance,
     });
   } catch (error) {
     console.error('Error fetching member:', error);

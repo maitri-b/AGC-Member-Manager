@@ -811,10 +811,13 @@ export default function MembersPage() {
   }, [status, session, router]);
 
   useEffect(() => {
-    fetchAllMembers();
-    fetchStaff();
-    fetchAttendanceStatus();
-  }, []);
+    if (session?.user && hasPermission(session.user.permissions || [], 'members:list')) {
+      fetchAllMembers();
+      fetchStaff();
+      // Fetch attendance in the background - don't block page load
+      fetchAttendanceStatus();
+    }
+  }, [session]);
 
   // Fetch staff list for contact modal
   const fetchStaff = async () => {

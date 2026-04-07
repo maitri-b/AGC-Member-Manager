@@ -135,10 +135,10 @@ export default function MemberDetailPage() {
   }, [status, session, router]);
 
   useEffect(() => {
-    if (memberId) {
+    if (memberId && status === 'authenticated' && session?.user) {
       fetchMember();
     }
-  }, [memberId]);
+  }, [memberId, status, session]);
 
   // Open edit modal with current member data
   const openEditModal = () => {

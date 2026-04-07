@@ -158,10 +158,11 @@ export async function updateMember(memberId: string, updates: Partial<Member>): 
   const updatedRow = memberToRow(headers, updatedMember);
 
   // Update the row in the sheet
+  // Use RAW to preserve phone numbers with leading zeros (e.g., 02-xxx-xxxx)
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
     range: `${SHEET_NAME}!A${rowIndex + 1}:AZ${rowIndex + 1}`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',
     requestBody: {
       values: [updatedRow],
     },
@@ -254,10 +255,11 @@ export async function addMember(member: Partial<Member>): Promise<string | null>
   const newRow = memberToRow(headers, member);
 
   // Append to sheet
+  // Use RAW to preserve phone numbers with leading zeros (e.g., 02-xxx-xxxx)
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
     range: `${SHEET_NAME}!A:AZ`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',
     requestBody: {
       values: [newRow],
     },

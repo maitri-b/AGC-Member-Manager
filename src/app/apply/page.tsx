@@ -46,6 +46,38 @@ const initialFormData: ApplicationForm = {
 // LINE OA link for document submission
 const LINE_OA_LINK = 'https://lin.ee/YahadVz';
 
+// Format phone number: 0x-xxx-xxxx (landline) or 0xx-xxx-xxxx (mobile)
+function formatPhoneNumber(value: string, isMobile: boolean = false): string {
+  // Remove all non-digit characters
+  const digits = value.replace(/\D/g, '');
+
+  // Ensure it starts with 0, add it if not present and user typed something
+  let formatted = digits;
+  if (digits.length > 0 && !digits.startsWith('0')) {
+    formatted = '0' + digits;
+  }
+
+  if (isMobile) {
+    // Mobile: 0xx-xxx-xxxx (10 digits total)
+    if (formatted.length <= 3) {
+      return formatted;
+    } else if (formatted.length <= 6) {
+      return `${formatted.slice(0, 3)}-${formatted.slice(3)}`;
+    } else {
+      return `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6, 10)}`;
+    }
+  } else {
+    // Landline: 0x-xxx-xxxx (9 digits total)
+    if (formatted.length <= 2) {
+      return formatted;
+    } else if (formatted.length <= 5) {
+      return `${formatted.slice(0, 2)}-${formatted.slice(2)}`;
+    } else {
+      return `${formatted.slice(0, 2)}-${formatted.slice(2, 5)}-${formatted.slice(5, 9)}`;
+    }
+  }
+}
+
 export default function ApplyPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -69,7 +101,16 @@ export default function ApplyPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Format phone numbers
+    let formattedValue = value;
+    if (name === 'phone') {
+      formattedValue = formatPhoneNumber(value, false); // Landline
+    } else if (name === 'mobile') {
+      formattedValue = formatPhoneNumber(value, true); // Mobile
+    }
+
+    setFormData(prev => ({ ...prev, [name]: formattedValue }));
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -520,9 +561,11 @@ export default function ApplyPage() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  placeholder="02-xxx-xxxx"
+                  placeholder="0x-xxx-xxxx"
+                  maxLength={11}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                <p className="text-xs text-gray-500 mt-1">รูปแบบ: 0x-xxx-xxxx</p>
               </div>
 
               <div>
@@ -534,10 +577,12 @@ export default function ApplyPage() {
                   name="mobile"
                   value={formData.mobile}
                   onChange={handleInputChange}
-                  placeholder="08x-xxx-xxxx"
+                  placeholder="0xx-xxx-xxxx"
+                  maxLength={12}
                   className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.mobile ? 'border-red-500' : 'border-gray-300'}`}
                 />
                 {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
+                {!errors.mobile && <p className="text-xs text-gray-500 mt-1">รูปแบบ: 0xx-xxx-xxxx</p>}
               </div>
 
               <div>

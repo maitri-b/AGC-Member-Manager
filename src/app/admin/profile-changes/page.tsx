@@ -53,25 +53,13 @@ export default function AdminProfileChangesPage() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      // Fetch requests based on filter
+      // Fetch requests based on filter - API now returns pendingCount in every response
       const response = await fetch(`/api/admin/profile-changes?status=${filter}`);
       if (response.ok) {
         const data = await response.json();
         setRequests(data.requests || []);
-
-        // If filtering by pending, update pending count
-        if (filter === 'pending') {
-          setPendingCount(data.requests?.length || 0);
-        }
-      }
-
-      // Always fetch pending count separately if not already filtering by pending
-      if (filter !== 'pending') {
-        const pendingResponse = await fetch('/api/admin/profile-changes?status=pending');
-        if (pendingResponse.ok) {
-          const pendingData = await pendingResponse.json();
-          setPendingCount(pendingData.requests?.length || 0);
-        }
+        // API returns pendingCount in every response
+        setPendingCount(data.pendingCount || 0);
       }
     } catch (error) {
       console.error('Error fetching requests:', error);

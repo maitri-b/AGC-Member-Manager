@@ -23,35 +23,34 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'pending';
 
     const db = adminDb();
-    let requestsSnapshot;
 
+    // Fetch all requests and filter in JavaScript to avoid Firestore composite index requirement
+    const requestsSnapshot = await db
+      .collection('profileChangeRequests')
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get();
+
+    let requests = requestsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
+        processedAt: data.processedAt?.toDate?.()?.toISOString() || data.processedAt,
+      };
+    });
+
+    // Filter by status in JavaScript
     if (status !== 'all') {
-      // When filtering by status, use where first then orderBy
-      // This requires a composite index in Firestore
-      requestsSnapshot = await db
-        .collection('profileChangeRequests')
-        .where('status', '==', status)
-        .orderBy('createdAt', 'desc')
-        .limit(50)
-        .get();
-    } else {
-      // For 'all', just orderBy without where
-      requestsSnapshot = await db
-        .collection('profileChangeRequests')
-        .orderBy('createdAt', 'desc')
-        .limit(50)
-        .get();
+      requests = requests.filter(r => (r as { status?: string }).status === status);
     }
 
-    const requests = requestsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt,
-      updatedAt: doc.data().updatedAt?.toDate?.()?.toISOString() || doc.data().updatedAt,
-      processedAt: doc.data().processedAt?.toDate?.()?.toISOString() || doc.data().processedAt,
-    }));
+    // Count pending for badge display
+    const pendingCount = requestsSnapshot.docs.filter(doc => doc.data().status === 'pending').length;
 
-    return NextResponse.json({ requests });
+    return NextResponse.json({ requests, pendingCount });
   } catch (error) {
     console.error('Error fetching change requests:', error);
     return NextResponse.json({ error: 'Failed to fetch change requests' }, { status: 500 });

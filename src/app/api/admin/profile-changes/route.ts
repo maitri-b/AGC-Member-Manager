@@ -22,13 +22,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'pending';
 
-    let query = adminDb().collection('profileChangeRequests').orderBy('createdAt', 'desc');
+    const db = adminDb();
+    let requestsSnapshot;
 
     if (status !== 'all') {
-      query = query.where('status', '==', status);
+      // When filtering by status, use where first then orderBy
+      // This requires a composite index in Firestore
+      requestsSnapshot = await db
+        .collection('profileChangeRequests')
+        .where('status', '==', status)
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+    } else {
+      // For 'all', just orderBy without where
+      requestsSnapshot = await db
+        .collection('profileChangeRequests')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
     }
-
-    const requestsSnapshot = await query.limit(50).get();
 
     const requests = requestsSnapshot.docs.map(doc => ({
       id: doc.id,

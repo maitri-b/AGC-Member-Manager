@@ -25,6 +25,7 @@ export default function AdminProfileChangesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
@@ -52,10 +53,25 @@ export default function AdminProfileChangesPage() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
+      // Fetch requests based on filter
       const response = await fetch(`/api/admin/profile-changes?status=${filter}`);
       if (response.ok) {
         const data = await response.json();
         setRequests(data.requests || []);
+
+        // If filtering by pending, update pending count
+        if (filter === 'pending') {
+          setPendingCount(data.requests?.length || 0);
+        }
+      }
+
+      // Always fetch pending count separately if not already filtering by pending
+      if (filter !== 'pending') {
+        const pendingResponse = await fetch('/api/admin/profile-changes?status=pending');
+        if (pendingResponse.ok) {
+          const pendingData = await pendingResponse.json();
+          setPendingCount(pendingData.requests?.length || 0);
+        }
       }
     } catch (error) {
       console.error('Error fetching requests:', error);
@@ -165,6 +181,25 @@ export default function AdminProfileChangesPage() {
           </div>
         </div>
 
+        {/* Summary Alert */}
+        {pendingCount > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-yellow-800">
+                  มีคำขอรอการอนุมัติ {pendingCount} รายการ
+                </p>
+                <p className="text-sm text-yellow-700">กรุณาตรวจสอบและดำเนินการ</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Filter Tabs */}
         <div className="bg-white rounded-lg shadow mb-6">
           <div className="border-b border-gray-200">
@@ -185,9 +220,9 @@ export default function AdminProfileChangesPage() {
                   }`}
                 >
                   {tab.label}
-                  {tab.key === 'pending' && requests.filter(r => r.status === 'pending').length > 0 && (
+                  {tab.key === 'pending' && pendingCount > 0 && (
                     <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">
-                      {requests.filter(r => r.status === 'pending').length}
+                      {pendingCount}
                     </span>
                   )}
                 </button>

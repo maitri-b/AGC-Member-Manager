@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         found: false,
         locked: true,
-        message: 'บัญชีของคุณถูกระงับการค้นหา กรุณาติดต่อ Admin เพื่อปลดล็อค'
+        message: 'บัญชีของคุณถูกระงับการค้นหา กรุณาติดต่อ Admin ทางแชทที่ LINE Official AGC เพื่อปลดล็อค'
       }, { status: 403 });
     }
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         found: false,
         locked: true,
-        message: 'คุณค้นหาครบ 3 ครั้งแล้ว บัญชีของคุณถูกระงับการค้นหา กรุณาติดต่อ Admin เพื่อปลดล็อค'
+        message: 'คุณค้นหาครบ 3 ครั้งแล้ว บัญชีของคุณถูกระงับการค้นหา กรุณาติดต่อ Admin ทางแชทที่ LINE Official AGC เพื่อปลดล็อค'
       }, { status: 403 });
     }
 

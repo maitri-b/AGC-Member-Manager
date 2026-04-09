@@ -95,7 +95,7 @@ export default function VerifyPage() {
       // Handle locked account or HTTP errors
       if (!res.ok) {
         if (data.locked) {
-          setError(data.message || 'บัญชีถูกระงับการค้นหา กรุณาติดต่อ Admin');
+          setError(data.message || 'บัญชีถูกระงับการค้นหา กรุณาติดต่อ Admin ทางแชทที่ LINE Official AGC');
         } else {
           setError(data.error || data.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
         }
@@ -333,7 +333,7 @@ export default function VerifyPage() {
 
             <div className="mt-6 pt-6 border-t border-gray-200">
               <p className="text-sm text-gray-500 text-center mb-4">
-                ไม่พบข้อมูล? กรุณาติดต่อ Admin
+                ไม่พบข้อมูล? กรุณาติดต่อ Admin ทางแชทที่ LINE Official AGC
               </p>
               <button
                 onClick={() => router.push('/dashboard')}

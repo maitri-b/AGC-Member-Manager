@@ -29,13 +29,13 @@ export async function GET(
     const db = adminDb();
 
     // Get search logs for this user
+    // Avoid using where + orderBy together to prevent composite index requirement
     const logsSnapshot = await db.collection('searchLogs')
       .where('userId', '==', userId)
-      .orderBy('searchedAt', 'desc')
-      .limit(50)
+      .limit(100)
       .get();
 
-    const logs = logsSnapshot.docs.map(doc => {
+    let logs = logsSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -45,6 +45,16 @@ export async function GET(
         attemptNumber: data.attemptNumber,
       };
     });
+
+    // Sort by searchedAt descending in JavaScript
+    logs.sort((a, b) => {
+      const dateA = a.searchedAt instanceof Date ? a.searchedAt.getTime() : new Date(a.searchedAt || 0).getTime();
+      const dateB = b.searchedAt instanceof Date ? b.searchedAt.getTime() : new Date(b.searchedAt || 0).getTime();
+      return dateB - dateA;
+    });
+
+    // Limit to 50
+    logs = logs.slice(0, 50);
 
     return NextResponse.json({ logs });
   } catch (error) {

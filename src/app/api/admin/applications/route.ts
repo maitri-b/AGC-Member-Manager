@@ -88,13 +88,13 @@ export async function GET(request: NextRequest) {
 
     if (lockedUserIds.length > 0) {
       for (const userId of lockedUserIds) {
+        // Avoid using where + orderBy together to prevent composite index requirement
         const logsSnapshot = await db.collection('searchLogs')
           .where('userId', '==', userId)
-          .orderBy('searchedAt', 'desc')
-          .limit(10)
+          .limit(50)
           .get();
 
-        const logs = logsSnapshot.docs.map(doc => {
+        let logs = logsSnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             searchQuery: data.searchQuery,
@@ -103,6 +103,16 @@ export async function GET(request: NextRequest) {
             attemptNumber: data.attemptNumber,
           };
         });
+
+        // Sort by searchedAt descending in JavaScript
+        logs.sort((a, b) => {
+          const dateA = a.searchedAt instanceof Date ? a.searchedAt.getTime() : new Date(String(a.searchedAt) || '0').getTime();
+          const dateB = b.searchedAt instanceof Date ? b.searchedAt.getTime() : new Date(String(b.searchedAt) || '0').getTime();
+          return dateB - dateA;
+        });
+
+        // Limit to 10
+        logs = logs.slice(0, 10);
 
         if (logs.length > 0) {
           searchLogsMap.set(userId, logs);

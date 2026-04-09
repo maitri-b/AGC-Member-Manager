@@ -636,8 +636,12 @@ Helping & Sharing`;
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-xs text-gray-500">ชื่อบริษัท:</span>
-                              <span className="text-sm font-medium text-gray-900">{request.systemData.companyNameTH || request.systemData.companyNameEN || '-'}</span>
+                              <span className="text-xs text-gray-500">ชื่อบริษัท (TH):</span>
+                              <span className="text-sm font-medium text-gray-900">{request.systemData.companyNameTH || '-'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">ชื่อบริษัท (EN):</span>
+                              <span className="text-sm font-medium text-gray-900">{request.systemData.companyNameEN || '-'}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-xs text-gray-500">เลขใบอนุญาต:</span>

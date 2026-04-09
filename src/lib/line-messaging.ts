@@ -2,6 +2,52 @@
 import { Member } from '@/types/member';
 
 const LINE_MESSAGING_API = 'https://api.line.me/v2/bot/message/push';
+
+// Thai month names
+const THAI_MONTHS = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+// Format date to Thai format: "วันที่ ชื่อเดือนภาษาไทย ปีค.ศ."
+function formatThaiDate(dateStr: string | undefined): string {
+  if (!dateStr) return '-';
+
+  try {
+    // Handle various date formats
+    let date: Date;
+
+    // Try parsing as ISO date or common formats
+    if (dateStr.includes('/')) {
+      // Handle DD/MM/YYYY or MM/DD/YYYY format
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        // Assume DD/MM/YYYY (Thai format)
+        const [day, month, year] = parts.map(Number);
+        date = new Date(year, month - 1, day);
+      } else {
+        date = new Date(dateStr);
+      }
+    } else if (dateStr.includes('-')) {
+      // Handle YYYY-MM-DD format
+      date = new Date(dateStr);
+    } else {
+      date = new Date(dateStr);
+    }
+
+    if (isNaN(date.getTime())) {
+      return dateStr; // Return original if parsing fails
+    }
+
+    const day = date.getDate();
+    const month = THAI_MONTHS[date.getMonth()];
+    const year = date.getFullYear(); // CE year
+
+    return `${day} ${month} ${year}`;
+  } catch {
+    return dateStr; // Return original if any error
+  }
+}
 const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
 interface FlexMessage {
@@ -333,7 +379,7 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
               },
               {
                 type: 'text',
-                text: member.membershipExpiry || '-',
+                text: formatThaiDate(member.membershipExpiry),
                 size: 'sm',
                 flex: 5,
               },

@@ -55,6 +55,7 @@ export default function AdminVerificationPage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [sendingLineId, setSendingLineId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [sendLineOnAction, setSendLineOnAction] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -95,6 +96,18 @@ export default function AdminVerificationPage() {
     });
   };
 
+  // Get checkbox state - default to true if not set
+  const getSendLineChecked = (id: string) => {
+    return sendLineOnAction[id] !== false; // Default true
+  };
+
+  const toggleSendLine = (id: string) => {
+    setSendLineOnAction(prev => ({
+      ...prev,
+      [id]: !getSendLineChecked(id),
+    }));
+  };
+
   const handleApprove = async (requestId: string) => {
     if (!confirm('ยืนยันการอนุมัติคำขอนี้?')) return;
 
@@ -107,8 +120,33 @@ export default function AdminVerificationPage() {
       });
 
       if (res.ok) {
+        const data = await res.json();
+
+        // Auto send LINE if checkbox is checked
+        if (getSendLineChecked(requestId)) {
+          const request = requests.pending.find(r => r.id === requestId);
+          if (request?.lineUserId) {
+            try {
+              await fetch('/api/line/send-verification-result', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lineUserId: request.lineUserId,
+                  memberId: request.memberId,
+                  status: 'approved',
+                  lineDisplayName: request.lineDisplayName,
+                }),
+              });
+            } catch (lineError) {
+              console.error('Error sending LINE:', lineError);
+            }
+          }
+        }
+
         await fetchRequests();
-        alert('อนุมัติคำขอเรียบร้อยแล้ว');
+        alert(getSendLineChecked(requestId)
+          ? 'อนุมัติคำขอและส่ง LINE แจ้งผลเรียบร้อยแล้ว'
+          : 'อนุมัติคำขอเรียบร้อยแล้ว');
       } else {
         const data = await res.json();
         alert(data.error || 'เกิดข้อผิดพลาด');
@@ -122,6 +160,7 @@ export default function AdminVerificationPage() {
 
   const handleReject = async (requestId: string) => {
     setProcessingId(requestId);
+    const reason = rejectionReason || 'ไม่ผ่านการตรวจสอบ';
     try {
       const res = await fetch('/api/admin/verification', {
         method: 'PUT',
@@ -129,15 +168,39 @@ export default function AdminVerificationPage() {
         body: JSON.stringify({
           requestId,
           action: 'reject',
-          rejectionReason: rejectionReason || 'ไม่ผ่านการตรวจสอบ',
+          rejectionReason: reason,
         }),
       });
 
       if (res.ok) {
+        // Auto send LINE if checkbox is checked
+        if (getSendLineChecked(requestId)) {
+          const request = requests.pending.find(r => r.id === requestId);
+          if (request?.lineUserId) {
+            try {
+              await fetch('/api/line/send-verification-result', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lineUserId: request.lineUserId,
+                  memberId: request.memberId,
+                  status: 'rejected',
+                  rejectionReason: reason,
+                  lineDisplayName: request.lineDisplayName,
+                }),
+              });
+            } catch (lineError) {
+              console.error('Error sending LINE:', lineError);
+            }
+          }
+        }
+
         await fetchRequests();
         setShowRejectModal(null);
         setRejectionReason('');
-        alert('ปฏิเสธคำขอเรียบร้อยแล้ว');
+        alert(getSendLineChecked(requestId)
+          ? 'ปฏิเสธคำขอและส่ง LINE แจ้งผลเรียบร้อยแล้ว'
+          : 'ปฏิเสธคำขอเรียบร้อยแล้ว');
       } else {
         const data = await res.json();
         alert(data.error || 'เกิดข้อผิดพลาด');
@@ -343,6 +406,16 @@ Helping & Sharing`;
                   <div className="flex items-center gap-1 sm:gap-2 ml-2 sm:ml-4">
                     {request.status === 'pending' && (
                       <>
+                        {/* Send LINE Checkbox */}
+                        <label className="hidden sm:flex items-center gap-1.5 cursor-pointer mr-2 text-xs text-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={getSendLineChecked(request.id)}
+                            onChange={() => toggleSendLine(request.id)}
+                            className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          />
+                          <span>ส่ง LINE</span>
+                        </label>
                         {/* Desktop buttons */}
                         <button
                           onClick={() => handleApprove(request.id)}
@@ -358,7 +431,15 @@ Helping & Sharing`;
                         >
                           ปฏิเสธ
                         </button>
-                        {/* Mobile icon buttons */}
+                        {/* Mobile: checkbox + icon buttons */}
+                        <label className="sm:hidden flex items-center cursor-pointer mr-1">
+                          <input
+                            type="checkbox"
+                            checked={getSendLineChecked(request.id)}
+                            onChange={() => toggleSendLine(request.id)}
+                            className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          />
+                        </label>
                         <button
                           onClick={() => handleApprove(request.id)}
                           disabled={processingId === request.id}

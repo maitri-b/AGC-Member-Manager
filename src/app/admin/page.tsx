@@ -76,6 +76,8 @@ export default function AdminPage() {
     profileChanges: 0,
     disputes: 0,
   });
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -443,7 +445,35 @@ export default function AdminPage() {
         {/* Users Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-            <h2 className="font-semibold text-gray-900">รายชื่อผู้ใช้งาน</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h2 className="font-semibold text-gray-900">รายชื่อผู้ใช้งาน</h2>
+              <div className="flex flex-wrap gap-2">
+                {/* Role Filter */}
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="all">ทุกประเภท</option>
+                  <option value="admin">ผู้ดูแลระบบ</option>
+                  <option value="committee">กรรมการ</option>
+                  <option value="member">สมาชิก</option>
+                  <option value="guest">ผู้เยี่ยมชม</option>
+                </select>
+                {/* Status Filter */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="all">ทุกสถานะ</option>
+                  <option value="verified">ยืนยันตัวตนแล้ว</option>
+                  <option value="pending">รอยืนยันตัวตน</option>
+                  <option value="locked">ถูกล็อค</option>
+                  <option value="inactive">ไม่ใช้งาน</option>
+                </select>
+              </div>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -476,7 +506,35 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
+                {users
+                  .filter((user) => {
+                    // Role filter
+                    if (roleFilter !== 'all' && user.role !== roleFilter) {
+                      return false;
+                    }
+                    // Status filter
+                    if (statusFilter === 'verified' && user.verificationStatus !== 'verified') {
+                      return false;
+                    }
+                    if (statusFilter === 'pending' && user.verificationStatus !== 'pending' && user.role === 'guest') {
+                      // Show guests who haven't verified yet
+                      return user.role === 'guest';
+                    }
+                    if (statusFilter === 'pending' && user.verificationStatus === 'pending') {
+                      return true;
+                    }
+                    if (statusFilter === 'pending' && user.verificationStatus !== 'pending') {
+                      return false;
+                    }
+                    if (statusFilter === 'locked' && !user.isSearchLocked) {
+                      return false;
+                    }
+                    if (statusFilter === 'inactive' && user.isActive !== false) {
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">

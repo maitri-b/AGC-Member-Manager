@@ -3,7 +3,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { hasPermission } from '@/lib/permissions';
 
 export default function Navbar() {
@@ -14,42 +14,6 @@ export default function Navbar() {
   const [cacheLoading, setCacheLoading] = useState(false);
   const [cacheMessage, setCacheMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [cacheMonths, setCacheMonths] = useState(12);
-  const [pendingCount, setPendingCount] = useState(0);
-
-  // Fetch pending counts for admin badge
-  useEffect(() => {
-    const fetchPendingCounts = async () => {
-      if (!session?.user?.permissions || !hasPermission(session.user.permissions, 'admin:access')) {
-        return;
-      }
-
-      try {
-        // Fetch verification requests count
-        const verificationRes = await fetch('/api/admin/verification');
-        const verificationData = verificationRes.ok ? await verificationRes.json() : { pending: [] };
-        const verificationCount = verificationData.pending?.length || 0;
-
-        // Fetch profile change requests count
-        const profileRes = await fetch('/api/admin/profile-changes?status=pending');
-        const profileData = profileRes.ok ? await profileRes.json() : { requests: [] };
-        const profileCount = profileData.requests?.length || 0;
-
-        // Fetch membership applications count
-        const applicationsRes = await fetch('/api/admin/applications?status=pending');
-        const applicationsData = applicationsRes.ok ? await applicationsRes.json() : { applications: [] };
-        const applicationsCount = applicationsData.applications?.length || 0;
-
-        setPendingCount(verificationCount + profileCount + applicationsCount);
-      } catch (error) {
-        console.error('Error fetching pending counts:', error);
-      }
-    };
-
-    fetchPendingCounts();
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchPendingCounts, 60000);
-    return () => clearInterval(interval);
-  }, [session]);
 
   if (!session) return null;
 
@@ -159,14 +123,9 @@ export default function Navbar() {
             {canAccessAdmin && (
               <Link
                 href="/admin"
-                className="relative px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 จัดการระบบ
-                {pendingCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[20px] h-5 flex items-center justify-center px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
-                    {pendingCount > 99 ? '99+' : pendingCount}
-                  </span>
-                )}
               </Link>
             )}
           </div>
@@ -358,15 +317,10 @@ export default function Navbar() {
             {canAccessAdmin && (
               <Link
                 href="/admin"
-                className="flex items-center justify-between px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
                 onClick={() => setIsMenuOpen(false)}
               >
-                <span>จัดการระบบ</span>
-                {pendingCount > 0 && (
-                  <span className="min-w-[20px] h-5 flex items-center justify-center px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
-                    {pendingCount > 99 ? '99+' : pendingCount}
-                  </span>
-                )}
+                จัดการระบบ
               </Link>
             )}
           </div>

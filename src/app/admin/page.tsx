@@ -96,39 +96,17 @@ export default function AdminPage() {
 
   const fetchPendingCounts = async () => {
     try {
-      // Fetch all pending counts in parallel
-      const [applicationsRes, verificationsRes, profileChangesRes, disputesRes] = await Promise.all([
-        fetch('/api/admin/applications?status=pending'),
-        fetch('/api/admin/verification?status=pending'),
-        fetch('/api/admin/profile-changes?status=pending'),
-        fetch('/api/admin/disputes?status=pending'),
-      ]);
-
-      const counts: PendingCounts = {
-        applications: 0,
-        verifications: 0,
-        profileChanges: 0,
-        disputes: 0,
-      };
-
-      if (applicationsRes.ok) {
-        const data = await applicationsRes.json();
-        counts.applications = data.applications?.length || 0;
+      // Use optimized pending-counts API (uses Firestore count() for minimal reads)
+      const response = await fetch('/api/admin/pending-counts');
+      if (response.ok) {
+        const data = await response.json();
+        setPendingCounts({
+          applications: data.applications || 0,
+          verifications: data.verifications || 0,
+          profileChanges: data.profileChanges || 0,
+          disputes: data.disputes || 0,
+        });
       }
-      if (verificationsRes.ok) {
-        const data = await verificationsRes.json();
-        counts.verifications = data.pendingCount || data.pending?.length || 0;
-      }
-      if (profileChangesRes.ok) {
-        const data = await profileChangesRes.json();
-        counts.profileChanges = data.requests?.length || 0;
-      }
-      if (disputesRes.ok) {
-        const data = await disputesRes.json();
-        counts.disputes = data.requests?.length || 0;
-      }
-
-      setPendingCounts(counts);
     } catch (err) {
       console.error('Error fetching pending counts:', err);
     }

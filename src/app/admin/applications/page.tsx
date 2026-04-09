@@ -6,6 +6,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Toast, useToast } from '@/components/Toast';
 
+interface SearchLog {
+  searchQuery: string;
+  searchType: string;
+  searchedAt: string;
+  attemptNumber: number;
+}
+
 interface Application {
   id: string;
   applicationId: string;
@@ -35,6 +42,12 @@ interface Application {
   approvedByName?: string;
   rejectedAt?: string;
   rejectedByName?: string;
+  // Search lock fields
+  isSearchLocked?: boolean;
+  searchCount?: number;
+  lockedAt?: string;
+  lockedReason?: string;
+  searchLogs?: SearchLog[];
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -307,20 +320,29 @@ export default function ApplicationsPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {applications.map((app) => (
-                    <tr key={app.id} className="hover:bg-gray-50">
+                    <tr key={app.id} className={`hover:bg-gray-50 ${app.isSearchLocked ? 'bg-red-50/50' : ''}`}>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          {app.lineProfilePicture ? (
-                            <img
-                              src={app.lineProfilePicture}
-                              alt=""
-                              className="w-10 h-10 rounded-full"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                              <span className="text-gray-500 text-sm">{app.nickname?.charAt(0)}</span>
-                            </div>
-                          )}
+                          <div className="relative">
+                            {app.lineProfilePicture ? (
+                              <img
+                                src={app.lineProfilePicture}
+                                alt=""
+                                className="w-10 h-10 rounded-full"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <span className="text-gray-500 text-sm">{app.nickname?.charAt(0)}</span>
+                              </div>
+                            )}
+                            {app.isSearchLocked && (
+                              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
                           <div>
                             <div className="font-medium text-gray-900">{app.nickname}</div>
                             <div className="text-sm text-gray-500">{app.companyNameTH}</div>
@@ -479,6 +501,51 @@ export default function ApplicationsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Search Lock Status & Logs */}
+              {selectedApp.isSearchLocked && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <h4 className="font-medium text-red-800">ถูกล็อคการค้นหา</h4>
+                  </div>
+                  <div className="text-sm text-red-700 mb-3">
+                    <p><span className="font-medium">เหตุผล:</span> {selectedApp.lockedReason || 'ค้นหาเกินจำนวนครั้งที่กำหนด'}</p>
+                    <p><span className="font-medium">จำนวนครั้งที่ค้นหา:</span> {selectedApp.searchCount || 0} ครั้ง</p>
+                    {selectedApp.lockedAt && (
+                      <p><span className="font-medium">ล็อคเมื่อ:</span> {formatDate(selectedApp.lockedAt)}</p>
+                    )}
+                  </div>
+
+                  {/* Search Logs */}
+                  {selectedApp.searchLogs && selectedApp.searchLogs.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-red-200">
+                      <h5 className="font-medium text-red-800 mb-2">ประวัติการค้นหา:</h5>
+                      <div className="space-y-2">
+                        {selectedApp.searchLogs.map((log, index) => (
+                          <div key={index} className="bg-white/60 rounded p-2 text-sm">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium text-gray-800">
+                                  ครั้งที่ {log.attemptNumber}: {log.searchQuery}
+                                </p>
+                                <p className="text-gray-500 text-xs">
+                                  {log.searchType === 'licenseNumber' ? 'เลขใบอนุญาต' : log.searchType}
+                                </p>
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {formatDate(log.searchedAt)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Document Status */}
               <div>

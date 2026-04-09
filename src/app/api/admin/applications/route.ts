@@ -28,21 +28,105 @@ export async function GET(request: NextRequest) {
     // Fetch all applications without orderBy to avoid composite index requirement
     const snapshot = await db.collection('membershipApplications').get();
 
+    interface SearchLog {
+      searchQuery: string;
+      searchType: string;
+      searchedAt: Date | string;
+      attemptNumber: number;
+    }
+
     interface ApplicationDoc {
       id: string;
       status?: string;
       createdAt?: Date | string;
       updatedAt?: Date | string;
+      lineUserId?: string;
+      isSearchLocked?: boolean;
+      searchCount?: number;
+      lockedAt?: Date | string;
+      lockedReason?: string;
+      searchLogs?: SearchLog[];
       [key: string]: unknown;
+    }
+
+    // Get all LINE user IDs from applications
+    const lineUserIds = snapshot.docs
+      .map(doc => doc.data().lineUserId)
+      .filter((id): id is string => !!id);
+
+    // Batch fetch user data for search lock status
+    const usersMap = new Map<string, { isSearchLocked?: boolean; searchCount?: number; lockedAt?: Date; lockedReason?: string }>();
+    if (lineUserIds.length > 0) {
+      // Firestore 'in' query supports up to 30 items, so we need to batch
+      const batches = [];
+      for (let i = 0; i < lineUserIds.length; i += 30) {
+        batches.push(lineUserIds.slice(i, i + 30));
+      }
+
+      for (const batch of batches) {
+        const usersSnapshot = await db.collection('users')
+          .where('__name__', 'in', batch)
+          .get();
+
+        usersSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          usersMap.set(doc.id, {
+            isSearchLocked: data.isSearchLocked || false,
+            searchCount: data.searchCount || 0,
+            lockedAt: data.lockedAt?.toDate?.() || data.lockedAt,
+            lockedReason: data.lockedReason,
+          });
+        });
+      }
+    }
+
+    // Fetch search logs for locked users
+    const searchLogsMap = new Map<string, SearchLog[]>();
+    const lockedUserIds = Array.from(usersMap.entries())
+      .filter(([, userData]) => userData.isSearchLocked)
+      .map(([userId]) => userId);
+
+    if (lockedUserIds.length > 0) {
+      for (const userId of lockedUserIds) {
+        const logsSnapshot = await db.collection('searchLogs')
+          .where('userId', '==', userId)
+          .orderBy('searchedAt', 'desc')
+          .limit(10)
+          .get();
+
+        const logs = logsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            searchQuery: data.searchQuery,
+            searchType: data.searchType,
+            searchedAt: data.searchedAt?.toDate?.() || data.searchedAt,
+            attemptNumber: data.attemptNumber,
+          };
+        });
+
+        if (logs.length > 0) {
+          searchLogsMap.set(userId, logs);
+        }
+      }
     }
 
     let applications: ApplicationDoc[] = snapshot.docs.map(doc => {
       const data = doc.data();
+      const lineUserId = data.lineUserId;
+      const userData = lineUserId ? usersMap.get(lineUserId) : null;
+      const searchLogs = lineUserId ? searchLogsMap.get(lineUserId) : undefined;
+
       return {
         id: doc.id,
         ...data,
         createdAt: data.createdAt?.toDate?.() || data.createdAt,
         updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        // Add search lock info
+        isSearchLocked: userData?.isSearchLocked || false,
+        searchCount: userData?.searchCount || 0,
+        lockedAt: userData?.lockedAt,
+        lockedReason: userData?.lockedReason,
+        searchLogs: searchLogs,
       };
     });
 

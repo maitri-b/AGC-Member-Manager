@@ -245,15 +245,9 @@ function DashboardContent() {
 
                         {/* Stats (for committee/admin) */}
                         {isCommitteeOrAdmin && event.totalRegistrations !== undefined && (
-                          <div className="flex gap-4 md:gap-6">
-                            <div className="text-center">
-                              <p className="text-2xl font-bold text-blue-600">{event.agentRegistrations || 0}</p>
-                              <p className="text-xs text-gray-500">ลงทะเบียน</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-2xl font-bold text-green-600">{event.confirmedCount || 0}</p>
-                              <p className="text-xs text-gray-500">ยืนยันแล้ว</p>
-                            </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-blue-600">{event.agentRegistrations || 0}</p>
+                            <p className="text-xs text-gray-500">บริษัท(เอเจ้นท์)<br />ที่ลงทะเบียน</p>
                           </div>
                         )}
                       </div>

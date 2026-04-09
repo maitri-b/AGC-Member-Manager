@@ -115,7 +115,7 @@ export default function AdminPage() {
       }
       if (verificationsRes.ok) {
         const data = await verificationsRes.json();
-        counts.verifications = data.requests?.length || 0;
+        counts.verifications = data.pendingCount || data.pending?.length || 0;
       }
       if (profileChangesRes.ok) {
         const data = await profileChangesRes.json();

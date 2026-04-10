@@ -19,6 +19,7 @@ interface Event {
   isPublished: boolean;
   countsAttendance: boolean;
   maxCapacity: number;
+  maxPerCompany: number;
   registrationFee: number;
   registrationOpen: boolean;
   documentName?: string;
@@ -35,6 +36,7 @@ interface UserRegistration {
   status: string;
   attendeeCount: number;
   registrationDate: string;
+  attendeeNames: string;
 }
 
 export default function EventDetailPage() {
@@ -339,19 +341,183 @@ export default function EventDetailPage() {
             {/* Registration Status / Form */}
             <div className="border-t pt-6">
               {userRegistration ? (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                      <p className="font-semibold text-green-800">คุณลงทะเบียนแล้ว</p>
-                      <p className="text-sm text-green-700">
-                        รหัสลงทะเบียน: {userRegistration.registrationId}
-                        {userRegistration.status && ` | สถานะ: ${userRegistration.status}`}
-                      </p>
+                <div className="space-y-4">
+                  {/* Registration Info Card */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3 flex-1">
+                        <svg className="w-6 h-6 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div className="flex-1">
+                          <p className="font-semibold text-green-800">คุณลงทะเบียนแล้ว</p>
+                          <p className="text-sm text-green-700">
+                            รหัสลงทะเบียน: {userRegistration.registrationId}
+                            {userRegistration.status && ` | สถานะ: ${userRegistration.status}`}
+                          </p>
+                          <p className="text-sm text-green-700 mt-1">
+                            จำนวนผู้เข้าร่วม: {userRegistration.attendeeCount} คน
+                          </p>
+                          {event?.maxPerCompany && event.maxPerCompany > 0 && (
+                            <p className="text-xs text-green-600 mt-1">
+                              * จำกัด {event.maxPerCompany} คนต่อ 1 บริษัท
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {!isEditing && (
+                        <button
+                          onClick={() => {
+                            setIsEditing(true);
+                            setAttendeeCount(userRegistration.attendeeCount);
+                            // Parse attendee names from userRegistration
+                            try {
+                              const names = JSON.parse(userRegistration.attendeeNames || '[]');
+                              setAttendeeNames(Array.isArray(names) ? names : [userRegistration.attendeeNames || '']);
+                            } catch {
+                              setAttendeeNames([userRegistration.attendeeNames || '']);
+                            }
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          แก้ไขข้อมูล
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  {/* Edit Form */}
+                  {isEditing && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                      <h3 className="font-semibold text-blue-900">แก้ไขข้อมูลการลงทะเบียน</h3>
+
+                      {/* Attendee Count */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          จำนวนผู้เข้าร่วม
+                          {event?.maxPerCompany && event.maxPerCompany > 0 && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              (สูงสุด {event.maxPerCompany} คน)
+                            </span>
+                          )}
+                        </label>
+                        <select
+                          value={attendeeCount}
+                          onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          {Array.from(
+                            { length: event?.maxPerCompany && event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
+                            (_, i) => i + 1
+                          ).map(num => (
+                            <option key={num} value={num}>{num} คน</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Attendee Names */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ชื่อผู้เข้าร่วม
+                        </label>
+                        <div className="space-y-2">
+                          {Array.from({ length: attendeeCount }).map((_, index) => (
+                            <input
+                              key={index}
+                              type="text"
+                              value={attendeeNames[index] || ''}
+                              onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
+                              placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Total Amount */}
+                      {event && event.registrationFee > 0 && (
+                        <div className="bg-white border border-blue-300 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm text-gray-600">ค่าสมัครใหม่</p>
+                              <p className="text-xs text-gray-500">
+                                {attendeeCount} คน × ฿{event.registrationFee.toLocaleString()}/คน
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xl font-bold text-blue-600">
+                                ฿{(event.registrationFee * attendeeCount).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={async () => {
+                            if (!event) return;
+
+                            // Validate attendee names
+                            const filledNames = attendeeNames.filter(name => name.trim());
+                            if (filledNames.length !== attendeeCount) {
+                              toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
+                              return;
+                            }
+
+                            setUpdating(true);
+                            try {
+                              const response = await fetch(`/api/events/${eventId}/update-registration`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  attendeeCount,
+                                  attendeeNames: filledNames,
+                                  requestNameChange: false,
+                                }),
+                              });
+
+                              const data = await response.json();
+
+                              if (!response.ok) {
+                                throw new Error(data.error || 'ไม่สามารถอัพเดทข้อมูลได้');
+                              }
+
+                              toast.success(data.message || 'อัพเดทข้อมูลเรียบร้อยแล้ว');
+                              setIsEditing(false);
+                              fetchEventDetail(); // Refresh data
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+                            } finally {
+                              setUpdating(false);
+                            }
+                          }}
+                          disabled={updating}
+                          className="flex-1 py-2 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {updating ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditing(false);
+                            setAttendeeCount(userRegistration.attendeeCount);
+                            try {
+                              const names = JSON.parse(userRegistration.attendeeNames || '[]');
+                              setAttendeeNames(Array.isArray(names) ? names : [userRegistration.attendeeNames || '']);
+                            } catch {
+                              setAttendeeNames([userRegistration.attendeeNames || '']);
+                            }
+                          }}
+                          disabled={updating}
+                          className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                        >
+                          ยกเลิก
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : !session?.user?.memberId ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

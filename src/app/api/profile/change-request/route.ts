@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // Build change details with old and new values
     const changeDetails: Record<string, { oldValue: string; newValue: string }> = {};
-    const allowedFields = ['fullNameTH', 'nickname', 'companyNameTH', 'companyNameEN', 'positionCompany', 'licenseNumber'];
+    const allowedFields = ['fullNameTH', 'nickname', 'companyNameTH', 'companyNameEN', 'positionCompany', 'licenseNumber', 'lineId'];
 
     for (const field of Object.keys(changes)) {
       if (allowedFields.includes(field) && changes[field] !== currentMember[field as keyof typeof currentMember]) {

@@ -363,28 +363,6 @@ export default function EventDetailPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        {/* Event Info */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">ปีจัดกิจกรรม</p>
-              <p className="font-medium">พ.ศ. {eventData.event.year} (ค.ศ. {eventData.event.year - 543})</p>
-            </div>
-            {eventData.event.location && (
-              <div>
-                <p className="text-sm text-gray-500">สถานที่</p>
-                <p className="font-medium">{eventData.event.location}</p>
-              </div>
-            )}
-            {eventData.event.description && (
-              <div>
-                <p className="text-sm text-gray-500">รายละเอียด</p>
-                <p className="font-medium">{eventData.event.description}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4 text-center">

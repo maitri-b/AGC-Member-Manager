@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 
 interface Event {
   eventId: string;
@@ -18,10 +19,15 @@ interface Event {
   isPublished: boolean;
   countsAttendance: boolean;
   maxCapacity: number;
+  maxPerCompany: number;
   registrationFee: number;
   registrationOpen: boolean;
   documentName?: string;
   documentUrl?: string;
+  mainImageUrl?: string;
+  paymentAccountName?: string;
+  paymentAccountNumber?: string;
+  paymentQrCodeUrl?: string;
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
@@ -49,10 +55,15 @@ interface EventFormData {
   isPublished: boolean;
   countsAttendance: boolean;
   maxCapacity: number;
+  maxPerCompany: number;
   registrationFee: number;
   registrationOpen: boolean;
   documentName: string;
   documentUrl: string;
+  mainImageUrl: string;
+  paymentAccountName: string;
+  paymentAccountNumber: string;
+  paymentQrCodeUrl: string;
 }
 
 const initialFormData: EventFormData = {
@@ -67,10 +78,15 @@ const initialFormData: EventFormData = {
   isPublished: false,
   countsAttendance: true,
   maxCapacity: 0,
+  maxPerCompany: 0,
   registrationFee: 0,
   registrationOpen: false,
   documentName: '',
   documentUrl: '',
+  mainImageUrl: '',
+  paymentAccountName: '',
+  paymentAccountNumber: '',
+  paymentQrCodeUrl: '',
 };
 
 export default function AdminEventsPage() {
@@ -92,6 +108,9 @@ export default function AdminEventsPage() {
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+
+  // Dropdown menu state
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -155,10 +174,15 @@ export default function AdminEventsPage() {
         isPublished: event.isPublished ?? false,
         countsAttendance: event.countsAttendance ?? true,
         maxCapacity: event.maxCapacity ?? 0,
+        maxPerCompany: event.maxPerCompany ?? 0,
         registrationFee: event.registrationFee ?? 0,
         registrationOpen: event.registrationOpen ?? false,
         documentName: event.documentName ?? '',
         documentUrl: event.documentUrl ?? '',
+        mainImageUrl: event.mainImageUrl ?? '',
+        paymentAccountName: event.paymentAccountName ?? '',
+        paymentAccountNumber: event.paymentAccountNumber ?? '',
+        paymentQrCodeUrl: event.paymentQrCodeUrl ?? '',
       });
     } else {
       setEditingEvent(null);
@@ -266,10 +290,107 @@ export default function AdminEventsPage() {
         throw new Error('Failed to update event');
       }
 
+      setSuccess(`${!event.isActive ? 'เปิด' : 'ปิด'}กิจกรรมเรียบร้อยแล้ว`);
       fetchEvents();
     } catch (err) {
       console.error('Error toggling event status:', err);
       setError('ไม่สามารถเปลี่ยนสถานะกิจกรรมได้');
+    }
+  };
+
+  const handleToggleRegistration = async (event: Event) => {
+    try {
+      const response = await fetch('/api/admin/events', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: event.eventId,
+          registrationOpen: !event.registrationOpen,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update registration status');
+      }
+
+      setSuccess(`${!event.registrationOpen ? 'เปิด' : 'ปิด'}รับสมัครเรียบร้อยแล้ว`);
+      setOpenDropdown(null);
+      fetchEvents();
+    } catch (err) {
+      console.error('Error toggling registration:', err);
+      setError('ไม่สามารถเปลี่ยนสถานะการรับสมัครได้');
+    }
+  };
+
+  const handleExportExcel = async (event: Event) => {
+    try {
+      const response = await fetch(`/api/events/${event.eventId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch event data');
+      }
+
+      const data = await response.json();
+      const attendees = data.attendees || [];
+
+      // Prepare data for Excel
+      const excelData = attendees.map((a: any) => ({
+        'รหัสลงทะเบียน': a.registration?.registrationId || '',
+        'ชื่อบริษัท': a.registration?.companyName || '',
+        'เลขใบอนุญาต': a.registration?.licenseNumber || '',
+        'ผู้ติดต่อ': a.registration?.contactName || '',
+        'เบอร์โทร': a.registration?.contactPhone || '',
+        'จำนวนผู้เข้าร่วม': a.registration?.attendeeCount || 0,
+        'รายชื่อผู้เข้าร่วม': a.registration?.attendeeNames || '',
+        'สถานะ': a.registration?.status || '',
+        'MemberID': a.member?.memberId || 'ไม่พบ',
+      }));
+
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'รายชื่อผู้เข้าร่วม');
+
+      // Save file
+      const fileName = `${event.eventName}_${new Date().toLocaleDateString('th-TH')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      setSuccess('Export Excel เรียบร้อยแล้ว');
+      setOpenDropdown(null);
+    } catch (err) {
+      console.error('Error exporting Excel:', err);
+      setError('ไม่สามารถ export ไฟล์ได้');
+    }
+  };
+
+  const handleCopyList = async (event: Event) => {
+    try {
+      const response = await fetch(`/api/events/${event.eventId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch event data');
+      }
+
+      const data = await response.json();
+      const attendees = data.attendees || [];
+
+      // Create text list
+      const textList = attendees
+        .map((a: any, index: number) => {
+          const companyName = a.registration?.companyName || 'ไม่ระบุ';
+          const contactName = a.registration?.contactName || 'ไม่ระบุ';
+          const phone = a.registration?.contactPhone || 'ไม่ระบุ';
+          const attendeeNames = a.registration?.attendeeNames || '';
+          return `${index + 1}. ${companyName}\n   ผู้ติดต่อ: ${contactName}\n   เบอร์โทร: ${phone}\n   รายชื่อผู้เข้าร่วม: ${attendeeNames}`;
+        })
+        .join('\n\n');
+
+      const fullText = `รายชื่อผู้ลงทะเบียน: ${event.eventName}\n\n${textList}`;
+
+      await navigator.clipboard.writeText(fullText);
+      setSuccess('คัดลอกรายชื่อเรียบร้อยแล้ว');
+      setOpenDropdown(null);
+    } catch (err) {
+      console.error('Error copying list:', err);
+      setError('ไม่สามารถคัดลอกรายชื่อได้');
     }
   };
 
@@ -461,27 +582,107 @@ export default function AdminEventsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        href={`/admin/events/${event.eventId}`}
-                        className="text-green-600 hover:text-green-900 mr-4"
-                      >
-                        ดูรายชื่อ
-                      </Link>
-                      <button
-                        onClick={() => handleOpenModal(event)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                      >
-                        แก้ไข
-                      </button>
-                      <button
-                        onClick={() => {
-                          setDeletingEventId(event.eventId);
-                          setShowDeleteConfirm(true);
-                        }}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        ลบ
-                      </button>
+                      <div className="relative inline-block">
+                        <button
+                          onClick={() => setOpenDropdown(openDropdown === event.eventId ? null : event.eventId)}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                          </svg>
+                        </button>
+
+                        {openDropdown === event.eventId && (
+                          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                            <Link
+                              href={`/admin/events/${event.eventId}`}
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              onClick={() => setOpenDropdown(null)}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                              </svg>
+                              ดูรายชื่อ
+                            </Link>
+                            <button
+                              onClick={() => {
+                                handleOpenModal(event);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              แก้ไข
+                            </button>
+                            <div className="border-t border-gray-200 my-1"></div>
+                            <button
+                              onClick={() => {
+                                handleExportExcel(event);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              Export Excel
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleCopyList(event);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              Copy รายชื่อ
+                            </button>
+                            <div className="border-t border-gray-200 my-1"></div>
+                            <button
+                              onClick={() => {
+                                handleToggleRegistration(event);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              {event.registrationOpen ? 'ปิดรับสมัคร' : 'เปิดรับสมัคร'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleToggleActive(event);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              {event.isActive ? 'จบกิจกรรม' : 'เปิดกิจกรรม'}
+                            </button>
+                            <div className="border-t border-gray-200 my-1"></div>
+                            <button
+                              onClick={() => {
+                                setDeletingEventId(event.eventId);
+                                setShowDeleteConfirm(true);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              ลบ
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -630,6 +831,21 @@ export default function AdminEventsPage() {
                       />
                       <p className="text-xs text-gray-500 mt-1">กรอก 0 หากไม่มีค่าใช้จ่าย</p>
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        จำนวนที่อนุญาตต่อ 1 บริษัท
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.maxPerCompany}
+                        onChange={(e) => setFormData({ ...formData, maxPerCompany: parseInt(e.target.value) || 0 })}
+                        placeholder="0 = ไม่จำกัด"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min={0}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">จำกัดจำนวนผู้เข้าร่วมต่อ 1 บริษัท (0 = ไม่จำกัด)</p>
+                    </div>
                   </div>
                 </div>
 
@@ -662,8 +878,68 @@ export default function AdminEventsPage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Link รูป Main Image (ไม่บังคับ)
+                      </label>
+                      <input
+                        type="url"
+                        value={formData.mainImageUrl}
+                        onChange={(e) => setFormData({ ...formData, mainImageUrl: e.target.value })}
+                        placeholder="https://... (รูปที่แสดงบน header ในรายละเอียดกิจกรรม)"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
                 </div>
+
+                {/* Payment Information */}
+                {formData.registrationFee > 0 && (
+                  <div className="md:col-span-2 border-t pt-4 mt-2">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3">ข้อมูลการชำระเงิน</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          ชื่อบัญชี
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.paymentAccountName}
+                          onChange={(e) => setFormData({ ...formData, paymentAccountName: e.target.value })}
+                          placeholder="ชื่อบัญชีธนาคาร"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          เลขที่บัญชี
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.paymentAccountNumber}
+                          onChange={(e) => setFormData({ ...formData, paymentAccountNumber: e.target.value })}
+                          placeholder="เลขบัญชีธนาคาร"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Link รูป QR Code
+                        </label>
+                        <input
+                          type="url"
+                          value={formData.paymentQrCodeUrl}
+                          onChange={(e) => setFormData({ ...formData, paymentQrCodeUrl: e.target.value })}
+                          placeholder="https://... (รูป QR Code สำหรับสแกนจ่ายเงิน)"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Status Checkboxes */}
                 <div className="md:col-span-2 border-t pt-4 mt-2">

@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import * as XLSX from 'xlsx';
 
 interface Event {
   eventId: string;
@@ -63,6 +64,9 @@ export default function EventDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [exportLoading, setExportLoading] = useState(false);
+  const [copyLoading, setCopyLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -96,6 +100,95 @@ export default function EventDetailPage() {
       setError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    if (!eventData) return;
+
+    setExportLoading(true);
+    setActionMessage(null);
+
+    try {
+      // Prepare data for export
+      const exportData = filteredAttendees.map((attendee, index) => ({
+        'ลำดับ': index + 1,
+        'รหัสลงทะเบียน': attendee.registration.registrationId,
+        'ชื่อบริษัท': attendee.registration.companyName || attendee.member?.companyNameTH || '',
+        'เลขใบอนุญาต': attendee.registration.licenseNumber || '',
+        'ชื่อผู้ติดต่อ': attendee.registration.contactName || attendee.member?.fullNameTH || attendee.lineProfile?.lineDisplayName || '',
+        'จำนวนผู้เข้าร่วม': attendee.registration.attendeeCount || 1,
+        'รายชื่อผู้เข้าร่วม': (() => {
+          try {
+            const names = JSON.parse(attendee.registration.attendeeNames || '[]');
+            return Array.isArray(names) ? names.join(', ') : attendee.registration.attendeeNames;
+          } catch {
+            return attendee.registration.attendeeNames || '';
+          }
+        })(),
+        'รหัสสมาชิก': attendee.member?.memberId || '',
+        'สถานะ': attendee.registration.status || '',
+        'Check-in': attendee.registration.checkinSections || '',
+        'โต๊ะ': attendee.registration.tableNumber || '',
+      }));
+
+      // Create workbook
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Attendees');
+
+      // Generate filename
+      const filename = `${eventData.event.eventName}_${new Date().toLocaleDateString('th-TH')}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(wb, filename);
+
+      setActionMessage({ type: 'success', text: 'ดาวน์โหลดไฟล์สำเร็จ' });
+      setTimeout(() => setActionMessage(null), 3000);
+    } catch (err) {
+      console.error('Error exporting Excel:', err);
+      setActionMessage({ type: 'error', text: 'ไม่สามารถ Export ได้' });
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleCopyList = async () => {
+    if (!eventData) return;
+
+    setCopyLoading(true);
+    setActionMessage(null);
+
+    try {
+      // Format attendee list for copying
+      const listText = filteredAttendees.map((attendee, index) => {
+        const companyName = attendee.registration.companyName || attendee.member?.companyNameTH || '';
+        const contactName = attendee.registration.contactName || attendee.member?.fullNameTH || attendee.lineProfile?.lineDisplayName || '';
+
+        // Parse attendee names
+        let attendeeNames = '';
+        try {
+          const names = JSON.parse(attendee.registration.attendeeNames || '[]');
+          attendeeNames = Array.isArray(names) ? names.join(', ') : attendee.registration.attendeeNames;
+        } catch {
+          attendeeNames = attendee.registration.attendeeNames || contactName;
+        }
+
+        const phone = ''; // Phone data would need to be fetched from member data if available
+
+        return `${index + 1}. ${companyName} | ${attendeeNames}${phone ? ' | ' + phone : ''}`;
+      }).join('\n');
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(listText);
+
+      setActionMessage({ type: 'success', text: 'คัดลอกรายชื่อแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+    } catch (err) {
+      console.error('Error copying list:', err);
+      setActionMessage({ type: 'error', text: 'ไม่สามารถคัดลอกได้' });
+    } finally {
+      setCopyLoading(false);
     }
   };
 
@@ -289,10 +382,55 @@ export default function EventDetailPage() {
 
         {/* Attendees List */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">
               รายชื่อผู้เข้าร่วม ({filteredAttendees.length} รายการ)
             </h2>
+            <div className="flex items-center gap-2">
+              {actionMessage && (
+                <div className={`text-sm px-3 py-1.5 rounded ${actionMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {actionMessage.text}
+                </div>
+              )}
+              <button
+                onClick={handleExportExcel}
+                disabled={exportLoading || filteredAttendees.length === 0}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exportLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    กำลัง Export...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export Excel
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleCopyList}
+                disabled={copyLoading || filteredAttendees.length === 0}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {copyLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    กำลังคัดลอก...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy รายชื่อ
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {filteredAttendees.length === 0 ? (

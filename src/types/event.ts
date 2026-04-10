@@ -74,10 +74,15 @@ export interface Event {
   isPublished: boolean;             // แสดงในหน้าสมาชิก (เปิด/ปิด)
   countsAttendance: boolean;        // เก็บคะแนนการเข้าร่วม
   maxCapacity: number;              // จำนวนที่เปิดรับ (0 = ไม่จำกัด)
+  maxPerCompany: number;            // จำนวนที่อนุญาตต่อ 1 บริษัท (0 = ไม่จำกัด)
   registrationFee: number;          // ค่าสมัคร (0 = ฟรี)
   registrationOpen: boolean;        // เปิดรับสมัคร
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
   documentUrl?: string;             // Link download เอกสาร
+  mainImageUrl?: string;            // Link รูป Main Image (header)
+  paymentAccountName?: string;      // ชื่อบัญชีธนาคาร
+  paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
+  paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
   createdAt: string;                // ISO timestamp
   updatedAt: string;                // ISO timestamp
   createdBy?: string;               // User ID who created the event
@@ -97,10 +102,15 @@ export interface EventInput {
   isPublished: boolean;             // แสดงในหน้าสมาชิก
   countsAttendance: boolean;        // เก็บคะแนนการเข้าร่วม
   maxCapacity: number;              // จำนวนที่เปิดรับ (0 = ไม่จำกัด)
+  maxPerCompany: number;            // จำนวนที่อนุญาตต่อ 1 บริษัท (0 = ไม่จำกัด)
   registrationFee: number;          // ค่าสมัคร (0 = ฟรี)
   registrationOpen: boolean;        // เปิดรับสมัคร
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
   documentUrl?: string;             // Link download เอกสาร
+  mainImageUrl?: string;            // Link รูป Main Image (header)
+  paymentAccountName?: string;      // ชื่อบัญชีธนาคาร
+  paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
+  paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
 }
 
 // Member attendance summary

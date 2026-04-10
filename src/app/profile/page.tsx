@@ -65,6 +65,7 @@ export default function ProfilePage() {
     mobile: '',
     email: '',
     website: '',
+    lineId: '',
   });
 
   // Profile change request (requires approval)
@@ -114,6 +115,7 @@ export default function ProfilePage() {
           mobile: data.member.mobile || '',
           email: data.member.email || '',
           website: data.member.website || '',
+          lineId: data.member.lineId || '',
         });
         setChangeForm({
           fullNameTH: data.member.fullNameTH || '',
@@ -403,6 +405,16 @@ export default function ProfilePage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">LINE ID</label>
+                      <input
+                        type="text"
+                        value={contactForm.lineId}
+                        onChange={(e) => setContactForm({ ...contactForm, lineId: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="@example หรือ example"
+                      />
+                    </div>
                   </div>
                   <div className="flex justify-end">
                     <button
@@ -431,6 +443,10 @@ export default function ProfilePage() {
                   <div>
                     <dt className="text-sm text-gray-500">เว็บไซต์</dt>
                     <dd className="text-gray-900">{member.website || '-'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-gray-500">LINE ID</dt>
+                    <dd className="text-gray-900">{member.lineId || '-'}</dd>
                   </div>
                 </dl>
               )}
@@ -702,7 +718,7 @@ export default function ProfilePage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-medium text-gray-900">{event.eventName}</h4>
-                            <p className="text-sm text-gray-500">ปี พ.ศ. {event.eventDate}</p>
+                            <p className="text-sm text-gray-500">{event.eventDate}</p>
                           </div>
                           <div className="text-right">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

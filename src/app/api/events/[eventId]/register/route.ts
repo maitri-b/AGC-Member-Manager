@@ -71,17 +71,17 @@ export async function POST(
       console.error('Error fetching registrations:', err);
     }
 
-    // Check if user already registered
-    const alreadyRegistered = existingRegistrations.find(r => {
+    // Check if company (by license number) already registered
+    const companyAlreadyRegistered = existingRegistrations.find(r => {
       const regData = r as unknown as Record<string, unknown>;
-      return (
-        (session.user.id && regData.LINE_userID === session.user.id) ||
-        (session.user.memberId && regData.memberID === session.user.memberId)
-      );
+      // Check by license number (1 company = 1 license = 1 registration)
+      return member.licenseNumber && regData.license_number === member.licenseNumber;
     });
 
-    if (alreadyRegistered) {
-      return NextResponse.json({ error: 'คุณลงทะเบียนกิจกรรมนี้แล้ว' }, { status: 400 });
+    if (companyAlreadyRegistered) {
+      return NextResponse.json({
+        error: 'บริษัทของคุณลงทะเบียนกิจกรรมนี้แล้ว หากต้องการเพิ่ม/ลดจำนวนผู้เข้าร่วม กรุณาใช้ปุ่มแก้ไขข้อมูลการลงทะเบียน'
+      }, { status: 400 });
     }
 
     // Check maxPerCompany limit

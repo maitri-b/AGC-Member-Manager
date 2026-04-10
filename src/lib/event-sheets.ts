@@ -202,6 +202,93 @@ export async function addEventRegistration(
   }
 }
 
+// Update an existing registration in an event sheet
+export async function updateEventRegistration(
+  sheetName: string,
+  registrationId: string,
+  updateData: Record<string, unknown>
+): Promise<boolean> {
+  const sheets = getGoogleSheetsClient();
+
+  try {
+    // Get all data from the sheet
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `'${sheetName}'!A:AZ`,
+    });
+
+    const rows = response.data.values;
+    if (!rows || rows.length < 2) {
+      console.error('No data found in sheet:', sheetName);
+      return false;
+    }
+
+    const headers = rows[0] as string[];
+    const dataRows = rows.slice(1);
+
+    // Find registration_id column index
+    const regIdIndex = headers.findIndex(h =>
+      h.toLowerCase().trim() === 'registration_id' ||
+      h.toLowerCase().trim() === 'registration id'
+    );
+
+    if (regIdIndex === -1) {
+      console.error('registration_id column not found in sheet:', sheetName);
+      return false;
+    }
+
+    // Find the row with matching registration ID
+    const rowIndex = dataRows.findIndex(row => row[regIdIndex] === registrationId);
+
+    if (rowIndex === -1) {
+      console.error('Registration not found:', registrationId);
+      return false;
+    }
+
+    // Actual row number (add 2: 1 for header, 1 for 0-indexed to 1-indexed)
+    const actualRowNumber = rowIndex + 2;
+
+    // Update specific cells
+    const updates: unknown[] = [];
+    for (const [key, value] of Object.entries(updateData)) {
+      const normalizedKey = key.toLowerCase().trim();
+      const headerIndex = headers.findIndex(h => {
+        const normalizedHeader = h.toLowerCase().trim();
+        return normalizedHeader === normalizedKey ||
+               normalizedHeader.replace(/ /g, '_') === normalizedKey ||
+               normalizedHeader.replace(/_/g, ' ') === normalizedKey;
+      });
+
+      if (headerIndex !== -1) {
+        const columnLetter = String.fromCharCode(65 + headerIndex); // A=65
+        updates.push({
+          range: `'${sheetName}'!${columnLetter}${actualRowNumber}`,
+          values: [[value]],
+        });
+      }
+    }
+
+    if (updates.length === 0) {
+      console.warn('No matching columns found for update');
+      return false;
+    }
+
+    // Batch update
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: {
+        data: updates,
+        valueInputOption: 'RAW',
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Error updating registration in ${sheetName}:`, error);
+    throw error;
+  }
+}
+
 // Get registrations for an event by eventId
 export async function getEventRegistrationsByEventId(eventId: string): Promise<EventRegistration[]> {
   const events = await getTrackedEventsFromFirestore();

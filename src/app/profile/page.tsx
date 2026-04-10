@@ -250,6 +250,34 @@ export default function ProfilePage() {
     return new Date(dateStr).toLocaleString('th-TH');
   };
 
+  // Thai month names
+  const THAI_MONTHS = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+
+  // Format date from Google Sheet (MM/DD/YYYY) to Thai format
+  const formatThaiDate = (dateStr: string | undefined): string => {
+    if (!dateStr) return '-';
+
+    try {
+      if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          // Google Sheet uses MM/DD/YYYY (US format)
+          const [month, day, year] = parts.map(Number);
+          // Convert Buddhist year to Gregorian if needed
+          const gregorianYear = year > 2500 ? year - 543 : year;
+
+          return `${day} ${THAI_MONTHS[month - 1]} ${gregorianYear}`;
+        }
+      }
+      return dateStr;
+    } catch {
+      return dateStr;
+    }
+  };
+
   const getFieldLabel = (field: string) => {
     const labels: Record<string, string> = {
       fullNameTH: 'ชื่อเต็ม',
@@ -634,7 +662,7 @@ export default function ProfilePage() {
                         </div>
                         <div>
                           <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
-                          <dd className="text-gray-900">{member.membershipExpiry || '-'}</dd>
+                          <dd className="text-gray-900">{formatThaiDate(member.membershipExpiry)}</dd>
                         </div>
                       </dl>
                     </div>

@@ -68,7 +68,7 @@ function toDatePickerFormat(dateStr: string): string {
   return `${year}-${month}-${day}`;
 }
 
-// Convert yyyy-mm-dd (from date picker) to mm/dd/yyyy (for Google Sheet)
+// Convert yyyy-mm-dd (from date picker) to dd/mm/yyyy (for Google Sheet - Thai/EU format)
 function toGoogleSheetFormat(dateStr: string): string {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
@@ -77,7 +77,7 @@ function toGoogleSheetFormat(dateStr: string): string {
   const year = parseInt(parts[0], 10);
   const month = parseInt(parts[1], 10);
   const day = parseInt(parts[2], 10);
-  return `${month}/${day}/${year}`;
+  return `${day}/${month}/${year}`;
 }
 
 // Editable fields for admin

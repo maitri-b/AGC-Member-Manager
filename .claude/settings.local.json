@@ -15,7 +15,8 @@
       "Bash(dir:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(curl:*)"
     ]
   }
 }

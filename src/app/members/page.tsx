@@ -64,6 +64,34 @@ const CONTACT_TOPICS: { value: ContactTopic; label: string }[] = [
   { value: 'other', label: 'อื่นๆ' },
 ];
 
+// Thai month names (full) for notification messages
+const THAI_MONTHS_FULL = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+// Format date for notification messages (outside component)
+function formatThaiDateForMessage(dateStr: string | undefined): string {
+  if (!dateStr) return '-';
+
+  try {
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        // Google Sheet uses DD/MM/YYYY (Thai/EU format)
+        const [day, month, year] = parts.map(Number);
+        // Convert Buddhist year to Gregorian if needed
+        const gregorianYear = year > 2500 ? year - 543 : year;
+
+        return `${day} ${THAI_MONTHS_FULL[month - 1]} ${gregorianYear}`;
+      }
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
+
 // Notification Modal Component
 function NotificationModal({
   member,
@@ -81,7 +109,7 @@ function NotificationModal({
 
 ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
 ใบอนุญาตธุรกิจนำเที่ยว เลขที่ ${member.licenseNumber || '-'}
-มีสถานะ ${member.status || '-'} (หมดอายุ ${member.membershipExpiry || member.licenseExpiry || '-'})
+มีสถานะ ${member.status || '-'} (หมดอายุ ${formatThaiDateForMessage(member.membershipExpiry || member.licenseExpiry)})
 
 หากคุณได้ต่ออายุใบอนุญาตแล้ว หรือมีข้อมูลที่อัพเดท
 รบกวนส่งสำเนาใบอนุญาตใหม่มาทาง LINE นี้ด้วยนะครับ
@@ -259,7 +287,7 @@ function ContactModal({
 
 ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
 ใบอนุญาตธุรกิจนำเที่ยว เลขที่ ${member.licenseNumber || '-'}
-มีสถานะ ${member.status || '-'} (หมดอายุ ${member.membershipExpiry || '-'})
+มีสถานะ ${member.status || '-'} (หมดอายุ ${formatThaiDateForMessage(member.membershipExpiry)})
 
 หากคุณได้ต่ออายุใบอนุญาตแล้ว หรือมีข้อมูลที่อัพเดท
 รบกวนส่งสำเนาใบอนุญาตใหม่มาทาง LINE นี้ด้วยนะครับ

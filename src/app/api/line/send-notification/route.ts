@@ -7,6 +7,34 @@ import { getMemberById } from '@/lib/google-sheets';
 
 const LINE_API_URL = 'https://api.line.me/v2/bot/message/push';
 
+// Thai month names
+const THAI_MONTHS = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+// Format date from Google Sheet (DD/MM/YYYY) to Thai format
+function formatThaiDate(dateStr: string | undefined): string {
+  if (!dateStr) return '-';
+
+  try {
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        // Google Sheet uses DD/MM/YYYY (Thai/EU format)
+        const [day, month, year] = parts.map(Number);
+        // Convert Buddhist year to Gregorian if needed
+        const gregorianYear = year > 2500 ? year - 543 : year;
+
+        return `${day} ${THAI_MONTHS[month - 1]} ${gregorianYear}`;
+      }
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -48,7 +76,7 @@ export async function POST(request: NextRequest) {
 
 ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
 ใบอนุญาตธุรกิจนำเที่ยว เลขที่ ${member.licenseNumber || '-'}
-มีสถานะ ${member.status || '-'} (หมดอายุ ${member.membershipExpiry || member.licenseExpiry || '-'})
+มีสถานะ ${member.status || '-'} (หมดอายุ ${formatThaiDate(member.membershipExpiry || member.licenseExpiry)})
 
 หากคุณได้ต่ออายุใบอนุญาตแล้ว หรือมีข้อมูลที่อัพเดท
 รบกวนส่งสำเนาใบอนุญาตใหม่มาทาง LINE นี้ด้วยนะครับ

@@ -96,10 +96,25 @@ export async function GET(
       }
     }
 
+    // Get member name for pre-filling registration form
+    let memberName = '';
+    if (session.user.memberId && !userRegistration) {
+      try {
+        const { getMemberById } = await import('@/lib/google-sheets');
+        const member = await getMemberById(session.user.memberId);
+        if (member) {
+          memberName = member.fullNameTH || member.nickname || '';
+        }
+      } catch (err) {
+        console.error('Error fetching member name:', err);
+      }
+    }
+
     return NextResponse.json({
       event,
       summary,
       userRegistration,
+      memberName,
     });
   } catch (error) {
     console.error('Error fetching event detail:', error);

@@ -49,6 +49,8 @@ export default function EventDetailPage() {
   const [userRegistration, setUserRegistration] = useState<UserRegistration | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
+  const [attendeeCount, setAttendeeCount] = useState(1);
+  const [attendeeNames, setAttendeeNames] = useState<string[]>(['']);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -70,6 +72,11 @@ export default function EventDetailPage() {
         setEvent(data.event);
         setSummary(data.summary);
         setUserRegistration(data.userRegistration);
+
+        // Set first attendee name from member data
+        if (data.memberName && !data.userRegistration) {
+          setAttendeeNames([data.memberName]);
+        }
       } else if (response.status === 404) {
         router.push('/events');
       }
@@ -80,9 +87,38 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleAttendeeCountChange = (count: number) => {
+    setAttendeeCount(count);
+    const currentNames = [...attendeeNames];
+
+    if (count > currentNames.length) {
+      // Add empty slots
+      while (currentNames.length < count) {
+        currentNames.push('');
+      }
+    } else {
+      // Remove excess slots
+      currentNames.length = count;
+    }
+    setAttendeeNames(currentNames);
+  };
+
+  const handleAttendeeNameChange = (index: number, name: string) => {
+    const newNames = [...attendeeNames];
+    newNames[index] = name;
+    setAttendeeNames(newNames);
+  };
+
   const handleRegister = async () => {
     if (!event || !session?.user?.memberId) {
       toast.error('กรุณาเชื่อมต่อบัญชีสมาชิกก่อนลงทะเบียน');
+      return;
+    }
+
+    // Validate attendee names
+    const filledNames = attendeeNames.filter(name => name.trim());
+    if (filledNames.length !== attendeeCount) {
+      toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
       return;
     }
 
@@ -92,7 +128,8 @@ export default function EventDetailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          attendeeCount: 1,
+          attendeeCount,
+          attendeeNames: filledNames,
         }),
       });
 
@@ -297,7 +334,7 @@ export default function EventDetailPage() {
               </div>
             )}
 
-            {/* Registration Status / Button */}
+            {/* Registration Status / Form */}
             <div className="border-t pt-6">
               {userRegistration ? (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -340,23 +377,82 @@ export default function EventDetailPage() {
                   <p className="text-red-600 font-medium">รับสมัครเต็มแล้ว</p>
                 </div>
               ) : (
-                <button
-                  onClick={handleRegister}
-                  disabled={registering}
-                  className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {registering ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      กำลังลงทะเบียน...
-                    </span>
-                  ) : (
-                    'ลงทะเบียนเข้าร่วม'
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">ลงทะเบียนเข้าร่วมกิจกรรม</h3>
+
+                  {/* Attendee Count */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      จำนวนผู้เข้าร่วม
+                    </label>
+                    <select
+                      value={attendeeCount}
+                      onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                        <option key={num} value={num}>{num} คน</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Attendee Names */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ชื่อผู้เข้าร่วม
+                    </label>
+                    <div className="space-y-2">
+                      {Array.from({ length: attendeeCount }).map((_, index) => (
+                        <input
+                          key={index}
+                          type="text"
+                          value={attendeeNames[index] || ''}
+                          onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
+                          placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Total Amount */}
+                  {event.registrationFee > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-gray-600">ค่าสมัคร</p>
+                          <p className="text-xs text-gray-500">
+                            {attendeeCount} คน × ฿{event.registrationFee.toLocaleString()}/คน
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-blue-600">
+                            ฿{(event.registrationFee * attendeeCount).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </button>
+
+                  {/* Submit Button */}
+                  <button
+                    onClick={handleRegister}
+                    disabled={registering}
+                    className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {registering ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        กำลังลงทะเบียน...
+                      </span>
+                    ) : (
+                      'ยืนยันการลงทะเบียน'
+                    )}
+                  </button>
+                </div>
               )}
             </div>
           </div>

@@ -71,6 +71,13 @@ export interface Event {
   sheetName: string;                // Google Sheet name for registration data
   year: number;                     // ปีของกิจกรรม (พ.ศ.)
   isActive: boolean;                // กิจกรรมที่กำลังดำเนินการ
+  isPublished: boolean;             // แสดงในหน้าสมาชิก (เปิด/ปิด)
+  countsAttendance: boolean;        // เก็บคะแนนการเข้าร่วม
+  maxCapacity: number;              // จำนวนที่เปิดรับ (0 = ไม่จำกัด)
+  registrationFee: number;          // ค่าสมัคร (0 = ฟรี)
+  registrationOpen: boolean;        // เปิดรับสมัคร
+  documentName?: string;            // ชื่อเอกสารเพิ่มเติม
+  documentUrl?: string;             // Link download เอกสาร
   createdAt: string;                // ISO timestamp
   updatedAt: string;                // ISO timestamp
   createdBy?: string;               // User ID who created the event
@@ -87,6 +94,13 @@ export interface EventInput {
   sheetName: string;
   year: number;
   isActive: boolean;
+  isPublished: boolean;             // แสดงในหน้าสมาชิก
+  countsAttendance: boolean;        // เก็บคะแนนการเข้าร่วม
+  maxCapacity: number;              // จำนวนที่เปิดรับ (0 = ไม่จำกัด)
+  registrationFee: number;          // ค่าสมัคร (0 = ฟรี)
+  registrationOpen: boolean;        // เปิดรับสมัคร
+  documentName?: string;            // ชื่อเอกสารเพิ่มเติม
+  documentUrl?: string;             // Link download เอกสาร
 }
 
 // Member attendance summary
@@ -184,6 +198,13 @@ export const DEFAULT_EVENTS: Event[] = [
     sheetName: '10 Yearth Meeting',
     year: 2569,  // พ.ศ. 2569 = ค.ศ. 2026
     isActive: true,
+    isPublished: true,
+    countsAttendance: true,
+    maxCapacity: 0,
+    registrationFee: 0,
+    registrationOpen: false,
+    documentName: '',
+    documentUrl: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },

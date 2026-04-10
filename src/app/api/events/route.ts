@@ -20,31 +20,53 @@ export async function GET() {
 
     const events = await getTrackedEvents();
 
+    // Filter to only published events for regular members
+    const publishedEvents = isCommitteeOrAdmin ? events : events.filter(e => e.isPublished);
+
     if (!isCommitteeOrAdmin) {
-      // For regular members, return basic event info only
-      return NextResponse.json({
-        events: events.map(e => ({
-          eventId: e.eventId,
-          eventName: e.eventName,
-          eventNameEN: e.eventNameEN,
-          eventDate: e.eventDate,
-          location: e.location,
-          description: e.description,
-          year: e.year,
-          isActive: e.isActive,
-        })),
-      });
+      // For regular members, return basic event info with registration status
+      const eventsWithRegistrationInfo = await Promise.all(
+        publishedEvents.map(async (e) => {
+          let totalAttendees = 0;
+          if (e.registrationOpen && e.maxCapacity && e.maxCapacity > 0) {
+            try {
+              const summary = await getEventAttendanceSummary(e.eventId);
+              totalAttendees = summary.totalAttendees || 0;
+            } catch {
+              // Ignore errors
+            }
+          }
+          return {
+            eventId: e.eventId,
+            eventName: e.eventName,
+            eventNameEN: e.eventNameEN,
+            eventDate: e.eventDate,
+            location: e.location,
+            description: e.description,
+            year: e.year,
+            isActive: e.isActive,
+            isPublished: e.isPublished,
+            countsAttendance: e.countsAttendance,
+            maxCapacity: e.maxCapacity,
+            registrationFee: e.registrationFee,
+            registrationOpen: e.registrationOpen,
+            totalAttendees,
+          };
+        })
+      );
+      return NextResponse.json({ events: eventsWithRegistrationInfo });
     }
 
     // For committee/admin, include attendance summaries
     const eventsWithSummary = await Promise.all(
-      events.map(async (event) => {
+      publishedEvents.map(async (event) => {
         const summary = await getEventAttendanceSummary(event.eventId);
         return {
           ...event,
           totalRegistrations: summary.totalRegistrations,
           agentRegistrations: summary.agentRegistrations,
           confirmedCount: summary.confirmedCount,
+          totalAttendees: summary.totalAttendees,
         };
       })
     );

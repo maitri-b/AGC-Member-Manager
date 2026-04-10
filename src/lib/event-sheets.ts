@@ -50,6 +50,13 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         sheetName: data.sheetName || '',
         year: data.year || 0,
         isActive: data.isActive ?? true,
+        isPublished: data.isPublished ?? false,
+        countsAttendance: data.countsAttendance ?? true,
+        maxCapacity: data.maxCapacity ?? 0,
+        registrationFee: data.registrationFee ?? 0,
+        registrationOpen: data.registrationOpen ?? false,
+        documentName: data.documentName || '',
+        documentUrl: data.documentUrl || '',
         // Convert Firestore Timestamps to ISO strings
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
         updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
@@ -136,6 +143,62 @@ export async function getEventRegistrations(sheetName: string): Promise<EventReg
   } catch (error) {
     console.error(`Error fetching registrations from ${sheetName}:`, error);
     return [];
+  }
+}
+
+// Add a new registration to an event sheet
+export async function addEventRegistration(
+  sheetName: string,
+  registrationData: Record<string, unknown>
+): Promise<boolean> {
+  const sheets = getGoogleSheetsClient();
+
+  try {
+    // Get headers first
+    const headerResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `'${sheetName}'!1:1`,
+    });
+
+    const headers = headerResponse.data.values?.[0] as string[];
+    if (!headers || headers.length === 0) {
+      console.error('No headers found in sheet:', sheetName);
+      return false;
+    }
+
+    // Map registration data to row based on headers
+    const newRow = headers.map(header => {
+      const normalizedHeader = header.toLowerCase().trim();
+      // Try direct match first
+      if (registrationData[normalizedHeader] !== undefined) {
+        return String(registrationData[normalizedHeader]);
+      }
+      // Try with underscore replaced by space
+      const withSpace = normalizedHeader.replace(/_/g, ' ');
+      if (registrationData[withSpace] !== undefined) {
+        return String(registrationData[withSpace]);
+      }
+      // Try original header name
+      if (registrationData[header] !== undefined) {
+        return String(registrationData[header]);
+      }
+      return '';
+    });
+
+    // Append to sheet
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: `'${sheetName}'!A:AZ`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [newRow],
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`Error adding registration to ${sheetName}:`, error);
+    throw error;
   }
 }
 

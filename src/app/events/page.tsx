@@ -14,9 +14,15 @@ interface Event {
   description: string;
   year: number;
   isActive: boolean;
+  isPublished?: boolean;
+  countsAttendance?: boolean;
+  maxCapacity?: number;
+  registrationFee?: number;
+  registrationOpen?: boolean;
   totalRegistrations?: number;
   agentRegistrations?: number;
   confirmedCount?: number;
+  totalAttendees?: number;
 }
 
 interface EventAttendee {
@@ -198,17 +204,63 @@ export default function EventsPage() {
                 </div>
               )}
 
-              {isCommittee && (
-                <button
-                  className="mt-4 w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fetchEventAttendees(event.eventId);
-                  }}
-                >
-                  ดูรายชื่อผู้เข้าร่วม
-                </button>
+              {/* Registration status and capacity */}
+              {event.registrationOpen && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-green-600 font-medium flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      เปิดรับสมัคร
+                    </span>
+                    {event.registrationFee !== undefined && (
+                      <span className={event.registrationFee > 0 ? 'text-blue-600 font-medium' : 'text-green-600 font-medium'}>
+                        {event.registrationFee > 0 ? `฿${event.registrationFee.toLocaleString()}` : 'ฟรี'}
+                      </span>
+                    )}
+                  </div>
+                  {event.maxCapacity !== undefined && event.maxCapacity > 0 && event.totalAttendees !== undefined && (
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>จำนวนผู้ลงทะเบียน</span>
+                        <span>{event.totalAttendees} / {event.maxCapacity}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${event.totalAttendees >= event.maxCapacity ? 'bg-red-500' : 'bg-blue-500'}`}
+                          style={{ width: `${Math.min((event.totalAttendees / event.maxCapacity) * 100, 100)}%` }}
+                        ></div>
+                      </div>
+                      {event.totalAttendees >= event.maxCapacity && (
+                        <p className="text-xs text-red-600 mt-1 font-medium">เต็มแล้ว</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
+
+              {/* Buttons */}
+              <div className="mt-4 flex gap-2">
+                <Link
+                  href={`/events/${event.eventId}`}
+                  className="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium text-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  ดูรายละเอียด
+                </Link>
+                {isCommittee && (
+                  <button
+                    className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fetchEventAttendees(event.eventId);
+                    }}
+                  >
+                    ดูรายชื่อ
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

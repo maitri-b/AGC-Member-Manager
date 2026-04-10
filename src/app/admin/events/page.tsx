@@ -15,6 +15,13 @@ interface Event {
   sheetName: string;
   year: number;
   isActive: boolean;
+  isPublished: boolean;
+  countsAttendance: boolean;
+  maxCapacity: number;
+  registrationFee: number;
+  registrationOpen: boolean;
+  documentName?: string;
+  documentUrl?: string;
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
@@ -39,6 +46,13 @@ interface EventFormData {
   sheetName: string;
   year: number;
   isActive: boolean;
+  isPublished: boolean;
+  countsAttendance: boolean;
+  maxCapacity: number;
+  registrationFee: number;
+  registrationOpen: boolean;
+  documentName: string;
+  documentUrl: string;
 }
 
 const initialFormData: EventFormData = {
@@ -50,6 +64,13 @@ const initialFormData: EventFormData = {
   sheetName: '',
   year: new Date().getFullYear() + 543,
   isActive: true,
+  isPublished: false,
+  countsAttendance: true,
+  maxCapacity: 0,
+  registrationFee: 0,
+  registrationOpen: false,
+  documentName: '',
+  documentUrl: '',
 };
 
 export default function AdminEventsPage() {
@@ -131,6 +152,13 @@ export default function AdminEventsPage() {
         sheetName: event.sheetName,
         year: event.year,
         isActive: event.isActive,
+        isPublished: event.isPublished ?? false,
+        countsAttendance: event.countsAttendance ?? true,
+        maxCapacity: event.maxCapacity ?? 0,
+        registrationFee: event.registrationFee ?? 0,
+        registrationOpen: event.registrationOpen ?? false,
+        documentName: event.documentName ?? '',
+        documentUrl: event.documentUrl ?? '',
       });
     } else {
       setEditingEvent(null);
@@ -404,17 +432,33 @@ export default function AdminEventsPage() {
                         <span className="text-gray-400 text-sm">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleToggleActive(event)}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors ${
-                          event.isActive
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                        }`}
-                      >
-                        {event.isActive ? 'กำลังดำเนินการ' : 'สิ้นสุดแล้ว'}
-                      </button>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        <button
+                          onClick={() => handleToggleActive(event)}
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                            event.isActive
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                          }`}
+                        >
+                          {event.isActive ? 'Active' : 'Inactive'}
+                        </button>
+                        {event.isPublished && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Published
+                          </span>
+                        )}
+                        {event.registrationOpen && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            เปิดรับสมัคร
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {event.registrationFee ? `฿${event.registrationFee.toLocaleString()}` : 'ฟรี'}
+                        {event.maxCapacity > 0 && ` | รับ ${event.maxCapacity} คน`}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
@@ -553,16 +597,118 @@ export default function AdminEventsPage() {
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">กิจกรรมกำลังดำเนินการ (Active)</span>
-                  </label>
+                {/* Registration Settings */}
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">ตั้งค่าการลงทะเบียน</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        จำนวนที่เปิดรับ
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.maxCapacity}
+                        onChange={(e) => setFormData({ ...formData, maxCapacity: parseInt(e.target.value) || 0 })}
+                        placeholder="0 = ไม่จำกัด"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min={0}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">กรอก 0 หากไม่จำกัดจำนวน</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        ค่าสมัคร (บาท)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.registrationFee}
+                        onChange={(e) => setFormData({ ...formData, registrationFee: parseInt(e.target.value) || 0 })}
+                        placeholder="0 = ฟรี"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min={0}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">กรอก 0 หากไม่มีค่าใช้จ่าย</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Document Link */}
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">เอกสารเพิ่มเติม</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        ชื่อเอกสาร
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.documentName}
+                        onChange={(e) => setFormData({ ...formData, documentName: e.target.value })}
+                        placeholder="เช่น รายละเอียดกิจกรรม, กำหนดการ"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Link เอกสาร
+                      </label>
+                      <input
+                        type="url"
+                        value={formData.documentUrl}
+                        onChange={(e) => setFormData({ ...formData, documentUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Checkboxes */}
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">สถานะและการแสดงผล</h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isActive}
+                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">กิจกรรมกำลังดำเนินการ (Active)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isPublished}
+                        onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                        className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                      />
+                      <span className="text-sm text-gray-700">แสดงในหน้าสมาชิก (Published)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.registrationOpen}
+                        onChange={(e) => setFormData({ ...formData, registrationOpen: e.target.checked })}
+                        className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <span className="text-sm text-gray-700">เปิดรับสมัคร (Registration Open)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.countsAttendance}
+                        onChange={(e) => setFormData({ ...formData, countsAttendance: e.target.checked })}
+                        className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                      />
+                      <span className="text-sm text-gray-700">เก็บคะแนนการเข้าร่วม</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 

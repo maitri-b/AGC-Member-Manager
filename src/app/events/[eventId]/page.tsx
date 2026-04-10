@@ -552,13 +552,21 @@ export default function EventDetailPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       จำนวนผู้เข้าร่วม
+                      {event.maxPerCompany > 0 && (
+                        <span className="text-xs text-gray-500 ml-2">
+                          (สูงสุด {event.maxPerCompany} คน)
+                        </span>
+                      )}
                     </label>
                     <select
                       value={attendeeCount}
                       onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                      {Array.from(
+                        { length: event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
+                        (_, i) => i + 1
+                      ).map(num => (
                         <option key={num} value={num}>{num} คน</option>
                       ))}
                     </select>

@@ -755,6 +755,12 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
         continue;
       }
 
+      // Skip events that don't count towards attendance
+      if (!event.countsAttendance) {
+        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - countsAttendance is false`);
+        continue;
+      }
+
       // Check if event is within the specified months (regardless of isActive status)
       if (!isWithinLastMonths(event.eventDate, months)) {
         console.log(`buildAttendanceCache: Skipping event ${event.eventId} - not within ${months} months (date: ${event.eventDate})`);

@@ -65,7 +65,6 @@ export default function ProfilePage() {
     mobile: '',
     email: '',
     website: '',
-    lineId: '',
   });
 
   // Profile change request (requires approval)
@@ -77,6 +76,7 @@ export default function ProfilePage() {
     companyNameEN: '',
     positionCompany: '',
     licenseNumber: '',
+    lineId: '',
   });
   const [changeReason, setChangeReason] = useState('');
   const [submittingRequest, setSubmittingRequest] = useState(false);
@@ -115,7 +115,6 @@ export default function ProfilePage() {
           mobile: data.member.mobile || '',
           email: data.member.email || '',
           website: data.member.website || '',
-          lineId: data.member.lineId || '',
         });
         setChangeForm({
           fullNameTH: data.member.fullNameTH || '',
@@ -124,6 +123,7 @@ export default function ProfilePage() {
           companyNameEN: data.member.companyNameEN || '',
           positionCompany: data.member.positionCompany || '',
           licenseNumber: data.member.licenseNumber || '',
+          lineId: data.member.lineId || '',
         });
       }
     } catch (err) {
@@ -200,6 +200,7 @@ export default function ProfilePage() {
     if (changeForm.companyNameEN !== (member?.companyNameEN || '')) changes.companyNameEN = changeForm.companyNameEN;
     if (changeForm.positionCompany !== (member?.positionCompany || '')) changes.positionCompany = changeForm.positionCompany;
     if (changeForm.licenseNumber !== (member?.licenseNumber || '')) changes.licenseNumber = changeForm.licenseNumber;
+    if (changeForm.lineId !== (member?.lineId || '')) changes.lineId = changeForm.lineId;
 
     if (Object.keys(changes).length === 0) {
       setError('ไม่มีข้อมูลที่เปลี่ยนแปลง');
@@ -257,6 +258,7 @@ export default function ProfilePage() {
       companyNameEN: 'ชื่อบริษัท (EN)',
       positionCompany: 'ตำแหน่งในบริษัท',
       licenseNumber: 'เลขที่ใบอนุญาต',
+      lineId: 'LINE ID',
     };
     return labels[field] || field;
   };
@@ -405,16 +407,6 @@ export default function ProfilePage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">LINE ID</label>
-                      <input
-                        type="text"
-                        value={contactForm.lineId}
-                        onChange={(e) => setContactForm({ ...contactForm, lineId: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="@example หรือ example"
-                      />
-                    </div>
                   </div>
                   <div className="flex justify-end">
                     <button
@@ -443,10 +435,6 @@ export default function ProfilePage() {
                   <div>
                     <dt className="text-sm text-gray-500">เว็บไซต์</dt>
                     <dd className="text-gray-900">{member.website || '-'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-gray-500">LINE ID</dt>
-                    <dd className="text-gray-900">{member.lineId || '-'}</dd>
                   </div>
                 </dl>
               )}
@@ -551,6 +539,16 @@ export default function ProfilePage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">LINE ID</label>
+                      <input
+                        type="text"
+                        value={changeForm.lineId}
+                        onChange={(e) => setChangeForm({ ...changeForm, lineId: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="@example หรือ example"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -578,6 +576,7 @@ export default function ProfilePage() {
                             companyNameEN: member.companyNameEN || '',
                             positionCompany: member.positionCompany || '',
                             licenseNumber: member.licenseNumber || '',
+                            lineId: member.lineId || '',
                           });
                         }
                       }}
@@ -609,12 +608,20 @@ export default function ProfilePage() {
                           <dd className="text-gray-900">{member.fullNameTH || '-'}</dd>
                         </div>
                         <div>
-                          <dt className="text-sm text-gray-500">บริษัท</dt>
-                          <dd className="text-gray-900">{member.companyNameEN || member.companyNameTH || '-'}</dd>
+                          <dt className="text-sm text-gray-500">บริษัท (TH)</dt>
+                          <dd className="text-gray-900">{member.companyNameTH || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-500">บริษัท (EN)</dt>
+                          <dd className="text-gray-900">{member.companyNameEN || '-'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm text-gray-500">ตำแหน่งในบริษัท</dt>
                           <dd className="text-gray-900">{member.positionCompany || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-sm text-gray-500">LINE ID</dt>
+                          <dd className="text-gray-900">{member.lineId || '-'}</dd>
                         </div>
                       </dl>
                     </div>

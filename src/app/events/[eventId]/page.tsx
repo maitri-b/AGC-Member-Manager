@@ -51,6 +51,8 @@ export default function EventDetailPage() {
   const [registering, setRegistering] = useState(false);
   const [attendeeCount, setAttendeeCount] = useState(1);
   const [attendeeNames, setAttendeeNames] = useState<string[]>(['']);
+  const [isEditing, setIsEditing] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {

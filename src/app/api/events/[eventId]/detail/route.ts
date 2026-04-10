@@ -47,6 +47,7 @@ export async function GET(
       isPublished: eventData?.isPublished ?? false,
       countsAttendance: eventData?.countsAttendance ?? true,
       maxCapacity: eventData?.maxCapacity ?? 0,
+      maxPerCompany: eventData?.maxPerCompany ?? 0,
       registrationFee: eventData?.registrationFee ?? 0,
       registrationOpen: eventData?.registrationOpen ?? false,
       documentName: eventData?.documentName || '',
@@ -86,6 +87,7 @@ export async function GET(
               registrationId: userReg.registrationId,
               status: userReg.status,
               attendeeCount: userReg.attendeeCount,
+              attendeeNames: userReg.attendeeNames,
               registrationDate: userReg.registrationDate,
             };
           }

@@ -84,6 +84,13 @@ export async function POST(
       return NextResponse.json({ error: 'คุณลงทะเบียนกิจกรรมนี้แล้ว' }, { status: 400 });
     }
 
+    // Check maxPerCompany limit
+    if (eventData.maxPerCompany > 0 && attendeeCount > eventData.maxPerCompany) {
+      return NextResponse.json({
+        error: `ไม่สามารถลงทะเบียนได้ เนื่องจากจำกัด ${eventData.maxPerCompany} คนต่อ 1 บริษัท`
+      }, { status: 400 });
+    }
+
     // Check capacity
     if (eventData.maxCapacity > 0) {
       const currentCount = existingRegistrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);

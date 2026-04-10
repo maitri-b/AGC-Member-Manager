@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Member } from '@/types/member';
 import Navbar from '@/components/Navbar';
+import { Toast, useToast } from '@/components/Toast';
 
 interface UserProfile {
   id: string;
@@ -51,6 +52,7 @@ interface MemberAttendance {
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const toast = useToast();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
@@ -221,12 +223,12 @@ export default function ProfilePage() {
         throw new Error(data.error || 'Failed to submit change request');
       }
 
-      setSuccess('ส่งคำขอแก้ไขข้อมูลเรียบร้อยแล้ว กรุณารอการอนุมัติจากผู้ดูแลระบบ');
+      toast.success('ส่งคำขอเรียบร้อยแล้ว รอทีมนายทะเบียนตรวจสอบและอนุมัติ');
       setIsRequestingChange(false);
       setChangeReason('');
       fetchChangeRequests();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setSubmittingRequest(false);
     }
@@ -320,6 +322,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
+      <Toast toasts={toast.toasts} onRemove={toast.removeToast} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">โปรไฟล์ของฉัน</h1>

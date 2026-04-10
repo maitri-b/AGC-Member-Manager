@@ -370,26 +370,27 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
               },
             ],
           },
-          {
-            type: 'box',
-            layout: 'horizontal',
-            margin: 'sm',
-            contents: [
-              {
-                type: 'text',
-                text: 'วันที่หมดอายุ:',
-                size: 'sm',
-                color: '#666666',
-                flex: 3,
-              },
-              {
-                type: 'text',
-                text: formatThaiDate(member.membershipExpiry),
-                size: 'sm',
-                flex: 5,
-              },
-            ],
-          },
+          // NOTE: License expiry date hidden temporarily while updating Google Sheet data
+          // {
+          //   type: 'box',
+          //   layout: 'horizontal',
+          //   margin: 'sm',
+          //   contents: [
+          //     {
+          //       type: 'text',
+          //       text: 'วันที่หมดอายุ:',
+          //       size: 'sm',
+          //       color: '#666666',
+          //       flex: 3,
+          //     },
+          //     {
+          //       type: 'text',
+          //       text: formatThaiDate(member.membershipExpiry),
+          //       size: 'sm',
+          //       flex: 5,
+          //     },
+          //   ],
+          // },
           {
             type: 'box',
             layout: 'horizontal',

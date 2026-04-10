@@ -660,10 +660,11 @@ export default function ProfilePage() {
                           <dt className="text-sm text-gray-500">เลขที่ใบอนุญาต</dt>
                           <dd className="text-gray-900">{member.licenseNumber || '-'}</dd>
                         </div>
-                        <div>
+                        {/* NOTE: License expiry date hidden temporarily while updating Google Sheet data */}
+                        {/* <div>
                           <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
                           <dd className="text-gray-900">{formatThaiDate(member.membershipExpiry)}</dd>
-                        </div>
+                        </div> */}
                       </dl>
                     </div>
                   </div>

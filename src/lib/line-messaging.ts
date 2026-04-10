@@ -10,6 +10,7 @@ const THAI_MONTHS = [
 ];
 
 // Format date to Thai format: "วันที่ ชื่อเดือนภาษาไทย ปีค.ศ."
+// Google Sheet stores dates as MM/DD/YYYY (US format)
 function formatThaiDate(dateStr: string | undefined): string {
   if (!dateStr) return '-';
 
@@ -19,12 +20,16 @@ function formatThaiDate(dateStr: string | undefined): string {
 
     // Try parsing as ISO date or common formats
     if (dateStr.includes('/')) {
-      // Handle DD/MM/YYYY or MM/DD/YYYY format
+      // Handle MM/DD/YYYY format (Google Sheet format)
       const parts = dateStr.split('/');
       if (parts.length === 3) {
-        // Assume DD/MM/YYYY (Thai format)
-        const [day, month, year] = parts.map(Number);
-        date = new Date(year, month - 1, day);
+        // Google Sheet uses MM/DD/YYYY (US format)
+        const [month, day, year] = parts.map(Number);
+
+        // Convert Buddhist year to Gregorian if needed (year > 2500)
+        const gregorianYear = year > 2500 ? year - 543 : year;
+
+        date = new Date(gregorianYear, month - 1, day);
       } else {
         date = new Date(dateStr);
       }

@@ -67,6 +67,12 @@ export default function EventDetailPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<{
+    attendeeCount: number;
+    status: string;
+  }>({ attendeeCount: 1, status: 'pending' });
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -189,6 +195,86 @@ export default function EventDetailPage() {
       setActionMessage({ type: 'error', text: 'ไม่สามารถคัดลอกได้' });
     } finally {
       setCopyLoading(false);
+    }
+  };
+
+  const handleEditRegistration = (attendee: Attendee) => {
+    setEditingRegistration(attendee.registration.registrationId);
+    setEditFormData({
+      attendeeCount: attendee.registration.attendeeCount || 1,
+      status: attendee.registration.status || 'pending',
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRegistration(null);
+    setEditFormData({ attendeeCount: 1, status: 'pending' });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRegistration || !eventData) return;
+
+    setUpdating(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/admin-update-registration`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registrationId: editingRegistration,
+          updateData: {
+            attendee_count: editFormData.attendeeCount,
+            status: editFormData.status,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่สามารถอัพเดทได้');
+      }
+
+      setActionMessage({ type: 'success', text: 'อัพเดทข้อมูลเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      handleCancelEdit();
+      fetchEventData(); // Refresh data
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleCancelRegistration = async (registrationId: string) => {
+    if (!confirm('ยืนยันการยกเลิกการลงทะเบียนนี้?')) return;
+
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/events/${eventId}/admin-update-registration?registrationId=${registrationId}`,
+        { method: 'DELETE' }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่สามารถยกเลิกได้');
+      }
+
+      setActionMessage({ type: 'success', text: 'ยกเลิกการลงทะเบียนเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      fetchEventData(); // Refresh data
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
     }
   };
 
@@ -439,7 +525,10 @@ export default function EventDetailPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {filteredAttendees.map((attendee, index) => (
+              {filteredAttendees.map((attendee, index) => {
+                const isEditing = editingRegistration === attendee.registration.registrationId;
+
+                return (
                 <div key={attendee.registration.registrationId || index} className="p-4 hover:bg-gray-50">
                   <div className="flex items-start gap-4">
                     {/* LINE Profile Picture */}
@@ -530,10 +619,88 @@ export default function EventDetailPage() {
                           ผู้ร่วม: {attendee.registration.attendeeNames}
                         </p>
                       )}
+
+                      {/* Edit Form */}
+                      {isEditing && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                จำนวนผู้เข้าร่วม
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={editFormData.attendeeCount}
+                                onChange={(e) => setEditFormData({ ...editFormData, attendeeCount: parseInt(e.target.value) || 1 })}
+                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                สถานะ
+                              </label>
+                              <select
+                                value={editFormData.status}
+                                onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="pending">รอดำเนินการ</option>
+                                <option value="confirmed">ยืนยันแล้ว</option>
+                                <option value="cancelled">ยกเลิก</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSaveEdit}
+                              disabled={updating}
+                              className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                              {updating ? 'กำลังบันทึก...' : 'บันทึก'}
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              disabled={updating}
+                              className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition-colors disabled:opacity-50"
+                            >
+                              ยกเลิก
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-col gap-2">
+                      {!isEditing && (
+                        <>
+                          <button
+                            onClick={() => handleEditRegistration(attendee)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="แก้ไข"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleCancelRegistration(attendee.registration.registrationId)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="ยกเลิก"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

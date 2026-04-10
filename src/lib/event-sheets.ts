@@ -249,7 +249,7 @@ export async function updateEventRegistration(
     const actualRowNumber = rowIndex + 2;
 
     // Update specific cells
-    const updates: unknown[] = [];
+    const updates: { range: string; values: unknown[][] }[] = [];
     for (const [key, value] of Object.entries(updateData)) {
       const normalizedKey = key.toLowerCase().trim();
       const headerIndex = headers.findIndex(h => {
@@ -277,7 +277,7 @@ export async function updateEventRegistration(
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: SHEET_ID,
       requestBody: {
-        data: updates,
+        data: updates as never,
         valueInputOption: 'RAW',
       },
     });

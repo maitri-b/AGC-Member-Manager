@@ -71,6 +71,7 @@ const THAI_MONTHS_FULL = [
 ];
 
 // Format date for notification messages (outside component)
+// Google Sheet uses MM/DD/YYYY format (US format)
 function formatThaiDateForMessage(dateStr: string | undefined): string {
   if (!dateStr) return '-';
 
@@ -78,8 +79,8 @@ function formatThaiDateForMessage(dateStr: string | undefined): string {
     if (dateStr.includes('/')) {
       const parts = dateStr.split('/');
       if (parts.length === 3) {
-        // Google Sheet uses DD/MM/YYYY (Thai/EU format)
-        const [day, month, year] = parts.map(Number);
+        // Google Sheet uses MM/DD/YYYY (US format)
+        const [month, day, year] = parts.map(Number);
         // Convert Buddhist year to Gregorian if needed
         const gregorianYear = year > 2500 ? year - 543 : year;
 
@@ -109,7 +110,7 @@ function NotificationModal({
 
 ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
 ใบอนุญาตธุรกิจนำเที่ยว เลขที่ ${member.licenseNumber || '-'}
-มีสถานะ ${member.status || '-'} (หมดอายุ ${formatThaiDateForMessage(member.membershipExpiry || member.licenseExpiry)})
+มีสถานะ ${member.status || '-'} (หมดอายุ ${formatThaiDateForMessage(member.licenseExpiry)})
 
 หากคุณได้ต่ออายุใบอนุญาตแล้ว หรือมีข้อมูลที่อัพเดท
 รบกวนส่งสำเนาใบอนุญาตใหม่มาทาง LINE นี้ด้วยนะครับ
@@ -287,7 +288,7 @@ function ContactModal({
 
 ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
 ใบอนุญาตธุรกิจนำเที่ยว เลขที่ ${member.licenseNumber || '-'}
-มีสถานะ ${member.status || '-'} (หมดอายุ ${formatThaiDateForMessage(member.membershipExpiry)})
+มีสถานะ ${member.status || '-'} (หมดอายุ ${formatThaiDateForMessage(member.licenseExpiry)})
 
 หากคุณได้ต่ออายุใบอนุญาตแล้ว หรือมีข้อมูลที่อัพเดท
 รบกวนส่งสำเนาใบอนุญาตใหม่มาทาง LINE นี้ด้วยนะครับ
@@ -905,7 +906,7 @@ export default function MembersPage() {
   // Thai month names (abbreviated)
   const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
-  // Format date to Thai format: "3 มี.ค. 2570"
+  // Format date to Thai format with Gregorian year: "3 มี.ค. 2027"
   const formatThaiDate = (dateStr: string): string => {
     if (!dateStr) return '-';
     const date = parseThaiDate(dateStr);
@@ -913,7 +914,7 @@ export default function MembersPage() {
 
     const day = date.getDate();
     const month = thaiMonths[date.getMonth()];
-    const year = date.getFullYear() + 543; // Convert to Buddhist Era
+    const year = date.getFullYear(); // Gregorian year (ค.ศ.)
 
     return `${day} ${month} ${year}`;
   };
@@ -926,10 +927,10 @@ export default function MembersPage() {
     return date < new Date();
   };
 
-  // Helper to check license expiry - using membershipExpiry field which maps to column S (วันที่หมดอายุ)
+  // Helper to check license expiry - using licenseExpiry field which maps to column S (วันหมดอายุ)
   const getLicenseExpiryStatus = (member: Member): 'expired' | 'within45' | 'within90' | 'ok' | 'unknown' => {
-    // Use membershipExpiry (column S - วันที่หมดอายุ) for license expiry filtering
-    const dateStr = member.membershipExpiry;
+    // Use licenseExpiry (column S - วันหมดอายุ) for license expiry filtering
+    const dateStr = member.licenseExpiry;
     if (!dateStr) return 'unknown';
     const expiry = parseThaiDate(dateStr);
     if (!expiry) return 'unknown';
@@ -1396,13 +1397,13 @@ export default function MembersPage() {
                             {member.licenseNumber || '-'}
                           </div>
                           <div className="flex items-center gap-1 text-xs">
-                            {isExpired(member.membershipExpiry) && (
+                            {isExpired(member.licenseExpiry) && (
                               <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                               </svg>
                             )}
-                            <span className={isExpired(member.membershipExpiry) ? 'text-red-600 font-medium' : 'text-gray-500'}>
-                              {formatThaiDate(member.membershipExpiry)}
+                            <span className={isExpired(member.licenseExpiry) ? 'text-red-600 font-medium' : 'text-gray-500'}>
+                              {formatThaiDate(member.licenseExpiry)}
                             </span>
                           </div>
                         </td>

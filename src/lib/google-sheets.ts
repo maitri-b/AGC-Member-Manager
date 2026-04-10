@@ -342,15 +342,15 @@ export async function getMemberStats(): Promise<{
   };
 }
 
-// Helper to parse date (supports Thai format DD/MM/YYYY)
+// Helper to parse date (supports US format MM/DD/YYYY)
 function parseDate(dateStr: string): Date | null {
   if (!dateStr) return null;
 
-  // Try DD/MM/YYYY format
+  // Try MM/DD/YYYY format (US format from Google Sheet)
   const parts = dateStr.split('/');
   if (parts.length === 3) {
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
+    const month = parseInt(parts[0], 10) - 1;
+    const day = parseInt(parts[1], 10);
     let year = parseInt(parts[2], 10);
 
     // Convert Buddhist year to Gregorian if needed

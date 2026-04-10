@@ -111,6 +111,9 @@ export default function EventDetailPage() {
     }
   };
 
+  const isCommitteeOrAdmin = session?.user?.permissions?.includes('admin:access') ||
+                              session?.user?.permissions?.includes('members:list');
+
   const isFull = event?.maxCapacity && event.maxCapacity > 0 && summary
     ? summary.totalAttendees >= event.maxCapacity
     : false;
@@ -176,6 +179,16 @@ export default function EventDetailPage() {
 
         {/* Event Header */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          {/* Preview mode banner for unpublished events */}
+          {isCommitteeOrAdmin && !event.isPublished && (
+            <div className="bg-yellow-500 text-white px-6 py-2 text-sm font-medium flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              โหมดดูตัวอย่าง - กิจกรรมนี้ยังไม่ได้ publish (สมาชิกทั่วไปจะไม่เห็น)
+            </div>
+          )}
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-8 text-white">
             <div className="flex items-start justify-between">
               <div>

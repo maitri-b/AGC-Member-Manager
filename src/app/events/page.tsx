@@ -158,11 +158,18 @@ export default function EventsPage() {
                   <h3 className="text-lg font-semibold text-gray-900">{event.eventName}</h3>
                   <p className="text-sm text-gray-500">{event.eventNameEN}</p>
                 </div>
-                {event.isActive && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    กำลังดำเนินการ
-                  </span>
-                )}
+                <div className="flex flex-col gap-1 items-end">
+                  {event.isActive && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      กำลังดำเนินการ
+                    </span>
+                  )}
+                  {isCommittee && !event.isPublished && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      ยังไม่ publish
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="mt-4 space-y-2">

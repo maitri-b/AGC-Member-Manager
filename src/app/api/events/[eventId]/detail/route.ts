@@ -28,9 +28,10 @@ export async function GET(
 
     const eventData = eventDoc.data();
 
-    // Check if event is published (unless user is admin)
-    const isAdmin = session.user.permissions?.includes('admin:access');
-    if (!isAdmin && !eventData?.isPublished) {
+    // Check if event is published (unless user is admin or committee)
+    const isCommitteeOrAdmin = session.user.permissions?.includes('admin:access') ||
+                               session.user.permissions?.includes('members:list');
+    if (!isCommitteeOrAdmin && !eventData?.isPublished) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
@@ -71,7 +72,7 @@ export async function GET(
         // Check if current user has registered (by LINE_userID or memberId)
         if (session.user.id || session.user.memberId) {
           const userReg = registrations.find(r => {
-            const regData = r as Record<string, unknown>;
+            const regData = r as unknown as Record<string, unknown>;
             return (
               (session.user.id && regData.lineUserId === session.user.id) ||
               (session.user.id && regData.LINE_userID === session.user.id) ||

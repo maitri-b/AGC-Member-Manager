@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { getMemberById } from '@/lib/google-sheets';
 import { getEventRegistrations, addEventRegistration } from '@/lib/event-sheets';
+import { EventRegistration } from '@/types/event';
 
 // Generate a unique 6-character registration ID
 function generateRegistrationId(): string {
@@ -63,7 +64,7 @@ export async function POST(
     }
 
     // Get existing registrations to check capacity and duplicates
-    let existingRegistrations = [];
+    let existingRegistrations: EventRegistration[] = [];
     try {
       existingRegistrations = await getEventRegistrations(eventData.sheetName);
     } catch (err) {
@@ -72,7 +73,7 @@ export async function POST(
 
     // Check if user already registered
     const alreadyRegistered = existingRegistrations.find(r => {
-      const regData = r as Record<string, unknown>;
+      const regData = r as unknown as Record<string, unknown>;
       return (
         (session.user.id && regData.LINE_userID === session.user.id) ||
         (session.user.memberId && regData.memberID === session.user.memberId)

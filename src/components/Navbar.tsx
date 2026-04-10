@@ -120,6 +120,12 @@ export default function Navbar() {
                 สมาชิก
               </Link>
             )}
+            <Link
+              href="/events"
+              className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              กิจกรรม
+            </Link>
             {canAccessAdmin && (
               <Link
                 href="/admin"
@@ -314,6 +320,13 @@ export default function Navbar() {
                 สมาชิก
               </Link>
             )}
+            <Link
+              href="/events"
+              className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              กิจกรรม
+            </Link>
             {canAccessAdmin && (
               <Link
                 href="/admin"

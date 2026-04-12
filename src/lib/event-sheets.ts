@@ -142,9 +142,36 @@ export async function getEventRegistrations(sheetName: string): Promise<EventReg
     }
 
     const headers = (rows[0] as string[]).map(h => h.toLowerCase().trim());
-    const registrations = rows.slice(1).map((row) => rowToEventRegistration(headers, row as string[]));
 
-    return registrations.filter((r) => r.registrationId); // Filter out empty rows
+    // DEBUG: Log headers to see what columns we have
+    console.log('[getEventRegistrations] Headers:', headers);
+    console.log('[getEventRegistrations] Headers related to user ID:',
+      headers.filter(h => h.includes('user') || h.includes('member'))
+    );
+
+    const registrations = rows.slice(1).map((row, index) => {
+      const reg = rowToEventRegistration(headers, row as string[]);
+
+      // DEBUG: Log first registration to see what we're getting
+      if (index === 0) {
+        console.log('[getEventRegistrations] First registration sample:', {
+          registrationId: reg.registrationId,
+          lineUserId: reg.lineUserId,
+          memberId: reg.memberId,
+          contactName: reg.contactName,
+        });
+      }
+
+      return reg;
+    });
+
+    const filtered = registrations.filter((r) => r.registrationId);
+
+    console.log(`[getEventRegistrations] Total registrations: ${filtered.length}`);
+    console.log(`[getEventRegistrations] Registrations with lineUserId: ${filtered.filter(r => r.lineUserId).length}`);
+    console.log(`[getEventRegistrations] Registrations with memberId: ${filtered.filter(r => r.memberId).length}`);
+
+    return filtered;
   } catch (error) {
     console.error(`Error fetching registrations from ${sheetName}:`, error);
     return [];

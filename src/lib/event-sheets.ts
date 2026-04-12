@@ -102,6 +102,11 @@ function rowToEventRegistration(headers: string[], row: string[]): EventRegistra
     const registrationKey = COLUMN_TO_EVENT_REGISTRATION_MAP[normalizedHeader];
 
     if (registrationKey) {
+      // Skip if value is already set (prefer first occurrence)
+      if ((registration as Record<string, unknown>)[registrationKey]) {
+        return;
+      }
+
       // Handle boolean fields
       if (registrationKey === 'hasClubRep' || registrationKey === 'shirtReceived' || registrationKey === 'cardReceived') {
         (registration as Record<string, unknown>)[registrationKey] =

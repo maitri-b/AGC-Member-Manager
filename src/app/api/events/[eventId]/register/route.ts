@@ -103,6 +103,7 @@ export async function POST(
     const registrationId = generateRegistrationId();
 
     // Prepare registration data (matching sheet columns)
+    // Write to BOTH old and new column names for backward compatibility
     const registrationData = {
       registration_id: registrationId,
       registration_date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }),
@@ -111,8 +112,12 @@ export async function POST(
       contact_name: member.fullNameTH || member.nickname || session.user.name || '',
       contact_phone: member.mobile || member.phone || '',
       contact_email: member.email || '',
+      // New format (lowercase)
       line_userid: session.user.id || '',
       memberid: session.user.memberId || '',
+      // Old format (mixed case) - for backward compatibility
+      LINE_userID: session.user.id || '',
+      memberID: session.user.memberId || '',
       attendee_count: attendeeCount,
       attendee_names: JSON.stringify(attendeeNames.length > 0 ? attendeeNames : [member.fullNameTH || member.nickname || '']),
       shirt_count: 0,

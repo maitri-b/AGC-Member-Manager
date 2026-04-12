@@ -15,6 +15,8 @@ export interface EventRegistration {
   contactName: string;              // contact_name
   contactPhone: string;             // contact_phone
   contactEmail: string;             // contact_email
+  lineUserId: string;               // LINE_userID (for user identification)
+  memberId: string;                 // memberID (from member sheet)
 
   // Club Representative
   hasClubRep: boolean;              // has_club_rep
@@ -163,6 +165,8 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   contactName: 'contact_name',
   contactPhone: 'contact_phone',
   contactEmail: 'contact_email',
+  lineUserId: 'line_userid',
+  memberId: 'memberid',
   hasClubRep: 'has_club_rep',
   lineRepName: 'line_rep_name',
   attendeeCount: 'attendee_count',

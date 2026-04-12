@@ -70,15 +70,12 @@ export async function GET(
         summary.totalRegistrations = registrations.length;
         summary.totalAttendees = registrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
 
-        // Check if current user has registered (by LINE_userID or memberId)
+        // Check if current user has registered (by LINE user ID or member ID)
         if (session.user.id || session.user.memberId) {
           const userReg = registrations.find(r => {
-            const regData = r as unknown as Record<string, unknown>;
             return (
-              (session.user.id && regData.lineUserId === session.user.id) ||
-              (session.user.id && regData.LINE_userID === session.user.id) ||
-              (session.user.memberId && regData.memberID === session.user.memberId) ||
-              (session.user.memberId && regData.memberId === session.user.memberId)
+              (session.user.id && r.lineUserId === session.user.id) ||
+              (session.user.memberId && r.memberId === session.user.memberId)
             );
           });
 

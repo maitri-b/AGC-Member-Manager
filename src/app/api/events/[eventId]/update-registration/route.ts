@@ -51,14 +51,35 @@ export async function PUT(
     }
 
     // Find user's registration (by LINE user ID or member ID)
+    console.log('[Update Registration] Looking for user registration:', {
+      userId: session.user.id,
+      memberId: session.user.memberId,
+      totalRegistrations: existingRegistrations.length,
+    });
+
     const userReg = existingRegistrations.find(r => {
-      return (
+      const match = (
         (session.user.id && r.lineUserId === session.user.id) ||
         (session.user.memberId && r.memberId === session.user.memberId)
       );
+      if (match) {
+        console.log('[Update Registration] Found matching registration:', {
+          registrationId: r.registrationId,
+          lineUserId: r.lineUserId,
+          memberId: r.memberId,
+        });
+      }
+      return match;
     });
 
     if (!userReg) {
+      console.error('[Update Registration] User registration not found. Available registrations:',
+        existingRegistrations.map(r => ({
+          registrationId: r.registrationId,
+          lineUserId: r.lineUserId,
+          memberId: r.memberId,
+        }))
+      );
       return NextResponse.json({ error: 'ไม่พบข้อมูลการลงทะเบียนของคุณ' }, { status: 404 });
     }
 

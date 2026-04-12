@@ -380,20 +380,20 @@ export default function EventDetailPage() {
                     </p>
                   </div>
 
-                  {debugInfo.sampleRegistrations && Array.isArray(debugInfo.sampleRegistrations) && debugInfo.sampleRegistrations.length > 0 && (
+                  {Array.isArray(debugInfo.sampleRegistrations) && debugInfo.sampleRegistrations.length > 0 ? (
                     <div className="bg-white p-3 rounded border border-yellow-200">
                       <p className="font-semibold text-gray-700 mb-2">ตัวอย่างข้อมูลการลงทะเบียน (3 รายการแรก):</p>
                       {(debugInfo.sampleRegistrations as Array<Record<string, unknown>>).map((reg, i) => (
                         <div key={i} className="mb-2 p-2 bg-gray-50 rounded text-xs">
-                          <p>Registration ID: {reg.registrationId as string}</p>
-                          <p>LINE User ID: {reg.lineUserId as string || '(ไม่มี)'}</p>
-                          <p>Member ID: {reg.memberId as string || '(ไม่มี)'}</p>
-                          <p>ชื่อ: {reg.contactName as string}</p>
-                          <p>บริษัท: {reg.companyName as string}</p>
+                          <p>Registration ID: {String(reg.registrationId || '')}</p>
+                          <p>LINE User ID: {String(reg.lineUserId || '(ไม่มี)')}</p>
+                          <p>Member ID: {String(reg.memberId || '(ไม่มี)')}</p>
+                          <p>ชื่อ: {String(reg.contactName || '')}</p>
+                          <p>บริษัท: {String(reg.companyName || '')}</p>
                         </div>
                       ))}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             )}

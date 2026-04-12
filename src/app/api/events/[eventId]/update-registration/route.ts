@@ -50,12 +50,11 @@ export async function PUT(
       return NextResponse.json({ error: 'ไม่สามารถโหลดข้อมูลได้' }, { status: 500 });
     }
 
-    // Find user's registration
+    // Find user's registration (by LINE user ID or member ID)
     const userReg = existingRegistrations.find(r => {
-      const regData = r as unknown as Record<string, unknown>;
       return (
-        (session.user.id && regData.LINE_userID === session.user.id) ||
-        (session.user.memberId && regData.memberID === session.user.memberId)
+        (session.user.id && r.lineUserId === session.user.id) ||
+        (session.user.memberId && r.memberId === session.user.memberId)
       );
     });
 

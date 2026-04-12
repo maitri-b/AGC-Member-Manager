@@ -71,9 +71,15 @@ export default function EventDetailPage() {
 
   const fetchEventDetail = async () => {
     try {
+      console.log('[DEBUG] Fetching event detail for eventId:', eventId);
       const response = await fetch(`/api/events/${eventId}/detail`);
+      console.log('[DEBUG] Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('[DEBUG] Response data:', data);
+        console.log('[DEBUG] Debug info from API:', data.debug);
+
         setEvent(data.event);
         setSummary(data.summary);
         setUserRegistration(data.userRegistration);

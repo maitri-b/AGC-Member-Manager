@@ -46,6 +46,10 @@ export default function EventDetailPage() {
   const toast = useToast();
   const eventId = params.eventId as string;
 
+  console.log('[DEBUG COMPONENT] Component mounted/rendered');
+  console.log('[DEBUG COMPONENT] params:', params);
+  console.log('[DEBUG COMPONENT] eventId:', eventId);
+
   const [event, setEvent] = useState<Event | null>(null);
   const [summary, setSummary] = useState<EventSummary | null>(null);
   const [userRegistration, setUserRegistration] = useState<UserRegistration | null>(null);
@@ -58,14 +62,19 @@ export default function EventDetailPage() {
   const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
+    console.log('[DEBUG useEffect AUTH] status:', status);
     if (status === 'unauthenticated') {
       router.push('/login');
     }
   }, [status, router]);
 
   useEffect(() => {
+    console.log('[DEBUG useEffect FETCH] eventId:', eventId);
     if (eventId) {
+      console.log('[DEBUG useEffect FETCH] Calling fetchEventDetail...');
       fetchEventDetail();
+    } else {
+      console.log('[DEBUG useEffect FETCH] eventId is undefined/null, not fetching');
     }
   }, [eventId]);
 

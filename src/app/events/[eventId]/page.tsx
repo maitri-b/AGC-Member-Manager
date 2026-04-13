@@ -49,7 +49,6 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [summary, setSummary] = useState<EventSummary | null>(null);
   const [userRegistration, setUserRegistration] = useState<UserRegistration | null>(null);
-  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [attendeeCount, setAttendeeCount] = useState(1);
@@ -79,7 +78,6 @@ export default function EventDetailPage() {
         setEvent(data.event);
         setSummary(data.summary);
         setUserRegistration(data.userRegistration);
-        setDebugInfo(data.debug || null);
 
         // Set first attendee name from member data
         if (data.memberName && !data.userRegistration) {
@@ -339,49 +337,6 @@ export default function EventDetailPage() {
                     {event.documentName || 'ดาวน์โหลดเอกสาร'}
                   </span>
                 </a>
-              </div>
-            )}
-
-            {/* DEBUG INFO - แสดงข้อมูล debug */}
-            {debugInfo && (
-              <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
-                <h3 className="font-bold text-yellow-900 mb-3 text-lg">🔍 Debug Information (ตรวจสอบการทำงาน)</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="bg-white p-3 rounded border border-yellow-200">
-                    <p className="font-semibold text-gray-700 mb-2">ข้อมูลผู้ใช้ปัจจุบัน:</p>
-                    <p className="text-gray-600">LINE User ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{(debugInfo.currentUser as Record<string, unknown>)?.lineUserId as string || 'ไม่มี'}</span></p>
-                    <p className="text-gray-600">Member ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{(debugInfo.currentUser as Record<string, unknown>)?.memberId as string || 'ไม่มี'}</span></p>
-                  </div>
-
-                  <div className="bg-white p-3 rounded border border-yellow-200">
-                    <p className="font-semibold text-gray-700 mb-2">สถิติการลงทะเบียน:</p>
-                    <p className="text-gray-600">จำนวนการลงทะเบียนทั้งหมด: <span className="font-bold text-blue-600">{debugInfo.totalRegistrations as number}</span></p>
-                    <p className="text-gray-600">มี LINE User ID: <span className="font-bold text-green-600">{debugInfo.registrationsWithLineUserId as number}</span></p>
-                    <p className="text-gray-600">มี Member ID: <span className="font-bold text-green-600">{debugInfo.registrationsWithMemberId as number}</span></p>
-                  </div>
-
-                  <div className="bg-white p-3 rounded border border-yellow-200">
-                    <p className="font-semibold text-gray-700 mb-2">ผลการค้นหา:</p>
-                    <p className={`font-bold ${debugInfo.userRegistrationFound ? 'text-green-600' : 'text-red-600'}`}>
-                      {debugInfo.userRegistrationFound ? '✅ เจอการลงทะเบียนของคุณ' : '❌ ไม่เจอการลงทะเบียนของคุณ'}
-                    </p>
-                  </div>
-
-                  {Array.isArray(debugInfo.sampleRegistrations) && debugInfo.sampleRegistrations.length > 0 ? (
-                    <div className="bg-white p-3 rounded border border-yellow-200">
-                      <p className="font-semibold text-gray-700 mb-2">ตัวอย่างข้อมูลการลงทะเบียน (3 รายการแรก):</p>
-                      {(debugInfo.sampleRegistrations as Array<Record<string, unknown>>).map((reg, i) => (
-                        <div key={i} className="mb-2 p-2 bg-gray-50 rounded text-xs">
-                          <p>Registration ID: {String(reg.registrationId || '')}</p>
-                          <p>LINE User ID: {String(reg.lineUserId || '(ไม่มี)')}</p>
-                          <p>Member ID: {String(reg.memberId || '(ไม่มี)')}</p>
-                          <p>ชื่อ: {String(reg.contactName || '')}</p>
-                          <p>บริษัท: {String(reg.companyName || '')}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
               </div>
             )}
 

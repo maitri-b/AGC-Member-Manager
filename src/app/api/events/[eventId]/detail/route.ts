@@ -61,29 +61,10 @@ export async function GET(
     };
 
     let userRegistration = null;
-    let debugInfo: Record<string, unknown> = {};
 
     if (eventData?.sheetName) {
       try {
         const registrations = await getEventRegistrations(eventData.sheetName);
-
-        // DEBUG: Collect information for debugging
-        debugInfo = {
-          currentUser: {
-            lineUserId: session.user.id,
-            memberId: session.user.memberId,
-          },
-          totalRegistrations: registrations.length,
-          registrationsWithLineUserId: registrations.filter(r => r.lineUserId).length,
-          registrationsWithMemberId: registrations.filter(r => r.memberId).length,
-          sampleRegistrations: registrations.slice(0, 3).map(r => ({
-            registrationId: r.registrationId,
-            lineUserId: r.lineUserId,
-            memberId: r.memberId,
-            contactName: r.contactName,
-            companyName: r.companyName,
-          })),
-        };
 
         // Calculate summary
         summary.totalRegistrations = registrations.length;
@@ -106,14 +87,10 @@ export async function GET(
               attendeeNames: userReg.attendeeNames,
               registrationDate: userReg.registrationDate,
             };
-            debugInfo.userRegistrationFound = true;
-          } else {
-            debugInfo.userRegistrationFound = false;
           }
         }
       } catch (err) {
         console.error('Error fetching registrations:', err);
-        debugInfo.error = err instanceof Error ? err.message : 'Unknown error';
         // Continue without registration data
       }
     }
@@ -137,8 +114,6 @@ export async function GET(
       summary,
       userRegistration,
       memberName,
-      // DEBUG: Include debug info in response (temporary for debugging)
-      debug: Object.keys(debugInfo).length > 0 ? debugInfo : undefined,
     });
   } catch (error) {
     console.error('Error fetching event detail:', error);

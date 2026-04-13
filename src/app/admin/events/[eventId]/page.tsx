@@ -70,8 +70,9 @@ export default function EventDetailPage() {
   const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<{
     attendeeCount: number;
+    attendeeNames: string[];
     status: string;
-  }>({ attendeeCount: 1, status: 'pending' });
+  }>({ attendeeCount: 1, attendeeNames: [''], status: 'pending' });
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
@@ -200,19 +201,37 @@ export default function EventDetailPage() {
 
   const handleEditRegistration = (attendee: Attendee) => {
     setEditingRegistration(attendee.registration.registrationId);
+
+    // Parse attendee names
+    let names: string[] = [''];
+    try {
+      const parsed = JSON.parse(attendee.registration.attendeeNames || '[]');
+      names = Array.isArray(parsed) ? parsed : [attendee.registration.attendeeNames || ''];
+    } catch {
+      names = [attendee.registration.attendeeNames || ''];
+    }
+
     setEditFormData({
       attendeeCount: attendee.registration.attendeeCount || 1,
+      attendeeNames: names,
       status: attendee.registration.status || 'pending',
     });
   };
 
   const handleCancelEdit = () => {
     setEditingRegistration(null);
-    setEditFormData({ attendeeCount: 1, status: 'pending' });
+    setEditFormData({ attendeeCount: 1, attendeeNames: [''], status: 'pending' });
   };
 
   const handleSaveEdit = async () => {
     if (!editingRegistration || !eventData) return;
+
+    // Validate attendee names
+    const filledNames = editFormData.attendeeNames.filter(name => name.trim());
+    if (filledNames.length !== editFormData.attendeeCount) {
+      setActionMessage({ type: 'error', text: 'กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน' });
+      return;
+    }
 
     setUpdating(true);
     setActionMessage(null);
@@ -225,6 +244,7 @@ export default function EventDetailPage() {
           registrationId: editingRegistration,
           updateData: {
             attendee_count: editFormData.attendeeCount,
+            attendee_names: JSON.stringify(filledNames),
             status: editFormData.status,
           },
         }),
@@ -248,6 +268,26 @@ export default function EventDetailPage() {
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleAttendeeCountChange = (count: number) => {
+    const currentNames = [...editFormData.attendeeNames];
+    if (count > currentNames.length) {
+      // Add empty slots
+      while (currentNames.length < count) {
+        currentNames.push('');
+      }
+    } else {
+      // Trim to new count
+      currentNames.length = count;
+    }
+    setEditFormData({ ...editFormData, attendeeCount: count, attendeeNames: currentNames });
+  };
+
+  const handleAttendeeNameChange = (index: number, value: string) => {
+    const newNames = [...editFormData.attendeeNames];
+    newNames[index] = value;
+    setEditFormData({ ...editFormData, attendeeNames: newNames });
   };
 
   const handleCancelRegistration = async (registrationId: string) => {
@@ -600,8 +640,8 @@ export default function EventDetailPage() {
 
                       {/* Edit Form */}
                       {isEditing && (
-                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">
                                 จำนวนผู้เข้าร่วม
@@ -611,7 +651,7 @@ export default function EventDetailPage() {
                                 min="1"
                                 max="20"
                                 value={editFormData.attendeeCount}
-                                onChange={(e) => setEditFormData({ ...editFormData, attendeeCount: parseInt(e.target.value) || 1 })}
+                                onChange={(e) => handleAttendeeCountChange(parseInt(e.target.value) || 1)}
                                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             </div>
@@ -630,6 +670,26 @@ export default function EventDetailPage() {
                               </select>
                             </div>
                           </div>
+
+                          {/* Attendee Names */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              ชื่อผู้เข้าร่วม
+                            </label>
+                            <div className="space-y-2">
+                              {Array.from({ length: editFormData.attendeeCount }).map((_, index) => (
+                                <input
+                                  key={index}
+                                  type="text"
+                                  value={editFormData.attendeeNames[index] || ''}
+                                  onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
+                                  placeholder={index === 0 ? 'ชื่อผู้ติดต่อ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              ))}
+                            </div>
+                          </div>
+
                           <div className="flex gap-2">
                             <button
                               onClick={handleSaveEdit}

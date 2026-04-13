@@ -141,27 +141,27 @@ export async function PUT(
       });
     }
 
-    // If just updating attendee count (not changing names)
+    // Update attendee count and/or names
     const updateData: Record<string, unknown> = {};
 
+    // Check if attendee count changed
     if (attendeeCount !== undefined && attendeeCount !== userReg.attendeeCount) {
       updateData.attendee_count = attendeeCount;
-
-      // Adjust attendee names array if needed
-      const newNames = [...currentAttendeeNames];
-      if (attendeeCount > newNames.length) {
-        while (newNames.length < attendeeCount) {
-          newNames.push('');
-        }
-      } else {
-        newNames.length = attendeeCount;
-      }
-      updateData.attendee_names = JSON.stringify(newNames);
 
       // Update total amount if there's a fee
       if (eventData.registrationFee > 0) {
         updateData.event_fee = eventData.registrationFee;
         updateData.total_amount = eventData.registrationFee * attendeeCount;
+      }
+    }
+
+    // Check if attendee names changed (compare with current names)
+    if (attendeeNames && Array.isArray(attendeeNames)) {
+      const newNamesJson = JSON.stringify(attendeeNames);
+      const currentNamesJson = JSON.stringify(currentAttendeeNames);
+
+      if (newNamesJson !== currentNamesJson) {
+        updateData.attendee_names = newNamesJson;
       }
     }
 

@@ -243,6 +243,9 @@ export async function updateEventRegistration(
   const sheets = getGoogleSheetsClient();
 
   try {
+    console.log(`[updateEventRegistration] Starting update for ${registrationId} in ${sheetName}`);
+    console.log(`[updateEventRegistration] Update data:`, updateData);
+
     // Get all data from the sheet
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
@@ -251,12 +254,15 @@ export async function updateEventRegistration(
 
     const rows = response.data.values;
     if (!rows || rows.length < 2) {
-      console.error('No data found in sheet:', sheetName);
+      console.error('[updateEventRegistration] No data found in sheet:', sheetName);
       return false;
     }
 
     const headers = rows[0] as string[];
     const dataRows = rows.slice(1);
+
+    console.log(`[updateEventRegistration] Found ${headers.length} columns in sheet`);
+    console.log(`[updateEventRegistration] Headers:`, headers);
 
     // Find registration_id column index
     const regIdIndex = headers.findIndex(h =>
@@ -265,20 +271,24 @@ export async function updateEventRegistration(
     );
 
     if (regIdIndex === -1) {
-      console.error('registration_id column not found in sheet:', sheetName);
+      console.error('[updateEventRegistration] registration_id column not found in sheet:', sheetName);
       return false;
     }
+
+    console.log(`[updateEventRegistration] registration_id column at index ${regIdIndex}`);
 
     // Find the row with matching registration ID
     const rowIndex = dataRows.findIndex(row => row[regIdIndex] === registrationId);
 
     if (rowIndex === -1) {
-      console.error('Registration not found:', registrationId);
+      console.error('[updateEventRegistration] Registration not found:', registrationId);
+      console.error('[updateEventRegistration] Available registration IDs:', dataRows.map(r => r[regIdIndex]).filter(Boolean));
       return false;
     }
 
     // Actual row number (add 2: 1 for header, 1 for 0-indexed to 1-indexed)
     const actualRowNumber = rowIndex + 2;
+    console.log(`[updateEventRegistration] Found registration at row ${actualRowNumber}`);
 
     // Update specific cells
     const updates: { range: string; values: unknown[][] }[] = [];
@@ -292,18 +302,33 @@ export async function updateEventRegistration(
       });
 
       if (headerIndex !== -1) {
-        const columnLetter = String.fromCharCode(65 + headerIndex); // A=65
+        // Support columns beyond Z (AA, AB, etc.)
+        let columnLetter = '';
+        let tempIndex = headerIndex;
+        while (tempIndex >= 0) {
+          columnLetter = String.fromCharCode(65 + (tempIndex % 26)) + columnLetter;
+          tempIndex = Math.floor(tempIndex / 26) - 1;
+        }
+
+        console.log(`[updateEventRegistration] Mapping ${key} -> column ${columnLetter} (index ${headerIndex}) = ${value}`);
+
         updates.push({
           range: `'${sheetName}'!${columnLetter}${actualRowNumber}`,
           values: [[value]],
         });
+      } else {
+        console.warn(`[updateEventRegistration] Column not found for key: ${key}`);
       }
     }
 
     if (updates.length === 0) {
-      console.warn('No matching columns found for update');
+      console.error('[updateEventRegistration] No matching columns found for update');
+      console.error('[updateEventRegistration] Requested keys:', Object.keys(updateData));
+      console.error('[updateEventRegistration] Available headers:', headers);
       return false;
     }
+
+    console.log(`[updateEventRegistration] Performing ${updates.length} updates:`, updates);
 
     // Batch update
     await sheets.spreadsheets.values.batchUpdate({
@@ -314,9 +339,10 @@ export async function updateEventRegistration(
       },
     });
 
+    console.log('[updateEventRegistration] Update successful');
     return true;
   } catch (error) {
-    console.error(`Error updating registration in ${sheetName}:`, error);
+    console.error(`[updateEventRegistration] Error updating registration in ${sheetName}:`, error);
     throw error;
   }
 }

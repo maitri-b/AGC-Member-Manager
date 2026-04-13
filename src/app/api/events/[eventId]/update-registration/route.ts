@@ -171,12 +171,25 @@ export async function PUT(
         updated: { by: 'member', at: new Date().toISOString() },
       });
 
-      await updateEventRegistration(eventData.sheetName, userReg.registrationId, updateData);
-
-      return NextResponse.json({
-        success: true,
-        message: 'อัพเดทข้อมูลเรียบร้อยแล้ว',
+      console.log('[Update Registration] Attempting update with data:', {
+        registrationId: userReg.registrationId,
+        sheetName: eventData.sheetName,
+        updateData,
       });
+
+      try {
+        await updateEventRegistration(eventData.sheetName, userReg.registrationId, updateData);
+
+        console.log('[Update Registration] Update successful');
+
+        return NextResponse.json({
+          success: true,
+          message: 'อัพเดทข้อมูลเรียบร้อยแล้ว',
+        });
+      } catch (updateError) {
+        console.error('[Update Registration] Update failed:', updateError);
+        throw updateError;
+      }
     }
 
     return NextResponse.json({ error: 'ไม่มีข้อมูลที่ต้องอัพเดท' }, { status: 400 });

@@ -46,10 +46,6 @@ export default function EventDetailPage() {
   const toast = useToast();
   const eventId = params.eventId as string;
 
-  console.log('[DEBUG COMPONENT] Component mounted/rendered');
-  console.log('[DEBUG COMPONENT] params:', params);
-  console.log('[DEBUG COMPONENT] eventId:', eventId);
-
   const [event, setEvent] = useState<Event | null>(null);
   const [summary, setSummary] = useState<EventSummary | null>(null);
   const [userRegistration, setUserRegistration] = useState<UserRegistration | null>(null);
@@ -59,40 +55,29 @@ export default function EventDetailPage() {
   const [attendeeNames, setAttendeeNames] = useState<string[]>(['']);
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
-    console.log('[DEBUG useEffect AUTH] status:', status);
     if (status === 'unauthenticated') {
       router.push('/login');
     }
   }, [status, router]);
 
   useEffect(() => {
-    console.log('[DEBUG useEffect FETCH] eventId:', eventId);
     if (eventId) {
-      console.log('[DEBUG useEffect FETCH] Calling fetchEventDetail...');
       fetchEventDetail();
-    } else {
-      console.log('[DEBUG useEffect FETCH] eventId is undefined/null, not fetching');
     }
   }, [eventId]);
 
   const fetchEventDetail = async () => {
     try {
-      console.log('[DEBUG] Fetching event detail for eventId:', eventId);
       const response = await fetch(`/api/events/${eventId}/detail`);
-      console.log('[DEBUG] Response status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log('[DEBUG] Response data:', data);
-        console.log('[DEBUG] Debug info from API:', data.debug);
 
         setEvent(data.event);
         setSummary(data.summary);
         setUserRegistration(data.userRegistration);
-        setDebugInfo(data.debug || null); // Store debug info
 
         // Set first attendee name from member data
         if (data.memberName && !data.userRegistration) {

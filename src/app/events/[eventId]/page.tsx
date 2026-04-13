@@ -49,6 +49,7 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [summary, setSummary] = useState<EventSummary | null>(null);
   const [userRegistration, setUserRegistration] = useState<UserRegistration | null>(null);
+  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [attendeeCount, setAttendeeCount] = useState(1);
@@ -78,6 +79,7 @@ export default function EventDetailPage() {
         setEvent(data.event);
         setSummary(data.summary);
         setUserRegistration(data.userRegistration);
+        setDebugInfo(data.debug || null);
 
         // Set first attendee name from member data
         if (data.memberName && !data.userRegistration) {

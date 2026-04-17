@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Member } from '@/types/member';
+import { Member, formatThaiDate as formatLicenseDate } from '@/types/member';
 import Navbar from '@/components/Navbar';
 import { Toast, useToast } from '@/components/Toast';
 
@@ -250,34 +250,6 @@ export default function ProfilePage() {
 
   const formatDateString = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('th-TH');
-  };
-
-  // Thai month names
-  const THAI_MONTHS = [
-    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-  ];
-
-  // Format date from Google Sheet (MM/DD/YYYY) to Thai format
-  const formatThaiDate = (dateStr: string | undefined): string => {
-    if (!dateStr) return '-';
-
-    try {
-      if (dateStr.includes('/')) {
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-          // Google Sheet uses MM/DD/YYYY (US format)
-          const [month, day, year] = parts.map(Number);
-          // Convert Buddhist year to Gregorian if needed
-          const gregorianYear = year > 2500 ? year - 543 : year;
-
-          return `${day} ${THAI_MONTHS[month - 1]} ${gregorianYear}`;
-        }
-      }
-      return dateStr;
-    } catch {
-      return dateStr;
-    }
   };
 
   const getFieldLabel = (field: string) => {
@@ -663,11 +635,10 @@ export default function ProfilePage() {
                           <dt className="text-sm text-gray-500">เลขที่ใบอนุญาต</dt>
                           <dd className="text-gray-900">{member.licenseNumber || '-'}</dd>
                         </div>
-                        {/* NOTE: License expiry date hidden temporarily while updating Google Sheet data */}
-                        {/* <div>
+                        <div>
                           <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
-                          <dd className="text-gray-900">{formatThaiDate(member.membershipExpiry)}</dd>
-                        </div> */}
+                          <dd className="text-gray-900">{formatLicenseDate(member.licenseExpiry)}</dd>
+                        </div>
                       </dl>
                     </div>
                   </div>

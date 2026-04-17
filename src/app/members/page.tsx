@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Member, parseThaiDate } from '@/types/member';
+import { Member, parseLicenseExpiryDate, formatThaiDate, formatThaiDateShort } from '@/types/member';
 import Navbar from '@/components/Navbar';
 import { Toast, useToast } from '@/components/Toast';
 import { hasPermission } from '@/lib/permissions';
@@ -903,28 +903,21 @@ export default function MembersPage() {
       .sort();
   }, [allMembers]);
 
-  // Thai month names (abbreviated)
-  const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-
-  // Format date to Thai format with Gregorian year: "3 มี.ค. 2027"
-  const formatThaiDate = (dateStr: string): string => {
-    if (!dateStr) return '-';
-    const date = parseThaiDate(dateStr);
-    if (!date) return dateStr;
-
-    const day = date.getDate();
-    const month = thaiMonths[date.getMonth()];
-    const year = date.getFullYear(); // Gregorian year (ค.ศ.)
-
-    return `${day} ${month} ${year}`;
-  };
-
   // Check if date is expired
   const isExpired = (dateStr: string): boolean => {
     if (!dateStr) return false;
-    const date = parseThaiDate(dateStr);
+    const date = parseLicenseExpiryDate(dateStr);
     if (!date) return false;
-    return date < new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiryDate = new Date(date);
+    expiryDate.setHours(0, 0, 0, 0);
+    return expiryDate < today;
+  };
+
+  // Format date for message template (short format with B.E. year)
+  const formatThaiDateForMessage = (dateStr: string): string => {
+    return formatThaiDateShort(dateStr);
   };
 
   // Helper to check license expiry - using licenseExpiry field which maps to column S (วันหมดอายุ)
@@ -932,11 +925,15 @@ export default function MembersPage() {
     // Use licenseExpiry (column S - วันหมดอายุ) for license expiry filtering
     const dateStr = member.licenseExpiry;
     if (!dateStr) return 'unknown';
-    const expiry = parseThaiDate(dateStr);
+    const expiry = parseLicenseExpiryDate(dateStr);
     if (!expiry) return 'unknown';
 
     const today = new Date();
-    const diffTime = expiry.getTime() - today.getTime();
+    today.setHours(0, 0, 0, 0);
+    const expiryDate = new Date(expiry);
+    expiryDate.setHours(0, 0, 0, 0);
+
+    const diffTime = expiryDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) return 'expired';

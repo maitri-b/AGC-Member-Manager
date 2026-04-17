@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
-import { Member, parseThaiDate } from '@/types/member';
+import { Member, formatThaiDate } from '@/types/member';
 import Navbar from '@/components/Navbar';
 import { hasPermission } from '@/lib/permissions';
 import { Toast, useToast } from '@/components/Toast';
@@ -39,45 +39,30 @@ interface MemberAttendance {
   noActivityWarning: boolean;
 }
 
-// Thai month names
-const THAI_MONTHS = [
-  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-];
-
-// Format date for display: เดือนภาษาไทย ปี ค.ศ. (e.g., "มีนาคม 2025")
-function formatThaiMonthYear(dateStr: string): string {
-  if (!dateStr) return '-';
-  const date = parseThaiDate(dateStr);
-  if (!date) return dateStr;
-
-  const month = THAI_MONTHS[date.getMonth()];
-  const year = date.getFullYear(); // Gregorian year (ค.ศ.)
-  return `${month} ${year}`;
-}
-
-// Convert date string (mm/dd/yyyy or yyyy-mm-dd) to yyyy-mm-dd for date picker
+// Convert date string (mm/dd/yyyy) to yyyy-mm-dd for date picker
 function toDatePickerFormat(dateStr: string): string {
   if (!dateStr) return '';
-  const date = parseThaiDate(dateStr);
-  if (!date) return '';
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  // Parse mm/dd/yyyy format from Google Sheets (Column S)
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const month = parts[0].padStart(2, '0');
+    const day = parts[1].padStart(2, '0');
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+  }
+  return '';
 }
 
-// Convert yyyy-mm-dd (from date picker) to dd/mm/yyyy (for Google Sheet - Thai/EU format)
+// Convert yyyy-mm-dd (from date picker) to mm/dd/yyyy (for Google Sheet Column S)
 function toGoogleSheetFormat(dateStr: string): string {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
   if (parts.length !== 3) return dateStr;
 
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const day = parseInt(parts[2], 10);
-  return `${day}/${month}/${year}`;
+  const year = parts[0];
+  const month = parseInt(parts[1], 10); // Remove leading zeros
+  const day = parseInt(parts[2], 10);   // Remove leading zeros
+  return `${month}/${day}/${year}`; // mm/dd/yyyy format (US format)
 }
 
 // Editable fields for admin
@@ -94,7 +79,7 @@ const EDITABLE_FIELDS = [
   { key: 'email', label: 'อีเมล', type: 'email' },
   { key: 'lineName', label: 'ชื่อ LINE (ที่แจ้งมา)', type: 'text' },
   { key: 'lineId', label: 'LINE ID', type: 'text' },
-  { key: 'membershipExpiry', label: 'วันหมดอายุใบอนุญาต', type: 'date' },
+  { key: 'licenseExpiry', label: 'วันหมดอายุใบอนุญาต', type: 'date' },
   { key: 'sponsor1', label: 'ผู้รับรอง 1', type: 'text' },
   { key: 'sponsor2', label: 'ผู้รับรอง 2', type: 'text' },
 ] as const;
@@ -515,7 +500,7 @@ export default function MemberDetailPage() {
               </div>
               <div>
                 <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
-                <dd className="text-gray-900">{formatThaiMonthYear(member.membershipExpiry || member.licenseExpiry || '')}</dd>
+                <dd className="text-gray-900">{formatThaiDate(member.licenseExpiry)}</dd>
               </div>
             </dl>
           </div>

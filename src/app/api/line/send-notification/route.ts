@@ -13,7 +13,8 @@ const THAI_MONTHS = [
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
 ];
 
-// Format date from Google Sheet (MM/DD/YYYY) to Thai format
+// Format date from Google Sheet (MM/DD/YYYY in Gregorian year) to Thai format with Buddhist year
+// Example: "5/2/2027" -> "2 พฤษภาคม 2570"
 function formatThaiDate(dateStr: string | undefined): string {
   if (!dateStr) return '-';
 
@@ -21,12 +22,14 @@ function formatThaiDate(dateStr: string | undefined): string {
     if (dateStr.includes('/')) {
       const parts = dateStr.split('/');
       if (parts.length === 3) {
-        // Google Sheet uses MM/DD/YYYY (US format)
-        const [month, day, year] = parts.map(Number);
-        // Convert Buddhist year to Gregorian if needed
-        const gregorianYear = year > 2500 ? year - 543 : year;
+        // Google Sheet Column S uses MM/DD/YYYY (US format, Gregorian year)
+        const month = parseInt(parts[0], 10);
+        const day = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10); // Already in Gregorian year (ค.ศ.)
 
-        return `${day} ${THAI_MONTHS[month - 1]} ${gregorianYear}`;
+        const yearBE = year + 543; // Convert to Buddhist Era (พ.ศ.)
+
+        return `${day} ${THAI_MONTHS[month - 1]} ${yearBE}`;
       }
     }
     return dateStr;
@@ -70,13 +73,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Build notification message
-    // Use membershipExpiry (column S - วันที่หมดอายุ) for license expiry date
+    // Use licenseExpiry (column S - วันหมดอายุ) for license expiry date
     const message = `สวัสดีครับ คุณ${member.fullNameTH || member.nickname || ''}
 บริษัท ${member.companyNameTH || member.companyNameEN || ''}
 
 ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
 ใบอนุญาตธุรกิจนำเที่ยว เลขที่ ${member.licenseNumber || '-'}
-มีสถานะ ${member.status || '-'} (หมดอายุ ${formatThaiDate(member.membershipExpiry || member.licenseExpiry)})
+มีสถานะ ${member.status || '-'} (หมดอายุ ${formatThaiDate(member.licenseExpiry)})
 
 หากคุณได้ต่ออายุใบอนุญาตแล้ว หรือมีข้อมูลที่อัพเดท
 รบกวนส่งสำเนาใบอนุญาตใหม่มาทาง LINE นี้ด้วยนะครับ

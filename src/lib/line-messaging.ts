@@ -378,14 +378,14 @@ export function createMemberProfileFlexMessage(member: Member): FlexMessage {
           //   contents: [
           //     {
           //       type: 'text',
-          //       text: 'วันที่หมดอายุ:',
+          //       text: 'วันหมดอายุใบอนุญาต:',
           //       size: 'sm',
           //       color: '#666666',
           //       flex: 3,
           //     },
           //     {
           //       type: 'text',
-          //       text: formatThaiDate(member.membershipExpiry),
+          //       text: formatThaiDate(member.licenseExpiry),
           //       size: 'sm',
           //       flex: 5,
           //     },

@@ -229,10 +229,9 @@ export async function PUT(request: NextRequest) {
             email: applicationData?.email || '',
             website: applicationData?.website || '',
             licenseNumber: applicationData?.licenseNumber || '',
-            licenseExpiry: '', // Will be updated later by admin
+            licenseExpiry: '', // License expiry date - will be updated later by admin
             positionCompany: applicationData?.positionCompany || '',
             positionClub: '', // New member, no club position yet
-            membershipExpiry: '', // Will be set by admin
             status: 'รอตรวจสอบ', // Pending verification via skycrbber
             sponsor1: applicationData?.sponsor1 || '',
             sponsor2: applicationData?.sponsor2 || '',

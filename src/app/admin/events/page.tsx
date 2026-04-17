@@ -475,8 +475,9 @@ export default function AdminEventsPage() {
         </div>
 
         {/* Events Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="bg-white rounded-lg shadow">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -593,7 +594,7 @@ export default function AdminEventsPage() {
                         </button>
 
                         {openDropdown === event.eventId && (
-                          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                             <Link
                               href={`/admin/events/${event.eventId}`}
                               className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -689,6 +690,7 @@ export default function AdminEventsPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </main>
 

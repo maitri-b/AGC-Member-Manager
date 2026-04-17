@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Member, parseLicenseExpiryDate, formatThaiDate, formatThaiDateShort } from '@/types/member';
+import { Member, parseLicenseExpiryDate, parseThaiDate, formatThaiDate, formatThaiDateShort } from '@/types/member';
 import Navbar from '@/components/Navbar';
 import { Toast, useToast } from '@/components/Toast';
 import { hasPermission } from '@/lib/permissions';

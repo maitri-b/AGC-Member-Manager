@@ -91,7 +91,7 @@ export const SHEET_COLUMN_MAP: Record<keyof Member, string> = {
   licenseNumber: 'ใบอนุญาตนำเที่ยวเลขที่',
   website: 'เว็บไซต์',
   email: 'อีเมล',
-  licenseExpiry: 'วันหมดอายุ', // Column S - mm/dd/yyyy (ค.ศ.)
+  licenseExpiry: 'วันหมดอายุใบอนุญาต', // Column S - mm/dd/yyyy (ค.ศ.)
   positionCompany: 'ตำแหน่งในบริษัท',
   sponsor1: 'ผู้รับรองสมาชิก ท่านที่ 1',
   sponsor2: 'ผู้รับรองสมาชิก ท่านที่ 2',

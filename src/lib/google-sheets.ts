@@ -62,13 +62,6 @@ export async function getAllMembers(): Promise<Member[]> {
   }
 
   const headers = rows[0] as string[];
-
-  // DEBUG: Log headers to see what we're getting from Google Sheets
-  console.log('[getAllMembers] Raw headers from Google Sheets:', headers);
-  console.log('[getAllMembers] Looking for "วันหมดอายุ" in headers...');
-  const expiryIndex = headers.findIndex(h => h.trim() === 'วันหมดอายุ');
-  console.log('[getAllMembers] "วันหมดอายุ" found at index:', expiryIndex, '(Column', String.fromCharCode(65 + expiryIndex) + ')');
-
   const members = rows.slice(1).map((row) => rowToMember(headers, row as string[]));
 
   return members.filter((m) => m.memberId); // Filter out empty rows

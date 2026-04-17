@@ -810,6 +810,7 @@ export default function MembersPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterLineStatus, setFilterLineStatus] = useState('');
   const [filterExpiry, setFilterExpiry] = useState('');
+  const [filterVerified, setFilterVerified] = useState('');
   const [notifyMember, setNotifyMember] = useState<MemberWithProfile | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
   const toast = useToast();
@@ -994,6 +995,12 @@ export default function MembersPage() {
         if (filterExpiry === 'within90' && expiryStatus !== 'within90' && expiryStatus !== 'within45') return false;
       }
 
+      // Verification filter
+      if (filterVerified) {
+        if (filterVerified === 'verified' && !member.lineUserId) return false;
+        if (filterVerified === 'not_verified' && member.lineUserId) return false;
+      }
+
       return true;
     });
 
@@ -1027,13 +1034,14 @@ export default function MembersPage() {
       const numB = parseInt(b.memberId || '0', 10);
       return numB - numA; // descending (high to low)
     });
-  }, [allMembers, search, filterStatus, filterLineStatus, filterExpiry]);
+  }, [allMembers, search, filterStatus, filterLineStatus, filterExpiry, filterVerified]);
 
   const handleClearFilters = () => {
     setSearch('');
     setFilterStatus('');
     setFilterLineStatus('');
     setFilterExpiry('');
+    setFilterVerified('');
   };
 
   const handleSendNotification = async () => {
@@ -1199,7 +1207,7 @@ export default function MembersPage() {
 
         {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">ค้นหา</label>
               <input
@@ -1252,12 +1260,28 @@ export default function MembersPage() {
               </select>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ยืนยันตัวตน</label>
+              <select
+                value={filterVerified}
+                onChange={(e) => setFilterVerified(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">ทั้งหมด</option>
+                <option value="verified">ยืนยันแล้ว</option>
+                <option value="not_verified">ยังไม่ยืนยัน</option>
+              </select>
+            </div>
+
             <div className="flex items-end">
               <button
                 onClick={handleClearFilters}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                title="ล้างตัวกรอง"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors flex items-center justify-center"
               >
-                ล้างตัวกรอง
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
           </div>

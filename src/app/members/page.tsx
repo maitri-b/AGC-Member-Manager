@@ -1101,7 +1101,7 @@ export default function MembersPage() {
 
     const memberList = members
       .map((member, index) => {
-        const companyName = member.companyName || member.lineProfile?.lineDisplayName || 'ไม่ระบุ';
+        const companyName = member.companyNameEN || member.companyNameTH || member.lineProfile?.lineDisplayName || 'ไม่ระบุ';
         const expiryDate = formatThaiDateForMessage(member.licenseExpiry);
         return `${index + 1}. ${companyName}\nExp: ${expiryDate}`;
       })

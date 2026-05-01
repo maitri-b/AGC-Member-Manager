@@ -824,6 +824,7 @@ export default function MembersPage() {
 
   // Copy state
   const [copiedIds, setCopiedIds] = useState(false);
+  const [copiedNotification, setCopiedNotification] = useState(false);
 
   // Attendance status state
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
@@ -1088,6 +1089,53 @@ export default function MembersPage() {
     }
   };
 
+  // Generate expiry notification message for members expiring within 45 days
+  const generateExpiryNotification = (members: MemberWithProfile[]): string => {
+    const header = `เรียนสมาชิกชมรม Agents Club
+
+เรื่อง บริการแจ้งเตือนสมาชิก เพื่อต่ออายุใบอนุญาตกับกรมการท่องเที่ยว
+
+รายนามสมาชิกต่อไปนี้ ใบอนุญาตกำลังจะหมดอายุใน 45 วัน
+
+`;
+
+    const memberList = members
+      .map((member, index) => {
+        const companyName = member.companyName || member.lineProfile?.lineDisplayName || 'ไม่ระบุ';
+        const expiryDate = formatThaiDateForMessage(member.licenseExpiry);
+        return `${index + 1}. ${companyName}\nExp: ${expiryDate}`;
+      })
+      .join('\n\n');
+
+    const footer = `
+
+สมาชิกไม่จำเป็นต้องส่งใบอนุญาตที่ต่อใหม่ หากเป็นการต่ออายุใบอนุญาตเลขที่เดิม
+
+กรณีที่มีการเปลี่ยนแปลงเลขที่ใบอนุญาต สมาชิกต้องทำการแก้ไขข้อมูลใบอนุญาตเลขที่ใหม่
+ที่หน้า โปรไฟล์ของฉัน
+และส่งสำเนาเอกสารฉบับที่จดใบอนุญาตเลขที่ใหม่ให้นายทะเบียนเพื่อเป็นหลักฐานในการอัพเดทข้อมูลต่อไป
+
+ด้วยความนับถือ
+
+ทีมทะเบียนสมาชิกชมรม Agents Club`;
+
+    return header + memberList + footer;
+  };
+
+  // Handle copy expiry notification
+  const handleCopyExpiryNotification = async () => {
+    const message = generateExpiryNotification(filteredMembers);
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopiedNotification(true);
+      toast.success(`คัดลอกข้อความแจ้งเตือน ${filteredMembers.length} รายการแล้ว`);
+      setTimeout(() => setCopiedNotification(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy notification:', err);
+      toast.error('ไม่สามารถคัดลอกได้');
+    }
+  };
+
   // Handle click outside menu to close it
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1314,6 +1362,35 @@ export default function MembersPage() {
               </>
             )}
           </button>
+
+          {/* Copy Expiry Notification - Show only when filtering by within45 */}
+          {filterExpiry === 'within45' && (
+            <button
+              onClick={handleCopyExpiryNotification}
+              disabled={filteredMembers.length === 0}
+              className={`px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors ${
+                copiedNotification
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed'
+              }`}
+            >
+              {copiedNotification ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  คัดลอกแล้ว
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  Copy ข้อความแจ้งเตือน ({filteredMembers.length} รายการ)
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Members Table */}

@@ -1099,7 +1099,19 @@ export default function MembersPage() {
 
 `;
 
-    const memberList = members
+    // Sort members by expiry date (oldest first - earliest expiry date first)
+    const sortedMembers = [...members].sort((a, b) => {
+      const dateA = parseLicenseExpiryDate(a.licenseExpiry);
+      const dateB = parseLicenseExpiryDate(b.licenseExpiry);
+
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    const memberList = sortedMembers
       .map((member, index) => {
         const companyName = member.companyNameTH || member.companyNameEN || member.lineProfile?.lineDisplayName || 'ไม่ระบุ';
         const expiryDate = formatThaiDateForMessage(member.licenseExpiry);

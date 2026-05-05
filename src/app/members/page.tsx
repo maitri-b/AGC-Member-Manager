@@ -1176,9 +1176,9 @@ export default function MembersPage() {
   };
 
   // Handle copy LINE ID
-  const handleCopyLineId = async (lineUserId: string, memberId: string) => {
+  const handleCopyLineId = async (lineId: string, memberId: string) => {
     try {
-      await navigator.clipboard.writeText(lineUserId);
+      await navigator.clipboard.writeText(lineId);
       setCopiedLineId(memberId);
       toast.success('คัดลอก LINE ID แล้ว');
       setTimeout(() => setCopiedLineId(null), 2000);
@@ -1636,9 +1636,9 @@ export default function MembersPage() {
                             ) : null}
 
                             {/* Copy LINE ID button */}
-                            {member.lineUserId && (
+                            {member.lineId && (
                               <button
-                                onClick={() => handleCopyLineId(member.lineUserId!, member.memberId)}
+                                onClick={() => handleCopyLineId(member.lineId, member.memberId)}
                                 className={`p-1 ${
                                   copiedLineId === member.memberId
                                     ? 'text-green-600'
@@ -1803,9 +1803,9 @@ export default function MembersPage() {
 
                       <div className="flex items-center gap-1">
                         {/* Copy LINE ID */}
-                        {member.lineUserId && (
+                        {member.lineId && (
                           <button
-                            onClick={() => handleCopyLineId(member.lineUserId!, member.memberId)}
+                            onClick={() => handleCopyLineId(member.lineId, member.memberId)}
                             className={`p-1.5 ${copiedLineId === member.memberId ? 'text-green-600' : 'text-gray-600 hover:text-gray-800'}`}
                             title="Copy LINE ID"
                           >

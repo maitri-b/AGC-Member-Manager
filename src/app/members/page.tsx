@@ -837,6 +837,7 @@ export default function MembersPage() {
   const [filterLineStatus, setFilterLineStatus] = useState('');
   const [filterExpiry, setFilterExpiry] = useState('');
   const [filterVerified, setFilterVerified] = useState('');
+  const [filterActivity, setFilterActivity] = useState(''); // Filter for activity participation
   const [notifyMember, setNotifyMember] = useState<MemberWithProfile | null>(null);
   const [sendingNotification, setSendingNotification] = useState(false);
   const toast = useToast();
@@ -1029,6 +1030,19 @@ export default function MembersPage() {
         if (filterVerified === 'not_verified' && member.lineUserId) return false;
       }
 
+      // Activity participation filter
+      if (filterActivity) {
+        const attendance = attendanceMap[member.memberId];
+        if (filterActivity === 'participated') {
+          // Show members who participated in activities (last 12 months)
+          if (!attendance?.hasRecentActivity) return false;
+        } else if (filterActivity === 'not_participated') {
+          // Show members who did NOT participate in activities (last 12 months)
+          // Only show if we have attendance data for them (to avoid showing members we don't have data for)
+          if (!attendance || attendance.hasRecentActivity) return false;
+        }
+      }
+
       return true;
     });
 
@@ -1062,7 +1076,7 @@ export default function MembersPage() {
       const numB = parseInt(b.memberId || '0', 10);
       return numB - numA; // descending (high to low)
     });
-  }, [allMembers, search, filterStatus, filterLineStatus, filterExpiry, filterVerified]);
+  }, [allMembers, search, filterStatus, filterLineStatus, filterExpiry, filterVerified, filterActivity, attendanceMap]);
 
   const handleClearFilters = () => {
     setSearch('');
@@ -1070,6 +1084,7 @@ export default function MembersPage() {
     setFilterLineStatus('');
     setFilterExpiry('');
     setFilterVerified('');
+    setFilterActivity('');
   };
 
   const handleSendNotification = async () => {
@@ -1370,6 +1385,19 @@ export default function MembersPage() {
                 <option value="">ทั้งหมด</option>
                 <option value="verified">ยืนยันแล้ว</option>
                 <option value="not_verified">ยังไม่ยืนยัน</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">การเข้าร่วมกิจกรรม</label>
+              <select
+                value={filterActivity}
+                onChange={(e) => setFilterActivity(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">ทั้งหมด</option>
+                <option value="participated">เข้าร่วมกิจกรรม (12 เดือน)</option>
+                <option value="not_participated">ไม่ได้เข้าร่วมกิจกรรม</option>
               </select>
             </div>
 

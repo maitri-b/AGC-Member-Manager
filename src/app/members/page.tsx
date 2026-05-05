@@ -851,6 +851,7 @@ export default function MembersPage() {
   // Copy state
   const [copiedIds, setCopiedIds] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState(false);
+  const [copiedLineId, setCopiedLineId] = useState<string | null>(null);
 
   // Attendance status state
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
@@ -1174,6 +1175,19 @@ export default function MembersPage() {
     }
   };
 
+  // Handle copy LINE ID
+  const handleCopyLineId = async (lineUserId: string, memberId: string) => {
+    try {
+      await navigator.clipboard.writeText(lineUserId);
+      setCopiedLineId(memberId);
+      toast.success('คัดลอก LINE ID แล้ว');
+      setTimeout(() => setCopiedLineId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy LINE ID:', err);
+      toast.error('ไม่สามารถคัดลอกได้');
+    }
+  };
+
   // Handle click outside menu to close it
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1373,12 +1387,12 @@ export default function MembersPage() {
           </div>
         </div>
 
-        {/* Toolbar */}
-        <div className="bg-white rounded-lg shadow p-3 mb-6 flex items-center gap-3">
+        {/* Toolbar - Mobile Responsive */}
+        <div className="bg-white rounded-lg shadow p-2 md:p-3 mb-6 flex flex-wrap items-center gap-2">
           <button
             onClick={handleCopyMemberIds}
             disabled={filteredMembers.length === 0}
-            className={`px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors ${
+            className={`px-3 md:px-4 py-2 rounded-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm font-medium transition-colors ${
               copiedIds
                 ? 'bg-green-100 text-green-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
@@ -1389,14 +1403,16 @@ export default function MembersPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                คัดลอกแล้ว
+                <span className="hidden sm:inline">คัดลอกแล้ว</span>
+                <span className="sm:hidden">แล้ว</span>
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                Copy รหัสสมาชิก ({filteredMembers.length} รายการ)
+                <span className="hidden sm:inline">Copy รหัสสมาชิก ({filteredMembers.length})</span>
+                <span className="sm:hidden">รหัส ({filteredMembers.length})</span>
               </>
             )}
           </button>
@@ -1406,7 +1422,7 @@ export default function MembersPage() {
             <button
               onClick={handleCopyExpiryNotification}
               disabled={filteredMembers.length === 0}
-              className={`px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors ${
+              className={`px-3 md:px-4 py-2 rounded-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm font-medium transition-colors ${
                 copiedNotification
                   ? 'bg-green-100 text-green-700'
                   : 'bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed'
@@ -1417,14 +1433,16 @@ export default function MembersPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  คัดลอกแล้ว
+                  <span className="hidden sm:inline">คัดลอกแล้ว</span>
+                  <span className="sm:hidden">แล้ว</span>
                 </>
               ) : (
                 <>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
-                  Copy ข้อความแจ้งเตือน ({filteredMembers.length} รายการ)
+                  <span className="hidden sm:inline">Copy แจ้งเตือน ({filteredMembers.length})</span>
+                  <span className="sm:hidden">แจ้งเตือน ({filteredMembers.length})</span>
                 </>
               )}
             </button>
@@ -1447,7 +1465,9 @@ export default function MembersPage() {
               <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                 <span className="text-sm text-gray-600">พบ {filteredMembers.length} รายการ (จากทั้งหมด {allMembers.length} รายการ)</span>
               </div>
-              <div className="overflow-x-auto">
+
+              {/* Desktop Table View - Hidden on Mobile */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -1615,6 +1635,29 @@ export default function MembersPage() {
                               </span>
                             ) : null}
 
+                            {/* Copy LINE ID button */}
+                            {member.lineUserId && (
+                              <button
+                                onClick={() => handleCopyLineId(member.lineUserId!, member.memberId)}
+                                className={`p-1 ${
+                                  copiedLineId === member.memberId
+                                    ? 'text-green-600'
+                                    : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                                title="Copy LINE ID"
+                              >
+                                {copiedLineId === member.memberId ? (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                )}
+                              </button>
+                            )}
+
                             {/* View detail button - icon only on mobile */}
                             <button
                               onClick={() => router.push(`/members/${member.memberId}`)}
@@ -1657,6 +1700,162 @@ export default function MembersPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Card View - Hidden on Desktop */}
+              <div className="md:hidden divide-y divide-gray-200">
+                {filteredMembers.map((member) => (
+                  <div key={member.memberId} className="p-3 hover:bg-gray-50">
+                    {/* Header Row */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-xs font-medium text-gray-500">#{member.memberId}</span>
+                          {member.lineUserId && (
+                            <svg className="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" title="ยืนยันตัวตนแล้ว">
+                              <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                          {attendanceMap[member.memberId]?.hasRecentActivity && (
+                            <svg className="w-3.5 h-3.5 text-teal-600" fill="currentColor" viewBox="0 0 20 20" title={`เข้าร่วมกิจกรรม ${attendanceMap[member.memberId]?.eventsLast12Months || 0} ครั้ง`}>
+                              <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">{member.nickname || '-'}</h3>
+                        <p className="text-xs text-gray-600 truncate">{member.fullNameTH || '-'}</p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <span className={`px-1.5 py-0.5 text-xs font-semibold rounded ${
+                          member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่')
+                            ? 'bg-green-100 text-green-800'
+                            : member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก')
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {member.lineGroupStatus === 'ออกจากกลุ่ม' || member.lineGroupStatus?.includes('ออก') ? 'ออก' : member.lineGroupStatus === 'อยู่ในกลุ่ม' || member.lineGroupStatus?.includes('อยู่') ? 'อยู่' : (member.lineGroupStatus || '-')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Company & License */}
+                    <div className="mb-2 space-y-0.5">
+                      <p className="text-xs text-gray-700 truncate">
+                        <span className="font-medium">บริษัท:</span> {member.companyNameTH || member.companyNameEN || '-'}
+                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-gray-700 truncate flex-1">
+                          <span className="font-medium">ใบอนุญาต:</span> {member.licenseNumber || '-'}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          {isExpired(member.licenseExpiry) && (
+                            <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                          <span className={`text-xs ${isExpired(member.licenseExpiry) ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                            {formatThaiDate(member.licenseExpiry)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* LINE Profile & Phone */}
+                    <div className="mb-2 space-y-0.5">
+                      {member.lineProfile || member.lineName ? (
+                        <div className="flex items-center gap-1.5">
+                          {member.lineProfile?.lineProfilePicture ? (
+                            <img src={member.lineProfile.lineProfilePicture} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                              <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                              </svg>
+                            </div>
+                          )}
+                          <span className="text-xs text-gray-700 truncate flex-1">
+                            {member.lineProfile?.lineDisplayName || member.lineName || '-'}
+                          </span>
+                        </div>
+                      ) : null}
+                      {(member.mobile || member.phone) && (
+                        <p className="text-xs text-gray-600">
+                          <span className="font-medium">Tel:</span> {member.mobile || member.phone}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions Row */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <span className={`px-2 py-0.5 text-xs font-semibold rounded ${
+                        member.status?.toLowerCase() === 'active' || member.status === 'ปกติ'
+                          ? 'bg-green-100 text-green-800'
+                          : member.status?.toLowerCase() === 'inactive' || member.status === 'ไม่ปกติ'
+                          ? 'bg-gray-100 text-gray-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {member.status || '-'}
+                      </span>
+
+                      <div className="flex items-center gap-1">
+                        {/* Copy LINE ID */}
+                        {member.lineUserId && (
+                          <button
+                            onClick={() => handleCopyLineId(member.lineUserId!, member.memberId)}
+                            className={`p-1.5 ${copiedLineId === member.memberId ? 'text-green-600' : 'text-gray-600 hover:text-gray-800'}`}
+                            title="Copy LINE ID"
+                          >
+                            {copiedLineId === member.memberId ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            )}
+                          </button>
+                        )}
+
+                        {/* View */}
+                        <button
+                          onClick={() => router.push(`/members/${member.memberId}`)}
+                          className="text-blue-600 hover:text-blue-800 p-1.5"
+                          title="ดูรายละเอียด"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+
+                        {/* Contact */}
+                        <button
+                          onClick={() => setContactMember(member)}
+                          className="text-purple-600 hover:text-purple-800 p-1.5"
+                          title="ติดต่อสมาชิก"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        </button>
+
+                        {/* Notify */}
+                        {isStatusNotNormal(member.status) && (
+                          <button
+                            onClick={() => setNotifyMember(member)}
+                            className="text-orange-600 hover:text-orange-800 p-1.5"
+                            title="แจ้งเตือนสมาชิก"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </>
           )}

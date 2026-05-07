@@ -18,8 +18,15 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only admin and committee can view member details
-    if (!hasPermission(session.user.permissions || [], 'members:list')) {
+    // Allow viewing member details for users with these permissions:
+    // - members:list (view members list)
+    // - members:read:all (read all member data)
+    // - admin:users (admin user management)
+    const canView = hasPermission(session.user.permissions || [], 'members:list') ||
+                    hasPermission(session.user.permissions || [], 'members:read:all') ||
+                    hasPermission(session.user.permissions || [], 'admin:users');
+
+    if (!canView) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 

@@ -79,6 +79,31 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  // Member search states
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [memberOptions, setMemberOptions] = useState<Array<{
+    memberId: string;
+    nickname: string;
+    fullNameTH: string;
+    companyNameTH: string;
+    companyNameEN: string;
+  }>>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [memberPreview, setMemberPreview] = useState<{
+    memberId: string;
+    fullNameTH: string;
+    nickname: string;
+    companyNameTH: string;
+    companyNameEN: string;
+    lineId: string;
+    phone: string;
+    mobile: string;
+    email: string;
+    licenseNumber: string;
+    status: string;
+  } | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
@@ -134,6 +159,8 @@ export default function AdminPage() {
       isActive: user.isActive,
     });
     setSearchLogs([]);
+    setMemberSearchQuery('');
+    setMemberPreview(null);
 
     // Fetch search logs for this user
     if (user.searchCount && user.searchCount > 0) {
@@ -149,6 +176,104 @@ export default function AdminPage() {
       } finally {
         setLoadingLogs(false);
       }
+    }
+
+    // Fetch all members for search dropdown
+    if (memberOptions.length === 0) {
+      fetchAllMembers();
+    }
+
+    // Load member preview if user already has a memberId
+    if (user.memberId) {
+      fetchMemberPreview(user.memberId);
+    }
+  };
+
+  // Fetch all members from Google Sheets for search dropdown
+  const fetchAllMembers = async () => {
+    setLoadingMembers(true);
+    try {
+      const response = await fetch('/api/members');
+      if (!response.ok) {
+        console.error('Failed to fetch members');
+        return;
+      }
+      const data = await response.json();
+
+      // Filter only active members and map to options
+      const options = data.members
+        .filter((m: any) => m.status === 'Active')
+        .map((m: any) => ({
+          memberId: m.memberId,
+          nickname: m.nickname || '',
+          fullNameTH: m.fullNameTH || '',
+          companyNameTH: m.companyNameTH || '',
+          companyNameEN: m.companyNameEN || '',
+        }))
+        .sort((a: any, b: any) => a.nickname.localeCompare(b.nickname, 'th'));
+
+      setMemberOptions(options);
+    } catch (err) {
+      console.error('Error fetching members:', err);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  // Fetch member preview details
+  const fetchMemberPreview = async (memberId: string) => {
+    if (!memberId.trim()) {
+      setMemberPreview(null);
+      return;
+    }
+
+    setLoadingPreview(true);
+    try {
+      const response = await fetch(`/api/members/${memberId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMemberPreview({
+          memberId: data.member.memberId,
+          fullNameTH: data.member.fullNameTH,
+          nickname: data.member.nickname,
+          companyNameTH: data.member.companyNameTH,
+          companyNameEN: data.member.companyNameEN,
+          lineId: data.member.lineId,
+          phone: data.member.phone,
+          mobile: data.member.mobile,
+          email: data.member.email,
+          licenseNumber: data.member.licenseNumber,
+          status: data.member.status,
+        });
+      } else {
+        setMemberPreview(null);
+      }
+    } catch (err) {
+      console.error('Error fetching member preview:', err);
+      setMemberPreview(null);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  // Handle member selection from dropdown
+  const handleMemberSelect = (memberId: string) => {
+    setEditForm({ ...editForm, memberId });
+    setMemberSearchQuery(''); // Clear search after selection
+    fetchMemberPreview(memberId); // Load full member details
+  };
+
+  // Handle manual member ID input
+  const handleMemberIdChange = (memberId: string) => {
+    setEditForm({ ...editForm, memberId });
+    // Debounce the preview fetch
+    if (memberId.trim()) {
+      const timeoutId = setTimeout(() => {
+        fetchMemberPreview(memberId);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setMemberPreview(null);
     }
   };
 
@@ -656,16 +781,143 @@ export default function AdminPage() {
                   </div>
                 )}
 
+                {/* Member Search and Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">รหัสสมาชิก</label>
-                  <input
-                    type="text"
-                    value={editForm.memberId}
-                    onChange={(e) => setEditForm({ ...editForm, memberId: e.target.value })}
-                    placeholder="เช่น 24001"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">ใส่รหัสสมาชิกเพื่อเชื่อมต่อกับข้อมูลใน Google Sheet</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ค้นหาและเลือกสมาชิก
+                  </label>
+
+                  {/* Search Input */}
+                  <div className="relative mb-2">
+                    <input
+                      type="text"
+                      value={memberSearchQuery}
+                      onChange={(e) => setMemberSearchQuery(e.target.value)}
+                      placeholder="พิมพ์ชื่อเล่น, ชื่อ, รหัสสมาชิก, หรือชื่อบริษัท..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                    {loadingMembers && (
+                      <div className="absolute right-3 top-2.5">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dropdown Results */}
+                  {memberSearchQuery && (
+                    <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-md bg-white shadow-lg mb-2">
+                      {memberOptions
+                        .filter((m) => {
+                          const query = memberSearchQuery.toLowerCase();
+                          return (
+                            m.nickname.toLowerCase().includes(query) ||
+                            m.fullNameTH.toLowerCase().includes(query) ||
+                            m.memberId.toLowerCase().includes(query) ||
+                            m.companyNameTH.toLowerCase().includes(query) ||
+                            m.companyNameEN.toLowerCase().includes(query)
+                          );
+                        })
+                        .slice(0, 50)
+                        .map((member) => (
+                          <button
+                            key={member.memberId}
+                            onClick={() => handleMemberSelect(member.memberId)}
+                            type="button"
+                            className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {member.nickname} ({member.fullNameTH})
+                                </p>
+                                <p className="text-xs text-gray-500 truncate">
+                                  {member.companyNameTH || member.companyNameEN}
+                                </p>
+                              </div>
+                              <span className="text-xs font-mono text-gray-600 flex-shrink-0">
+                                {member.memberId}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+
+                      {memberOptions.filter((m) => {
+                        const query = memberSearchQuery.toLowerCase();
+                        return (
+                          m.nickname.toLowerCase().includes(query) ||
+                          m.fullNameTH.toLowerCase().includes(query) ||
+                          m.memberId.toLowerCase().includes(query) ||
+                          m.companyNameTH.toLowerCase().includes(query) ||
+                          m.companyNameEN.toLowerCase().includes(query)
+                        );
+                      }).length === 0 && (
+                        <div className="px-3 py-4 text-center text-sm text-gray-500">
+                          ไม่พบสมาชิกที่ตรงกับคำค้นหา
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Manual Input Option */}
+                  {!memberSearchQuery && (
+                    <>
+                      <label className="block text-xs font-medium text-gray-600 mb-1 mt-3">
+                        หรือพิมพ์รหัสสมาชิกโดยตรง
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.memberId}
+                        onChange={(e) => handleMemberIdChange(e.target.value)}
+                        placeholder="เช่น 24001"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                      />
+                    </>
+                  )}
+
+                  {/* Loading Indicator */}
+                  {loadingPreview && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                      กำลังตรวจสอบข้อมูล...
+                    </div>
+                  )}
+
+                  {/* Member Preview Card */}
+                  {!loadingPreview && memberPreview && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-xs font-semibold text-green-800 mb-2">✓ พบข้อมูลสมาชิก</p>
+                      <div className="space-y-1 text-xs text-gray-700">
+                        <p><span className="font-medium">รหัส:</span> {memberPreview.memberId}</p>
+                        <p><span className="font-medium">ชื่อ:</span> {memberPreview.fullNameTH}</p>
+                        <p><span className="font-medium">ชื่อเล่น:</span> {memberPreview.nickname}</p>
+                        <p><span className="font-medium">บริษัท:</span> {memberPreview.companyNameTH}</p>
+                        {memberPreview.lineId && (
+                          <p><span className="font-medium">LINE ID:</span> {memberPreview.lineId}</p>
+                        )}
+                        {memberPreview.mobile && (
+                          <p><span className="font-medium">มือถือ:</span> {memberPreview.mobile}</p>
+                        )}
+                        {memberPreview.licenseNumber && (
+                          <p><span className="font-medium">เลขใบอนุญาต:</span> {memberPreview.licenseNumber}</p>
+                        )}
+                        <p>
+                          <span className="font-medium">สถานะ:</span>{' '}
+                          <span className={memberPreview.status === 'Active' ? 'text-green-600' : 'text-gray-600'}>
+                            {memberPreview.status}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Not Found Message */}
+                  {!loadingPreview && editForm.memberId.trim() && !memberPreview && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <p className="text-xs text-yellow-800">
+                        ⚠️ ไม่พบรหัสสมาชิก &quot;{editForm.memberId}&quot; ในระบบ
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div>

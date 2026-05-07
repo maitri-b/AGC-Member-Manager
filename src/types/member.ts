@@ -54,6 +54,33 @@ export interface Member {
 
 export type MemberStatus = 'Active' | 'Inactive' | 'Pending' | 'Suspended' | 'Expired' | string;
 
+// Member selection option for search dropdown
+export interface MemberOption {
+  memberId: string;
+  nickname: string;
+  fullNameTH: string;
+  companyNameTH: string;
+  companyNameEN: string;
+}
+
+// Member preview data for displaying selected member details
+export interface MemberPreview {
+  memberId: string;
+  fullNameTH: string;
+  nickname: string;
+  companyNameTH: string;
+  companyNameEN: string;
+  lineId: string;
+  phone: string;
+  mobile: string;
+  email: string;
+  licenseNumber: string;
+  licenseExpiry: string;
+  status: MemberStatus;
+  positionCompany: string;
+  positionClub: string;
+}
+
 // Member ID generator helper
 export function generateMemberId(year: number, runningNumber: number): string {
   const yearCode = year.toString().slice(-2);

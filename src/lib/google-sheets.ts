@@ -300,7 +300,8 @@ export async function searchMembers(query: string): Promise<Member[]> {
       m.lineName?.toLowerCase().includes(lowerQuery) ||
       m.email?.toLowerCase().includes(lowerQuery) ||
       m.mobile?.includes(query) ||
-      m.phone?.includes(query)
+      m.phone?.includes(query) ||
+      m.licenseNumber?.toLowerCase().includes(lowerQuery)
     );
   });
 }

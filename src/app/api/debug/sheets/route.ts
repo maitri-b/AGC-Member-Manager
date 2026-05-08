@@ -40,14 +40,14 @@ export async function GET() {
 
     const sheetNames = spreadsheet.data.sheets?.map(s => s.properties?.title) || [];
 
-    // Try to read from "Member Profile" sheet
+    // Try to read from "AGC_Membership" sheet
     let memberData = null;
     let memberError = null;
 
     try {
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SHEET_ID,
-        range: 'Member Profile!A1:E5', // Get first 5 rows, first 5 columns
+        range: 'AGC_Membership!A1:Z5', // Get first 5 rows, all columns up to Z
       });
       memberData = {
         rows: response.data.values?.length || 0,
@@ -63,7 +63,7 @@ export async function GET() {
       envCheck,
       spreadsheetTitle: spreadsheet.data.properties?.title,
       sheetNames,
-      memberProfileSheet: memberData || { error: memberError },
+      agcMembershipSheet: memberData || { error: memberError },
     });
   } catch (error) {
     console.error('Debug sheets error:', error);

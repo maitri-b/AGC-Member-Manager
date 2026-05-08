@@ -200,9 +200,13 @@ export default function AdminPage() {
       }
       const data = await response.json();
 
+      console.log('Total members fetched:', data.members?.length);
+      console.log('Sample member:', data.members?.[0]);
+
       // Filter only active members and map to options
+      // Support both "Active" and "ปกติ" status
       const options = data.members
-        .filter((m: any) => m.status === 'Active')
+        .filter((m: any) => m.status === 'Active' || m.status === 'ปกติ')
         .map((m: any) => ({
           memberId: m.memberId,
           nickname: m.nickname || '',
@@ -211,6 +215,8 @@ export default function AdminPage() {
           companyNameEN: m.companyNameEN || '',
         }))
         .sort((a: any, b: any) => a.nickname.localeCompare(b.nickname, 'th'));
+
+      console.log('Active members filtered:', options.length);
 
       setMemberOptions(options);
     } catch (err) {

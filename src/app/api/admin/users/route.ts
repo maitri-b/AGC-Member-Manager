@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { ROLE_PERMISSIONS } from '@/types/next-auth.d';
-import { updateMember } from '@/lib/google-sheets';
+import { updateMember, getMemberById } from '@/lib/google-sheets';
 
 export async function GET() {
   try {
@@ -200,6 +200,7 @@ export async function PUT(request: NextRequest) {
     await userRef.update(updates);
 
     // If memberId is set, update LINE_UserID and lineDisplayName in Google Sheet
+    // AND fetch member data to update licenseNumber and phone in Firestore
     if (memberId) {
       try {
         const userData = userDoc.data();
@@ -207,6 +208,7 @@ export async function PUT(request: NextRequest) {
         // Use consistent field name priority: lineDisplayName > displayName > name
         const lineDisplayName = userData?.lineDisplayName || userData?.displayName || userData?.name || '';
 
+        // Update Google Sheet with LINE info
         await updateMember(memberId, {
           lineUserId: lineUserId,
           lineDisplayName: lineDisplayName,
@@ -215,8 +217,31 @@ export async function PUT(request: NextRequest) {
         });
 
         console.log(`Updated Google Sheet: Member ${memberId} linked to LINE User ${lineUserId}, Display Name: ${lineDisplayName}`);
+
+        // Fetch member data from Google Sheets to get licenseNumber and phone
+        const memberData = await getMemberById(memberId);
+        if (memberData) {
+          const firestoreUpdates: Record<string, unknown> = {};
+
+          // Update licenseNumber if available
+          if (memberData.licenseNumber) {
+            firestoreUpdates.licenseNumber = memberData.licenseNumber;
+          }
+
+          // Update phone (prefer mobile, fallback to phone)
+          const phoneNumber = memberData.mobile || memberData.phone;
+          if (phoneNumber) {
+            firestoreUpdates.phone = phoneNumber;
+          }
+
+          // Update Firestore with member data
+          if (Object.keys(firestoreUpdates).length > 0) {
+            await userRef.update(firestoreUpdates);
+            console.log(`Updated Firestore user ${userId} with licenseNumber and phone from Google Sheets`);
+          }
+        }
       } catch (sheetError) {
-        console.error('Error updating Google Sheet:', sheetError);
+        console.error('Error updating Google Sheet or Firestore:', sheetError);
         // Don't fail the whole request if Google Sheet update fails
       }
     }

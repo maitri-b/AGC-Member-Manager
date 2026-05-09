@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
-import { updateMember, getAllMembers } from '@/lib/google-sheets';
+import { updateMember, getAllMembers, getMemberById } from '@/lib/google-sheets';
 import { ROLE_PERMISSIONS } from '@/types/next-auth.d';
 
 // GET: List all verification requests
@@ -166,6 +166,9 @@ export async function PUT(request: NextRequest) {
       const lineDisplayName = requestData.lineDisplayName || userData?.lineDisplayName || userData?.displayName || userData?.name || '';
       const lineProfilePicture = requestData.lineImage || userData?.lineProfilePicture || userData?.pictureUrl || userData?.image || '';
 
+      // Fetch member data from Google Sheets to get licenseNumber and phone
+      const memberData = await getMemberById(requestData.memberId);
+
       // Build update object with LINE profile info
       // Use consistent field names: lineDisplayName, lineProfilePicture
       const userUpdateData: Record<string, unknown> = {
@@ -187,6 +190,18 @@ export async function PUT(request: NextRequest) {
       }
       if (lineProfilePicture) {
         userUpdateData.lineProfilePicture = lineProfilePicture;
+      }
+
+      // Add licenseNumber and phone from Google Sheets
+      if (memberData) {
+        if (memberData.licenseNumber) {
+          userUpdateData.licenseNumber = memberData.licenseNumber;
+        }
+        // Prefer mobile, fallback to phone
+        const phoneNumber = memberData.mobile || memberData.phone;
+        if (phoneNumber) {
+          userUpdateData.phone = phoneNumber;
+        }
       }
 
       await userRef.update(userUpdateData);

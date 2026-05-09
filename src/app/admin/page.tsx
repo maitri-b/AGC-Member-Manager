@@ -87,6 +87,7 @@ export default function AdminPage() {
     fullNameTH: string;
     companyNameTH: string;
     companyNameEN: string;
+    licenseNumber: string;
   }>>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [memberPreview, setMemberPreview] = useState<{
@@ -213,6 +214,7 @@ export default function AdminPage() {
           fullNameTH: m.fullNameTH || '',
           companyNameTH: m.companyNameTH || '',
           companyNameEN: m.companyNameEN || '',
+          licenseNumber: m.licenseNumber || '',
         }))
         .sort((a: any, b: any) => a.nickname.localeCompare(b.nickname, 'th'));
 
@@ -799,7 +801,7 @@ export default function AdminPage() {
                       type="text"
                       value={memberSearchQuery}
                       onChange={(e) => setMemberSearchQuery(e.target.value)}
-                      placeholder="พิมพ์ชื่อเล่น, ชื่อ, รหัสสมาชิก, หรือชื่อบริษัท..."
+                      placeholder="พิมพ์ชื่อเล่น, ชื่อ, รหัสสมาชิก, ชื่อบริษัท, หรือเลขใบอนุญาต..."
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
                     {loadingMembers && (
@@ -820,7 +822,8 @@ export default function AdminPage() {
                             m.fullNameTH.toLowerCase().includes(query) ||
                             m.memberId.toLowerCase().includes(query) ||
                             m.companyNameTH.toLowerCase().includes(query) ||
-                            m.companyNameEN.toLowerCase().includes(query)
+                            m.companyNameEN.toLowerCase().includes(query) ||
+                            m.licenseNumber.toLowerCase().includes(query)
                           );
                         })
                         .slice(0, 50)
@@ -854,7 +857,8 @@ export default function AdminPage() {
                           m.fullNameTH.toLowerCase().includes(query) ||
                           m.memberId.toLowerCase().includes(query) ||
                           m.companyNameTH.toLowerCase().includes(query) ||
-                          m.companyNameEN.toLowerCase().includes(query)
+                          m.companyNameEN.toLowerCase().includes(query) ||
+                          m.licenseNumber.toLowerCase().includes(query)
                         );
                       }).length === 0 && (
                         <div className="px-3 py-4 text-center text-sm text-gray-500">

@@ -631,13 +631,14 @@ function DashboardContent() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-blue-800">ยืนยันตัวตนสมาชิก</h3>
+                    <h3 className="font-semibold text-blue-800">ยืนยันตัวตนเพื่อเข้าใช้งานระบบ</h3>
                     <p className="text-sm text-blue-700 mt-1 mb-3">
-                      เชื่อมบัญชี LINE ของคุณกับข้อมูลสมาชิก Agents Club เพื่อเข้าถึงข้อมูลและบริการต่างๆ
+                      ยืนยันว่าคุณเป็นสมาชิก Agents Club โดยกรอกข้อมูลเลขที่ใบอนุญาต เบอร์โทร และชื่อบริษัท
+                      เพื่อให้เข้าถึงข้อมูลสมาชิกและบริการต่างๆ ของชมรมได้
                     </p>
                     <Link
                       href="/verify"
-                      className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -78,6 +78,7 @@ export default function AdminPage() {
   });
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [userSearchQuery, setUserSearchQuery] = useState('');
 
   // Member search states
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
@@ -90,6 +91,14 @@ export default function AdminPage() {
     licenseNumber: string;
   }>>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [allMembersData, setAllMembersData] = useState<Array<{
+    memberId: string;
+    nickname: string;
+    fullNameTH: string;
+    companyNameTH: string;
+    companyNameEN: string;
+    licenseNumber: string;
+  }>>([]);
   const [memberPreview, setMemberPreview] = useState<{
     memberId: string;
     fullNameTH: string;
@@ -117,6 +126,7 @@ export default function AdminPage() {
     if (session && hasPermission(session.user.permissions || [], 'admin:users')) {
       fetchUsers();
       fetchPendingCounts();
+      fetchAllMembersData();
     }
   }, [session]);
 
@@ -149,6 +159,40 @@ export default function AdminPage() {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllMembersData = async () => {
+    try {
+      const response = await fetch('/api/members');
+      if (!response.ok) {
+        console.error('Failed to fetch members data');
+        return;
+      }
+      const data = await response.json();
+
+      // Filter for active members only and map to required fields
+      const activeMembersData = data.members
+        .filter((m: { status: string }) => m.status === 'Active' || m.status === 'ปกติ')
+        .map((m: {
+          memberId: string;
+          nickname: string;
+          fullNameTH: string;
+          companyNameTH: string;
+          companyNameEN: string;
+          licenseNumber: string;
+        }) => ({
+          memberId: m.memberId || '',
+          nickname: m.nickname || '',
+          fullNameTH: m.fullNameTH || '',
+          companyNameTH: m.companyNameTH || '',
+          companyNameEN: m.companyNameEN || '',
+          licenseNumber: m.licenseNumber || '',
+        }));
+
+      setAllMembersData(activeMembersData);
+    } catch (err) {
+      console.error('Error fetching all members data:', err);
     }
   };
 
@@ -556,33 +600,58 @@ export default function AdminPage() {
         {/* Users Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <h2 className="font-semibold text-gray-900">รายชื่อผู้ใช้งาน</h2>
-              <div className="flex flex-wrap gap-2">
-                {/* Role Filter */}
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h2 className="font-semibold text-gray-900">รายชื่อผู้ใช้งาน</h2>
+                <div className="flex flex-wrap gap-2">
+                  {/* Role Filter */}
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <option value="all">ทุกประเภท</option>
+                    <option value="admin">ผู้ดูแลระบบ</option>
+                    <option value="committee">กรรมการ</option>
+                    <option value="member">สมาชิก</option>
+                    <option value="guest">ผู้เยี่ยมชม</option>
+                  </select>
+                  {/* Status Filter */}
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <option value="all">ทุกสถานะ</option>
+                    <option value="verified">ยืนยันตัวตนแล้ว</option>
+                    <option value="pending">รอยืนยันตัวตน</option>
+                    <option value="locked">ถูกล็อค</option>
+                    <option value="inactive">ไม่ใช้งาน</option>
+                  </select>
+                </div>
+              </div>
+              {/* Search Input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="ค้นหาด้วย ชื่อ LINE, รหัสสมาชิก, เลขใบอนุญาต, เบอร์โทร, ชื่อ-นามสกุล, ชื่อเล่น, ชื่อบริษัท..."
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+                <svg
+                  className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <option value="all">ทุกประเภท</option>
-                  <option value="admin">ผู้ดูแลระบบ</option>
-                  <option value="committee">กรรมการ</option>
-                  <option value="member">สมาชิก</option>
-                  <option value="guest">ผู้เยี่ยมชม</option>
-                </select>
-                {/* Status Filter */}
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                >
-                  <option value="all">ทุกสถานะ</option>
-                  <option value="verified">ยืนยันตัวตนแล้ว</option>
-                  <option value="pending">รอยืนยันตัวตน</option>
-                  <option value="locked">ถูกล็อค</option>
-                  <option value="inactive">ไม่ใช้งาน</option>
-                </select>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
@@ -643,20 +712,52 @@ export default function AdminPage() {
                     if (statusFilter === 'inactive' && user.isActive !== false) {
                       return false;
                     }
+
+                    // Search filter
+                    if (userSearchQuery) {
+                      const query = userSearchQuery.toLowerCase();
+
+                      // Search in user's own fields
+                      const matchesUserFields =
+                        user.lineDisplayName?.toLowerCase().includes(query) ||
+                        user.memberId?.toLowerCase().includes(query) ||
+                        user.licenseNumber?.toLowerCase().includes(query) ||
+                        user.phone?.toLowerCase().includes(query) ||
+                        user.lineUserId?.toLowerCase().includes(query);
+
+                      // Search in member data from Google Sheets
+                      const memberData = allMembersData.find(m => m.memberId === user.memberId);
+                      const matchesMemberFields = memberData && (
+                        memberData.fullNameTH?.toLowerCase().includes(query) ||
+                        memberData.nickname?.toLowerCase().includes(query) ||
+                        memberData.companyNameTH?.toLowerCase().includes(query) ||
+                        memberData.companyNameEN?.toLowerCase().includes(query) ||
+                        memberData.licenseNumber?.toLowerCase().includes(query)
+                      );
+
+                      if (!matchesUserFields && !matchesMemberFields) {
+                        return false;
+                      }
+                    }
+
                     return true;
                   })
-                  .map((user) => (
+                  .map((user) => {
+                    // Get member data for this user
+                    const memberData = allMembersData.find(m => m.memberId === user.memberId);
+
+                    return (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4">
                       <div className="flex items-center">
                         {user.lineProfilePicture ? (
                           <img
                             src={user.lineProfilePicture}
                             alt={user.lineDisplayName || 'User'}
-                            className="w-10 h-10 rounded-full object-cover"
+                            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-gray-500 text-sm">
                               {user.lineDisplayName?.charAt(0) || '?'}
                             </span>
@@ -664,7 +765,19 @@ export default function AdminPage() {
                         )}
                         <div className="ml-4">
                           <p className="text-sm font-medium text-gray-900">{user.lineDisplayName || 'Unknown'}</p>
-                          <p className="text-xs text-gray-500">ID: {user.id.slice(0, 8)}...</p>
+                          {memberData && (
+                            <>
+                              {memberData.fullNameTH && (
+                                <p className="text-xs text-gray-600">{memberData.fullNameTH} ({memberData.nickname || '-'})</p>
+                              )}
+                              {(memberData.companyNameTH || memberData.companyNameEN) && (
+                                <p className="text-xs text-gray-500">
+                                  {memberData.companyNameTH || memberData.companyNameEN}
+                                </p>
+                              )}
+                            </>
+                          )}
+                          <p className="text-xs text-gray-400">ID: {user.id.slice(0, 8)}...</p>
                         </div>
                       </div>
                     </td>
@@ -732,7 +845,8 @@ export default function AdminPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                    );
+                  })}
               </tbody>
             </table>
           </div>

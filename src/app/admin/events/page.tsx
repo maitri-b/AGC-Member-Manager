@@ -21,6 +21,10 @@ interface Event {
   maxCapacity: number;
   maxPerCompany: number;
   registrationFee: number;
+  pricingType?: 'fixed' | 'tiered';
+  baseFee?: number;
+  additionalFeePerPerson?: number;
+  memberDiscount?: number;
   registrationOpen: boolean;
   documentName?: string;
   documentUrl?: string;
@@ -59,6 +63,10 @@ interface EventFormData {
   maxCapacity: number;
   maxPerCompany: number;
   registrationFee: number;
+  pricingType: 'fixed' | 'tiered';
+  baseFee: number;
+  additionalFeePerPerson: number;
+  memberDiscount: number;
   registrationOpen: boolean;
   documentName: string;
   documentUrl: string;
@@ -84,6 +92,10 @@ const initialFormData: EventFormData = {
   maxCapacity: 0,
   maxPerCompany: 0,
   registrationFee: 0,
+  pricingType: 'fixed',
+  baseFee: 0,
+  additionalFeePerPerson: 0,
+  memberDiscount: 0,
   registrationOpen: false,
   documentName: '',
   documentUrl: '',
@@ -182,6 +194,10 @@ export default function AdminEventsPage() {
         maxCapacity: event.maxCapacity ?? 0,
         maxPerCompany: event.maxPerCompany ?? 0,
         registrationFee: event.registrationFee ?? 0,
+        pricingType: event.pricingType ?? 'fixed',
+        baseFee: event.baseFee ?? 0,
+        additionalFeePerPerson: event.additionalFeePerPerson ?? 0,
+        memberDiscount: event.memberDiscount ?? 0,
         registrationOpen: event.registrationOpen ?? false,
         documentName: event.documentName ?? '',
         documentUrl: event.documentUrl ?? '',
@@ -827,20 +843,97 @@ export default function AdminEventsPage() {
                       <p className="text-xs text-gray-500 mt-1">กรอก 0 หากไม่จำกัดจำนวน</p>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        ค่าสมัคร (บาท)
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ประเภทการคิดราคา
                       </label>
-                      <input
-                        type="number"
-                        value={formData.registrationFee}
-                        onChange={(e) => setFormData({ ...formData, registrationFee: parseInt(e.target.value) || 0 })}
-                        placeholder="0 = ฟรี"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        min={0}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">กรอก 0 หากไม่มีค่าใช้จ่าย</p>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            value="fixed"
+                            checked={formData.pricingType === 'fixed'}
+                            onChange={(e) => setFormData({ ...formData, pricingType: 'fixed' })}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm">ราคาเหมา (Fixed) - ทุกคนจ่ายเท่ากัน</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            value="tiered"
+                            checked={formData.pricingType === 'tiered'}
+                            onChange={(e) => setFormData({ ...formData, pricingType: 'tiered' })}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm">ราคาขั้นบันได (Tiered) - คนแรกและคนที่ 2+ ราคาต่างกัน</span>
+                        </label>
+                      </div>
                     </div>
+
+                    {formData.pricingType === 'tiered' ? (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            ราคาคนแรก (บาท)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.baseFee}
+                            onChange={(e) => setFormData({ ...formData, baseFee: parseInt(e.target.value) || 0 })}
+                            placeholder="0 = ฟรี"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            min={0}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">ราคาสำหรับคนแรก</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            ราคาคนที่ 2+ (บาท/คน)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.additionalFeePerPerson}
+                            onChange={(e) => setFormData({ ...formData, additionalFeePerPerson: parseInt(e.target.value) || 0 })}
+                            placeholder="0 = ฟรี"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            min={0}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">ราคาสำหรับคนที่ 2 เป็นต้นไป</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            ส่วนลดสมาชิก (บาท)
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.memberDiscount}
+                            onChange={(e) => setFormData({ ...formData, memberDiscount: parseInt(e.target.value) || 0 })}
+                            placeholder="0 = ไม่มีส่วนลด"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            min={0}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">ส่วนลดจากราคารวม (บาท)</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          ค่าสมัคร (บาท/คน)
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.registrationFee}
+                          onChange={(e) => setFormData({ ...formData, registrationFee: parseInt(e.target.value) || 0 })}
+                          placeholder="0 = ฟรี"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          min={0}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">กรอก 0 หากไม่มีค่าใช้จ่าย</p>
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -905,7 +998,8 @@ export default function AdminEventsPage() {
                 </div>
 
                 {/* Payment Information */}
-                {formData.registrationFee > 0 && (
+                {((formData.pricingType === 'fixed' && formData.registrationFee > 0) ||
+                  (formData.pricingType === 'tiered' && (formData.baseFee > 0 || formData.additionalFeePerPerson > 0))) && (
                   <div className="md:col-span-2 border-t pt-4 mt-2">
                     <h3 className="text-sm font-semibold text-gray-800 mb-3">ข้อมูลการชำระเงิน</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

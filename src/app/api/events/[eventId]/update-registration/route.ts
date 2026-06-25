@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrations, updateEventRegistration } from '@/lib/event-sheets';
-import { EventRegistration } from '@/types/event';
+import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 
 // Helper function to check if registration is cancelled
 function isRegistrationCancelled(registration: EventRegistration): boolean {
@@ -160,10 +160,11 @@ export async function PUT(
     if (attendeeCount !== undefined && attendeeCount !== userReg.attendeeCount) {
       updateData.attendee_count = attendeeCount;
 
-      // Update total amount if there's a fee
-      if (eventData.registrationFee > 0) {
-        updateData.event_fee = eventData.registrationFee;
-        updateData.total_amount = eventData.registrationFee * attendeeCount;
+      // Update total amount using tiered pricing calculation
+      const totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
+      if (totalFee > 0) {
+        updateData.event_fee = totalFee;
+        updateData.total_amount = totalFee;
       }
     }
 

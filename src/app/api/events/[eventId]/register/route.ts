@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { getMemberById } from '@/lib/google-sheets';
 import { getEventRegistrations, addEventRegistration } from '@/lib/event-sheets';
-import { EventRegistration } from '@/types/event';
+import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
 
 // Generate a unique 6-character registration ID
@@ -103,6 +103,9 @@ export async function POST(
     // Generate registration ID
     const registrationId = generateRegistrationId();
 
+    // Calculate registration fee using tiered pricing if applicable
+    const totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
+
     // Prepare registration data (matching sheet columns)
     // Write to BOTH old and new column names for backward compatibility
     const registrationData = {
@@ -123,11 +126,11 @@ export async function POST(
       attendee_names: JSON.stringify(attendeeNames.length > 0 ? attendeeNames : [member.fullNameTH || member.nickname || '']),
       shirt_count: 0,
       shirt_sizes: '[]',
-      event_fee: eventData.registrationFee || 0,
+      event_fee: totalFee,
       shirt_fee: 0,
-      total_amount: eventData.registrationFee || 0,
+      total_amount: totalFee,
       slip_url: '',
-      status: eventData.registrationFee > 0 ? 'รอชำระเงิน' : 'ลงทะเบียนแล้ว',
+      status: totalFee > 0 ? 'รอชำระเงิน' : 'ลงทะเบียนแล้ว',
       verified_by: '',
       verified_date: '',
       client_token: '',
@@ -157,7 +160,7 @@ export async function POST(
           location: eventData.location || '',
           registrationId,
           attendeeCount,
-          registrationFee: eventData.registrationFee || 0,
+          registrationFee: totalFee,
           memberName: member.fullNameTH || member.nickname || '',
         });
       } catch (lineError) {

@@ -77,7 +77,11 @@ export interface Event {
   countsAttendance: boolean;        // เก็บคะแนนการเข้าร่วม
   maxCapacity: number;              // จำนวนที่เปิดรับ (0 = ไม่จำกัด)
   maxPerCompany: number;            // จำนวนที่อนุญาตต่อ 1 บริษัท (0 = ไม่จำกัด)
-  registrationFee: number;          // ค่าสมัคร (0 = ฟรี)
+  registrationFee: number;          // ค่าสมัคร (0 = ฟรี) - DEPRECATED: use pricingType instead
+  pricingType?: 'fixed' | 'tiered'; // ประเภทการคิดราคา ('fixed' = ราคาเดียว, 'tiered' = ราคาตามจำนวนคน)
+  baseFee?: number;                 // ราคาคนแรก (tiered pricing)
+  additionalFeePerPerson?: number;  // ราคาคนที่ 2+ (tiered pricing)
+  memberDiscount?: number;          // ส่วนลดสำหรับสมาชิก (บาท)
   registrationOpen: boolean;        // เปิดรับสมัคร
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
   documentUrl?: string;             // Link download เอกสาร
@@ -107,7 +111,11 @@ export interface EventInput {
   countsAttendance: boolean;        // เก็บคะแนนการเข้าร่วม
   maxCapacity: number;              // จำนวนที่เปิดรับ (0 = ไม่จำกัด)
   maxPerCompany: number;            // จำนวนที่อนุญาตต่อ 1 บริษัท (0 = ไม่จำกัด)
-  registrationFee: number;          // ค่าสมัคร (0 = ฟรี)
+  registrationFee: number;          // ค่าสมัคร (0 = ฟรี) - DEPRECATED: use pricingType instead
+  pricingType?: 'fixed' | 'tiered'; // ประเภทการคิดราคา
+  baseFee?: number;                 // ราคาคนแรก (tiered pricing)
+  additionalFeePerPerson?: number;  // ราคาคนที่ 2+ (tiered pricing)
+  memberDiscount?: number;          // ส่วนลดสำหรับสมาชิก (บาท)
   registrationOpen: boolean;        // เปิดรับสมัคร
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
   documentUrl?: string;             // Link download เอกสาร
@@ -221,6 +229,10 @@ export const DEFAULT_EVENTS: Event[] = [
     maxCapacity: 0,
     maxPerCompany: 0,
     registrationFee: 0,
+    pricingType: 'fixed',
+    baseFee: 0,
+    additionalFeePerPerson: 0,
+    memberDiscount: 0,
     registrationOpen: false,
     documentName: '',
     documentUrl: '',
@@ -286,4 +298,42 @@ export function getCurrentBuddhistYear(): number {
 // Helper to convert พ.ศ. to ค.ศ.
 export function buddhistToGregorian(buddhistYear: number): number {
   return buddhistYear - 543;
+}
+
+// Helper to calculate event registration fee based on pricing type
+export function calculateRegistrationFee(
+  event: Event | EventInput,
+  attendeeCount: number,
+  isMember: boolean = true
+): number {
+  // Use new pricing system if available
+  if (event.pricingType === 'tiered' && event.baseFee !== undefined && event.additionalFeePerPerson !== undefined) {
+    // Tiered pricing: first person at baseFee, additional persons at additionalFeePerPerson
+    const baseAmount = event.baseFee;
+    const additionalAmount = (attendeeCount - 1) * event.additionalFeePerPerson;
+    const totalBeforeDiscount = baseAmount + additionalAmount;
+
+    // Apply member discount if applicable
+    const discount = isMember && event.memberDiscount ? event.memberDiscount : 0;
+    return Math.max(0, totalBeforeDiscount - discount);
+  }
+
+  // Fall back to legacy fixed pricing
+  return event.registrationFee * attendeeCount;
+}
+
+// Helper to get pricing summary for display
+export function getPricingSummary(event: Event | EventInput): string {
+  if (event.pricingType === 'tiered' && event.baseFee !== undefined && event.additionalFeePerPerson !== undefined) {
+    if (event.baseFee === 0 && event.additionalFeePerPerson === 0) {
+      return 'ฟรี';
+    }
+    return `คนแรก ฿${event.baseFee.toLocaleString()}, คนที่ 2+ ฿${event.additionalFeePerPerson.toLocaleString()}/คน`;
+  }
+
+  // Legacy fixed pricing
+  if (event.registrationFee === 0) {
+    return 'ฟรี';
+  }
+  return `฿${event.registrationFee.toLocaleString()}/คน`;
 }

@@ -501,6 +501,14 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
   };
 }
 
+// Helper to check if a registration is cancelled
+function isRegistrationCancelled(reg: EventRegistration): boolean {
+  const rawStatus = reg.status;
+  const status = typeof rawStatus === 'string' ? rawStatus : String(rawStatus || '');
+  const statusLower = status.toLowerCase();
+  return statusLower === 'cancelled' || status.includes('ยกเลิก');
+}
+
 // Helper to check if a registration is confirmed/attended
 function isRegistrationConfirmed(reg: EventRegistration): boolean {
   const rawStatus = reg.status;
@@ -545,63 +553,48 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
   }
 
   const allRegistrations = await getEventRegistrations(event.sheetName);
-  // Only count registrations with attendanceType = 'agent' (exclude empty values)
+  // Only count registrations with attendanceType = 'agent' (exclude empty values and cancelled)
   const agentRegistrationsRaw = allRegistrations.filter(r =>
-    r.attendanceType?.toLowerCase() === 'agent'
+    r.attendanceType?.toLowerCase() === 'agent' && !isRegistrationCancelled(r)
   );
 
   const members = await getAllMembers();
 
-  // Deduplicate by license number - keep only first registration per license
-  // But merge attendee counts and names from duplicate registrations
-  const licenseMap = new Map<string, {
-    registration: EventRegistration;
-    mergedAttendeeCount: number;
-    mergedAttendeeNames: string[];
-    isConfirmed: boolean;
-  }>();
+  // Deduplicate by license number or memberId - keep only the LATEST active registration per license/member
+  // This handles the case where someone registers, gets cancelled, then registers again
+  const licenseMap = new Map<string, EventRegistration>();
 
   for (const reg of agentRegistrationsRaw) {
     const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber || '');
+    const memberId = reg.memberId || '';
 
-    // Skip registrations without license number
-    if (!normalizedLicense) {
-      // For registrations without license, use registration ID as key
-      const key = `NO_LICENSE_${reg.registrationId}`;
-      if (!licenseMap.has(key)) {
-        licenseMap.set(key, {
-          registration: reg,
-          mergedAttendeeCount: reg.attendeeCount || 0,
-          mergedAttendeeNames: reg.attendeeNames ? [reg.attendeeNames] : [],
-          isConfirmed: isRegistrationConfirmed(reg),
-        });
-      }
-      continue;
+    // Create a unique key based on license number (preferred) or memberId
+    let key = '';
+    if (normalizedLicense) {
+      key = `LICENSE_${normalizedLicense}`;
+    } else if (memberId) {
+      key = `MEMBER_${memberId}`;
+    } else {
+      // For registrations without license or memberId, use LINE user ID or registration ID
+      key = `USER_${reg.lineUserId || reg.registrationId}`;
     }
 
-    if (licenseMap.has(normalizedLicense)) {
-      // Merge with existing entry
-      const existing = licenseMap.get(normalizedLicense)!;
-      existing.mergedAttendeeCount += reg.attendeeCount || 0;
-      if (reg.attendeeNames) {
-        existing.mergedAttendeeNames.push(reg.attendeeNames);
-      }
-      // If any registration is confirmed, mark as confirmed
-      if (isRegistrationConfirmed(reg)) {
-        existing.isConfirmed = true;
-      }
+    // Always use the latest registration (newer registrations override older ones)
+    // This ensures that if someone re-registers after cancellation, the new one is used
+    const existing = licenseMap.get(key);
+    if (!existing) {
+      licenseMap.set(key, reg);
     } else {
-      // First registration for this license
-      licenseMap.set(normalizedLicense, {
-        registration: reg,
-        mergedAttendeeCount: reg.attendeeCount || 0,
-        mergedAttendeeNames: reg.attendeeNames ? [reg.attendeeNames] : [],
-        isConfirmed: isRegistrationConfirmed(reg),
-      });
+      // Compare registration dates to keep the latest one
+      const existingDate = existing.registrationDate || '';
+      const currentDate = reg.registrationDate || '';
+      if (currentDate > existingDate) {
+        licenseMap.set(key, reg);
+      }
     }
   }
 
-  // Build deduplicated attendees list
+  // Build attendees list from active registrations only
   const attendees: {
     registration: EventRegistration;
     member: {
@@ -614,23 +607,16 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
   let confirmedCount = 0;
   let totalAttendees = 0;
 
-  for (const [, entry] of licenseMap) {
-    // Create a merged registration with combined attendee info
-    const mergedReg: EventRegistration = {
-      ...entry.registration,
-      attendeeCount: entry.mergedAttendeeCount,
-      attendeeNames: entry.mergedAttendeeNames.join(', '),
-    };
-
+  for (const [, reg] of licenseMap) {
     // Find matching member
-    const normalizedLicense = normalizeLicenseNumber(entry.registration.licenseNumber || '');
+    const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber || '');
     const member = members.find(m => {
       const memberLicense = normalizeLicenseNumber(m.licenseNumber || '');
       return memberLicense && memberLicense === normalizedLicense;
     });
 
     attendees.push({
-      registration: mergedReg,
+      registration: reg,
       member: member ? {
         memberId: member.memberId,
         fullNameTH: member.fullNameTH,
@@ -638,18 +624,21 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
       } : null,
     });
 
-    if (entry.isConfirmed) {
+    if (isRegistrationConfirmed(reg)) {
       confirmedCount++;
     }
-    totalAttendees += entry.mergedAttendeeCount;
+    totalAttendees += reg.attendeeCount || 0;
   }
+
+  // Filter allRegistrations to exclude cancelled for totalRegistrations count
+  const activeRegistrationsCount = allRegistrations.filter(r => !isRegistrationCancelled(r)).length;
 
   return {
     event,
-    totalRegistrations: allRegistrations.length,
-    agentRegistrations: licenseMap.size,  // Unique companies count
-    confirmedCount,                        // Unique confirmed companies
-    totalAttendees,                        // Total people (sum of attendeeCount)
+    totalRegistrations: activeRegistrationsCount,  // Only active registrations
+    agentRegistrations: licenseMap.size,           // Unique companies count (active only)
+    confirmedCount,                                 // Unique confirmed companies
+    totalAttendees,                                 // Total people (sum of attendeeCount, active only)
     attendees,
   };
 }

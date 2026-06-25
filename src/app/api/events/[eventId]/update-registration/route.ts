@@ -6,6 +6,13 @@ import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrations, updateEventRegistration } from '@/lib/event-sheets';
 import { EventRegistration } from '@/types/event';
 
+// Helper function to check if registration is cancelled
+function isRegistrationCancelled(registration: EventRegistration): boolean {
+  const status = registration.status || '';
+  const statusLower = status.toLowerCase();
+  return statusLower === 'cancelled' || status.includes('ยกเลิก');
+}
+
 // PUT - Update registration (Member can only update their own registration)
 export async function PUT(
   request: NextRequest,
@@ -98,12 +105,17 @@ export async function PUT(
     if (attendeeCount !== undefined && attendeeCount !== userReg.attendeeCount) {
       // Validate against maxCapacity
       if (eventData.maxCapacity > 0) {
-        const currentTotal = existingRegistrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
+        // Calculate current total excluding cancelled registrations
+        const activeRegistrations = existingRegistrations.filter(r => !isRegistrationCancelled(r));
+        const currentTotal = activeRegistrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
         const difference = attendeeCount - userReg.attendeeCount;
         const newTotal = currentTotal + difference;
 
         if (newTotal > eventData.maxCapacity) {
-          return NextResponse.json({ error: 'ไม่สามารถเพิ่มจำนวนผู้เข้าร่วมได้ เนื่องจากจำนวนที่รับสมัครเต็มแล้ว' }, { status: 400 });
+          const availableSlots = eventData.maxCapacity - currentTotal + userReg.attendeeCount;
+          return NextResponse.json({
+            error: `ไม่สามารถเพิ่มจำนวนผู้เข้าร่วมได้ เนื่องจากที่นั่งเหลือ ${availableSlots} ที่`,
+          }, { status: 400 });
         }
       }
 

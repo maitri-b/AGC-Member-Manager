@@ -394,6 +394,20 @@ export default function EventDetailPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
                       <h3 className="font-semibold text-blue-900">แก้ไขข้อมูลการลงทะเบียน</h3>
 
+                      {/* Capacity Info */}
+                      {event?.maxCapacity && event.maxCapacity > 0 && summary && (
+                        <div className="bg-white border border-blue-300 rounded-lg p-3">
+                          <p className="text-sm text-gray-600">
+                            ที่นั่งเหลือ: <span className="font-semibold text-blue-600">
+                              {event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount} ที่
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            (คุณลงทะเบียนไว้ {userRegistration.attendeeCount} คน)
+                          </p>
+                        </div>
+                      )}
+
                       {/* Attendee Count */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -412,9 +426,20 @@ export default function EventDetailPage() {
                           {Array.from(
                             { length: event?.maxPerCompany && event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
                             (_, i) => i + 1
-                          ).map(num => (
-                            <option key={num} value={num}>{num} คน</option>
-                          ))}
+                          ).map(num => {
+                            // Calculate if this option would exceed capacity
+                            const difference = num - userRegistration.attendeeCount;
+                            const availableSlots = event?.maxCapacity && event.maxCapacity > 0 && summary
+                              ? event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount
+                              : Infinity;
+                            const isDisabled = num > availableSlots;
+
+                            return (
+                              <option key={num} value={num} disabled={isDisabled}>
+                                {num} คน{isDisabled ? ' (เกินที่นั่งที่เหลือ)' : ''}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
 

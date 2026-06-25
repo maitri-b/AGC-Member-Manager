@@ -4,6 +4,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrations } from '@/lib/event-sheets';
+import { EventRegistration } from '@/types/event';
+
+// Helper function to check if registration is cancelled
+function isRegistrationCancelled(registration: EventRegistration): boolean {
+  const status = registration.status || '';
+  const statusLower = status.toLowerCase();
+  return statusLower === 'cancelled' || status.includes('ยกเลิก');
+}
 
 // GET - Get event detail for member view
 export async function GET(
@@ -66,9 +74,12 @@ export async function GET(
       try {
         const registrations = await getEventRegistrations(eventData.sheetName);
 
-        // Calculate summary
-        summary.totalRegistrations = registrations.length;
-        summary.totalAttendees = registrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
+        // Filter out cancelled registrations for summary
+        const activeRegistrations = registrations.filter(r => !isRegistrationCancelled(r));
+
+        // Calculate summary (excluding cancelled)
+        summary.totalRegistrations = activeRegistrations.length;
+        summary.totalAttendees = activeRegistrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
 
         // Check if current user has registered (by LINE user ID or member ID)
         if (session.user.id || session.user.memberId) {
@@ -79,7 +90,8 @@ export async function GET(
             );
           });
 
-          if (userReg) {
+          // Only set userRegistration if it's not cancelled
+          if (userReg && !isRegistrationCancelled(userReg)) {
             userRegistration = {
               registrationId: userReg.registrationId,
               status: userReg.status,

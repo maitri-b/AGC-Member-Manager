@@ -4,6 +4,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
 import { getTrackedEvents, getEventAttendanceSummary, getEventRegistrations } from '@/lib/event-sheets';
+import { EventRegistration } from '@/types/event';
+
+// Helper function to check if registration is cancelled
+function isRegistrationCancelled(registration: EventRegistration): boolean {
+  const status = registration.status || '';
+  const statusLower = status.toLowerCase();
+  return statusLower === 'cancelled' || status.includes('ยกเลิก');
+}
 
 export async function GET() {
   try {
@@ -35,9 +43,12 @@ export async function GET() {
               // Get registrations to check if user has registered
               const registrations = await getEventRegistrations(e.sheetName);
 
-              // Check if current user has registered
+              // Filter out cancelled registrations
+              const activeRegistrations = registrations.filter(r => !isRegistrationCancelled(r));
+
+              // Check if current user has registered (and not cancelled)
               if (session.user.id || session.user.memberId) {
-                const userReg = registrations.find(r => {
+                const userReg = activeRegistrations.find(r => {
                   return (
                     (session.user.id && r.lineUserId === session.user.id) ||
                     (session.user.memberId && r.memberId === session.user.memberId)
@@ -46,8 +57,8 @@ export async function GET() {
                 userRegistered = !!userReg;
               }
 
-              // Calculate total attendees
-              totalAttendees = registrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
+              // Calculate total attendees (excluding cancelled)
+              totalAttendees = activeRegistrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
             } catch (err) {
               console.error(`Error fetching registrations for ${e.eventId}:`, err);
               // Ignore errors
@@ -86,7 +97,9 @@ export async function GET() {
         if (event.sheetName && (session.user.id || session.user.memberId)) {
           try {
             const registrations = await getEventRegistrations(event.sheetName);
-            const userReg = registrations.find(r => {
+            // Filter out cancelled registrations
+            const activeRegistrations = registrations.filter(r => !isRegistrationCancelled(r));
+            const userReg = activeRegistrations.find(r => {
               return (
                 (session.user.id && r.lineUserId === session.user.id) ||
                 (session.user.memberId && r.memberId === session.user.memberId)

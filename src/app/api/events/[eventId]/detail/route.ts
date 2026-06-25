@@ -82,22 +82,29 @@ export async function GET(
         summary.totalAttendees = activeRegistrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
 
         // Check if current user has registered (by LINE user ID or member ID)
+        // Search ONLY in active registrations and get the LATEST one if multiple exist
         if (session.user.id || session.user.memberId) {
-          const userReg = registrations.find(r => {
+          const userRegs = activeRegistrations.filter(r => {
             return (
               (session.user.id && r.lineUserId === session.user.id) ||
               (session.user.memberId && r.memberId === session.user.memberId)
             );
           });
 
-          // Only set userRegistration if it's not cancelled
-          if (userReg && !isRegistrationCancelled(userReg)) {
+          // If user has multiple active registrations, use the latest one by registration date
+          if (userRegs.length > 0) {
+            const latestReg = userRegs.sort((a, b) => {
+              const dateA = a.registrationDate || '';
+              const dateB = b.registrationDate || '';
+              return dateB > dateA ? 1 : -1; // descending order
+            })[0];
+
             userRegistration = {
-              registrationId: userReg.registrationId,
-              status: userReg.status,
-              attendeeCount: userReg.attendeeCount,
-              attendeeNames: userReg.attendeeNames,
-              registrationDate: userReg.registrationDate,
+              registrationId: latestReg.registrationId,
+              status: latestReg.status,
+              attendeeCount: latestReg.attendeeCount,
+              attendeeNames: latestReg.attendeeNames,
+              registrationDate: latestReg.registrationDate,
             };
           }
         }

@@ -19,6 +19,7 @@ interface EventInfo {
   totalRegistrations?: number;
   agentRegistrations?: number;
   confirmedCount?: number;
+  userRegistered?: boolean;
 }
 
 interface EventAttendanceRecord {
@@ -145,10 +146,15 @@ function DashboardContent() {
   const isCommitteeOrAdmin = hasPermission(session.user.permissions, 'members:list') ||
                              hasPermission(session.user.permissions, 'admin:access');
 
-  // Check if user attended a specific event
+  // Check if user attended a specific event (confirmed status from attendance data)
   const getUserAttendanceForEvent = (eventId: string) => {
     if (!attendance) return null;
     return attendance.eventsAttended.find(e => e.eventId === eventId);
+  };
+
+  // Check if user has registered for an event (from events API)
+  const hasUserRegistered = (event: EventInfo) => {
+    return event.userRegistered === true;
   };
 
   return (
@@ -209,6 +215,7 @@ function DashboardContent() {
                 <div className="space-y-4 mb-6">
                   {events.filter(e => e.isActive).map((event) => {
                     const userAttendance = getUserAttendanceForEvent(event.eventId);
+                    const isRegistered = hasUserRegistered(event);
                     return (
                       <div key={event.eventId} className="bg-white rounded-lg shadow overflow-hidden border-l-4 border-green-500">
                         <div className="p-5">
@@ -257,15 +264,15 @@ function DashboardContent() {
                             )}
                           </div>
 
-                          {/* User Attendance Status - Active Event */}
+                          {/* User Registration Status - Active Event */}
                           {session.user.memberId && (
                             <div className="mt-4 pt-4 border-t border-gray-100">
-                              {loadingAttendance ? (
+                              {loadingEvents ? (
                                 <div className="flex items-center gap-2 text-sm text-gray-500">
                                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
                                   กำลังโหลดข้อมูล...
                                 </div>
-                              ) : userAttendance ? (
+                              ) : isRegistered ? (
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -277,9 +284,9 @@ function DashboardContent() {
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                                      รอเข้าร่วมงาน
+                                      {userAttendance ? 'เข้าร่วมแล้ว' : 'รอเข้าร่วมงาน'}
                                     </span>
-                                    {userAttendance.attendeeCount > 0 && (
+                                    {userAttendance?.attendeeCount && userAttendance.attendeeCount > 0 && (
                                       <span className="text-sm text-gray-500">
                                         ผู้เข้าร่วมจากบริษัท {userAttendance.attendeeCount} คน
                                       </span>
@@ -328,6 +335,7 @@ function DashboardContent() {
                   <div className="space-y-4">
                     {events.filter(e => !e.isActive).map((event) => {
                       const userAttendance = getUserAttendanceForEvent(event.eventId);
+                      const isRegistered = hasUserRegistered(event);
                       return (
                         <div key={event.eventId} className="bg-white rounded-lg shadow overflow-hidden opacity-90">
                           <div className="p-5">
@@ -376,10 +384,10 @@ function DashboardContent() {
                               )}
                             </div>
 
-                            {/* User Attendance Status - Past Event */}
+                            {/* User Registration Status - Past Event */}
                             {session.user.memberId && (
                               <div className="mt-4 pt-4 border-t border-gray-100">
-                                {loadingAttendance ? (
+                                {loadingEvents ? (
                                   <div className="flex items-center gap-2 text-sm text-gray-500">
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
                                     กำลังโหลดข้อมูล...
@@ -405,12 +413,26 @@ function DashboardContent() {
                                       )}
                                     </div>
                                   </div>
+                                ) : isRegistered ? (
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <span className="text-sm font-medium text-yellow-700">
+                                        คุณได้ลงทะเบียนกิจกรรมนี้
+                                      </span>
+                                    </div>
+                                    <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                                      รอตรวจสอบ
+                                    </span>
+                                  </div>
                                 ) : (
                                   <div className="flex items-center gap-2 text-sm text-gray-400">
                                     <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
-                                    <span>คุณไม่ได้เข้าร่วมกิจกรรมนี้</span>
+                                    <span>คุณไม่ได้ลงทะเบียนกิจกรรมนี้</span>
                                   </div>
                                 )}
                               </div>

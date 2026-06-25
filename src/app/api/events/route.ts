@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
-import { getTrackedEvents, getEventAttendanceSummary } from '@/lib/event-sheets';
+import { getTrackedEvents, getEventAttendanceSummary, getEventRegistrations } from '@/lib/event-sheets';
 
 export async function GET() {
   try {
@@ -28,14 +28,32 @@ export async function GET() {
       const eventsWithRegistrationInfo = await Promise.all(
         publishedEvents.map(async (e) => {
           let totalAttendees = 0;
-          if (e.registrationOpen && e.maxCapacity && e.maxCapacity > 0) {
+          let userRegistered = false;
+
+          if (e.sheetName) {
             try {
-              const summary = await getEventAttendanceSummary(e.eventId);
-              totalAttendees = summary.totalAttendees || 0;
-            } catch {
+              // Get registrations to check if user has registered
+              const registrations = await getEventRegistrations(e.sheetName);
+
+              // Check if current user has registered
+              if (session.user.id || session.user.memberId) {
+                const userReg = registrations.find(r => {
+                  return (
+                    (session.user.id && r.lineUserId === session.user.id) ||
+                    (session.user.memberId && r.memberId === session.user.memberId)
+                  );
+                });
+                userRegistered = !!userReg;
+              }
+
+              // Calculate total attendees
+              totalAttendees = registrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
+            } catch (err) {
+              console.error(`Error fetching registrations for ${e.eventId}:`, err);
               // Ignore errors
             }
           }
+
           return {
             eventId: e.eventId,
             eventName: e.eventName,
@@ -51,6 +69,7 @@ export async function GET() {
             registrationFee: e.registrationFee,
             registrationOpen: e.registrationOpen,
             totalAttendees,
+            userRegistered,
           };
         })
       );

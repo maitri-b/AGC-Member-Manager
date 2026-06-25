@@ -510,8 +510,7 @@ export default function EventDetailPage() {
                             </span>
                           ) : (
                             <div className="text-sm text-gray-600">
-                              <p className="mb-1">แจ้งชำระเงินทาง LINE หรือติดต่อเจ้าหน้าที่</p>
-                              <p className="text-xs text-gray-500">เจ้าหน้าที่จะบันทึกการชำระเงินให้</p>
+                              <p className="mb-1">โปรดชำระเงินและส่งหลักฐานการชำระตามที่แจ้งไว้ที่ข้อมูลการชำระเงิน</p>
                             </div>
                           )}
                         </div>
@@ -547,8 +546,7 @@ export default function EventDetailPage() {
                               </span>
                             ) : (
                               <div className="text-sm text-gray-600">
-                                <p className="mb-1">แจ้งชำระเงินทาง LINE หรือติดต่อเจ้าหน้าที่</p>
-                                <p className="text-xs text-gray-500">เจ้าหน้าที่จะบันทึกการชำระเงินให้</p>
+                                <p className="mb-1">โปรดชำระเงินและส่งหลักฐานการชำระตามที่แจ้งไว้ที่ข้อมูลการชำระเงิน</p>
                               </div>
                             )}
                           </div>

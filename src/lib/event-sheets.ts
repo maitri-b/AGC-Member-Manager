@@ -108,12 +108,12 @@ function rowToEventRegistration(headers: string[], row: string[]): EventRegistra
       }
 
       // Handle boolean fields
-      if (registrationKey === 'hasClubRep' || registrationKey === 'shirtReceived' || registrationKey === 'cardReceived') {
+      if (registrationKey === 'hasClubRep' || registrationKey === 'shirtReceived' || registrationKey === 'cardReceived' || registrationKey === 'depositPaid') {
         (registration as Record<string, unknown>)[registrationKey] =
           value.toLowerCase() === 'true' || value === '1' || value.toLowerCase() === 'yes';
       }
       // Handle number fields
-      else if (['attendeeCount', 'shirtCount', 'eventFee', 'shirtFee', 'totalAmount'].includes(registrationKey)) {
+      else if (['attendeeCount', 'shirtCount', 'eventFee', 'shirtFee', 'totalAmount', 'depositAmount', 'remainingAmount'].includes(registrationKey)) {
         (registration as Record<string, unknown>)[registrationKey] = parseFloat(value) || 0;
       }
       // Handle string fields

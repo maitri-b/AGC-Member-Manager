@@ -76,11 +76,13 @@ export function isDeadlinePassed(deadlineISO: string): boolean {
  * Calculate deposit and remaining amounts
  * @param totalAmount Total registration fee
  * @param event Event configuration
+ * @param attendeeCount Number of attendees (for per-person deposit calculation)
  * @returns { depositAmount, remainingAmount }
  */
 export function calculatePaymentSplit(
   totalAmount: number,
-  event: Event | EventInput
+  event: Event | EventInput,
+  attendeeCount: number = 1
 ): { depositAmount: number; remainingAmount: number } {
   if (event.paymentMode !== 'deposit' || totalAmount === 0) {
     return { depositAmount: 0, remainingAmount: totalAmount };
@@ -91,7 +93,8 @@ export function calculatePaymentSplit(
   if (event.useDepositPercentage && event.depositPercentage) {
     depositAmount = Math.round(totalAmount * event.depositPercentage / 100);
   } else if (event.depositAmount) {
-    depositAmount = Math.min(event.depositAmount, totalAmount);
+    // Multiply per-person deposit rate by attendee count
+    depositAmount = Math.min(event.depositAmount * attendeeCount, totalAmount);
   }
 
   const remainingAmount = totalAmount - depositAmount;

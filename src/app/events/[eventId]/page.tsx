@@ -483,10 +483,19 @@ export default function EventDetailPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                       <h3 className="font-semibold text-blue-900 mb-4">รายละเอียดการชำระเงิน</h3>
 
+                      {/* Total Amount Summary Card */}
+                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
+                        <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-3xl font-bold">฿{userRegistration.totalAmount.toLocaleString()}</span>
+                          <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
+                        </div>
+                      </div>
+
                       {/* Deposit Payment */}
                       <div className="bg-white rounded-lg p-4 mb-3">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium">มัดจำ</span>
+                          <span className="font-medium">งวดที่ 1: มัดจำ</span>
                           <span className="text-lg font-bold">฿{userRegistration.depositAmount?.toLocaleString() || 0}</span>
                         </div>
 
@@ -516,17 +525,25 @@ export default function EventDetailPage() {
                         </div>
                       </div>
 
-                      {/* Remaining Payment (shown only if deposit paid and remaining > 0) */}
-                      {userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && (
-                        <div className="bg-white rounded-lg p-4">
+                      {/* Remaining Payment (always show, with conditional note) */}
+                      {userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && (
+                        <div className={`bg-white rounded-lg p-4 ${!userRegistration.depositPaid ? 'opacity-75' : ''}`}>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">ยอดคงเหลือ</span>
+                            <span className="font-medium">งวดที่ 2: ยอดคงเหลือ</span>
                             <span className="text-lg font-bold text-orange-600">
                               ฿{userRegistration.remainingAmount.toLocaleString()}
                             </span>
                           </div>
 
-                          {userRegistration.remainingDeadline && (
+                          {!userRegistration.depositPaid && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2">
+                              <p className="text-xs text-yellow-800">
+                                <strong>หมายเหตุ:</strong> กำหนดชำระจะแสดงหลังจากชำระมัดจำแล้ว
+                              </p>
+                            </div>
+                          )}
+
+                          {userRegistration.depositPaid && userRegistration.remainingDeadline && (
                             <div className="text-sm text-gray-600 mb-2">
                               ครบกำหนด: {formatDeadline(userRegistration.remainingDeadline)}
                               <br />
@@ -544,9 +561,13 @@ export default function EventDetailPage() {
                                 </svg>
                                 ชำระครบแล้ว
                               </span>
-                            ) : (
+                            ) : userRegistration.depositPaid ? (
                               <div className="text-sm text-gray-600">
                                 <p className="mb-1">โปรดชำระเงินและส่งหลักฐานการชำระตามที่แจ้งไว้ที่ข้อมูลการชำระเงิน</p>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-500 italic">
+                                กรุณาชำระมัดจำก่อน
                               </div>
                             )}
                           </div>

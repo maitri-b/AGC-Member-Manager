@@ -114,7 +114,7 @@ export async function POST(
     let paymentStatus = totalFee > 0 ? 'รอชำระเงิน' : 'ลงทะเบียนแล้ว';
 
     if (eventData.paymentMode === 'deposit' && totalFee > 0) {
-      const split = calculatePaymentSplit(totalFee, eventData as Event);
+      const split = calculatePaymentSplit(totalFee, eventData as Event, attendeeCount);
       depositAmount = split.depositAmount;
       remainingAmount = split.remainingAmount;
 

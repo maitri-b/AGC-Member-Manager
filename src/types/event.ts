@@ -82,9 +82,11 @@ export interface Event {
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
   documentUrl?: string;             // Link download เอกสาร
   mainImageUrl?: string;            // Link รูป Main Image (header)
+  paymentBankName?: string;         // ชื่อธนาคาร
   paymentAccountName?: string;      // ชื่อบัญชีธนาคาร
   paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
   paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
+  paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
   createdAt: string;                // ISO timestamp
   updatedAt: string;                // ISO timestamp
   createdBy?: string;               // User ID who created the event
@@ -110,9 +112,11 @@ export interface EventInput {
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
   documentUrl?: string;             // Link download เอกสาร
   mainImageUrl?: string;            // Link รูป Main Image (header)
+  paymentBankName?: string;         // ชื่อธนาคาร
   paymentAccountName?: string;      // ชื่อบัญชีธนาคาร
   paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
   paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
+  paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
 }
 
 // Member attendance summary
@@ -221,9 +225,11 @@ export const DEFAULT_EVENTS: Event[] = [
     documentName: '',
     documentUrl: '',
     mainImageUrl: '',
+    paymentBankName: '',
     paymentAccountName: '',
     paymentAccountNumber: '',
     paymentQrCodeUrl: '',
+    paymentTerms: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },

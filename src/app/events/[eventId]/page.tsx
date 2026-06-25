@@ -24,6 +24,11 @@ interface Event {
   registrationOpen: boolean;
   documentName?: string;
   documentUrl?: string;
+  paymentBankName?: string;
+  paymentAccountName?: string;
+  paymentAccountNumber?: string;
+  paymentQrCodeUrl?: string;
+  paymentTerms?: string;
 }
 
 interface EventSummary {
@@ -337,6 +342,57 @@ export default function EventDetailPage() {
                     {event.documentName || 'ดาวน์โหลดเอกสาร'}
                   </span>
                 </a>
+              </div>
+            )}
+
+            {/* Payment Information */}
+            {event.registrationFee > 0 && (event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">ข้อมูลการชำระเงิน</h2>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                  {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-blue-900 mb-2">บัญชีสำหรับชำระเงิน</h3>
+                      <div className="space-y-1 text-sm text-blue-800">
+                        {event.paymentBankName && (
+                          <p>
+                            <span className="font-medium">ธนาคาร:</span> {event.paymentBankName}
+                          </p>
+                        )}
+                        {event.paymentAccountName && (
+                          <p>
+                            <span className="font-medium">ชื่อบัญชี:</span> {event.paymentAccountName}
+                          </p>
+                        )}
+                        {event.paymentAccountNumber && (
+                          <p>
+                            <span className="font-medium">เลขที่บัญชี:</span> {event.paymentAccountNumber}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {event.paymentQrCodeUrl && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-blue-900 mb-2">สแกน QR Code เพื่อชำระเงิน</h3>
+                      <img
+                        src={event.paymentQrCodeUrl}
+                        alt="QR Code สำหรับชำระเงิน"
+                        className="max-w-xs rounded-lg border-2 border-blue-300"
+                      />
+                    </div>
+                  )}
+
+                  {event.paymentTerms && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h3>
+                      <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
+                        {event.paymentTerms}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

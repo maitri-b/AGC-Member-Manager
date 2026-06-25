@@ -25,9 +25,11 @@ interface Event {
   documentName?: string;
   documentUrl?: string;
   mainImageUrl?: string;
+  paymentBankName?: string;
   paymentAccountName?: string;
   paymentAccountNumber?: string;
   paymentQrCodeUrl?: string;
+  paymentTerms?: string;
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
@@ -61,9 +63,11 @@ interface EventFormData {
   documentName: string;
   documentUrl: string;
   mainImageUrl: string;
+  paymentBankName: string;
   paymentAccountName: string;
   paymentAccountNumber: string;
   paymentQrCodeUrl: string;
+  paymentTerms: string;
 }
 
 const initialFormData: EventFormData = {
@@ -84,9 +88,11 @@ const initialFormData: EventFormData = {
   documentName: '',
   documentUrl: '',
   mainImageUrl: '',
+  paymentBankName: '',
   paymentAccountName: '',
   paymentAccountNumber: '',
   paymentQrCodeUrl: '',
+  paymentTerms: '',
 };
 
 export default function AdminEventsPage() {
@@ -180,9 +186,11 @@ export default function AdminEventsPage() {
         documentName: event.documentName ?? '',
         documentUrl: event.documentUrl ?? '',
         mainImageUrl: event.mainImageUrl ?? '',
+        paymentBankName: event.paymentBankName ?? '',
         paymentAccountName: event.paymentAccountName ?? '',
         paymentAccountNumber: event.paymentAccountNumber ?? '',
         paymentQrCodeUrl: event.paymentQrCodeUrl ?? '',
+        paymentTerms: event.paymentTerms ?? '',
       });
     } else {
       setEditingEvent(null);
@@ -903,6 +911,19 @@ export default function AdminEventsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
+                          ธนาคาร
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.paymentBankName}
+                          onChange={(e) => setFormData({ ...formData, paymentBankName: e.target.value })}
+                          placeholder="เช่น ธนาคารกสิกรไทย"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
                           ชื่อบัญชี
                         </label>
                         <input
@@ -927,7 +948,7 @@ export default function AdminEventsPage() {
                         />
                       </div>
 
-                      <div className="md:col-span-2">
+                      <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Link รูป QR Code
                         </label>
@@ -935,9 +956,25 @@ export default function AdminEventsPage() {
                           type="url"
                           value={formData.paymentQrCodeUrl}
                           onChange={(e) => setFormData({ ...formData, paymentQrCodeUrl: e.target.value })}
-                          placeholder="https://... (รูป QR Code สำหรับสแกนจ่ายเงิน)"
+                          placeholder="https://..."
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          เงื่อนไขการชำระเงิน
+                        </label>
+                        <textarea
+                          value={formData.paymentTerms}
+                          onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
+                          placeholder="กรอกเงื่อนไขหรือหมายเหตุเกี่ยวกับการชำระเงิน เช่น กำหนดชำระ, เงื่อนไขการคืนเงิน"
+                          rows={4}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          รองรับข้อความแบบ plain text หรือ markdown
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -376,59 +376,6 @@ export default function EventDetailPage() {
               </div>
             )}
 
-            {/* Payment Information */}
-            {((event.pricingType === 'fixed' && event.registrationFee > 0) ||
-              (event.pricingType === 'tiered' && ((event.baseFee ?? 0) > 0 || (event.additionalFeePerPerson ?? 0) > 0))) &&
-              (event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (
-              <div className="mb-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">ข้อมูลการชำระเงิน</h2>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                  {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-blue-900 mb-2">บัญชีสำหรับชำระเงิน</h3>
-                      <div className="space-y-1 text-sm text-blue-800">
-                        {event.paymentBankName && (
-                          <p>
-                            <span className="font-medium">ธนาคาร:</span> {event.paymentBankName}
-                          </p>
-                        )}
-                        {event.paymentAccountName && (
-                          <p>
-                            <span className="font-medium">ชื่อบัญชี:</span> {event.paymentAccountName}
-                          </p>
-                        )}
-                        {event.paymentAccountNumber && (
-                          <p>
-                            <span className="font-medium">เลขที่บัญชี:</span> {event.paymentAccountNumber}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {event.paymentQrCodeUrl && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-blue-900 mb-2">สแกน QR Code เพื่อชำระเงิน</h3>
-                      <img
-                        src={event.paymentQrCodeUrl}
-                        alt="QR Code สำหรับชำระเงิน"
-                        className="max-w-xs rounded-lg border-2 border-blue-300"
-                      />
-                    </div>
-                  )}
-
-                  {event.paymentTerms && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h3>
-                      <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
-                        {event.paymentTerms}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Registration Status / Form */}
             <div className="border-t pt-6">
               {userRegistration ? (
@@ -472,11 +419,197 @@ export default function EventDetailPage() {
                           }}
                           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                         >
-                          แก้ไขข้อมูล
+                          {(event as any)?.allowMemberEdit !== false ? 'แก้ไขข้อมูล' : 'ดูข้อมูล'}
                         </button>
                       )}
                     </div>
                   </div>
+
+                  {/* Edit Form */}
+                  {isEditing && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                      <h3 className="font-semibold text-blue-900">
+                        {(event as any)?.allowMemberEdit !== false ? 'แก้ไขข้อมูลการลงทะเบียน' : 'ข้อมูลการลงทะเบียน'}
+                      </h3>
+
+                      {/* Capacity Info */}
+                      {event?.maxCapacity && event.maxCapacity > 0 && summary && (
+                        <div className="bg-white border border-blue-300 rounded-lg p-3">
+                          <p className="text-sm text-gray-600">
+                            ที่นั่งเหลือ: <span className="font-semibold text-blue-600">
+                              {event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount} ที่
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            (คุณลงทะเบียนไว้ {userRegistration.attendeeCount} คน)
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Attendee Count */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          จำนวนผู้เข้าร่วม
+                          {event?.maxPerCompany && event.maxPerCompany > 0 && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              (สูงสุด {event.maxPerCompany} คน)
+                            </span>
+                          )}
+                        </label>
+                        <select
+                          value={attendeeCount}
+                          onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
+                          disabled={(event as any)?.allowMemberEdit === false}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                          {Array.from(
+                            { length: event?.maxPerCompany && event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
+                            (_, i) => i + 1
+                          ).map(num => {
+                            // Calculate if this option would exceed capacity
+                            const difference = num - userRegistration.attendeeCount;
+                            const availableSlots = event?.maxCapacity && event.maxCapacity > 0 && summary
+                              ? event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount
+                              : Infinity;
+                            const isDisabled = num > availableSlots;
+
+                            return (
+                              <option key={num} value={num} disabled={isDisabled}>
+                                {num} คน{isDisabled ? ' (เกินที่นั่งที่เหลือ)' : ''}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+
+                      {/* Attendee Names */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ชื่อผู้เข้าร่วม
+                        </label>
+                        <div className="space-y-2">
+                          {Array.from({ length: attendeeCount }).map((_, index) => (
+                            <input
+                              key={index}
+                              type="text"
+                              value={attendeeNames[index] || ''}
+                              onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
+                              disabled={(event as any)?.allowMemberEdit === false}
+                              placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Total Amount */}
+                      {event && calculateRegistrationFee(event, attendeeCount, true) > 0 && (
+                        <div className="bg-white border border-blue-300 rounded-lg p-3">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm text-gray-600">ค่าสมัครใหม่</p>
+                              <p className="text-xs text-gray-500">
+                                {event.pricingType === 'tiered' ? (
+                                  <>
+                                    {attendeeCount === 1
+                                      ? `฿${event.baseFee?.toLocaleString()}/คน`
+                                      : `฿${event.baseFee?.toLocaleString()} (คนแรก) + ฿${event.additionalFeePerPerson?.toLocaleString()} × ${attendeeCount - 1} คน`
+                                    }
+                                    {event.memberDiscount && event.memberDiscount > 0 && (
+                                      <span> - ส่วนลด ฿{event.memberDiscount.toLocaleString()}</span>
+                                    )}
+                                  </>
+                                ) : (
+                                  `${attendeeCount} คน × ฿${event.registrationFee.toLocaleString()}/คน`
+                                )}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xl font-bold text-blue-600">
+                                ฿{calculateRegistrationFee(event, attendeeCount, true).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3 pt-2">
+                        {(event as any)?.allowMemberEdit !== false ? (
+                          <>
+                            <button
+                              onClick={async () => {
+                                if (!event) return;
+
+                                // Validate attendee names
+                                const filledNames = attendeeNames.filter(name => name.trim());
+                                if (filledNames.length !== attendeeCount) {
+                                  toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
+                                  return;
+                                }
+
+                                setUpdating(true);
+                                try {
+                                  const response = await fetch(`/api/events/${eventId}/update-registration`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      attendeeCount,
+                                      attendeeNames: filledNames,
+                                      requestNameChange: false,
+                                    }),
+                                  });
+
+                                  const data = await response.json();
+
+                                  if (!response.ok) {
+                                    throw new Error(data.error || 'ไม่สามารถอัพเดทข้อมูลได้');
+                                  }
+
+                                  toast.success(data.message || 'อัพเดทข้อมูลเรียบร้อยแล้ว');
+                                  setIsEditing(false);
+                                  fetchEventDetail(); // Refresh data
+                                } catch (err) {
+                                  toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+                                } finally {
+                                  setUpdating(false);
+                                }
+                              }}
+                              disabled={updating}
+                              className="flex-1 py-2 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {updating ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsEditing(false);
+                                setAttendeeCount(userRegistration.attendeeCount);
+                                try {
+                                  const names = JSON.parse(userRegistration.attendeeNames || '[]');
+                                  setAttendeeNames(Array.isArray(names) ? names : [userRegistration.attendeeNames || '']);
+                                } catch {
+                                  setAttendeeNames([userRegistration.attendeeNames || '']);
+                                }
+                              }}
+                              disabled={updating}
+                              className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                            >
+                              ยกเลิก
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setIsEditing(false);
+                            }}
+                            className="w-full py-2 px-4 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors"
+                          >
+                            ปิด
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Payment Breakdown (NEW - for deposit mode) */}
                   {event?.paymentMode === 'deposit' && userRegistration.totalAmount && userRegistration.totalAmount > 0 && (
@@ -585,174 +718,51 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
-                    </div>
-                  )}
 
-                  {/* Edit Form */}
-                  {isEditing && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
-                      <h3 className="font-semibold text-blue-900">แก้ไขข้อมูลการลงทะเบียน</h3>
-
-                      {/* Capacity Info */}
-                      {event?.maxCapacity && event.maxCapacity > 0 && summary && (
-                        <div className="bg-white border border-blue-300 rounded-lg p-3">
-                          <p className="text-sm text-gray-600">
-                            ที่นั่งเหลือ: <span className="font-semibold text-blue-600">
-                              {event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount} ที่
-                            </span>
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            (คุณลงทะเบียนไว้ {userRegistration.attendeeCount} คน)
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Attendee Count */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          จำนวนผู้เข้าร่วม
-                          {event?.maxPerCompany && event.maxPerCompany > 0 && (
-                            <span className="text-xs text-gray-500 ml-2">
-                              (สูงสุด {event.maxPerCompany} คน)
-                            </span>
-                          )}
-                        </label>
-                        <select
-                          value={attendeeCount}
-                          onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          {Array.from(
-                            { length: event?.maxPerCompany && event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
-                            (_, i) => i + 1
-                          ).map(num => {
-                            // Calculate if this option would exceed capacity
-                            const difference = num - userRegistration.attendeeCount;
-                            const availableSlots = event?.maxCapacity && event.maxCapacity > 0 && summary
-                              ? event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount
-                              : Infinity;
-                            const isDisabled = num > availableSlots;
-
-                            return (
-                              <option key={num} value={num} disabled={isDisabled}>
-                                {num} คน{isDisabled ? ' (เกินที่นั่งที่เหลือ)' : ''}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-
-                      {/* Attendee Names */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ชื่อผู้เข้าร่วม
-                        </label>
-                        <div className="space-y-2">
-                          {Array.from({ length: attendeeCount }).map((_, index) => (
-                            <input
-                              key={index}
-                              type="text"
-                              value={attendeeNames[index] || ''}
-                              onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
-                              placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Total Amount */}
-                      {event && calculateRegistrationFee(event, attendeeCount, true) > 0 && (
-                        <div className="bg-white border border-blue-300 rounded-lg p-3">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="text-sm text-gray-600">ค่าสมัครใหม่</p>
-                              <p className="text-xs text-gray-500">
-                                {event.pricingType === 'tiered' ? (
-                                  <>
-                                    {attendeeCount === 1
-                                      ? `฿${event.baseFee?.toLocaleString()}/คน`
-                                      : `฿${event.baseFee?.toLocaleString()} (คนแรก) + ฿${event.additionalFeePerPerson?.toLocaleString()} × ${attendeeCount - 1} คน`
-                                    }
-                                    {event.memberDiscount && event.memberDiscount > 0 && (
-                                      <span> - ส่วนลด ฿{event.memberDiscount.toLocaleString()}</span>
-                                    )}
-                                  </>
-                                ) : (
-                                  `${attendeeCount} คน × ฿${event.registrationFee.toLocaleString()}/คน`
-                                )}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xl font-bold text-blue-600">
-                                ฿{calculateRegistrationFee(event, attendeeCount, true).toLocaleString()}
-                              </p>
+                      {/* Payment Information (Bank Account & Terms) */}
+                      <div className="mt-4 pt-4 border-t border-blue-200 space-y-3">
+                        {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) && (
+                          <div>
+                            <h3 className="text-sm font-semibold text-blue-900 mb-2">บัญชีสำหรับชำระเงิน</h3>
+                            <div className="space-y-1 text-sm text-blue-800">
+                              {event.paymentBankName && (
+                                <p>
+                                  <span className="font-medium">ธนาคาร:</span> {event.paymentBankName}
+                                </p>
+                              )}
+                              {event.paymentAccountName && (
+                                <p>
+                                  <span className="font-medium">ชื่อบัญชี:</span> {event.paymentAccountName}
+                                </p>
+                              )}
+                              {event.paymentAccountNumber && (
+                                <p>
+                                  <span className="font-medium">เลขที่บัญชี:</span> {event.paymentAccountNumber}
+                                </p>
+                              )}
                             </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Action Buttons */}
-                      <div className="flex gap-3 pt-2">
-                        <button
-                          onClick={async () => {
-                            if (!event) return;
+                        {event.paymentQrCodeUrl && (
+                          <div>
+                            <h3 className="text-sm font-semibold text-blue-900 mb-2">สแกน QR Code เพื่อชำระเงิน</h3>
+                            <img
+                              src={event.paymentQrCodeUrl}
+                              alt="QR Code สำหรับชำระเงิน"
+                              className="max-w-xs rounded-lg border-2 border-blue-300"
+                            />
+                          </div>
+                        )}
 
-                            // Validate attendee names
-                            const filledNames = attendeeNames.filter(name => name.trim());
-                            if (filledNames.length !== attendeeCount) {
-                              toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
-                              return;
-                            }
-
-                            setUpdating(true);
-                            try {
-                              const response = await fetch(`/api/events/${eventId}/update-registration`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  attendeeCount,
-                                  attendeeNames: filledNames,
-                                  requestNameChange: false,
-                                }),
-                              });
-
-                              const data = await response.json();
-
-                              if (!response.ok) {
-                                throw new Error(data.error || 'ไม่สามารถอัพเดทข้อมูลได้');
-                              }
-
-                              toast.success(data.message || 'อัพเดทข้อมูลเรียบร้อยแล้ว');
-                              setIsEditing(false);
-                              fetchEventDetail(); // Refresh data
-                            } catch (err) {
-                              toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
-                            } finally {
-                              setUpdating(false);
-                            }
-                          }}
-                          disabled={updating}
-                          className="flex-1 py-2 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {updating ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setIsEditing(false);
-                            setAttendeeCount(userRegistration.attendeeCount);
-                            try {
-                              const names = JSON.parse(userRegistration.attendeeNames || '[]');
-                              setAttendeeNames(Array.isArray(names) ? names : [userRegistration.attendeeNames || '']);
-                            } catch {
-                              setAttendeeNames([userRegistration.attendeeNames || '']);
-                            }
-                          }}
-                          disabled={updating}
-                          className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
-                        >
-                          ยกเลิก
-                        </button>
+                        {event.paymentTerms && (
+                          <div>
+                            <h3 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h3>
+                            <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
+                              {event.paymentTerms}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

@@ -81,6 +81,8 @@ export async function GET() {
         remainingDeadlineType: data.remainingDeadlineType || 'none',
         remainingDeadlineFixed: data.remainingDeadlineFixed || '',
         remainingDeadlineHours: data.remainingDeadlineHours ?? 0,
+        // Registration edit control
+        allowMemberEdit: data.allowMemberEdit !== false,
         // Convert Firestore Timestamps to ISO strings
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
         updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
@@ -166,6 +168,8 @@ export async function POST(request: NextRequest) {
       remainingDeadlineType: body.remainingDeadlineType || 'none',
       remainingDeadlineFixed: body.remainingDeadlineFixed || '',
       remainingDeadlineHours: body.remainingDeadlineHours ?? 0,
+      // Registration edit control
+      allowMemberEdit: body.allowMemberEdit !== false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: session.user.id,

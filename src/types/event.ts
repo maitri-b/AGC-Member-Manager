@@ -119,6 +119,9 @@ export interface Event {
   remainingDeadlineFixed?: string;  // วันที่ตายตัว (YYYY-MM-DD)
   remainingDeadlineHours?: number;  // จำนวนชั่วโมงนับจากชำระมัดจำ
 
+  // Registration Edit Control
+  allowMemberEdit?: boolean;        // อนุญาตให้สมาชิกแก้ไขข้อมูลการลงทะเบียนหลังจากลงทะเบียนแล้ว (Default: true)
+
   createdAt: string;                // ISO timestamp
   updatedAt: string;                // ISO timestamp
   createdBy?: string;               // User ID who created the event
@@ -169,6 +172,9 @@ export interface EventInput {
   remainingDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระยอดคงเหลือ
   remainingDeadlineFixed?: string;  // วันที่ตายตัว (YYYY-MM-DD)
   remainingDeadlineHours?: number;  // จำนวนชั่วโมงนับจากชำระมัดจำ
+
+  // Registration Edit Control
+  allowMemberEdit?: boolean;        // อนุญาตให้สมาชิกแก้ไขข้อมูลการลงทะเบียนหลังจากลงทะเบียนแล้ว (Default: true)
 }
 
 // Member attendance summary

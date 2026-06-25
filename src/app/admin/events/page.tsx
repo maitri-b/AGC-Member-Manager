@@ -98,6 +98,8 @@ interface EventFormData {
   remainingDeadlineType: 'none' | 'fixed' | 'hours';
   remainingDeadlineFixed: string;
   remainingDeadlineHours: number;
+  // Registration edit control
+  allowMemberEdit: boolean;
 }
 
 const initialFormData: EventFormData = {
@@ -138,6 +140,8 @@ const initialFormData: EventFormData = {
   remainingDeadlineType: 'none',
   remainingDeadlineFixed: '',
   remainingDeadlineHours: 0,
+  // Registration edit control
+  allowMemberEdit: true,
 };
 
 export default function AdminEventsPage() {
@@ -251,6 +255,8 @@ export default function AdminEventsPage() {
         remainingDeadlineType: event.remainingDeadlineType ?? 'none',
         remainingDeadlineFixed: event.remainingDeadlineFixed ?? '',
         remainingDeadlineHours: event.remainingDeadlineHours ?? 0,
+        // Registration edit control
+        allowMemberEdit: (event as any).allowMemberEdit !== false,
       });
     } else {
       setEditingEvent(null);
@@ -1328,6 +1334,16 @@ export default function AdminEventsPage() {
                         className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                       />
                       <span className="text-sm text-gray-700">เก็บคะแนนการเข้าร่วม</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.allowMemberEdit !== false}
+                        onChange={(e) => setFormData({ ...formData, allowMemberEdit: e.target.checked })}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                      />
+                      <span className="text-sm text-gray-700">อนุญาตให้สมาชิกแก้ไขข้อมูลหลังลงทะเบียน</span>
                     </label>
                   </div>
                 </div>

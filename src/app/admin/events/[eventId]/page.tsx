@@ -121,7 +121,7 @@ export default function EventDetailPage() {
       // Prepare data for export
       const exportData = filteredAttendees.map((attendee, index) => ({
         'ลำดับ': index + 1,
-        'รหัสลงทะเบียน': attendee.registration.registrationId,
+        'รหัสลงทะเบียน (6 หลัก)': attendee.registration.registrationId,
         'วันเวลาลงทะเบียน': attendee.registration.registrationDate || '',
         'ชื่อบริษัท': attendee.registration.companyName || attendee.member?.companyNameTH || '',
         'เลขใบอนุญาต': attendee.registration.licenseNumber || '',
@@ -335,8 +335,9 @@ export default function EventDetailPage() {
                        attendee.lineProfile?.lineDisplayName?.toLowerCase().includes(term);
       const matchLicense = attendee.registration.licenseNumber?.toLowerCase().includes(term);
       const matchMemberId = attendee.member?.memberId?.toLowerCase().includes(term);
+      const matchRegistrationId = attendee.registration.registrationId?.toLowerCase().includes(term);
 
-      return matchCompany || matchName || matchLicense || matchMemberId;
+      return matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId;
     }
 
     return true;
@@ -622,6 +623,9 @@ export default function EventDetailPage() {
 
                       {/* License & additional info */}
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
+                        {attendee.registration.registrationId && (
+                          <span className="text-purple-600 font-medium">🎫 รหัส: {attendee.registration.registrationId}</span>
+                        )}
                         {attendee.registration.registrationDate && (
                           <span className="text-blue-600 font-medium">📅 ลงทะเบียน: {attendee.registration.registrationDate}</span>
                         )}

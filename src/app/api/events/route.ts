@@ -80,12 +80,31 @@ export async function GET() {
     const eventsWithSummary = await Promise.all(
       publishedEvents.map(async (event) => {
         const summary = await getEventAttendanceSummary(event.eventId);
+
+        // Check if current user has registered (for admin/committee too)
+        let userRegistered = false;
+        if (event.sheetName && (session.user.id || session.user.memberId)) {
+          try {
+            const registrations = await getEventRegistrations(event.sheetName);
+            const userReg = registrations.find(r => {
+              return (
+                (session.user.id && r.lineUserId === session.user.id) ||
+                (session.user.memberId && r.memberId === session.user.memberId)
+              );
+            });
+            userRegistered = !!userReg;
+          } catch (err) {
+            console.error(`Error checking user registration for ${event.eventId}:`, err);
+          }
+        }
+
         return {
           ...event,
           totalRegistrations: summary.totalRegistrations,
           agentRegistrations: summary.agentRegistrations,
           confirmedCount: summary.confirmedCount,
           totalAttendees: summary.totalAttendees,
+          userRegistered,
         };
       })
     );

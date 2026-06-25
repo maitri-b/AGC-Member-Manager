@@ -7,6 +7,8 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { Toast, useToast } from '@/components/Toast';
 import { calculateRegistrationFee, getPricingSummary } from '@/types/event';
+import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
+import { getStatusBadgeClass } from '@/lib/payment-status';
 
 interface Event {
   eventId: string;
@@ -36,6 +38,17 @@ interface Event {
   paymentAccountNumber?: string;
   paymentQrCodeUrl?: string;
   paymentTerms?: string;
+  // Deposit payment configuration (New)
+  paymentMode?: 'full' | 'deposit';
+  depositAmount?: number;
+  depositPercentage?: number;
+  useDepositPercentage?: boolean;
+  depositDeadlineType?: 'none' | 'fixed' | 'hours';
+  depositDeadlineFixed?: string;
+  depositDeadlineHours?: number;
+  remainingDeadlineType?: 'none' | 'fixed' | 'hours';
+  remainingDeadlineFixed?: string;
+  remainingDeadlineHours?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +64,17 @@ interface UserRegistration {
   attendeeCount: number;
   registrationDate: string;
   attendeeNames: string;
+  // Deposit payment data (New)
+  totalAmount?: number;
+  depositAmount?: number;
+  remainingAmount?: number;
+  depositPaid?: boolean;
+  depositPaidDate?: string;
+  depositSlipUrl?: string;
+  remainingSlipUrl?: string;
+  depositDeadline?: string;
+  remainingDeadline?: string;
+  paymentStatus?: string;
 }
 
 export default function EventDetailPage() {
@@ -453,6 +477,97 @@ export default function EventDetailPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Payment Breakdown (NEW - for deposit mode) */}
+                  {event?.paymentMode === 'deposit' && userRegistration.totalAmount && userRegistration.totalAmount > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                      <h3 className="font-semibold text-blue-900 mb-4">รายละเอียดการชำระเงิน</h3>
+
+                      {/* Deposit Payment */}
+                      <div className="bg-white rounded-lg p-4 mb-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">มัดจำ</span>
+                          <span className="text-lg font-bold">฿{userRegistration.depositAmount?.toLocaleString() || 0}</span>
+                        </div>
+
+                        {userRegistration.depositDeadline && (
+                          <div className="text-sm text-gray-600 mb-2">
+                            ครบกำหนด: {formatDeadline(userRegistration.depositDeadline)}
+                            <br />
+                            <span className="text-orange-600 font-medium">
+                              {getTimeRemaining(userRegistration.depositDeadline)}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="mt-2">
+                          {userRegistration.depositPaid ? (
+                            <span className="text-sm text-green-600 flex items-center gap-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              ชำระแล้ว {userRegistration.depositPaidDate && `(${formatDeadline(userRegistration.depositPaidDate)})`}
+                            </span>
+                          ) : (
+                            <div className="text-sm text-gray-600">
+                              <p className="mb-1">แจ้งชำระเงินทาง LINE หรือติดต่อเจ้าหน้าที่</p>
+                              <p className="text-xs text-gray-500">เจ้าหน้าที่จะบันทึกการชำระเงินให้</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Remaining Payment (shown only if deposit paid and remaining > 0) */}
+                      {userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && (
+                        <div className="bg-white rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium">ยอดคงเหลือ</span>
+                            <span className="text-lg font-bold text-orange-600">
+                              ฿{userRegistration.remainingAmount.toLocaleString()}
+                            </span>
+                          </div>
+
+                          {userRegistration.remainingDeadline && (
+                            <div className="text-sm text-gray-600 mb-2">
+                              ครบกำหนด: {formatDeadline(userRegistration.remainingDeadline)}
+                              <br />
+                              <span className="text-orange-600 font-medium">
+                                {getTimeRemaining(userRegistration.remainingDeadline)}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="mt-2">
+                            {userRegistration.remainingSlipUrl ? (
+                              <span className="text-sm text-green-600 flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                ชำระครบแล้ว
+                              </span>
+                            ) : (
+                              <div className="text-sm text-gray-600">
+                                <p className="mb-1">แจ้งชำระเงินทาง LINE หรือติดต่อเจ้าหน้าที่</p>
+                                <p className="text-xs text-gray-500">เจ้าหน้าที่จะบันทึกการชำระเงินให้</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Payment Status Badge */}
+                      {userRegistration.paymentStatus && (
+                        <div className="mt-4 pt-4 border-t border-blue-200">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">สถานะการชำระเงิน:</span>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClass(userRegistration.paymentStatus)}`}>
+                              {userRegistration.paymentStatus}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Edit Form */}
                   {isEditing && (

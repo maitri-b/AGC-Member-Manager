@@ -4,7 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrations } from '@/lib/event-sheets';
-import { EventRegistration } from '@/types/event';
+import { EventRegistration, Event } from '@/types/event';
+import { determinePaymentStatus } from '@/lib/payment-status';
 
 // Helper function to check if registration is cancelled
 function isRegistrationCancelled(registration: EventRegistration): boolean {
@@ -73,6 +74,17 @@ export async function GET(
       paymentTerms: eventData?.paymentTerms || '',
       createdAt: eventData?.createdAt || '',
       updatedAt: eventData?.updatedAt || '',
+      // Deposit payment configuration (New)
+      paymentMode: eventData?.paymentMode || 'full',
+      depositAmount: eventData?.depositAmount ?? 0,
+      depositPercentage: eventData?.depositPercentage ?? 0,
+      useDepositPercentage: eventData?.useDepositPercentage ?? false,
+      depositDeadlineType: eventData?.depositDeadlineType || 'none',
+      depositDeadlineFixed: eventData?.depositDeadlineFixed || '',
+      depositDeadlineHours: eventData?.depositDeadlineHours ?? 0,
+      remainingDeadlineType: eventData?.remainingDeadlineType || 'none',
+      remainingDeadlineFixed: eventData?.remainingDeadlineFixed || '',
+      remainingDeadlineHours: eventData?.remainingDeadlineHours ?? 0,
     };
 
     // Get registration summary
@@ -112,12 +124,26 @@ export async function GET(
               return dateB > dateA ? 1 : -1; // descending order
             })[0];
 
+            // Calculate current payment status
+            const currentStatus = determinePaymentStatus(latestReg, eventData as Event);
+
             userRegistration = {
               registrationId: latestReg.registrationId,
               status: latestReg.status,
               attendeeCount: latestReg.attendeeCount,
               attendeeNames: latestReg.attendeeNames,
               registrationDate: latestReg.registrationDate,
+              // Deposit payment data (New)
+              totalAmount: latestReg.totalAmount,
+              depositAmount: latestReg.depositAmount,
+              remainingAmount: latestReg.remainingAmount,
+              depositPaid: latestReg.depositPaid,
+              depositPaidDate: latestReg.depositPaidDate,
+              depositSlipUrl: latestReg.depositSlipUrl,
+              remainingSlipUrl: latestReg.remainingSlipUrl,
+              depositDeadline: latestReg.depositDeadline,
+              remainingDeadline: latestReg.remainingDeadline,
+              paymentStatus: currentStatus,
             };
           }
         }

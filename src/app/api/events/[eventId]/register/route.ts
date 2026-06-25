@@ -7,6 +7,7 @@ import { getMemberById } from '@/lib/google-sheets';
 import { getEventRegistrations, addEventRegistration } from '@/lib/event-sheets';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
+import { calculatePaymentSplit, calculateDepositDeadline } from '@/lib/payment-deadlines';
 
 // Generate a unique 6-character registration ID
 function generateRegistrationId(): string {
@@ -106,6 +107,24 @@ export async function POST(
     // Calculate registration fee using tiered pricing if applicable
     const totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
 
+    // Calculate payment breakdown if deposit mode
+    let depositAmount = 0;
+    let remainingAmount = totalFee;
+    let depositDeadline = '';
+    let paymentStatus = totalFee > 0 ? 'รอชำระเงิน' : 'ลงทะเบียนแล้ว';
+
+    if (eventData.paymentMode === 'deposit' && totalFee > 0) {
+      const split = calculatePaymentSplit(totalFee, eventData as Event);
+      depositAmount = split.depositAmount;
+      remainingAmount = split.remainingAmount;
+
+      // Calculate deposit deadline
+      const registrationDate = new Date().toISOString();
+      depositDeadline = calculateDepositDeadline(eventData as Event, registrationDate);
+
+      paymentStatus = 'รอชำระมัดจำ';
+    }
+
     // Prepare registration data (matching sheet columns)
     // Write to BOTH old and new column names for backward compatibility
     const registrationData = {
@@ -130,7 +149,18 @@ export async function POST(
       shirt_fee: 0,
       total_amount: totalFee,
       slip_url: '',
-      status: totalFee > 0 ? 'รอชำระเงิน' : 'ลงทะเบียนแล้ว',
+      // Deposit payment fields (New)
+      deposit_amount: depositAmount,
+      remaining_amount: remainingAmount,
+      deposit_paid: false,
+      deposit_paid_date: '',
+      deposit_slip_url: '',
+      remaining_slip_url: '',
+      deposit_deadline: depositDeadline,
+      remaining_deadline: '',
+      payment_status: paymentStatus,
+      // End deposit payment fields
+      status: paymentStatus, // Keep for backward compatibility
       verified_by: '',
       verified_date: '',
       client_token: '',

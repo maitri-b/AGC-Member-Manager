@@ -34,6 +34,17 @@ interface Event {
   paymentAccountNumber?: string;
   paymentQrCodeUrl?: string;
   paymentTerms?: string;
+  // Deposit payment configuration (New)
+  paymentMode?: 'full' | 'deposit';
+  depositAmount?: number;
+  depositPercentage?: number;
+  useDepositPercentage?: boolean;
+  depositDeadlineType?: 'none' | 'fixed' | 'hours';
+  depositDeadlineFixed?: string;
+  depositDeadlineHours?: number;
+  remainingDeadlineType?: 'none' | 'fixed' | 'hours';
+  remainingDeadlineFixed?: string;
+  remainingDeadlineHours?: number;
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
@@ -76,6 +87,17 @@ interface EventFormData {
   paymentAccountNumber: string;
   paymentQrCodeUrl: string;
   paymentTerms: string;
+  // Deposit payment configuration (New)
+  paymentMode: 'full' | 'deposit';
+  depositAmount: number;
+  depositPercentage: number;
+  useDepositPercentage: boolean;
+  depositDeadlineType: 'none' | 'fixed' | 'hours';
+  depositDeadlineFixed: string;
+  depositDeadlineHours: number;
+  remainingDeadlineType: 'none' | 'fixed' | 'hours';
+  remainingDeadlineFixed: string;
+  remainingDeadlineHours: number;
 }
 
 const initialFormData: EventFormData = {
@@ -105,6 +127,17 @@ const initialFormData: EventFormData = {
   paymentAccountNumber: '',
   paymentQrCodeUrl: '',
   paymentTerms: '',
+  // Deposit payment configuration (New)
+  paymentMode: 'full',
+  depositAmount: 0,
+  depositPercentage: 30,
+  useDepositPercentage: false,
+  depositDeadlineType: 'none',
+  depositDeadlineFixed: '',
+  depositDeadlineHours: 0,
+  remainingDeadlineType: 'none',
+  remainingDeadlineFixed: '',
+  remainingDeadlineHours: 0,
 };
 
 export default function AdminEventsPage() {
@@ -207,6 +240,17 @@ export default function AdminEventsPage() {
         paymentAccountNumber: event.paymentAccountNumber ?? '',
         paymentQrCodeUrl: event.paymentQrCodeUrl ?? '',
         paymentTerms: event.paymentTerms ?? '',
+        // Deposit payment configuration (New)
+        paymentMode: event.paymentMode ?? 'full',
+        depositAmount: event.depositAmount ?? 0,
+        depositPercentage: event.depositPercentage ?? 30,
+        useDepositPercentage: event.useDepositPercentage ?? false,
+        depositDeadlineType: event.depositDeadlineType ?? 'none',
+        depositDeadlineFixed: event.depositDeadlineFixed ?? '',
+        depositDeadlineHours: event.depositDeadlineHours ?? 0,
+        remainingDeadlineType: event.remainingDeadlineType ?? 'none',
+        remainingDeadlineFixed: event.remainingDeadlineFixed ?? '',
+        remainingDeadlineHours: event.remainingDeadlineHours ?? 0,
       });
     } else {
       setEditingEvent(null);
@@ -951,6 +995,174 @@ export default function AdminEventsPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Deposit Payment Configuration (NEW) */}
+                {((formData.pricingType === 'fixed' && formData.registrationFee > 0) ||
+                  (formData.pricingType === 'tiered' && (formData.baseFee > 0 || formData.additionalFeePerPerson > 0))) && (
+                  <div className="md:col-span-2 border-t pt-4 mt-4">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                      ตั้งค่าการชำระเงิน (Deposit System)
+                    </h3>
+
+                    {/* Payment Mode Radio */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        รูปแบบการชำระเงิน
+                      </label>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            value="full"
+                            checked={formData.paymentMode === 'full'}
+                            onChange={() => setFormData({ ...formData, paymentMode: 'full' })}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">ชำระเต็มจำนวน (Full) - ชำระครั้งเดียว</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            value="deposit"
+                            checked={formData.paymentMode === 'deposit'}
+                            onChange={() => setFormData({ ...formData, paymentMode: 'deposit' })}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">ชำระแบบมัดจำ (Deposit) - แบ่ง 2 งวด</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Conditional: Show if deposit mode */}
+                    {formData.paymentMode === 'deposit' && (
+                      <>
+                        {/* Deposit Amount: Fixed vs Percentage */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <label className="flex items-center gap-2 mb-2">
+                              <input
+                                type="radio"
+                                checked={!formData.useDepositPercentage}
+                                onChange={() => setFormData({ ...formData, useDepositPercentage: false })}
+                              />
+                              <span className="text-sm font-medium">จำนวนเงินมัดจำคงที่ (บาท)</span>
+                            </label>
+                            <input
+                              type="number"
+                              value={formData.depositAmount || ''}
+                              onChange={(e) => setFormData({ ...formData, depositAmount: parseInt(e.target.value) || 0 })}
+                              disabled={formData.useDepositPercentage}
+                              className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100"
+                              placeholder="เช่น 500"
+                            />
+                          </div>
+                          <div>
+                            <label className="flex items-center gap-2 mb-2">
+                              <input
+                                type="radio"
+                                checked={formData.useDepositPercentage}
+                                onChange={() => setFormData({ ...formData, useDepositPercentage: true })}
+                              />
+                              <span className="text-sm font-medium">เปอร์เซ็นต์มัดจำ (%)</span>
+                            </label>
+                            <input
+                              type="number"
+                              value={formData.depositPercentage || ''}
+                              onChange={(e) => setFormData({ ...formData, depositPercentage: parseInt(e.target.value) || 0 })}
+                              disabled={!formData.useDepositPercentage}
+                              className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100"
+                              placeholder="เช่น 30"
+                              min="1"
+                              max="100"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Deposit Deadline */}
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            กำหนดชำระมัดจำ
+                          </label>
+                          <select
+                            value={formData.depositDeadlineType || 'none'}
+                            onChange={(e) => setFormData({ ...formData, depositDeadlineType: e.target.value as any })}
+                            className="w-full px-3 py-2 border rounded-md mb-2"
+                          >
+                            <option value="none">ไม่กำหนด - ไม่จำกัดเวลา</option>
+                            <option value="fixed">วันที่กำหนด - ระบุวันที่ชัดเจน</option>
+                            <option value="hours">ชั่วโมงจากลงทะเบียน - นับถอยหลัง</option>
+                          </select>
+
+                          {formData.depositDeadlineType === 'fixed' && (
+                            <input
+                              type="date"
+                              value={formData.depositDeadlineFixed || ''}
+                              onChange={(e) => setFormData({ ...formData, depositDeadlineFixed: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-md"
+                            />
+                          )}
+
+                          {formData.depositDeadlineType === 'hours' && (
+                            <div>
+                              <input
+                                type="number"
+                                value={formData.depositDeadlineHours || ''}
+                                onChange={(e) => setFormData({ ...formData, depositDeadlineHours: parseInt(e.target.value) || 0 })}
+                                className="w-full px-3 py-2 border rounded-md"
+                                placeholder="เช่น 72 (3 วัน)"
+                                min="1"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                จำนวนชั่วโมงนับจากเวลาที่ลงทะเบียน
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Remaining Deadline */}
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            กำหนดชำระยอดคงเหลือ
+                          </label>
+                          <select
+                            value={formData.remainingDeadlineType || 'none'}
+                            onChange={(e) => setFormData({ ...formData, remainingDeadlineType: e.target.value as any })}
+                            className="w-full px-3 py-2 border rounded-md mb-2"
+                          >
+                            <option value="none">ไม่กำหนด - ไม่จำกัดเวลา</option>
+                            <option value="fixed">วันที่กำหนด - ระบุวันที่ชัดเจน</option>
+                            <option value="hours">ชั่วโมงจากชำระมัดจำ - นับถอยหลัง</option>
+                          </select>
+
+                          {formData.remainingDeadlineType === 'fixed' && (
+                            <input
+                              type="date"
+                              value={formData.remainingDeadlineFixed || ''}
+                              onChange={(e) => setFormData({ ...formData, remainingDeadlineFixed: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-md"
+                            />
+                          )}
+
+                          {formData.remainingDeadlineType === 'hours' && (
+                            <div>
+                              <input
+                                type="number"
+                                value={formData.remainingDeadlineHours || ''}
+                                onChange={(e) => setFormData({ ...formData, remainingDeadlineHours: parseInt(e.target.value) || 0 })}
+                                className="w-full px-3 py-2 border rounded-md"
+                                placeholder="เช่น 168 (7 วัน)"
+                                min="1"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                จำนวนชั่วโมงนับจากเวลาที่ชำระมัดจำ
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {/* Document Link */}
                 <div className="md:col-span-2 border-t pt-4 mt-2">

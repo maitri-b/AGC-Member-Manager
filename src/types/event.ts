@@ -35,7 +35,18 @@ export interface EventRegistration {
   eventFee: number;                 // event_fee
   shirtFee: number;                 // shirt_fee
   totalAmount: number;              // total_amount
-  slipUrl: string;                  // slip_url
+  slipUrl: string;                  // slip_url (for full payment or legacy)
+
+  // Deposit Payment (New - for 2-stage payment)
+  depositAmount: number;            // deposit_amount - Deposit for this registration
+  remainingAmount: number;          // remaining_amount - Remaining balance
+  depositPaid: boolean;             // deposit_paid - Has deposit been paid?
+  depositPaidDate: string;          // deposit_paid_date - When deposit was paid (ISO timestamp)
+  depositSlipUrl: string;           // deposit_slip_url - Slip for deposit payment
+  remainingSlipUrl: string;         // remaining_slip_url - Slip for remaining payment
+  depositDeadline: string;          // deposit_deadline - ISO timestamp when deposit is due
+  remainingDeadline: string;        // remaining_deadline - ISO timestamp when remaining is due
+  paymentStatus: string;            // payment_status - Current computed payment status
 
   // Verification
   status: EventRegistrationStatus;  // status
@@ -91,6 +102,23 @@ export interface Event {
   paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
   paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
   paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
+
+  // Deposit Payment Configuration (New)
+  paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')
+  depositAmount?: number;           // จำนวนเงินมัดจำคงที่ (บาท)
+  depositPercentage?: number;       // เปอร์เซ็นต์มัดจำ (%)
+  useDepositPercentage?: boolean;   // ใช้เปอร์เซ็นต์หรือจำนวนคงที่
+
+  // Deposit Deadline Configuration
+  depositDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระมัดจำ
+  depositDeadlineFixed?: string;    // วันที่ตายตัว (YYYY-MM-DD)
+  depositDeadlineHours?: number;    // จำนวนชั่วโมงนับจากลงทะเบียน
+
+  // Remaining Balance Deadline Configuration
+  remainingDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระยอดคงเหลือ
+  remainingDeadlineFixed?: string;  // วันที่ตายตัว (YYYY-MM-DD)
+  remainingDeadlineHours?: number;  // จำนวนชั่วโมงนับจากชำระมัดจำ
+
   createdAt: string;                // ISO timestamp
   updatedAt: string;                // ISO timestamp
   createdBy?: string;               // User ID who created the event
@@ -125,6 +153,22 @@ export interface EventInput {
   paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
   paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
   paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
+
+  // Deposit Payment Configuration (New)
+  paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')
+  depositAmount?: number;           // จำนวนเงินมัดจำคงที่ (บาท)
+  depositPercentage?: number;       // เปอร์เซ็นต์มัดจำ (%)
+  useDepositPercentage?: boolean;   // ใช้เปอร์เซ็นต์หรือจำนวนคงที่
+
+  // Deposit Deadline Configuration
+  depositDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระมัดจำ
+  depositDeadlineFixed?: string;    // วันที่ตายตัว (YYYY-MM-DD)
+  depositDeadlineHours?: number;    // จำนวนชั่วโมงนับจากลงทะเบียน
+
+  // Remaining Balance Deadline Configuration
+  remainingDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระยอดคงเหลือ
+  remainingDeadlineFixed?: string;  // วันที่ตายตัว (YYYY-MM-DD)
+  remainingDeadlineHours?: number;  // จำนวนชั่วโมงนับจากชำระมัดจำ
 }
 
 // Member attendance summary
@@ -161,6 +205,16 @@ export type EventRegistrationStatus =
   | 'waitlist'      // รายชื่อสำรอง
   | string;
 
+// Payment Status types (New - for deposit payment system)
+export type PaymentStatus =
+  | 'รอชำระมัดจำ'           // Waiting for deposit payment
+  | 'รอชำระยอดที่เหลือ'     // Deposit paid, waiting for remaining balance
+  | 'ชำระครบแล้ว'           // Fully paid
+  | 'พ้นกำหนด'              // Overdue (deadline passed)
+  | 'ลงทะเบียนแล้ว'         // Legacy: registered (for free events or full payment mode)
+  | 'รอชำระเงิน'            // Legacy: waiting payment (full payment mode)
+  | string;
+
 export type AttendanceType =
   | 'agent'         // สมาชิก Agent Club
   | 'wholesales'    // Wholesales
@@ -190,6 +244,17 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   shirtFee: 'shirt_fee',
   totalAmount: 'total_amount',
   slipUrl: 'slip_url',
+  // Deposit payment fields (New)
+  depositAmount: 'deposit_amount',
+  remainingAmount: 'remaining_amount',
+  depositPaid: 'deposit_paid',
+  depositPaidDate: 'deposit_paid_date',
+  depositSlipUrl: 'deposit_slip_url',
+  remainingSlipUrl: 'remaining_slip_url',
+  depositDeadline: 'deposit_deadline',
+  remainingDeadline: 'remaining_deadline',
+  paymentStatus: 'payment_status',
+  // End deposit payment fields
   status: 'status',
   verifiedBy: 'verified_by',
   verifiedDate: 'verified_date',

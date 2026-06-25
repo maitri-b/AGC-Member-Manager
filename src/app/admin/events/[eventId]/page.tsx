@@ -6,6 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import * as XLSX from 'xlsx';
+import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
+import { getStatusBadgeClass } from '@/lib/payment-status';
 
 interface Event {
   eventId: string;
@@ -29,6 +31,17 @@ interface Attendee {
     status: string;
     checkinSections: string;
     tableNumber: string;
+    // Deposit payment fields (New)
+    totalAmount: number;
+    depositAmount: number;
+    remainingAmount: number;
+    depositPaid: boolean;
+    depositPaidDate: string;
+    depositSlipUrl: string;
+    remainingSlipUrl: string;
+    depositDeadline: string;
+    remainingDeadline: string;
+    paymentStatus: string;
   };
   member: {
     memberId: string;
@@ -75,6 +88,21 @@ export default function EventDetailPage() {
     status: string;
   }>({ attendeeCount: 1, attendeeNames: [''], status: 'pending' });
   const [updating, setUpdating] = useState(false);
+
+  // Payment confirmation state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentFormData, setPaymentFormData] = useState<{
+    registrationId: string;
+    paymentType: 'deposit' | 'remaining';
+    slipUrl: string;
+    paidDate: string;
+  }>({
+    registrationId: '',
+    paymentType: 'deposit',
+    slipUrl: '',
+    paidDate: new Date().toISOString().split('T')[0],
+  });
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -317,6 +345,67 @@ export default function EventDetailPage() {
         type: 'error',
         text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
       });
+    }
+  };
+
+  const handleOpenPaymentModal = (attendee: Attendee, paymentType: 'deposit' | 'remaining') => {
+    setPaymentFormData({
+      registrationId: attendee.registration.registrationId,
+      paymentType,
+      slipUrl: paymentType === 'deposit' ? attendee.registration.depositSlipUrl : attendee.registration.remainingSlipUrl,
+      paidDate: new Date().toISOString().split('T')[0],
+    });
+    setPaymentModalOpen(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setPaymentModalOpen(false);
+    setPaymentFormData({
+      registrationId: '',
+      paymentType: 'deposit',
+      slipUrl: '',
+      paidDate: new Date().toISOString().split('T')[0],
+    });
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!paymentFormData.paidDate) {
+      setActionMessage({ type: 'error', text: 'กรุณาระบุวันที่ชำระเงิน' });
+      return;
+    }
+
+    setConfirmingPayment(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/update-payment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registrationId: paymentFormData.registrationId,
+          paymentType: paymentFormData.paymentType,
+          slipUrl: paymentFormData.slipUrl,
+          paidDate: paymentFormData.paidDate,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่สามารถบันทึกการชำระเงินได้');
+      }
+
+      setActionMessage({ type: 'success', text: data.message || 'บันทึกการชำระเงินเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      handleClosePaymentModal();
+      fetchEventData(); // Refresh data
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
+    } finally {
+      setConfirmingPayment(false);
     }
   };
 
@@ -647,6 +736,92 @@ export default function EventDetailPage() {
                         </p>
                       )}
 
+                      {/* Payment Status & Actions (NEW) */}
+                      {attendee.registration.totalAmount > 0 && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xs font-semibold text-gray-700">สถานะการชำระเงิน</h4>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeClass(attendee.registration.paymentStatus)}`}>
+                              {attendee.registration.paymentStatus}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2 text-xs">
+                            {/* Total Amount */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">ยอดรวมทั้งหมด:</span>
+                              <span className="font-semibold">฿{attendee.registration.totalAmount.toLocaleString()}</span>
+                            </div>
+
+                            {/* Deposit Payment Section */}
+                            {attendee.registration.depositAmount > 0 && (
+                              <>
+                                <div className="border-t pt-2">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-gray-600 font-medium">มัดจำ:</span>
+                                    <span className="font-semibold">฿{attendee.registration.depositAmount.toLocaleString()}</span>
+                                  </div>
+                                  {attendee.registration.depositDeadline && (
+                                    <div className="text-gray-500 text-xs">
+                                      กำหนด: {formatDeadline(attendee.registration.depositDeadline)}
+                                      <br />
+                                      <span className="text-orange-600">{getTimeRemaining(attendee.registration.depositDeadline)}</span>
+                                    </div>
+                                  )}
+                                  {attendee.registration.depositPaid ? (
+                                    <div className="mt-1 flex items-center gap-2 text-green-600">
+                                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                      </svg>
+                                      ชำระแล้ว {attendee.registration.depositPaidDate && `(${formatDeadline(attendee.registration.depositPaidDate)})`}
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleOpenPaymentModal(attendee, 'deposit')}
+                                      className="mt-2 w-full px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                                    >
+                                      ✓ ยืนยันการรับชำระมัดจำ
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Remaining Payment Section (show if deposit paid) */}
+                                {attendee.registration.depositPaid && attendee.registration.remainingAmount > 0 && (
+                                  <div className="border-t pt-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-gray-600 font-medium">ยอดคงเหลือ:</span>
+                                      <span className="font-semibold text-orange-600">฿{attendee.registration.remainingAmount.toLocaleString()}</span>
+                                    </div>
+                                    {attendee.registration.remainingDeadline && (
+                                      <div className="text-gray-500 text-xs">
+                                        กำหนด: {formatDeadline(attendee.registration.remainingDeadline)}
+                                        <br />
+                                        <span className="text-orange-600">{getTimeRemaining(attendee.registration.remainingDeadline)}</span>
+                                      </div>
+                                    )}
+                                    {attendee.registration.remainingSlipUrl ? (
+                                      <div className="mt-1 flex items-center gap-2 text-green-600">
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                        ชำระครบแล้ว
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleOpenPaymentModal(attendee, 'remaining')}
+                                        className="mt-2 w-full px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                                      >
+                                        ✓ ยืนยันการรับชำระยอดคงเหลือ
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Edit Form */}
                       {isEditing && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
@@ -752,6 +927,75 @@ export default function EventDetailPage() {
           )}
         </div>
       </main>
+
+      {/* Payment Confirmation Modal */}
+      {paymentModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {paymentFormData.paymentType === 'deposit' ? 'ยืนยันการรับชำระมัดจำ' : 'ยืนยันการรับชำระยอดคงเหลือ'}
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  วันที่ชำระเงิน *
+                </label>
+                <input
+                  type="date"
+                  value={paymentFormData.paidDate}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, paidDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ระบุวันที่ลูกค้าชำระเงินจริง (ใช้สำหรับคำนวณกำหนดชำระส่วนถัดไป)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  URL สลิปการโอนเงิน (ถ้ามี)
+                </label>
+                <input
+                  type="text"
+                  value={paymentFormData.slipUrl}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, slipUrl: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  อัพโหลดสลิปไปยัง Cloud Storage แล้วใส่ URL ที่นี่
+                </p>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>หมายเหตุ:</strong> การกดยืนยันจะบันทึกการชำระเงินลงในระบบและอัพเดทสถานะอัตโนมัติ
+                  {paymentFormData.paymentType === 'deposit' && ' และคำนวณกำหนดชำระยอดคงเหลือ'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleConfirmPayment}
+                disabled={confirmingPayment || !paymentFormData.paidDate}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {confirmingPayment ? 'กำลังบันทึก...' : 'ยืนยันการชำระ'}
+              </button>
+              <button
+                onClick={handleClosePaymentModal}
+                disabled={confirmingPayment}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

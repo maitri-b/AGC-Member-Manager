@@ -6,6 +6,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { getMemberById } from '@/lib/google-sheets';
 import { getEventRegistrations, addEventRegistration } from '@/lib/event-sheets';
 import { EventRegistration } from '@/types/event';
+import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
 
 // Generate a unique 6-character registration ID
 function generateRegistrationId(): string {
@@ -145,6 +146,25 @@ export async function POST(
 
     // Add to Google Sheet
     await addEventRegistration(eventData.sheetName, registrationData);
+
+    // Send LINE confirmation message
+    if (session.user.id) {
+      try {
+        await sendEventRegistrationConfirmation(session.user.id, {
+          eventName: eventData.eventName || '',
+          eventNameEN: eventData.eventNameEN || '',
+          eventDate: eventData.eventDate || '',
+          location: eventData.location || '',
+          registrationId,
+          attendeeCount,
+          registrationFee: eventData.registrationFee || 0,
+          memberName: member.fullNameTH || member.nickname || '',
+        });
+      } catch (lineError) {
+        console.error('Failed to send LINE confirmation:', lineError);
+        // Don't fail the registration if LINE message fails
+      }
+    }
 
     return NextResponse.json({
       success: true,

@@ -83,6 +83,7 @@ export async function GET(
       return {
         registration: {
           registrationId: String(attendee.registration.registrationId || ''),
+          registrationDate: String(attendee.registration.registrationDate || ''),
           companyName: String(attendee.registration.companyName || ''),
           contactName: String(attendee.registration.contactName || ''),
           licenseNumber: String(attendee.registration.licenseNumber || ''),

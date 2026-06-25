@@ -20,6 +20,7 @@ interface Event {
 interface Attendee {
   registration: {
     registrationId: string;
+    registrationDate: string;
     companyName: string;
     contactName: string;
     licenseNumber: string;
@@ -121,6 +122,7 @@ export default function EventDetailPage() {
       const exportData = filteredAttendees.map((attendee, index) => ({
         'ลำดับ': index + 1,
         'รหัสลงทะเบียน': attendee.registration.registrationId,
+        'วันเวลาลงทะเบียน': attendee.registration.registrationDate || '',
         'ชื่อบริษัท': attendee.registration.companyName || attendee.member?.companyNameTH || '',
         'เลขใบอนุญาต': attendee.registration.licenseNumber || '',
         'ชื่อผู้ติดต่อ': attendee.registration.contactName || attendee.member?.fullNameTH || attendee.lineProfile?.lineDisplayName || '',
@@ -620,6 +622,9 @@ export default function EventDetailPage() {
 
                       {/* License & additional info */}
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
+                        {attendee.registration.registrationDate && (
+                          <span className="text-blue-600 font-medium">📅 ลงทะเบียน: {attendee.registration.registrationDate}</span>
+                        )}
                         {attendee.registration.licenseNumber && (
                           <span>ใบอนุญาต: {attendee.registration.licenseNumber}</span>
                         )}

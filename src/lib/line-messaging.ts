@@ -398,3 +398,48 @@ export async function sendMemberProfile(lineUserId: string, member: Member): Pro
   const flexMessage = createMemberProfileFlexMessage(member);
   return sendPushMessage(lineUserId, [flexMessage]);
 }
+
+// Send Event Registration Confirmation to LINE user
+export async function sendEventRegistrationConfirmation(
+  lineUserId: string,
+  eventData: {
+    eventName: string;
+    eventNameEN: string;
+    eventDate: string;
+    location: string;
+    registrationId: string;
+    attendeeCount: number;
+    registrationFee: number;
+    memberName: string;
+  }
+): Promise<boolean> {
+  const hasPayment = eventData.registrationFee > 0;
+
+  const message = `✅ ลงทะเบียนกิจกรรมสำเร็จ
+
+สวัสดีครับ คุณ${eventData.memberName}
+
+ระบบได้รับข้อมูลการลงทะเบียนของคุณเรียบร้อยแล้ว
+
+📋 รายละเอียดกิจกรรม
+${eventData.eventName}${eventData.eventNameEN ? `\n${eventData.eventNameEN}` : ''}
+
+📅 วันที่จัดงาน: ${eventData.eventDate}
+📍 สถานที่: ${eventData.location}
+
+🎫 รหัสลงทะเบียน: ${eventData.registrationId}
+👥 จำนวนผู้เข้าร่วม: ${eventData.attendeeCount} ท่าน${hasPayment ? `\n💰 ค่าลงทะเบียน: ${eventData.registrationFee.toLocaleString()} บาท
+
+⚠️ สถานะการลงทะเบียน: รอชำระเงิน
+กรุณาชำระเงินและอัพโหลดสลิปในระบบเพื่อยืนยันการเข้าร่วมงาน` : `\n✅ สถานะการลงทะเบียน: ลงทะเบียนสำเร็จ`}
+
+ขอบคุณที่เข้าร่วมกิจกรรมของ Agents Club
+Helping & Sharing`;
+
+  return sendPushMessage(lineUserId, [
+    {
+      type: 'text',
+      text: message,
+    },
+  ]);
+}

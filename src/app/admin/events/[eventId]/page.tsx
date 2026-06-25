@@ -624,7 +624,7 @@ export default function EventDetailPage() {
                       {/* License & additional info */}
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
                         {attendee.registration.registrationId && (
-                          <span className="text-purple-600 font-medium">🎫 รหัส: {attendee.registration.registrationId}</span>
+                          <span className="text-indigo-600 font-semibold">🎫 รหัส: {attendee.registration.registrationId}</span>
                         )}
                         {attendee.registration.registrationDate && (
                           <span className="text-blue-600 font-medium">📅 ลงทะเบียน: {attendee.registration.registrationDate}</span>

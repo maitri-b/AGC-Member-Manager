@@ -617,8 +617,8 @@ export default function EventDetailPage() {
                                     {attendeeCount === 1
                                       ? `${event.baseFee?.toLocaleString()} บาท/คน`
                                       : `${event.baseFee?.toLocaleString()} บาท (คนแรก) + ${event.additionalFeePerPerson?.toLocaleString()} บาท × ${attendeeCount - 1} คน`}
-                                    {event.memberDiscount > 0 && (
-                                      <span> - ส่วนลด {event.memberDiscount.toLocaleString()} บาท</span>
+                                    {(event.memberDiscount ?? 0) > 0 && (
+                                      <span> - ส่วนลด {event.memberDiscount!.toLocaleString()} บาท</span>
                                     )}
                                   </>
                                 ) : (
@@ -953,8 +953,8 @@ export default function EventDetailPage() {
                                 {attendeeCount === 1
                                   ? `${event.baseFee?.toLocaleString()} บาท/คน`
                                   : `${event.baseFee?.toLocaleString()} บาท (คนแรก) + ${event.additionalFeePerPerson?.toLocaleString()} บาท × ${attendeeCount - 1} คน`}
-                                {event.memberDiscount > 0 && (
-                                  <span> - ส่วนลด {event.memberDiscount.toLocaleString()} บาท</span>
+                                {(event.memberDiscount ?? 0) > 0 && (
+                                  <span> - ส่วนลด {event.memberDiscount!.toLocaleString()} บาท</span>
                                 )}
                               </>
                             ) : (

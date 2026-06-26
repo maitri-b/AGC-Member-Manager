@@ -87,6 +87,11 @@ export async function GET(
       remainingDeadlineType: eventData?.remainingDeadlineType || 'none',
       remainingDeadlineFixed: eventData?.remainingDeadlineFixed || '',
       remainingDeadlineHours: eventData?.remainingDeadlineHours ?? 0,
+      // Attendee type pricing (New)
+      useAttendeeTypePricing: eventData?.useAttendeeTypePricing ?? false,
+      attendeeTypes: eventData?.attendeeTypes || [],
+      // Room allocation (New)
+      roomTypes: eventData?.roomTypes || [],
     };
 
     // Get registration summary

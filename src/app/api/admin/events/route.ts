@@ -87,6 +87,8 @@ export async function GET() {
         // Attendee type pricing
         useAttendeeTypePricing: data.useAttendeeTypePricing ?? false,
         attendeeTypes: data.attendeeTypes || [],
+        // Room allocation
+        roomTypes: data.roomTypes || [],
         // Convert Firestore Timestamps to ISO strings
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
         updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
@@ -178,6 +180,8 @@ export async function POST(request: NextRequest) {
       // Attendee type pricing
       useAttendeeTypePricing: body.useAttendeeTypePricing ?? false,
       attendeeTypes: body.attendeeTypes || [],
+      // Room allocation
+      roomTypes: body.roomTypes || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: session.user.id,

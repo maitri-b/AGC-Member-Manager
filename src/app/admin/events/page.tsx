@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { AttendeeType } from '@/types/event';
+import { AttendeeType, RoomType } from '@/types/event';
 
 interface Event {
   eventId: string;
@@ -105,6 +105,8 @@ interface EventFormData {
   // Attendee type pricing (New)
   useAttendeeTypePricing: boolean;
   attendeeTypes: AttendeeType[];
+  // Room allocation (New)
+  roomTypes: RoomType[];
 }
 
 const initialFormData: EventFormData = {
@@ -151,6 +153,8 @@ const initialFormData: EventFormData = {
   // Attendee type pricing (New)
   useAttendeeTypePricing: false,
   attendeeTypes: [],
+  // Room allocation (New)
+  roomTypes: [],
 };
 
 export default function AdminEventsPage() {
@@ -270,6 +274,8 @@ export default function AdminEventsPage() {
         // Attendee type pricing (New)
         useAttendeeTypePricing: (event as any).useAttendeeTypePricing ?? false,
         attendeeTypes: (event as any).attendeeTypes ?? [],
+        // Room allocation (New)
+        roomTypes: (event as any).roomTypes ?? [],
       });
     } else {
       setEditingEvent(null);
@@ -1165,6 +1171,107 @@ export default function AdminEventsPage() {
                       <p className="text-xs text-orange-600">
                         <strong>หมายเหตุ:</strong> เมื่อเปิดใช้งาน ราคาต่อหัวแบบปกติจะถูกแทนที่ด้วยราคาตามประเภท
                       </p>
+
+                      {/* Room Type Configuration (NEW - only when attendee type pricing is enabled) */}
+                      <div className="border-t pt-4 mt-4">
+                        <h4 className="text-sm font-semibold text-gray-800 mb-3">
+                          ประเภทห้องพัก (Room Types)
+                        </h4>
+                        <p className="text-xs text-gray-600 mb-3">
+                          กำหนดประเภทห้องพักและค่าใช้จ่ายเพิ่มเติมสำหรับแต่ละประเภท:
+                        </p>
+
+                        <div className="space-y-3">
+                          {[
+                            { id: 'single', name: 'พักเดี่ยว', capacity: 1, defaultPrice: 0 },
+                            { id: 'double', name: 'พักคู่ Double', capacity: 2, defaultPrice: 0 },
+                            { id: 'twin', name: 'พักคู่ Twin', capacity: 2, defaultPrice: 0 },
+                            { id: 'triple', name: 'พัก 3 ท่าน', capacity: 3, defaultPrice: 0 }
+                          ].map((room, index) => {
+                            const existingRoom = formData.roomTypes?.find(rt => rt.typeId === room.id);
+                            const isActive = !!existingRoom;
+                            const price = existingRoom?.price ?? room.defaultPrice;
+                            const typeName = existingRoom?.typeName || room.name;
+
+                            return (
+                              <div key={room.id} className="flex items-center gap-3 bg-white p-3 rounded border">
+                                <input
+                                  type="checkbox"
+                                  checked={isActive}
+                                  onChange={(e) => {
+                                    const newRooms = [...(formData.roomTypes || [])];
+                                    if (e.target.checked) {
+                                      newRooms.push({
+                                        typeId: room.id,
+                                        typeName: room.name,
+                                        capacity: room.capacity,
+                                        price: room.defaultPrice,
+                                        isActive: true,
+                                        sortOrder: index
+                                      });
+                                    } else {
+                                      const idx = newRooms.findIndex(rt => rt.typeId === room.id);
+                                      if (idx > -1) newRooms.splice(idx, 1);
+                                    }
+                                    setFormData({ ...formData, roomTypes: newRooms });
+                                  }}
+                                  className="w-4 h-4"
+                                />
+
+                                {isActive ? (
+                                  <input
+                                    type="text"
+                                    value={typeName}
+                                    placeholder={room.name}
+                                    onChange={(e) => {
+                                      const newRooms = [...(formData.roomTypes || [])];
+                                      const idx = newRooms.findIndex(rt => rt.typeId === room.id);
+                                      if (idx > -1) {
+                                        newRooms[idx].typeName = e.target.value;
+                                        setFormData({ ...formData, roomTypes: newRooms });
+                                      }
+                                    }}
+                                    className="w-32 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium text-gray-400 w-32">{room.name}</span>
+                                )}
+
+                                <span className="text-xs text-gray-500">({room.capacity} คน)</span>
+
+                                {isActive && (
+                                  <div className="flex items-center gap-2 ml-auto">
+                                    <span className="text-sm text-gray-600">ราคาเพิ่ม:</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="100"
+                                      value={price}
+                                      onChange={(e) => {
+                                        const newRooms = [...(formData.roomTypes || [])];
+                                        const idx = newRooms.findIndex(rt => rt.typeId === room.id);
+                                        if (idx > -1) {
+                                          newRooms[idx].price = parseFloat(e.target.value) || 0;
+                                          setFormData({ ...formData, roomTypes: newRooms });
+                                        }
+                                      }}
+                                      className="w-24 px-3 py-1 border border-gray-300 rounded-md text-right"
+                                    />
+                                    <span className="text-sm text-gray-600">บาท</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <p className="text-xs text-gray-500 mt-2">
+                          ค่าใช้จ่ายห้องพักจะถูกบวกเพิ่มจากค่าลงทะเบียนตามประเภทผู้เข้าร่วม
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          <strong>หมายเหตุ:</strong> ระบบจะตรวจสอบว่าจำนวนห้องพักที่เลือกรองรับจำนวนผู้เข้าร่วมพอดี
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

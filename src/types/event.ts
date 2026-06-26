@@ -74,6 +74,9 @@ export interface EventRegistration {
 
   // Attendee Type Pricing (New - for events with different attendee categories)
   attendeeTypeSelections?: string;  // attendee_type_selections (JSON stringified AttendeeTypeSelection[])
+
+  // Room Allocation (New - for events with accommodation)
+  roomAllocations?: string;         // room_allocations (JSON stringified RoomAllocation[])
 }
 
 // Event metadata (for managing multiple events)
@@ -129,6 +132,9 @@ export interface Event {
   // Attendee Type Pricing (New - for events with accommodation or different attendee categories)
   useAttendeeTypePricing?: boolean; // ใช้ระบบราคาตามประเภทผู้เข้าร่วม (Default: false)
   attendeeTypes?: AttendeeType[];   // ประเภทผู้เข้าร่วมและราคา
+
+  // Room Allocation (New - for events with accommodation)
+  roomTypes?: RoomType[];           // ประเภทห้องพักและราคา (only when useAttendeeTypePricing is true)
 
   createdAt: string;                // ISO timestamp
   updatedAt: string;                // ISO timestamp
@@ -188,6 +194,9 @@ export interface EventInput {
   // Attendee Type Pricing (New - for events with accommodation or different attendee categories)
   useAttendeeTypePricing?: boolean; // ใช้ระบบราคาตามประเภทผู้เข้าร่วม (Default: false)
   attendeeTypes?: AttendeeType[];   // ประเภทผู้เข้าร่วมและราคา
+
+  // Room Allocation (New - for events with accommodation)
+  roomTypes?: RoomType[];           // ประเภทห้องพักและราคา (only when useAttendeeTypePricing is true)
 }
 
 // Member attendance summary
@@ -256,6 +265,21 @@ export interface AttendeeTypeSelection {
   quantity: number;              // Number of attendees of this type
 }
 
+// Room Type (New - for events with accommodation)
+export interface RoomType {
+  typeId: string;                // 'single', 'double', 'twin', 'triple', or custom
+  typeName: string;              // 'พักเดี่ยว', 'พักคู่ Double', 'พักคู่ Twin', 'พัก 3 ท่าน'
+  capacity: number;              // Number of people per room (1, 2, 3)
+  price: number;                 // Additional price for this room type
+  isActive: boolean;             // Admin can enable/disable
+  sortOrder: number;             // Display order
+}
+
+export interface RoomAllocation {
+  roomTypeId: string;            // Reference to RoomType.typeId
+  roomCount: number;             // Number of rooms of this type
+}
+
 // Google Sheet column mapping for Event Registration
 export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, string> = {
   registrationId: 'registration_id',
@@ -305,6 +329,8 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   lastUpdateInfo: 'last_update_info',
   // Attendee type pricing (New)
   attendeeTypeSelections: 'attendee_type_selections',
+  // Room allocation (New)
+  roomAllocations: 'room_allocations',
 };
 
 // Reverse mapping for sheet to registration conversion

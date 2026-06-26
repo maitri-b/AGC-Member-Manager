@@ -162,6 +162,7 @@ const REQUIRED_HEADERS = [
   'admin_notes',
   'last_update_info',
   'attendee_type_selections',
+  'room_allocations',
 ];
 
 // Initialize or validate event sheet headers

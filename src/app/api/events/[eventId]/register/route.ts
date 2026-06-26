@@ -37,7 +37,7 @@ export async function POST(
 
     const { eventId } = await params;
     const body = await request.json();
-    const { attendeeCount = 1, attendeeNames = [], specialRequests = '', attendeeTypeSelections = [] } = body;
+    const { attendeeCount = 1, attendeeNames = [], specialRequests = '', attendeeTypeSelections = [], roomAllocations = [] } = body;
 
     const db = adminDb();
 
@@ -148,6 +148,35 @@ export async function POST(
         }
         return sum + (type.price * s.quantity);
       }, 0);
+
+      // Validate and calculate room allocation fees (if room types are configured)
+      if (eventData.roomTypes && eventData.roomTypes.length > 0) {
+        if (!roomAllocations || roomAllocations.length === 0) {
+          return NextResponse.json({ error: 'กรุณาเลือกประเภทห้องพัก' }, { status: 400 });
+        }
+
+        // Calculate total room capacity and validate
+        let totalRoomCapacity = 0;
+        let roomFee = 0;
+        for (const alloc of roomAllocations) {
+          const roomType = eventData.roomTypes.find((rt: { typeId: string; capacity: number; price: number }) => rt.typeId === alloc.roomTypeId);
+          if (!roomType) {
+            return NextResponse.json({ error: `ไม่พบประเภทห้อง: ${alloc.roomTypeId}` }, { status: 400 });
+          }
+          totalRoomCapacity += roomType.capacity * alloc.roomCount;
+          roomFee += roomType.price * alloc.roomCount;
+        }
+
+        // Exact match required
+        if (totalRoomCapacity !== attendeeCount) {
+          return NextResponse.json({
+            error: `จำนวนที่นั่งในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalRoomCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
+          }, { status: 400 });
+        }
+
+        // Add room fees to total
+        totalFee += roomFee;
+      }
     } else {
       // Original fee calculation (fixed or tiered pricing)
       totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
@@ -208,6 +237,8 @@ export async function POST(
       // End deposit payment fields
       // Attendee type pricing (New)
       attendee_type_selections: JSON.stringify(attendeeTypeSelections),
+      // Room allocation (New)
+      room_allocations: JSON.stringify(roomAllocations),
       status: paymentStatus, // Keep for backward compatibility
       verified_by: '',
       verified_date: '',

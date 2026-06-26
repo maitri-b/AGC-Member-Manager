@@ -31,7 +31,7 @@ export async function PUT(
 
     const { eventId } = await params;
     const body = await request.json();
-    const { attendeeCount, attendeeNames, specialRequests, attendeeTypeSelections, requestNameChange } = body;
+    const { attendeeCount, attendeeNames, specialRequests, attendeeTypeSelections, roomAllocations, requestNameChange } = body;
 
     const db = adminDb();
 
@@ -156,11 +156,12 @@ export async function PUT(
     // Update attendee count and/or names
     const updateData: Record<string, unknown> = {};
 
-    // Check if attendee count or attendee type selections changed
+    // Check if attendee count, attendee type selections, or room allocations changed
     const attendeeCountChanged = attendeeCount !== undefined && attendeeCount !== userReg.attendeeCount;
     const attendeeTypeSelectionsChanged = attendeeTypeSelections && JSON.stringify(attendeeTypeSelections) !== (userReg.attendeeTypeSelections || '[]');
+    const roomAllocationsChanged = roomAllocations && JSON.stringify(roomAllocations) !== (userReg.roomAllocations || '[]');
 
-    if (attendeeCountChanged || attendeeTypeSelectionsChanged) {
+    if (attendeeCountChanged || attendeeTypeSelectionsChanged || roomAllocationsChanged) {
       if (attendeeCountChanged) {
         updateData.attendee_count = attendeeCount;
       }
@@ -180,7 +181,7 @@ export async function PUT(
           return NextResponse.json({ error: 'จำนวนผู้เข้าร่วมไม่ตรงกัน' }, { status: 400 });
         }
 
-        // Calculate fee
+        // Calculate fee from attendee types
         totalFee = selections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
           const type = eventData.attendeeTypes.find((t: { typeId: string; price: number }) => t.typeId === s.typeId);
           if (!type) {
@@ -190,6 +191,37 @@ export async function PUT(
         }, 0);
 
         updateData.attendee_type_selections = JSON.stringify(attendeeTypeSelections);
+
+        // Validate and calculate room allocation fees (if room types are configured)
+        if (eventData.roomTypes && eventData.roomTypes.length > 0) {
+          const allocations = roomAllocations || [];
+          if (allocations.length === 0) {
+            return NextResponse.json({ error: 'กรุณาเลือกประเภทห้องพัก' }, { status: 400 });
+          }
+
+          // Calculate total room capacity and validate
+          let totalRoomCapacity = 0;
+          let roomFee = 0;
+          for (const alloc of allocations) {
+            const roomType = eventData.roomTypes.find((rt: { typeId: string; capacity: number; price: number }) => rt.typeId === alloc.roomTypeId);
+            if (!roomType) {
+              return NextResponse.json({ error: `ไม่พบประเภทห้อง: ${alloc.roomTypeId}` }, { status: 400 });
+            }
+            totalRoomCapacity += roomType.capacity * alloc.roomCount;
+            roomFee += roomType.price * alloc.roomCount;
+          }
+
+          // Exact match required
+          if (totalRoomCapacity !== attendeeCount) {
+            return NextResponse.json({
+              error: `จำนวนที่นั่งในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalRoomCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
+            }, { status: 400 });
+          }
+
+          // Add room fees to total
+          totalFee += roomFee;
+          updateData.room_allocations = JSON.stringify(roomAllocations);
+        }
       } else {
         // Original fee calculation (fixed or tiered pricing)
         totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember

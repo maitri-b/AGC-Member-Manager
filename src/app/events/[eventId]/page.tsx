@@ -523,11 +523,11 @@ export default function EventDetailPage() {
                         <div className="bg-white border border-blue-300 rounded-lg p-3">
                           <p className="text-sm text-gray-600">
                             ที่นั่งเหลือ: <span className="font-semibold text-blue-600">
-                              {event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount} ที่
+                              {event.maxCapacity - summary.totalAttendees} ที่
                             </span>
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
-                            (คุณลงทะเบียนไว้ {userRegistration.attendeeCount} คน)
+                            (คุณลงทะเบียนไว้ {userRegistration.attendeeCount} คน รวมอยู่ในจำนวนที่จองแล้ว)
                           </p>
                         </div>
                       )}
@@ -610,26 +610,26 @@ export default function EventDetailPage() {
                         <div className="bg-white border border-blue-300 rounded-lg p-3">
                           <div className="flex justify-between items-center">
                             <div>
-                              <p className="text-sm text-gray-600">ค่าสมัครใหม่</p>
+                              <p className="text-sm text-gray-600">ค่าสมัครร่วมกิจกรรม</p>
                               <p className="text-xs text-gray-500">
                                 {event.pricingType === 'tiered' ? (
                                   <>
                                     {attendeeCount === 1
-                                      ? `฿${event.baseFee?.toLocaleString()}/คน`
-                                      : `฿${event.baseFee?.toLocaleString()} (คนแรก) + ฿${event.additionalFeePerPerson?.toLocaleString()} × ${attendeeCount - 1} คน`
+                                      ? `${event.baseFee?.toLocaleString()} บาท/คน`
+                                      : `${event.baseFee?.toLocaleString()} บาท (คนแรก) + ${event.additionalFeePerPerson?.toLocaleString()} บาท × ${attendeeCount - 1} คน`
                                     }
                                     {event.memberDiscount && event.memberDiscount > 0 && (
-                                      <span> - ส่วนลด ฿{event.memberDiscount.toLocaleString()}</span>
+                                      <span> - ส่วนลด {event.memberDiscount.toLocaleString()} บาท</span>
                                     )}
                                   </>
                                 ) : (
-                                  `${attendeeCount} คน × ฿${event.registrationFee.toLocaleString()}/คน`
+                                  `${attendeeCount} คน × ${event.registrationFee.toLocaleString()} บาท/คน`
                                 )}
                               </p>
                             </div>
                             <div className="text-right">
                               <p className="text-xl font-bold text-blue-600">
-                                ฿{calculateRegistrationFee(event, attendeeCount, true).toLocaleString()}
+                                {calculateRegistrationFee(event, attendeeCount, true).toLocaleString()} บาท
                               </p>
                             </div>
                           </div>
@@ -724,7 +724,7 @@ export default function EventDetailPage() {
                       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
                         <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
                         <div className="flex items-baseline justify-between">
-                          <span className="text-3xl font-bold">฿{userRegistration.totalAmount.toLocaleString()}</span>
+                          <span className="text-3xl font-bold">{userRegistration.totalAmount.toLocaleString()} บาท</span>
                           <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
                         </div>
                       </div>
@@ -733,7 +733,7 @@ export default function EventDetailPage() {
                       <div className="bg-white rounded-lg p-4 mb-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium">งวดที่ 1: มัดจำ</span>
-                          <span className="text-lg font-bold">฿{userRegistration.depositAmount?.toLocaleString() || 0}</span>
+                          <span className="text-lg font-bold">{userRegistration.depositAmount?.toLocaleString() || 0} บาท</span>
                         </div>
 
                         {userRegistration.depositDeadline && (
@@ -782,7 +782,7 @@ export default function EventDetailPage() {
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium">งวดที่ 2: ยอดคงเหลือ</span>
                             <span className="text-lg font-bold text-orange-600">
-                              ฿{userRegistration.remainingAmount.toLocaleString()}
+                              {userRegistration.remainingAmount.toLocaleString()} บาท
                             </span>
                           </div>
 
@@ -952,21 +952,21 @@ export default function EventDetailPage() {
                             {event.pricingType === 'tiered' ? (
                               <>
                                 {attendeeCount === 1
-                                  ? `฿${event.baseFee?.toLocaleString()}/คน`
-                                  : `฿${event.baseFee?.toLocaleString()} (คนแรก) + ฿${event.additionalFeePerPerson?.toLocaleString()} × ${attendeeCount - 1} คน`
+                                  ? `${event.baseFee?.toLocaleString()} บาท/คน`
+                                  : `${event.baseFee?.toLocaleString()} บาท (คนแรก) + ${event.additionalFeePerPerson?.toLocaleString()} บาท × ${attendeeCount - 1} คน`
                                 }
                                 {event.memberDiscount && event.memberDiscount > 0 && (
-                                  <span> - ส่วนลด ฿{event.memberDiscount.toLocaleString()}</span>
+                                  <span> - ส่วนลด {event.memberDiscount.toLocaleString()} บาท</span>
                                 )}
                               </>
                             ) : (
-                              `${attendeeCount} คน × ฿${event.registrationFee.toLocaleString()}/คน`
+                              `${attendeeCount} คน × ${event.registrationFee.toLocaleString()} บาท/คน`
                             )}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold text-blue-600">
-                            ฿{calculateRegistrationFee(event, attendeeCount, true).toLocaleString()}
+                            {calculateRegistrationFee(event, attendeeCount, true).toLocaleString()} บาท
                           </p>
                         </div>
                       </div>

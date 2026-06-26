@@ -102,6 +102,9 @@ export default function EventDetailPage() {
   const [specialRequests, setSpecialRequests] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
+  // Member contact info state (New)
+  const [memberName, setMemberName] = useState('');
+  const [memberPhone, setMemberPhone] = useState('');
   // Attendee type pricing state (New)
   const [attendeeTypeSelections, setAttendeeTypeSelections] = useState<AttendeeTypeSelection[]>([]);
   const [calculatedTotalFee, setCalculatedTotalFee] = useState(0);
@@ -143,6 +146,14 @@ export default function EventDetailPage() {
         setEvent(data.event);
         setSummary(data.summary);
         setUserRegistration(data.userRegistration);
+
+        // Store member contact info
+        if (data.memberName) {
+          setMemberName(data.memberName);
+        }
+        if (data.memberPhone) {
+          setMemberPhone(data.memberPhone);
+        }
 
         // Set first attendee name from member data
         if (data.memberName && !data.userRegistration) {
@@ -608,10 +619,29 @@ export default function EventDetailPage() {
                         </select>
                       </div>
 
+                      {/* Contact Information Card */}
+                      {memberName && memberPhone && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-blue-900 mb-3">
+                            ข้อมูลผู้ติดต่อ
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-600 font-medium w-20">ชื่อ:</span>
+                              <span className="text-gray-900">{memberName}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-600 font-medium w-20">เบอร์โทร:</span>
+                              <span className="text-gray-900">{memberPhone}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Attendee Names */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ชื่อผู้เข้าร่วม
+                          รายชื่อผู้สมัครร่วมกิจกรรม
                         </label>
                         <div className="space-y-2">
                           {Array.from({ length: attendeeCount }).map((_, index) => (
@@ -1151,10 +1181,29 @@ export default function EventDetailPage() {
                     </div>
                   )}
 
+                  {/* Contact Information Card */}
+                  {memberName && memberPhone && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-3">
+                        ข้อมูลผู้ติดต่อ
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium w-20">ชื่อ:</span>
+                          <span className="text-gray-900">{memberName}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium w-20">เบอร์โทร:</span>
+                          <span className="text-gray-900">{memberPhone}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Attendee Names */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ชื่อผู้เข้าร่วม
+                      รายชื่อผู้สมัครร่วมกิจกรรม
                     </label>
                     <div className="space-y-2">
                       {Array.from({ length: attendeeCount }).map((_, index) => (

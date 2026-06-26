@@ -38,6 +38,7 @@ interface Event {
   paymentAccountNumber?: string;
   paymentQrCodeUrl?: string;
   paymentTerms?: string;
+  paymentSlipSubmissionUrl?: string;
   // Deposit payment configuration (New)
   paymentMode?: 'full' | 'deposit';
   depositAmount?: number;
@@ -49,6 +50,13 @@ interface Event {
   remainingDeadlineType?: 'none' | 'fixed' | 'hours';
   remainingDeadlineFixed?: string;
   remainingDeadlineHours?: number;
+  // Registration edit control
+  allowMemberEdit?: boolean;
+  // Attendee type pricing (New)
+  useAttendeeTypePricing?: boolean;
+  attendeeTypes?: AttendeeType[];
+  // Room allocation (New)
+  roomTypes?: RoomType[];
   createdAt: string;
   updatedAt: string;
 }
@@ -186,7 +194,7 @@ export default function EventDetailPage() {
     }
 
     // Validate room allocation (if required)
-    if ((event as any).useAttendeeTypePricing && (event as any).roomTypes && (event as any).roomTypes.length > 0) {
+    if (event.useAttendeeTypePricing && event.roomTypes && event.roomTypes.length > 0) {
       if (roomAllocations.length === 0) {
         toast.error('กรุณาเลือกประเภทห้องพัก');
         return;
@@ -195,7 +203,7 @@ export default function EventDetailPage() {
       // Calculate total capacity
       let totalCapacity = 0;
       for (const alloc of roomAllocations) {
-        const rt = ((event as any).roomTypes as RoomType[]).find((r: RoomType) => r.typeId === alloc.roomTypeId);
+        const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
         if (rt) {
           totalCapacity += rt.capacity * alloc.roomCount;
         }
@@ -537,7 +545,7 @@ export default function EventDetailPage() {
                           }}
                           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                         >
-                          {((event as any)?.allowMemberEdit ?? true) ? 'แก้ไขข้อมูล' : 'ดูข้อมูล'}
+                          {(event.allowMemberEdit ?? true) ? 'แก้ไขข้อมูล' : 'ดูข้อมูล'}
                         </button>
                       )}
                     </div>
@@ -547,7 +555,7 @@ export default function EventDetailPage() {
                   {isEditing && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
                       <h3 className="font-semibold text-blue-900">
-                        {((event as any)?.allowMemberEdit ?? true) ? 'แก้ไขข้อมูลการลงทะเบียน' : 'ข้อมูลการลงทะเบียน'}
+                        {(event.allowMemberEdit ?? true) ? 'แก้ไขข้อมูลการลงทะเบียน' : 'ข้อมูลการลงทะเบียน'}
                       </h3>
 
                       {/* Capacity Info */}
@@ -577,7 +585,7 @@ export default function EventDetailPage() {
                         <select
                           value={attendeeCount}
                           onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
-                          disabled={!((event as any)?.allowMemberEdit ?? true)}
+                          disabled={!(event.allowMemberEdit ?? true)}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                         >
                           {Array.from(
@@ -612,7 +620,7 @@ export default function EventDetailPage() {
                               type="text"
                               value={attendeeNames[index] || ''}
                               onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
-                              disabled={!((event as any)?.allowMemberEdit ?? true)}
+                              disabled={!(event.allowMemberEdit ?? true)}
                               placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                             />
@@ -621,14 +629,14 @@ export default function EventDetailPage() {
                       </div>
 
                       {/* Room Allocation (only when attendee type pricing is enabled and room types are configured) */}
-                      {(event as any).useAttendeeTypePricing && (event as any).roomTypes && (event as any).roomTypes.length > 0 && (
+                      {event.useAttendeeTypePricing && event.roomTypes && event.roomTypes.length > 0 && (
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                           <h4 className="text-sm font-semibold text-amber-900 mb-3">
                             เลือกประเภทห้องพัก *
                           </h4>
 
                           <div className="space-y-3">
-                            {((event as any).roomTypes as RoomType[])
+                            {event.roomTypes
                               .filter((rt: RoomType) => rt.isActive)
                               .sort((a, b) => a.sortOrder - b.sortOrder)
                               .map(roomType => {
@@ -656,7 +664,7 @@ export default function EventDetailPage() {
                                         // Calculate total capacity
                                         let totalCapacity = 0;
                                         for (const alloc of newAllocations) {
-                                          const rt = ((event as any).roomTypes as RoomType[]).find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                          const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                           if (rt) {
                                             totalCapacity += rt.capacity * alloc.roomCount;
                                           }
@@ -674,7 +682,7 @@ export default function EventDetailPage() {
                                         // Calculate room fee
                                         let roomFee = 0;
                                         for (const alloc of newAllocations) {
-                                          const rt = ((event as any).roomTypes as RoomType[]).find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                          const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                           if (rt) {
                                             roomFee += rt.price * alloc.roomCount;
                                           }
@@ -710,7 +718,7 @@ export default function EventDetailPage() {
                               <div className="space-y-1">
                                 <p className="text-sm text-green-600 font-medium">
                                   ✓ รองรับ {roomAllocations.reduce((sum, ra) => {
-                                    const rt = ((event as any).roomTypes as RoomType[]).find((r: RoomType) => r.typeId === ra.roomTypeId);
+                                    const rt = event.roomTypes.find((r: RoomType) => r.typeId === ra.roomTypeId);
                                     return sum + (rt?.capacity || 0) * ra.roomCount;
                                   }, 0)} คน (ลงทะเบียน {attendeeCount} คน)
                                 </p>
@@ -778,7 +786,7 @@ export default function EventDetailPage() {
 
                       {/* Action Buttons */}
                       <div className="flex gap-3 pt-2">
-                        {((event as any)?.allowMemberEdit ?? true) ? (
+                        {(event.allowMemberEdit ?? true) ? (
                           <>
                             <button
                               onClick={async () => {
@@ -792,7 +800,7 @@ export default function EventDetailPage() {
                                 }
 
                                 // Validate room allocation (if required)
-                                if ((event as any).useAttendeeTypePricing && (event as any).roomTypes && (event as any).roomTypes.length > 0) {
+                                if (event.useAttendeeTypePricing && event.roomTypes && event.roomTypes.length > 0) {
                                   if (roomAllocations.length === 0) {
                                     toast.error('กรุณาเลือกประเภทห้องพัก');
                                     return;
@@ -801,7 +809,7 @@ export default function EventDetailPage() {
                                   // Calculate total capacity
                                   let totalCapacity = 0;
                                   for (const alloc of roomAllocations) {
-                                    const rt = ((event as any).roomTypes as RoomType[]).find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                    const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                     if (rt) {
                                       totalCapacity += rt.capacity * alloc.roomCount;
                                     }
@@ -920,11 +928,11 @@ export default function EventDetailPage() {
                             </span>
                           ) : (
                             <div className="text-sm text-gray-600">
-                              {(event as any).paymentSlipSubmissionUrl ? (
+                              {event.paymentSlipSubmissionUrl ? (
                                 <p className="mb-1">
                                   โปรดชำระเงินและส่งหลักฐานการชำระมาที่{' '}
                                   <a
-                                    href={(event as any).paymentSlipSubmissionUrl}
+                                    href={event.paymentSlipSubmissionUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-blue-600 hover:text-blue-800 underline font-medium"
@@ -978,11 +986,11 @@ export default function EventDetailPage() {
                               </span>
                             ) : userRegistration.depositPaid ? (
                               <div className="text-sm text-gray-600">
-                                {(event as any).paymentSlipSubmissionUrl ? (
+                                {event.paymentSlipSubmissionUrl ? (
                                   <p className="mb-1">
                                     โปรดชำระเงินและส่งหลักฐานการชำระมาที่{' '}
                                     <a
-                                      href={(event as any).paymentSlipSubmissionUrl}
+                                      href={event.paymentSlipSubmissionUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-blue-600 hover:text-blue-800 underline font-medium"
@@ -1047,14 +1055,14 @@ export default function EventDetailPage() {
                   <h3 className="text-lg font-semibold text-gray-900">ลงทะเบียนเข้าร่วมกิจกรรม</h3>
 
                   {/* Attendee Type Selection (if enabled) */}
-                  {(event as any).useAttendeeTypePricing && (event as any).attendeeTypes ? (
+                  {event.useAttendeeTypePricing && event.attendeeTypes && event.attendeeTypes.length > 0 ? (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <h4 className="text-sm font-semibold text-blue-900 mb-3">
                         เลือกจำนวนผู้เข้าร่วมตามประเภท *
                       </h4>
 
                       <div className="space-y-3">
-                        {((event as any).attendeeTypes as AttendeeType[])
+                        {event.attendeeTypes
                           .filter((t: AttendeeType) => t.isActive)
                           .sort((a, b) => a.sortOrder - b.sortOrder)
                           .map(type => {
@@ -1084,7 +1092,7 @@ export default function EventDetailPage() {
                                     setAttendeeCount(totalCount);
 
                                     const totalFee = newSelections.reduce((sum, s) => {
-                                      const t = ((event as any).attendeeTypes as AttendeeType[]).find((at: AttendeeType) => at.typeId === s.typeId);
+                                      const t = event.attendeeTypes.find((at: AttendeeType) => at.typeId === s.typeId);
                                       return sum + (t?.price || 0) * s.quantity;
                                     }, 0);
                                     setCalculatedTotalFee(totalFee);
@@ -1163,14 +1171,14 @@ export default function EventDetailPage() {
                   </div>
 
                   {/* Room Allocation in Edit Mode (only when attendee type pricing is enabled and room types are configured) */}
-                  {(event as any).useAttendeeTypePricing && (event as any).roomTypes && (event as any).roomTypes.length > 0 && (
+                  {event.useAttendeeTypePricing && event.roomTypes && event.roomTypes.length > 0 && (
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                       <h4 className="text-sm font-semibold text-amber-900 mb-3">
                         เลือกประเภทห้องพัก *
                       </h4>
 
                       <div className="space-y-3">
-                        {((event as any).roomTypes as RoomType[])
+                        {event.roomTypes
                           .filter((rt: RoomType) => rt.isActive)
                           .sort((a, b) => a.sortOrder - b.sortOrder)
                           .map(roomType => {
@@ -1198,7 +1206,7 @@ export default function EventDetailPage() {
                                     // Calculate total capacity
                                     let totalCapacity = 0;
                                     for (const alloc of newAllocations) {
-                                      const rt = ((event as any).roomTypes as RoomType[]).find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                      const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                       if (rt) {
                                         totalCapacity += rt.capacity * alloc.roomCount;
                                       }
@@ -1216,7 +1224,7 @@ export default function EventDetailPage() {
                                     // Calculate room fee
                                     let roomFee = 0;
                                     for (const alloc of newAllocations) {
-                                      const rt = ((event as any).roomTypes as RoomType[]).find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                      const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                       if (rt) {
                                         roomFee += rt.price * alloc.roomCount;
                                       }
@@ -1252,7 +1260,7 @@ export default function EventDetailPage() {
                           <div className="space-y-1">
                             <p className="text-sm text-green-600 font-medium">
                               ✓ รองรับ {roomAllocations.reduce((sum, ra) => {
-                                const rt = ((event as any).roomTypes as RoomType[]).find((r: RoomType) => r.typeId === ra.roomTypeId);
+                                const rt = event.roomTypes.find((r: RoomType) => r.typeId === ra.roomTypeId);
                                 return sum + (rt?.capacity || 0) * ra.roomCount;
                               }, 0)} คน (ลงทะเบียน {attendeeCount} คน)
                             </p>

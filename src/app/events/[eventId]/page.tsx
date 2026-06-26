@@ -465,19 +465,19 @@ export default function EventDetailPage() {
                         <div className="flex-1">
                           <p className="font-semibold text-green-800">คุณลงทะเบียนแล้ว</p>
                           <p className="text-sm text-green-700 flex items-center gap-2">
-                            <span>
+                            <span className="flex items-center gap-2">
                               รหัสลงทะเบียน: {userRegistration.registrationId}
-                              {userRegistration.status && ` | สถานะ: ${userRegistration.status}`}
+                              <button
+                                onClick={() => copyToClipboard(userRegistration.registrationId, 'รหัสลงทะเบียน')}
+                                className="p-1 text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                                title="คัดลอกรหัสลงทะเบียน"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              </button>
                             </span>
-                            <button
-                              onClick={() => copyToClipboard(userRegistration.registrationId, 'รหัสลงทะเบียน')}
-                              className="p-1 text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
-                              title="คัดลอกรหัสลงทะเบียน"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            </button>
+                            {userRegistration.status && <span> | สถานะ: {userRegistration.status}</span>}
                           </p>
                           <p className="text-sm text-green-700 mt-1">
                             จำนวนผู้เข้าร่วม: {userRegistration.attendeeCount} คน

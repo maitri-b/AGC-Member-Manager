@@ -16,7 +16,9 @@
       "Bash(cat:*)",
       "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(node check-event-data.js:*)"
     ]
   }
 }

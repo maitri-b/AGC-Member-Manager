@@ -53,13 +53,45 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         isPublished: data.isPublished ?? false,
         countsAttendance: data.countsAttendance ?? true,
         maxCapacity: data.maxCapacity ?? 0,
+        maxPerCompany: data.maxPerCompany ?? 0,
         registrationFee: data.registrationFee ?? 0,
+        pricingType: data.pricingType || 'fixed',
+        baseFee: data.baseFee ?? 0,
+        additionalFeePerPerson: data.additionalFeePerPerson ?? 0,
+        memberDiscount: data.memberDiscount ?? 0,
         registrationOpen: data.registrationOpen ?? false,
         documentName: data.documentName || '',
         documentUrl: data.documentUrl || '',
+        mainImageUrl: data.mainImageUrl || '',
+        paymentBankName: data.paymentBankName || '',
+        paymentAccountName: data.paymentAccountName || '',
+        paymentAccountNumber: data.paymentAccountNumber || '',
+        paymentQrCodeUrl: data.paymentQrCodeUrl || '',
+        paymentTerms: data.paymentTerms || '',
+        paymentSlipSubmissionUrl: data.paymentSlipSubmissionUrl || '',
+        // Deposit payment configuration
+        paymentMode: data.paymentMode || 'full',
+        depositAmount: data.depositAmount ?? 0,
+        depositPercentage: data.depositPercentage ?? 0,
+        useDepositPercentage: data.useDepositPercentage ?? false,
+        depositDeadlineType: data.depositDeadlineType || 'none',
+        depositDeadlineFixed: data.depositDeadlineFixed || '',
+        depositDeadlineHours: data.depositDeadlineHours ?? 0,
+        remainingDeadlineType: data.remainingDeadlineType || 'none',
+        remainingDeadlineFixed: data.remainingDeadlineFixed || '',
+        remainingDeadlineHours: data.remainingDeadlineHours ?? 0,
+        // Registration edit control
+        allowMemberEdit: data.allowMemberEdit ?? true,
+        // Attendee type pricing (NEW)
+        useAttendeeTypePricing: data.useAttendeeTypePricing ?? false,
+        attendeeTypes: data.attendeeTypes || [],
+        // Room allocation (NEW)
+        roomTypes: data.roomTypes || [],
         // Convert Firestore Timestamps to ISO strings
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
         updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
+        createdBy: data.createdBy || '',
+        updatedBy: data.updatedBy || '',
       };
     }) as Event[];
 

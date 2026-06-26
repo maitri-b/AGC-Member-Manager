@@ -401,12 +401,13 @@ export function getPricingSummary(event: Event | EventInput): string {
     if (event.baseFee === 0 && event.additionalFeePerPerson === 0) {
       return 'ฟรี';
     }
-    return `คนแรก ฿${event.baseFee.toLocaleString()}, คนที่ 2+ ฿${event.additionalFeePerPerson.toLocaleString()}/คน`;
+    // Simplified pricing display - just show starting price
+    return `เริ่มต้น ${event.baseFee.toLocaleString()} บาท`;
   }
 
   // Legacy fixed pricing
   if (event.registrationFee === 0) {
     return 'ฟรี';
   }
-  return `฿${event.registrationFee.toLocaleString()}/คน`;
+  return `${event.registrationFee.toLocaleString()} บาท/คน`;
 }

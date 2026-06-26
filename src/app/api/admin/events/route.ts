@@ -70,6 +70,7 @@ export async function GET() {
         paymentAccountNumber: data.paymentAccountNumber || '',
         paymentQrCodeUrl: data.paymentQrCodeUrl || '',
         paymentTerms: data.paymentTerms || '',
+        paymentSlipSubmissionUrl: data.paymentSlipSubmissionUrl || '',
         // Deposit payment configuration (New)
         paymentMode: data.paymentMode || 'full',
         depositAmount: data.depositAmount ?? 0,
@@ -82,7 +83,7 @@ export async function GET() {
         remainingDeadlineFixed: data.remainingDeadlineFixed || '',
         remainingDeadlineHours: data.remainingDeadlineHours ?? 0,
         // Registration edit control
-        allowMemberEdit: data.allowMemberEdit !== false,
+        allowMemberEdit: data.allowMemberEdit ?? true,
         // Convert Firestore Timestamps to ISO strings
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
         updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
@@ -157,6 +158,7 @@ export async function POST(request: NextRequest) {
       paymentAccountNumber: body.paymentAccountNumber || '',
       paymentQrCodeUrl: body.paymentQrCodeUrl || '',
       paymentTerms: body.paymentTerms || '',
+      paymentSlipSubmissionUrl: body.paymentSlipSubmissionUrl || '',
       // Deposit payment configuration (New)
       paymentMode: body.paymentMode || 'full',
       depositAmount: body.depositAmount ?? 0,
@@ -169,7 +171,7 @@ export async function POST(request: NextRequest) {
       remainingDeadlineFixed: body.remainingDeadlineFixed || '',
       remainingDeadlineHours: body.remainingDeadlineHours ?? 0,
       // Registration edit control
-      allowMemberEdit: body.allowMemberEdit !== false,
+      allowMemberEdit: body.allowMemberEdit ?? true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: session.user.id,

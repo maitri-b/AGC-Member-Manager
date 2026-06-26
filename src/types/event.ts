@@ -102,6 +102,7 @@ export interface Event {
   paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
   paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
   paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
+  paymentSlipSubmissionUrl?: string; // URL สำหรับส่งหลักฐานการชำระเงิน (Google Form / ฟอร์มอื่นๆ)
 
   // Deposit Payment Configuration (New)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')
@@ -156,6 +157,7 @@ export interface EventInput {
   paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
   paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
   paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
+  paymentSlipSubmissionUrl?: string; // URL สำหรับส่งหลักฐานการชำระเงิน (Google Form / ฟอร์มอื่นๆ)
 
   // Deposit Payment Configuration (New)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')

@@ -652,7 +652,21 @@ export default function EventDetailPage() {
                             </span>
                           ) : (
                             <div className="text-sm text-gray-600">
-                              <p className="mb-1">โปรดชำระเงินและส่งหลักฐานการชำระตามที่แจ้งไว้ที่ข้อมูลการชำระเงิน</p>
+                              {(event as any).paymentSlipSubmissionUrl ? (
+                                <p className="mb-1">
+                                  โปรดชำระเงินและส่งหลักฐานการชำระมาที่{' '}
+                                  <a
+                                    href={(event as any).paymentSlipSubmissionUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                  >
+                                    ฟอร์มส่งหลักฐาน
+                                  </a>
+                                </p>
+                              ) : (
+                                <p className="mb-1">โปรดชำระเงินและส่งหลักฐานการชำระตามที่แจ้งไว้ที่ข้อมูลการชำระเงิน</p>
+                              )}
                             </div>
                           )}
                         </div>
@@ -696,7 +710,21 @@ export default function EventDetailPage() {
                               </span>
                             ) : userRegistration.depositPaid ? (
                               <div className="text-sm text-gray-600">
-                                <p className="mb-1">โปรดชำระเงินและส่งหลักฐานการชำระตามที่แจ้งไว้ที่ข้อมูลการชำระเงิน</p>
+                                {(event as any).paymentSlipSubmissionUrl ? (
+                                  <p className="mb-1">
+                                    โปรดชำระเงินและส่งหลักฐานการชำระมาที่{' '}
+                                    <a
+                                      href={(event as any).paymentSlipSubmissionUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                    >
+                                      ฟอร์มส่งหลักฐาน
+                                    </a>
+                                  </p>
+                                ) : (
+                                  <p className="mb-1">โปรดชำระเงินและส่งหลักฐานการชำระตามที่แจ้งไว้ที่ข้อมูลการชำระเงิน</p>
+                                )}
                               </div>
                             ) : (
                               <div className="text-xs text-gray-500 italic">

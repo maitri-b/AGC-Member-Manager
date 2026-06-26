@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
+import { AttendeeType } from '@/types/event';
 
 interface Event {
   eventId: string;
@@ -101,6 +102,9 @@ interface EventFormData {
   remainingDeadlineHours: number;
   // Registration edit control
   allowMemberEdit: boolean;
+  // Attendee type pricing (New)
+  useAttendeeTypePricing: boolean;
+  attendeeTypes: AttendeeType[];
 }
 
 const initialFormData: EventFormData = {
@@ -144,6 +148,9 @@ const initialFormData: EventFormData = {
   remainingDeadlineHours: 0,
   // Registration edit control
   allowMemberEdit: true,
+  // Attendee type pricing (New)
+  useAttendeeTypePricing: false,
+  attendeeTypes: [],
 };
 
 export default function AdminEventsPage() {
@@ -260,6 +267,9 @@ export default function AdminEventsPage() {
         remainingDeadlineHours: event.remainingDeadlineHours ?? 0,
         // Registration edit control
         allowMemberEdit: (event as any).allowMemberEdit !== false,
+        // Attendee type pricing (New)
+        useAttendeeTypePricing: (event as any).useAttendeeTypePricing ?? false,
+        attendeeTypes: (event as any).attendeeTypes ?? [],
       });
     } else {
       setEditingEvent(null);
@@ -1039,6 +1049,107 @@ export default function AdminEventsPage() {
                       <p className="text-xs text-gray-500 mt-1">จำกัดจำนวนผู้เข้าร่วมต่อ 1 บริษัท (0 = ไม่จำกัด)</p>
                     </div>
                   </div>
+                </div>
+
+                {/* Attendee Type Pricing Configuration (NEW) */}
+                <div className="md:col-span-2 border-t pt-4 mt-4">
+                  <label className="flex items-center gap-2 cursor-pointer mb-3">
+                    <input
+                      type="checkbox"
+                      checked={formData.useAttendeeTypePricing || false}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        setFormData({
+                          ...formData,
+                          useAttendeeTypePricing: isChecked,
+                          // Reset attendee types if unchecked
+                          attendeeTypes: isChecked ? formData.attendeeTypes : []
+                        });
+                      }}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-semibold text-gray-800">
+                      ใช้ราคาแยกตามประเภทผู้เข้าร่วม
+                      <span className="text-gray-500 font-normal ml-1">(เหมาะสำหรับกิจกรรมที่มีที่พัก)</span>
+                    </span>
+                  </label>
+
+                  {formData.useAttendeeTypePricing && (
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      <p className="text-sm text-gray-600 mb-3">
+                        กำหนดประเภทผู้เข้าร่วมและราคาสำหรับแต่ละประเภท:
+                      </p>
+
+                      {/* Default attendee types */}
+                      <div className="space-y-3">
+                        {[
+                          { id: 'adult', name: 'ผู้ใหญ่', defaultPrice: 0 },
+                          { id: 'child_with_bed', name: 'เด็กพักเพิ่มเตียง', defaultPrice: 0 },
+                          { id: 'child_no_bed', name: 'เด็กไม่เพิ่มเตียง', defaultPrice: 0 },
+                          { id: 'infant', name: 'ทารก', defaultPrice: 0 }
+                        ].map((type, index) => {
+                          const existingType = formData.attendeeTypes?.find(at => at.typeId === type.id);
+                          const isActive = !!existingType;
+                          const price = existingType?.price ?? type.defaultPrice;
+
+                          return (
+                            <div key={type.id} className="flex items-center gap-3 bg-white p-3 rounded border">
+                              <input
+                                type="checkbox"
+                                checked={isActive}
+                                onChange={(e) => {
+                                  const newTypes = [...(formData.attendeeTypes || [])];
+                                  if (e.target.checked) {
+                                    newTypes.push({
+                                      typeId: type.id,
+                                      typeName: type.name,
+                                      price: type.defaultPrice,
+                                      isActive: true,
+                                      sortOrder: index
+                                    });
+                                  } else {
+                                    const idx = newTypes.findIndex(at => at.typeId === type.id);
+                                    if (idx > -1) newTypes.splice(idx, 1);
+                                  }
+                                  setFormData({ ...formData, attendeeTypes: newTypes });
+                                }}
+                                className="w-4 h-4"
+                              />
+                              <span className="text-sm font-medium w-32">{type.name}</span>
+                              {isActive && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-gray-600">ราคา:</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="100"
+                                    value={price}
+                                    onChange={(e) => {
+                                      const newTypes = [...(formData.attendeeTypes || [])];
+                                      const idx = newTypes.findIndex(at => at.typeId === type.id);
+                                      if (idx > -1) {
+                                        newTypes[idx].price = parseFloat(e.target.value) || 0;
+                                        setFormData({ ...formData, attendeeTypes: newTypes });
+                                      }
+                                    }}
+                                    className="w-24 px-3 py-1 border border-gray-300 rounded-md text-right"
+                                  />
+                                  <span className="text-sm text-gray-600">บาท</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <p className="text-xs text-gray-500 mt-2">
+                        เมื่อใช้ระบบนี้ ราคาจะคำนวณจากจำนวนผู้เข้าร่วมแต่ละประเภท × ราคาของประเภทนั้น
+                      </p>
+                      <p className="text-xs text-orange-600">
+                        <strong>หมายเหตุ:</strong> เมื่อเปิดใช้งาน ราคาต่อหัวแบบปกติจะถูกแทนที่ด้วยราคาตามประเภท
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Deposit Payment Configuration (NEW) */}

@@ -161,6 +161,7 @@ const REQUIRED_HEADERS = [
   'special_requests',
   'admin_notes',
   'last_update_info',
+  'attendee_type_selections',
 ];
 
 // Initialize or validate event sheet headers

@@ -84,6 +84,9 @@ export async function GET() {
         remainingDeadlineHours: data.remainingDeadlineHours ?? 0,
         // Registration edit control
         allowMemberEdit: data.allowMemberEdit ?? true,
+        // Attendee type pricing
+        useAttendeeTypePricing: data.useAttendeeTypePricing ?? false,
+        attendeeTypes: data.attendeeTypes || [],
         // Convert Firestore Timestamps to ISO strings
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
         updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
@@ -172,6 +175,9 @@ export async function POST(request: NextRequest) {
       remainingDeadlineHours: body.remainingDeadlineHours ?? 0,
       // Registration edit control
       allowMemberEdit: body.allowMemberEdit ?? true,
+      // Attendee type pricing
+      useAttendeeTypePricing: body.useAttendeeTypePricing ?? false,
+      attendeeTypes: body.attendeeTypes || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: session.user.id,

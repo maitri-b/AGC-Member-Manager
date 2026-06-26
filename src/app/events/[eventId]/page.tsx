@@ -6,7 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { Toast, useToast } from '@/components/Toast';
-import { calculateRegistrationFee, getPricingSummary } from '@/types/event';
+import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection } from '@/types/event';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
 
@@ -94,6 +94,9 @@ export default function EventDetailPage() {
   const [specialRequests, setSpecialRequests] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
+  // Attendee type pricing state (New)
+  const [attendeeTypeSelections, setAttendeeTypeSelections] = useState<AttendeeTypeSelection[]>([]);
+  const [calculatedTotalFee, setCalculatedTotalFee] = useState(0);
 
   // Copy to clipboard helper
   const copyToClipboard = async (text: string, label: string) => {
@@ -186,6 +189,7 @@ export default function EventDetailPage() {
           attendeeCount,
           attendeeNames: filledNames,
           specialRequests,
+          attendeeTypeSelections, // Add attendee type selections
         }),
       });
 
@@ -659,6 +663,7 @@ export default function EventDetailPage() {
                                       attendeeCount,
                                       attendeeNames: filledNames,
                                       specialRequests,
+                                      attendeeTypeSelections, // Add attendee type selections
                                       requestNameChange: false,
                                     }),
                                   });
@@ -881,29 +886,102 @@ export default function EventDetailPage() {
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900">ลงทะเบียนเข้าร่วมกิจกรรม</h3>
 
-                  {/* Attendee Count */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      จำนวนผู้เข้าร่วม
-                      {event.maxPerCompany > 0 && (
-                        <span className="text-xs text-gray-500 ml-2">
-                          (สูงสุด {event.maxPerCompany} คน)
+                  {/* Attendee Type Selection (if enabled) */}
+                  {(event as any).useAttendeeTypePricing && (event as any).attendeeTypes ? (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-3">
+                        เลือกจำนวนผู้เข้าร่วมตามประเภท *
+                      </h4>
+
+                      <div className="space-y-3">
+                        {((event as any).attendeeTypes as AttendeeType[])
+                          .filter((t: AttendeeType) => t.isActive)
+                          .sort((a, b) => a.sortOrder - b.sortOrder)
+                          .map(type => {
+                            const selection = attendeeTypeSelections.find(s => s.typeId === type.typeId);
+                            const quantity = selection?.quantity || 0;
+
+                            return (
+                              <div key={type.typeId} className="flex items-center gap-3 bg-white p-3 rounded">
+                                <span className="text-sm font-medium text-gray-700 w-40">
+                                  {type.typeName}:
+                                </span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="50"
+                                  value={quantity}
+                                  onChange={(e) => {
+                                    const qty = parseInt(e.target.value) || 0;
+                                    const newSelections = attendeeTypeSelections.filter(s => s.typeId !== type.typeId);
+                                    if (qty > 0) {
+                                      newSelections.push({ typeId: type.typeId, quantity: qty });
+                                    }
+                                    setAttendeeTypeSelections(newSelections);
+
+                                    // Auto-calculate total count and fee
+                                    const totalCount = newSelections.reduce((sum, s) => sum + s.quantity, 0);
+                                    setAttendeeCount(totalCount);
+
+                                    const totalFee = newSelections.reduce((sum, s) => {
+                                      const t = ((event as any).attendeeTypes as AttendeeType[]).find((at: AttendeeType) => at.typeId === s.typeId);
+                                      return sum + (t?.price || 0) * s.quantity;
+                                    }, 0);
+                                    setCalculatedTotalFee(totalFee);
+
+                                    // Auto-adjust attendee names array
+                                    handleAttendeeCountChange(totalCount);
+                                  }}
+                                  className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center"
+                                />
+                                <span className="text-sm text-gray-600">
+                                  คน × {type.price.toLocaleString()} บาท
+                                </span>
+                                {quantity > 0 && (
+                                  <span className="text-sm font-semibold text-blue-600 ml-auto">
+                                    = {(type.price * quantity).toLocaleString()} บาท
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      {/* Summary */}
+                      <div className="mt-3 pt-3 border-t border-blue-200 flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700">
+                          รวมทั้งหมด: {attendeeCount} คน
                         </span>
-                      )}
-                    </label>
-                    <select
-                      value={attendeeCount}
-                      onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {Array.from(
-                        { length: event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
-                        (_, i) => i + 1
-                      ).map(num => (
-                        <option key={num} value={num}>{num} คน</option>
-                      ))}
-                    </select>
-                  </div>
+                        <span className="text-base font-bold text-blue-900">
+                          ค่าลงทะเบียน: {calculatedTotalFee.toLocaleString()} บาท
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Attendee Count (original) */
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        จำนวนผู้เข้าร่วม
+                        {event.maxPerCompany > 0 && (
+                          <span className="text-xs text-gray-500 ml-2">
+                            (สูงสุด {event.maxPerCompany} คน)
+                          </span>
+                        )}
+                      </label>
+                      <select
+                        value={attendeeCount}
+                        onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        {Array.from(
+                          { length: event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
+                          (_, i) => i + 1
+                        ).map(num => (
+                          <option key={num} value={num}>{num} คน</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Attendee Names */}
                   <div>

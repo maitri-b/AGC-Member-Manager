@@ -71,6 +71,9 @@ export interface EventRegistration {
   specialRequests: string;          // special_requests
   adminNotes: string;               // admin_notes
   lastUpdateInfo: string;           // last_update_info
+
+  // Attendee Type Pricing (New - for events with different attendee categories)
+  attendeeTypeSelections?: string;  // attendee_type_selections (JSON stringified AttendeeTypeSelection[])
 }
 
 // Event metadata (for managing multiple events)
@@ -122,6 +125,10 @@ export interface Event {
 
   // Registration Edit Control
   allowMemberEdit?: boolean;        // อนุญาตให้สมาชิกแก้ไขข้อมูลการลงทะเบียนหลังจากลงทะเบียนแล้ว (Default: true)
+
+  // Attendee Type Pricing (New - for events with accommodation or different attendee categories)
+  useAttendeeTypePricing?: boolean; // ใช้ระบบราคาตามประเภทผู้เข้าร่วม (Default: false)
+  attendeeTypes?: AttendeeType[];   // ประเภทผู้เข้าร่วมและราคา
 
   createdAt: string;                // ISO timestamp
   updatedAt: string;                // ISO timestamp
@@ -177,6 +184,10 @@ export interface EventInput {
 
   // Registration Edit Control
   allowMemberEdit?: boolean;        // อนุญาตให้สมาชิกแก้ไขข้อมูลการลงทะเบียนหลังจากลงทะเบียนแล้ว (Default: true)
+
+  // Attendee Type Pricing (New - for events with accommodation or different attendee categories)
+  useAttendeeTypePricing?: boolean; // ใช้ระบบราคาตามประเภทผู้เข้าร่วม (Default: false)
+  attendeeTypes?: AttendeeType[];   // ประเภทผู้เข้าร่วมและราคา
 }
 
 // Member attendance summary
@@ -230,6 +241,21 @@ export type AttendanceType =
   | 'guest'         // แขกรับเชิญ
   | string;
 
+// Attendee Type Pricing (New - for events with different pricing per attendee category)
+export interface AttendeeType {
+  typeId: string;                // 'adult', 'child_with_bed', 'child_no_bed', 'infant', or custom
+  typeName: string;              // 'ผู้ใหญ่', 'เด็กพักเพิ่มเตียง', 'เด็กไม่เพิ่มเตียง', 'ทารก'
+  price: number;                 // Price for this attendee type
+  description?: string;          // Optional description
+  isActive: boolean;             // Admin can enable/disable
+  sortOrder: number;             // Display order
+}
+
+export interface AttendeeTypeSelection {
+  typeId: string;                // Reference to AttendeeType.typeId
+  quantity: number;              // Number of attendees of this type
+}
+
 // Google Sheet column mapping for Event Registration
 export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, string> = {
   registrationId: 'registration_id',
@@ -277,6 +303,8 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   specialRequests: 'special_requests',
   adminNotes: 'admin_notes',
   lastUpdateInfo: 'last_update_info',
+  // Attendee type pricing (New)
+  attendeeTypeSelections: 'attendee_type_selections',
 };
 
 // Reverse mapping for sheet to registration conversion

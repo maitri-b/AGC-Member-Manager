@@ -31,7 +31,7 @@ export async function PUT(
 
     const { eventId } = await params;
     const body = await request.json();
-    const { attendeeCount, attendeeNames, specialRequests, requestNameChange } = body;
+    const { attendeeCount, attendeeNames, specialRequests, attendeeTypeSelections, requestNameChange } = body;
 
     const db = adminDb();
 
@@ -156,12 +156,45 @@ export async function PUT(
     // Update attendee count and/or names
     const updateData: Record<string, unknown> = {};
 
-    // Check if attendee count changed
-    if (attendeeCount !== undefined && attendeeCount !== userReg.attendeeCount) {
-      updateData.attendee_count = attendeeCount;
+    // Check if attendee count or attendee type selections changed
+    const attendeeCountChanged = attendeeCount !== undefined && attendeeCount !== userReg.attendeeCount;
+    const attendeeTypeSelectionsChanged = attendeeTypeSelections && JSON.stringify(attendeeTypeSelections) !== (userReg.attendeeTypeSelections || '[]');
 
-      // Update total amount using tiered pricing calculation
-      const totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
+    if (attendeeCountChanged || attendeeTypeSelectionsChanged) {
+      if (attendeeCountChanged) {
+        updateData.attendee_count = attendeeCount;
+      }
+
+      // Calculate total amount
+      let totalFee = 0;
+      if (eventData.useAttendeeTypePricing && eventData.attendeeTypes) {
+        // Calculate fee based on attendee types
+        const selections = attendeeTypeSelections || [];
+        if (selections.length === 0) {
+          return NextResponse.json({ error: 'กรุณาระบุจำนวนผู้เข้าร่วมตามประเภท' }, { status: 400 });
+        }
+
+        // Validate count
+        const calculatedCount = selections.reduce((sum: number, s: { typeId: string; quantity: number }) => sum + s.quantity, 0);
+        if (calculatedCount !== attendeeCount) {
+          return NextResponse.json({ error: 'จำนวนผู้เข้าร่วมไม่ตรงกัน' }, { status: 400 });
+        }
+
+        // Calculate fee
+        totalFee = selections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
+          const type = eventData.attendeeTypes.find((t: { typeId: string; price: number }) => t.typeId === s.typeId);
+          if (!type) {
+            return sum;
+          }
+          return sum + (type.price * s.quantity);
+        }, 0);
+
+        updateData.attendee_type_selections = JSON.stringify(attendeeTypeSelections);
+      } else {
+        // Original fee calculation (fixed or tiered pricing)
+        totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
+      }
+
       if (totalFee > 0) {
         updateData.event_fee = totalFee;
         updateData.total_amount = totalFee;

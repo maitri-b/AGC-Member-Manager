@@ -37,7 +37,7 @@ export async function POST(
 
     const { eventId } = await params;
     const body = await request.json();
-    const { attendeeCount = 1, attendeeNames = [], specialRequests = '' } = body;
+    const { attendeeCount = 1, attendeeNames = [], specialRequests = '', attendeeTypeSelections = [] } = body;
 
     const db = adminDb();
 
@@ -126,8 +126,32 @@ export async function POST(
     // Generate registration ID
     const registrationId = generateRegistrationId();
 
-    // Calculate registration fee using tiered pricing if applicable
-    const totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
+    // Calculate registration fee
+    let totalFee = 0;
+    if (eventData.useAttendeeTypePricing && eventData.attendeeTypes) {
+      // Calculate fee based on attendee types
+      if (!attendeeTypeSelections || attendeeTypeSelections.length === 0) {
+        return NextResponse.json({ error: 'กรุณาระบุจำนวนผู้เข้าร่วมตามประเภท' }, { status: 400 });
+      }
+
+      // Validate: calculated count must match attendeeCount
+      const calculatedCount = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => sum + s.quantity, 0);
+      if (calculatedCount !== attendeeCount) {
+        return NextResponse.json({ error: 'จำนวนผู้เข้าร่วมไม่ตรงกัน' }, { status: 400 });
+      }
+
+      // Calculate fee from attendee types
+      totalFee = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
+        const type = eventData.attendeeTypes.find((t: { typeId: string; price: number }) => t.typeId === s.typeId);
+        if (!type) {
+          return sum;
+        }
+        return sum + (type.price * s.quantity);
+      }, 0);
+    } else {
+      // Original fee calculation (fixed or tiered pricing)
+      totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
+    }
 
     // Calculate payment breakdown if deposit mode
     let depositAmount = 0;
@@ -182,6 +206,8 @@ export async function POST(
       remaining_deadline: '',
       payment_status: paymentStatus,
       // End deposit payment fields
+      // Attendee type pricing (New)
+      attendee_type_selections: JSON.stringify(attendeeTypeSelections),
       status: paymentStatus, // Keep for backward compatibility
       verified_by: '',
       verified_date: '',

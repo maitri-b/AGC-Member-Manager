@@ -114,7 +114,7 @@ export async function PUT(
         if (newTotal > eventData.maxCapacity) {
           const availableSlots = eventData.maxCapacity - currentTotal + userReg.attendeeCount;
           return NextResponse.json({
-            error: `ไม่สามารถเพิ่มจำนวนผู้เข้าร่วมได้ เนื่องจากที่นั่งเหลือ ${availableSlots} ที่`,
+            error: `ไม่สามารถเพิ่มจำนวนผู้เข้าร่วมได้ เนื่องจากที่นั่งเหลือเพียง ${availableSlots} ที่ (คุณลงทะเบียนไว้ ${userReg.attendeeCount} ที่ และพยายามเปลี่ยนเป็น ${attendeeCount} ที่)`,
           }, { status: 400 });
         }
       }

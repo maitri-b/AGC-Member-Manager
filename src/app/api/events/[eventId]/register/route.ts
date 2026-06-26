@@ -108,8 +108,18 @@ export async function POST(
 
     // Check capacity (use active registrations only)
     if (eventData.maxCapacity > 0) {
+      const availableSlots = eventData.maxCapacity - currentCount;
+
       if (currentCount + attendeeCount > eventData.maxCapacity) {
-        return NextResponse.json({ error: 'กิจกรรมนี้รับสมัครเต็มแล้ว' }, { status: 400 });
+        if (availableSlots === 0) {
+          return NextResponse.json({
+            error: 'กิจกรรมนี้รับสมัครเต็มแล้ว'
+          }, { status: 400 });
+        } else {
+          return NextResponse.json({
+            error: `ไม่สามารถลงทะเบียนได้ เนื่องจากที่นั่งเหลือเพียง ${availableSlots} ที่ (คุณพยายามจอง ${attendeeCount} ที่)`
+          }, { status: 400 });
+        }
       }
     }
 

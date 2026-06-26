@@ -1145,7 +1145,7 @@ export default function AdminEventsPage() {
                                   <input
                                     type="number"
                                     min="0"
-                                    step="100"
+                                    step="1"
                                     value={price}
                                     onChange={(e) => {
                                       const newTypes = [...(formData.attendeeTypes || [])];
@@ -1245,7 +1245,7 @@ export default function AdminEventsPage() {
                                     <input
                                       type="number"
                                       min="0"
-                                      step="100"
+                                      step="1"
                                       value={price}
                                       onChange={(e) => {
                                         const newRooms = [...(formData.roomTypes || [])];

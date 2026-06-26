@@ -680,6 +680,77 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
+                      {/* Attendee Type Selection in Edit Mode (if enabled) */}
+                      {event.useAttendeeTypePricing && event.attendeeTypes && event.attendeeTypes.length > 0 && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-blue-900 mb-3">
+                            จำนวนผู้เข้าร่วมตามประเภท *
+                          </h4>
+
+                          <div className="space-y-3">
+                            {event.attendeeTypes
+                              .filter((t: AttendeeType) => t.isActive)
+                              .sort((a, b) => a.sortOrder - b.sortOrder)
+                              .map(type => {
+                                const selection = attendeeTypeSelections.find(s => s.typeId === type.typeId);
+                                const quantity = selection?.quantity || 0;
+
+                                return (
+                                  <div key={type.typeId} className="flex items-center gap-3 bg-white p-3 rounded">
+                                    <span className="text-sm font-medium text-gray-700 w-40">
+                                      {type.typeName}:
+                                    </span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="50"
+                                      value={quantity}
+                                      disabled={!(event.allowMemberEdit ?? true)}
+                                      onChange={(e) => {
+                                        const qty = parseInt(e.target.value) || 0;
+                                        const newSelections = attendeeTypeSelections.filter(s => s.typeId !== type.typeId);
+                                        if (qty > 0) {
+                                          newSelections.push({ typeId: type.typeId, quantity: qty });
+                                        }
+                                        setAttendeeTypeSelections(newSelections);
+
+                                        // Auto-calculate total count and fee
+                                        const totalCount = newSelections.reduce((sum, s) => sum + s.quantity, 0);
+                                        setAttendeeCount(totalCount);
+
+                                        const totalFee = newSelections.reduce((sum, s) => {
+                                          const t = event.attendeeTypes?.find((at: AttendeeType) => at.typeId === s.typeId);
+                                          return sum + (t?.price || 0) * s.quantity;
+                                        }, 0);
+                                        setCalculatedTotalFee(totalFee);
+                                      }}
+                                      className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                    />
+                                    <span className="text-sm text-gray-600">
+                                      คน × {type.price.toLocaleString()} บาท
+                                    </span>
+                                    {quantity > 0 && (
+                                      <span className="text-sm font-semibold text-blue-600 ml-auto">
+                                        = {(type.price * quantity).toLocaleString()} บาท
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                          </div>
+
+                          {/* Summary */}
+                          <div className="mt-3 pt-3 border-t border-blue-200 flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-700">
+                              รวมทั้งหมด: {attendeeCount} คน
+                            </span>
+                            <span className="text-base font-bold text-blue-900">
+                              ค่าลงทะเบียน: {calculatedTotalFee.toLocaleString()} บาท
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Attendee Names */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">

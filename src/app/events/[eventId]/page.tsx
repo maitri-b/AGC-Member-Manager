@@ -203,7 +203,7 @@ export default function EventDetailPage() {
       // Calculate total capacity
       let totalCapacity = 0;
       for (const alloc of roomAllocations) {
-        const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
+        const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
         if (rt) {
           totalCapacity += rt.capacity * alloc.roomCount;
         }
@@ -664,7 +664,7 @@ export default function EventDetailPage() {
                                         // Calculate total capacity
                                         let totalCapacity = 0;
                                         for (const alloc of newAllocations) {
-                                          const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                          const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                           if (rt) {
                                             totalCapacity += rt.capacity * alloc.roomCount;
                                           }
@@ -682,7 +682,7 @@ export default function EventDetailPage() {
                                         // Calculate room fee
                                         let roomFee = 0;
                                         for (const alloc of newAllocations) {
-                                          const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                          const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                           if (rt) {
                                             roomFee += rt.price * alloc.roomCount;
                                           }
@@ -718,7 +718,7 @@ export default function EventDetailPage() {
                               <div className="space-y-1">
                                 <p className="text-sm text-green-600 font-medium">
                                   ✓ รองรับ {roomAllocations.reduce((sum, ra) => {
-                                    const rt = event.roomTypes.find((r: RoomType) => r.typeId === ra.roomTypeId);
+                                    const rt = event.roomTypes?.find((r: RoomType) => r.typeId === ra.roomTypeId);
                                     return sum + (rt?.capacity || 0) * ra.roomCount;
                                   }, 0)} คน (ลงทะเบียน {attendeeCount} คน)
                                 </p>
@@ -809,7 +809,7 @@ export default function EventDetailPage() {
                                   // Calculate total capacity
                                   let totalCapacity = 0;
                                   for (const alloc of roomAllocations) {
-                                    const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                    const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                     if (rt) {
                                       totalCapacity += rt.capacity * alloc.roomCount;
                                     }
@@ -1092,7 +1092,7 @@ export default function EventDetailPage() {
                                     setAttendeeCount(totalCount);
 
                                     const totalFee = newSelections.reduce((sum, s) => {
-                                      const t = event.attendeeTypes.find((at: AttendeeType) => at.typeId === s.typeId);
+                                      const t = event.attendeeTypes?.find((at: AttendeeType) => at.typeId === s.typeId);
                                       return sum + (t?.price || 0) * s.quantity;
                                     }, 0);
                                     setCalculatedTotalFee(totalFee);
@@ -1206,7 +1206,7 @@ export default function EventDetailPage() {
                                     // Calculate total capacity
                                     let totalCapacity = 0;
                                     for (const alloc of newAllocations) {
-                                      const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                      const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                       if (rt) {
                                         totalCapacity += rt.capacity * alloc.roomCount;
                                       }
@@ -1224,7 +1224,7 @@ export default function EventDetailPage() {
                                     // Calculate room fee
                                     let roomFee = 0;
                                     for (const alloc of newAllocations) {
-                                      const rt = event.roomTypes.find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                      const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
                                       if (rt) {
                                         roomFee += rt.price * alloc.roomCount;
                                       }
@@ -1260,7 +1260,7 @@ export default function EventDetailPage() {
                           <div className="space-y-1">
                             <p className="text-sm text-green-600 font-medium">
                               ✓ รองรับ {roomAllocations.reduce((sum, ra) => {
-                                const rt = event.roomTypes.find((r: RoomType) => r.typeId === ra.roomTypeId);
+                                const rt = event.roomTypes?.find((r: RoomType) => r.typeId === ra.roomTypeId);
                                 return sum + (rt?.capacity || 0) * ra.roomCount;
                               }, 0)} คน (ลงทะเบียน {attendeeCount} คน)
                             </p>

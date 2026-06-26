@@ -83,6 +83,9 @@ interface UserRegistration {
   depositDeadline?: string;
   remainingDeadline?: string;
   paymentStatus?: string;
+  // Attendee type selections and room allocations (New)
+  attendeeTypeSelections?: AttendeeTypeSelection[];
+  roomAllocations?: RoomAllocation[];
 }
 
 export default function EventDetailPage() {
@@ -155,9 +158,40 @@ export default function EventDetailPage() {
           setMemberPhone(data.memberPhone);
         }
 
-        // Set first attendee name from member data
-        if (data.memberName && !data.userRegistration) {
-          setAttendeeNames([data.memberName]);
+        // Load existing registration data if user has already registered
+        if (data.userRegistration) {
+          // Load attendee type selections
+          if (data.userRegistration.attendeeTypeSelections) {
+            setAttendeeTypeSelections(data.userRegistration.attendeeTypeSelections);
+
+            // Calculate total fee from attendee type selections
+            if (data.event.useAttendeeTypePricing && data.event.attendeeTypes) {
+              const totalFee = data.userRegistration.attendeeTypeSelections.reduce((sum: number, s: AttendeeTypeSelection) => {
+                const type = data.event.attendeeTypes.find((t: AttendeeType) => t.typeId === s.typeId);
+                return sum + (type?.price || 0) * s.quantity;
+              }, 0);
+              setCalculatedTotalFee(totalFee);
+            }
+          }
+
+          // Load room allocations
+          if (data.userRegistration.roomAllocations) {
+            setRoomAllocations(data.userRegistration.roomAllocations);
+
+            // Calculate room fee
+            if (data.event.roomTypes) {
+              const roomFee = data.userRegistration.roomAllocations.reduce((sum: number, alloc: RoomAllocation) => {
+                const roomType = data.event.roomTypes.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+                return sum + (roomType?.price || 0) * alloc.roomCount;
+              }, 0);
+              setCalculatedRoomFee(roomFee);
+            }
+          }
+        } else {
+          // Set first attendee name from member data for new registration
+          if (data.memberName) {
+            setAttendeeNames([data.memberName]);
+          }
         }
       } else if (response.status === 404) {
         router.push('/events');
@@ -622,9 +656,17 @@ export default function EventDetailPage() {
                       {/* Contact Information Card */}
                       {memberName && memberPhone && (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <h4 className="text-sm font-semibold text-blue-900 mb-3">
-                            ข้อมูลผู้ติดต่อ
-                          </h4>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-blue-900">
+                              ข้อมูลผู้ติดต่อ
+                            </h4>
+                            <Link
+                              href="/profile"
+                              className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                            >
+                              แก้ไขข้อมูลติดต่อ
+                            </Link>
+                          </div>
                           <div className="space-y-2 text-sm">
                             <div className="flex items-center gap-2">
                               <span className="text-gray-600 font-medium w-20">ชื่อ:</span>
@@ -1184,9 +1226,17 @@ export default function EventDetailPage() {
                   {/* Contact Information Card */}
                   {memberName && memberPhone && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-blue-900 mb-3">
-                        ข้อมูลผู้ติดต่อ
-                      </h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-blue-900">
+                          ข้อมูลผู้ติดต่อ
+                        </h4>
+                        <Link
+                          href="/profile"
+                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                        >
+                          แก้ไขข้อมูลติดต่อ
+                        </Link>
+                      </div>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2">
                           <span className="text-gray-600 font-medium w-20">ชื่อ:</span>

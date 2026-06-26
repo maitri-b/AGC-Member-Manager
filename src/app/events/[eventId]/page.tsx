@@ -567,6 +567,84 @@ export default function EventDetailPage() {
                           <p className="text-sm text-green-700 mt-1">
                             จำนวนผู้เข้าร่วม: {userRegistration.attendeeCount} คน
                           </p>
+
+                          {/* Show fee breakdown for attendee type pricing events */}
+                          {event.useAttendeeTypePricing && userRegistration.attendeeTypeSelections && userRegistration.attendeeTypeSelections.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-green-200">
+                              <p className="text-xs font-semibold text-green-800 mb-2">รายละเอียดค่าใช้จ่าย:</p>
+
+                              {/* Attendee types breakdown */}
+                              <div className="text-xs text-green-700 space-y-1">
+                                {userRegistration.attendeeTypeSelections.map((selection: AttendeeTypeSelection) => {
+                                  const type = event.attendeeTypes?.find((t: AttendeeType) => t.typeId === selection.typeId);
+                                  if (!type) return null;
+                                  const subtotal = type.price * selection.quantity;
+                                  return (
+                                    <div key={selection.typeId} className="flex justify-between">
+                                      <span>{type.typeName} × {selection.quantity} คน</span>
+                                      <span>{subtotal.toLocaleString()} บาท</span>
+                                    </div>
+                                  );
+                                })}
+
+                                {/* Subtotal for attendee types */}
+                                {(() => {
+                                  const attendeeTypesTotal = userRegistration.attendeeTypeSelections.reduce((sum: number, s: AttendeeTypeSelection) => {
+                                    const type = event.attendeeTypes?.find((t: AttendeeType) => t.typeId === s.typeId);
+                                    return sum + (type?.price || 0) * s.quantity;
+                                  }, 0);
+                                  return (
+                                    <div className="flex justify-between font-medium pt-1 border-t border-green-300">
+                                      <span>รวมค่าลงทะเบียน:</span>
+                                      <span>{attendeeTypesTotal.toLocaleString()} บาท</span>
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* Room allocations breakdown */}
+                                {userRegistration.roomAllocations && userRegistration.roomAllocations.length > 0 && event.roomTypes && (
+                                  <>
+                                    <div className="mt-2 pt-2 border-t border-green-300">
+                                      {userRegistration.roomAllocations.map((alloc: RoomAllocation) => {
+                                        const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+                                        if (!roomType) return null;
+                                        const subtotal = roomType.price * alloc.roomCount;
+                                        return (
+                                          <div key={alloc.roomTypeId} className="flex justify-between">
+                                            <span>{roomType.typeName} × {alloc.roomCount} ห้อง</span>
+                                            <span>{subtotal.toLocaleString()} บาท</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {/* Subtotal for rooms */}
+                                    {(() => {
+                                      const roomTotal = userRegistration.roomAllocations.reduce((sum: number, alloc: RoomAllocation) => {
+                                        const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+                                        return sum + (roomType?.price || 0) * alloc.roomCount;
+                                      }, 0);
+                                      return (
+                                        <div className="flex justify-between font-medium pt-1 border-t border-green-300">
+                                          <span>รวมค่าห้องพัก:</span>
+                                          <span>{roomTotal.toLocaleString()} บาท</span>
+                                        </div>
+                                      );
+                                    })()}
+                                  </>
+                                )}
+
+                                {/* Grand total */}
+                                {userRegistration.totalAmount && (
+                                  <div className="flex justify-between font-bold text-sm pt-2 border-t-2 border-green-400 text-green-900">
+                                    <span>ยอดรวมทั้งหมด:</span>
+                                    <span>{userRegistration.totalAmount.toLocaleString()} บาท</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
                           {event?.maxPerCompany && event.maxPerCompany > 0 && (
                             <p className="text-xs text-green-600 mt-1">
                               * จำกัด {event.maxPerCompany} คนต่อ 1 บริษัท

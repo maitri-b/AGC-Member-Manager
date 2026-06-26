@@ -126,6 +126,95 @@ function rowToEventRegistration(headers: string[], row: string[]): EventRegistra
   return registration as EventRegistration;
 }
 
+// Required column headers for event registration sheets
+const REQUIRED_HEADERS = [
+  'registration_id',
+  'registration_date',
+  'company_name',
+  'license_number',
+  'contact_name',
+  'contact_phone',
+  'contact_email',
+  'line_userid',
+  'memberid',
+  'attendee_count',
+  'attendee_names',
+  'shirt_count',
+  'shirt_sizes',
+  'event_fee',
+  'shirt_fee',
+  'total_amount',
+  'slip_url',
+  'deposit_amount',
+  'remaining_amount',
+  'deposit_paid',
+  'deposit_paid_date',
+  'deposit_slip_url',
+  'remaining_slip_url',
+  'deposit_deadline',
+  'remaining_deadline',
+  'payment_status',
+  'status',
+  'verified_by',
+  'verified_date',
+  'attendance_type',
+  'special_requests',
+  'admin_notes',
+  'last_update_info',
+];
+
+// Initialize or validate event sheet headers
+export async function ensureSheetHeaders(sheetName: string): Promise<{ success: boolean; addedHeaders: string[] }> {
+  const sheets = getGoogleSheetsClient();
+  const addedHeaders: string[] = [];
+
+  try {
+    // Get current headers
+    const headerResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `'${sheetName}'!1:1`,
+    });
+
+    const currentHeaders = (headerResponse.data.values?.[0] as string[]) || [];
+    const normalizedCurrentHeaders = currentHeaders.map(h => h.toLowerCase().trim());
+
+    // Find missing headers
+    const missingHeaders: string[] = [];
+    for (const requiredHeader of REQUIRED_HEADERS) {
+      if (!normalizedCurrentHeaders.includes(requiredHeader)) {
+        missingHeaders.push(requiredHeader);
+      }
+    }
+
+    if (missingHeaders.length === 0) {
+      return { success: true, addedHeaders: [] };
+    }
+
+    console.log(`[ensureSheetHeaders] Adding ${missingHeaders.length} missing headers to ${sheetName}:`, missingHeaders);
+
+    // Append missing headers to the end of the header row
+    const newHeaderRow = [...currentHeaders, ...missingHeaders];
+
+    // Update header row
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `'${sheetName}'!1:1`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [newHeaderRow],
+      },
+    });
+
+    addedHeaders.push(...missingHeaders);
+    console.log(`[ensureSheetHeaders] Successfully added headers to ${sheetName}`);
+
+    return { success: true, addedHeaders };
+  } catch (error) {
+    console.error(`Error ensuring headers for ${sheetName}:`, error);
+    return { success: false, addedHeaders: [] };
+  }
+}
+
 // Get all registrations from a specific event sheet
 export async function getEventRegistrations(sheetName: string): Promise<EventRegistration[]> {
   const sheets = getGoogleSheetsClient();
@@ -186,7 +275,10 @@ export async function addEventRegistration(
   const sheets = getGoogleSheetsClient();
 
   try {
-    // Get headers first
+    // Ensure all required headers exist in the sheet
+    await ensureSheetHeaders(sheetName);
+
+    // Get headers (now guaranteed to have all required columns)
     const headerResponse = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `'${sheetName}'!1:1`,
@@ -245,6 +337,9 @@ export async function updateEventRegistration(
   try {
     console.log(`[updateEventRegistration] Starting update for ${registrationId} in ${sheetName}`);
     console.log(`[updateEventRegistration] Update data:`, updateData);
+
+    // Ensure all required headers exist in the sheet
+    await ensureSheetHeaders(sheetName);
 
     // Get all data from the sheet
     const response = await sheets.spreadsheets.values.get({

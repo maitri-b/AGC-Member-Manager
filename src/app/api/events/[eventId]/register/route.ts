@@ -65,6 +65,13 @@ export async function POST(
       return NextResponse.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 });
     }
 
+    // Helper function to check if registration is cancelled
+    function isRegistrationCancelled(registration: EventRegistration): boolean {
+      const status = registration.status || '';
+      const statusLower = status.toLowerCase();
+      return statusLower === 'cancelled' || status.includes('ยกเลิก');
+    }
+
     // Get existing registrations to check capacity and duplicates
     let existingRegistrations: EventRegistration[] = [];
     try {
@@ -73,8 +80,11 @@ export async function POST(
       console.error('Error fetching registrations:', err);
     }
 
-    // Check if company (by license number) already registered
-    const companyAlreadyRegistered = existingRegistrations.find(r => {
+    // Filter out cancelled registrations
+    const activeRegistrations = existingRegistrations.filter(r => !isRegistrationCancelled(r));
+
+    // Check if company (by license number) already registered (check only active registrations)
+    const companyAlreadyRegistered = activeRegistrations.find(r => {
       const regData = r as unknown as Record<string, unknown>;
       // Check by license number (1 company = 1 license = 1 registration)
       return member.licenseNumber && regData.license_number === member.licenseNumber;
@@ -93,9 +103,11 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // Check capacity
+    // Calculate current attendee count (for capacity check and auto-close)
+    const currentCount = activeRegistrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
+
+    // Check capacity (use active registrations only)
     if (eventData.maxCapacity > 0) {
-      const currentCount = existingRegistrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
       if (currentCount + attendeeCount > eventData.maxCapacity) {
         return NextResponse.json({ error: 'กิจกรรมนี้รับสมัครเต็มแล้ว' }, { status: 400 });
       }
@@ -179,6 +191,23 @@ export async function POST(
 
     // Add to Google Sheet
     await addEventRegistration(eventData.sheetName, registrationData);
+
+    // Check if event is now full and auto-close registration
+    if (eventData.maxCapacity > 0) {
+      const newTotalCount = currentCount + attendeeCount;
+      if (newTotalCount >= eventData.maxCapacity) {
+        try {
+          console.log(`[AutoClose] Event ${eventId} reached capacity (${newTotalCount}/${eventData.maxCapacity}), closing registration`);
+          await db.collection('events').doc(eventId).update({
+            registrationOpen: false,
+            updatedAt: new Date().toISOString(),
+          });
+        } catch (closeError) {
+          console.error('Failed to auto-close registration:', closeError);
+          // Don't fail the registration if auto-close fails
+        }
+      }
+    }
 
     // Send LINE confirmation message
     if (session.user.id) {

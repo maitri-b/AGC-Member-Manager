@@ -471,6 +471,30 @@ export default function AdminEventsPage() {
     }
   };
 
+  const handleFixHeaders = async (event: Event) => {
+    try {
+      setError(null);
+      setSuccess(null);
+
+      const response = await fetch(`/api/admin/events/${event.eventId}/fix-headers`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'ไม่สามารถแก้ไขหัวตารางได้');
+        return;
+      }
+
+      const data = await response.json();
+      setSuccess(data.message);
+      setOpenDropdown(null);
+    } catch (err) {
+      console.error('Error fixing headers:', err);
+      setError('ไม่สามารถแก้ไขหัวตารางได้');
+    }
+  };
+
   const isAdmin = session?.user?.permissions?.includes('admin:access');
 
   if (status === 'loading' || loading) {
@@ -693,6 +717,18 @@ export default function AdminEventsPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                               แก้ไข
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleFixHeaders(event);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              title="แก้ไขหัวตาราง Google Sheet ให้ครบถ้วน"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7V5c0-2 1-3 3-3h10c2 0 3 1 3 3v2M4 7h16M10 11v6M14 11v6" />
+                              </svg>
+                              แก้ไขหัวตาราง
                             </button>
                             <div className="border-t border-gray-200 my-1"></div>
                             <button

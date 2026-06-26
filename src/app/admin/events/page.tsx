@@ -1115,7 +1115,24 @@ export default function AdminEventsPage() {
                                 }}
                                 className="w-4 h-4"
                               />
-                              <span className="text-sm font-medium w-32">{type.name}</span>
+                              {isActive ? (
+                                <input
+                                  type="text"
+                                  value={existingType?.typeName || type.name}
+                                  placeholder={type.name}
+                                  onChange={(e) => {
+                                    const newTypes = [...(formData.attendeeTypes || [])];
+                                    const idx = newTypes.findIndex(at => at.typeId === type.id);
+                                    if (idx > -1) {
+                                      newTypes[idx].typeName = e.target.value;
+                                      setFormData({ ...formData, attendeeTypes: newTypes });
+                                    }
+                                  }}
+                                  className="w-40 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium text-gray-400 w-40">{type.name}</span>
+                              )}
                               {isActive && (
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm text-gray-600">ราคา:</span>

@@ -31,7 +31,7 @@ export async function PUT(
 
     const { eventId } = await params;
     const body = await request.json();
-    const { attendeeCount, attendeeNames, requestNameChange } = body;
+    const { attendeeCount, attendeeNames, specialRequests, requestNameChange } = body;
 
     const db = adminDb();
 
@@ -176,6 +176,11 @@ export async function PUT(
       if (newNamesJson !== currentNamesJson) {
         updateData.attendee_names = newNamesJson;
       }
+    }
+
+    // Check if special requests changed
+    if (specialRequests !== undefined) {
+      updateData.special_requests = specialRequests;
     }
 
     if (Object.keys(updateData).length > 0) {

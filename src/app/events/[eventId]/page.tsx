@@ -91,8 +91,19 @@ export default function EventDetailPage() {
   const [registering, setRegistering] = useState(false);
   const [attendeeCount, setAttendeeCount] = useState(1);
   const [attendeeNames, setAttendeeNames] = useState<string[]>(['']);
+  const [specialRequests, setSpecialRequests] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
+
+  // Copy to clipboard helper
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`คัดลอก${label}เรียบร้อยแล้ว`);
+    } catch (err) {
+      toast.error('ไม่สามารถคัดลอกได้');
+    }
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -174,6 +185,7 @@ export default function EventDetailPage() {
         body: JSON.stringify({
           attendeeCount,
           attendeeNames: filledNames,
+          specialRequests,
         }),
       });
 
@@ -360,6 +372,9 @@ export default function EventDetailPage() {
             {/* Document Download */}
             {event.documentUrl && (
               <div className="mb-8">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                  Download เอกสาร
+                </h3>
                 <a
                   href={event.documentUrl}
                   target="_blank"
@@ -376,6 +391,66 @@ export default function EventDetailPage() {
               </div>
             )}
 
+            {/* Payment Information - Moved outside registration card */}
+            {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (
+              <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 className="text-sm font-semibold text-blue-900 mb-4">บัญชีสำหรับชำระเงิน</h3>
+
+                <div className="space-y-4">
+                  {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) && (
+                    <div className="space-y-1 text-sm text-blue-800">
+                      {event.paymentBankName && (
+                        <p>
+                          <span className="font-medium">ธนาคาร:</span> {event.paymentBankName}
+                        </p>
+                      )}
+                      {event.paymentAccountName && (
+                        <p>
+                          <span className="font-medium">ชื่อบัญชี:</span> {event.paymentAccountName}
+                        </p>
+                      )}
+                      {event.paymentAccountNumber && (
+                        <p className="flex items-center gap-2">
+                          <span>
+                            <span className="font-medium">เลขที่บัญชี:</span> {event.paymentAccountNumber}
+                          </span>
+                          <button
+                            onClick={() => copyToClipboard(event.paymentAccountNumber!, 'เลขที่บัญชี')}
+                            className="p-1 text-blue-700 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+                            title="คัดลอกเลขที่บัญชี"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {event.paymentQrCodeUrl && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-blue-900 mb-2">สแกน QR Code เพื่อชำระเงิน</h4>
+                      <img
+                        src={event.paymentQrCodeUrl}
+                        alt="QR Code สำหรับชำระเงิน"
+                        className="max-w-xs rounded-lg border-2 border-blue-300"
+                      />
+                    </div>
+                  )}
+
+                  {event.paymentTerms && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h4>
+                      <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
+                        {event.paymentTerms}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Registration Status / Form */}
             <div className="border-t pt-6">
               {userRegistration ? (
@@ -389,9 +464,20 @@ export default function EventDetailPage() {
                         </svg>
                         <div className="flex-1">
                           <p className="font-semibold text-green-800">คุณลงทะเบียนแล้ว</p>
-                          <p className="text-sm text-green-700">
-                            รหัสลงทะเบียน: {userRegistration.registrationId}
-                            {userRegistration.status && ` | สถานะ: ${userRegistration.status}`}
+                          <p className="text-sm text-green-700 flex items-center gap-2">
+                            <span>
+                              รหัสลงทะเบียน: {userRegistration.registrationId}
+                              {userRegistration.status && ` | สถานะ: ${userRegistration.status}`}
+                            </span>
+                            <button
+                              onClick={() => copyToClipboard(userRegistration.registrationId, 'รหัสลงทะเบียน')}
+                              className="p-1 text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                              title="คัดลอกรหัสลงทะเบียน"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
                           </p>
                           <p className="text-sm text-green-700 mt-1">
                             จำนวนผู้เข้าร่วม: {userRegistration.attendeeCount} คน
@@ -502,6 +588,23 @@ export default function EventDetailPage() {
                         </div>
                       </div>
 
+                      {/* Special Requests */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          ความต้องการพิเศษ (ถ้ามี)
+                        </label>
+                        <textarea
+                          value={specialRequests}
+                          onChange={(e) => setSpecialRequests(e.target.value)}
+                          placeholder="เช่น ต้องการอาหารเจ, แพ้อาหารทะเล, ต้องการห้องชั้นล่าง, ผู้สูงอายุ/ผู้พิการ"
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          ระบุความต้องการพิเศษ เช่น อาหาร การเข้าพัก หรือความช่วยเหลือพิเศษ
+                        </p>
+                      </div>
+
                       {/* Total Amount */}
                       {event && calculateRegistrationFee(event, attendeeCount, true) > 0 && (
                         <div className="bg-white border border-blue-300 rounded-lg p-3">
@@ -556,6 +659,7 @@ export default function EventDetailPage() {
                                     body: JSON.stringify({
                                       attendeeCount,
                                       attendeeNames: filledNames,
+                                      specialRequests,
                                       requestNameChange: false,
                                     }),
                                   });
@@ -746,52 +850,6 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
-
-                      {/* Payment Information (Bank Account & Terms) */}
-                      <div className="mt-4 pt-4 border-t border-blue-200 space-y-3">
-                        {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) && (
-                          <div>
-                            <h3 className="text-sm font-semibold text-blue-900 mb-2">บัญชีสำหรับชำระเงิน</h3>
-                            <div className="space-y-1 text-sm text-blue-800">
-                              {event.paymentBankName && (
-                                <p>
-                                  <span className="font-medium">ธนาคาร:</span> {event.paymentBankName}
-                                </p>
-                              )}
-                              {event.paymentAccountName && (
-                                <p>
-                                  <span className="font-medium">ชื่อบัญชี:</span> {event.paymentAccountName}
-                                </p>
-                              )}
-                              {event.paymentAccountNumber && (
-                                <p>
-                                  <span className="font-medium">เลขที่บัญชี:</span> {event.paymentAccountNumber}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {event.paymentQrCodeUrl && (
-                          <div>
-                            <h3 className="text-sm font-semibold text-blue-900 mb-2">สแกน QR Code เพื่อชำระเงิน</h3>
-                            <img
-                              src={event.paymentQrCodeUrl}
-                              alt="QR Code สำหรับชำระเงิน"
-                              className="max-w-xs rounded-lg border-2 border-blue-300"
-                            />
-                          </div>
-                        )}
-
-                        {event.paymentTerms && (
-                          <div>
-                            <h3 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h3>
-                            <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
-                              {event.paymentTerms}
-                            </div>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   )}
                 </div>
@@ -865,6 +923,23 @@ export default function EventDetailPage() {
                         />
                       ))}
                     </div>
+                  </div>
+
+                  {/* Special Requests */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      ความต้องการพิเศษ (ถ้ามี)
+                    </label>
+                    <textarea
+                      value={specialRequests}
+                      onChange={(e) => setSpecialRequests(e.target.value)}
+                      placeholder="เช่น ต้องการอาหารเจ, แพ้อาหารทะเล, ต้องการห้องชั้นล่าง, ผู้สูงอายุ/ผู้พิการ"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      ระบุความต้องการพิเศษ เช่น อาหาร การเข้าพัก หรือความช่วยเหลือพิเศษ
+                    </p>
                   </div>
 
                   {/* Total Amount */}

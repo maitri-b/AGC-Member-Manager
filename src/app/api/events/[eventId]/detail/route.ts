@@ -72,6 +72,8 @@ export async function GET(
       paymentAccountNumber: eventData?.paymentAccountNumber || '',
       paymentQrCodeUrl: eventData?.paymentQrCodeUrl || '',
       paymentTerms: eventData?.paymentTerms || '',
+      paymentSlipSubmissionUrl: eventData?.paymentSlipSubmissionUrl || '',
+      allowMemberEdit: eventData?.allowMemberEdit ?? true,
       createdAt: eventData?.createdAt || '',
       updatedAt: eventData?.updatedAt || '',
       // Deposit payment configuration (New)

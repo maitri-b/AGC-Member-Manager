@@ -419,7 +419,7 @@ export default function EventDetailPage() {
                           }}
                           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                         >
-                          {(event as any)?.allowMemberEdit !== false ? 'แก้ไขข้อมูล' : 'ดูข้อมูล'}
+                          {((event as any)?.allowMemberEdit ?? true) ? 'แก้ไขข้อมูล' : 'ดูข้อมูล'}
                         </button>
                       )}
                     </div>
@@ -429,7 +429,7 @@ export default function EventDetailPage() {
                   {isEditing && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
                       <h3 className="font-semibold text-blue-900">
-                        {(event as any)?.allowMemberEdit !== false ? 'แก้ไขข้อมูลการลงทะเบียน' : 'ข้อมูลการลงทะเบียน'}
+                        {((event as any)?.allowMemberEdit ?? true) ? 'แก้ไขข้อมูลการลงทะเบียน' : 'ข้อมูลการลงทะเบียน'}
                       </h3>
 
                       {/* Capacity Info */}
@@ -459,7 +459,7 @@ export default function EventDetailPage() {
                         <select
                           value={attendeeCount}
                           onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
-                          disabled={(event as any)?.allowMemberEdit === false}
+                          disabled={!((event as any)?.allowMemberEdit ?? true)}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                         >
                           {Array.from(
@@ -494,7 +494,7 @@ export default function EventDetailPage() {
                               type="text"
                               value={attendeeNames[index] || ''}
                               onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
-                              disabled={(event as any)?.allowMemberEdit === false}
+                              disabled={!((event as any)?.allowMemberEdit ?? true)}
                               placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                             />
@@ -535,7 +535,7 @@ export default function EventDetailPage() {
 
                       {/* Action Buttons */}
                       <div className="flex gap-3 pt-2">
-                        {(event as any)?.allowMemberEdit !== false ? (
+                        {((event as any)?.allowMemberEdit ?? true) ? (
                           <>
                             <button
                               onClick={async () => {

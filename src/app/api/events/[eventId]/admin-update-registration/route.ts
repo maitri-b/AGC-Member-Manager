@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { updateEventRegistration, getEventRegistrations } from '@/lib/event-sheets';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { Event, AttendeeType, RoomType } from '@/types/event';
 
 // PUT - Admin update registration
@@ -19,13 +19,26 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check admin/committee permission
-    if (!hasPermission(session.user.permissions, 'members:list') &&
-        !hasPermission(session.user.permissions, 'admin:access')) {
+    const { eventId } = await params;
+
+    // Check permissions: either has full access OR can manage assigned event
+    const hasFullAccess = hasPermission(session.user.permissions, 'members:list') ||
+                          hasPermission(session.user.permissions, 'admin:access');
+    const canManageAssigned = hasPermission(session.user.permissions, 'events:manage-assigned');
+
+    if (!hasFullAccess && !canManageAssigned) {
       return NextResponse.json({ error: 'ไม่มีสิทธิ์ในการแก้ไข' }, { status: 403 });
     }
 
-    const { eventId } = await params;
+    // Verify assignment for event-staff/event-co
+    if (!hasFullAccess && canManageAssigned) {
+      const userRole = session.user.role;
+      const assignedEventIds = session.user.assignedEventIds || [];
+
+      if (!canManageEvent(userRole, assignedEventIds, eventId)) {
+        return NextResponse.json({ error: 'Not assigned to this event' }, { status: 403 });
+      }
+    }
     const body = await request.json();
     const { registrationId, updateData } = body;
 

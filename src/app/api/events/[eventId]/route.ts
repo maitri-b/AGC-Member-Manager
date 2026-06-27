@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { getEventAttendanceSummary, getEventById } from '@/lib/event-sheets';
 import { adminDb } from '@/lib/firebase-admin';
 
@@ -17,12 +17,25 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Require members:list permission to view event attendees
-    if (!hasPermission(session.user.permissions || [], 'members:list')) {
+    const { eventId } = await params;
+
+    // Check permissions: either has members:list OR can manage assigned event
+    const hasFullAccess = hasPermission(session.user.permissions || [], 'members:list');
+    const canManageAssigned = hasPermission(session.user.permissions || [], 'events:manage-assigned');
+
+    if (!hasFullAccess && !canManageAssigned) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { eventId } = await params;
+    // Verify assignment for event-staff/event-co
+    if (!hasFullAccess && canManageAssigned) {
+      const userRole = session.user.role;
+      const assignedEventIds = session.user.assignedEventIds || [];
+
+      if (!canManageEvent(userRole, assignedEventIds, eventId)) {
+        return NextResponse.json({ error: 'Not assigned to this event' }, { status: 403 });
+      }
+    }
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });

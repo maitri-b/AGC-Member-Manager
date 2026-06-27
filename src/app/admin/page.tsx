@@ -25,6 +25,7 @@ interface User {
   memberId?: string;
   isActive: boolean;
   permissions: string[];
+  assignedEventIds?: string[];
   createdAt?: { _seconds: number };
   lastLoginAt?: { _seconds: number };
   licenseNumber?: string;
@@ -64,6 +65,7 @@ export default function AdminPage() {
     role: '',
     memberId: '',
     isActive: true,
+    assignedEventIds: [] as string[],
   });
   const [searchLogs, setSearchLogs] = useState<SearchLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -113,6 +115,15 @@ export default function AdminPage() {
     status: string;
   } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // Event assignment states
+  const [activePublishedEvents, setActivePublishedEvents] = useState<Array<{
+    eventId: string;
+    eventName: string;
+    eventDate: string;
+    year: number;
+  }>>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -202,6 +213,7 @@ export default function AdminPage() {
       role: user.role,
       memberId: user.memberId || '',
       isActive: user.isActive,
+      assignedEventIds: user.assignedEventIds || [],
     });
     setSearchLogs([]);
     setMemberSearchQuery('');
@@ -232,6 +244,9 @@ export default function AdminPage() {
     if (user.memberId) {
       fetchMemberPreview(user.memberId);
     }
+
+    // Fetch active published events for event assignment
+    fetchActivePublishedEvents();
   };
 
   // Fetch all members from Google Sheets for search dropdown
@@ -305,6 +320,36 @@ export default function AdminPage() {
       setMemberPreview(null);
     } finally {
       setLoadingPreview(false);
+    }
+  };
+
+  // Fetch active and published events for event assignment
+  const fetchActivePublishedEvents = async () => {
+    setLoadingEvents(true);
+    try {
+      const response = await fetch('/api/admin/events');
+      if (response.ok) {
+        const data = await response.json();
+        // Filter for active and published events only
+        const activePublished = (data.events || [])
+          .filter((event: any) => event.isActive && event.isPublished)
+          .map((event: any) => ({
+            eventId: event.eventId,
+            eventName: event.eventName,
+            eventDate: event.eventDate,
+            year: event.year,
+          }))
+          .sort((a: any, b: any) => {
+            // Sort by year (desc) then by event date (desc)
+            if (a.year !== b.year) return b.year - a.year;
+            return new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
+          });
+        setActivePublishedEvents(activePublished);
+      }
+    } catch (err) {
+      console.error('Error fetching events:', err);
+    } finally {
+      setLoadingEvents(false);
     }
   };
 
@@ -401,6 +446,7 @@ export default function AdminPage() {
         userId: editingUser.id,
         memberId: editForm.memberId || null,
         isActive: editForm.isActive,
+        assignedEventIds: editForm.assignedEventIds || [],
       };
 
       // Only include role if user has permission to change roles
@@ -431,6 +477,8 @@ export default function AdminPage() {
     switch (role) {
       case 'admin': return 'ผู้ดูแลระบบ';
       case 'committee': return 'กรรมการ';
+      case 'event-co': return 'ผู้ประสานงาน';
+      case 'event-staff': return 'เจ้าหน้าที่';
       case 'member': return 'สมาชิก';
       default: return 'ผู้เยี่ยมชม';
     }
@@ -440,6 +488,8 @@ export default function AdminPage() {
     switch (role) {
       case 'admin': return 'bg-red-100 text-red-800';
       case 'committee': return 'bg-blue-100 text-blue-800';
+      case 'event-co': return 'bg-purple-100 text-purple-800';
+      case 'event-staff': return 'bg-orange-100 text-orange-800';
       case 'member': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -613,6 +663,8 @@ export default function AdminPage() {
                     <option value="all">ทุกประเภท</option>
                     <option value="admin">ผู้ดูแลระบบ</option>
                     <option value="committee">กรรมการ</option>
+                    <option value="event-co">ผู้ประสานงาน</option>
+                    <option value="event-staff">เจ้าหน้าที่</option>
                     <option value="member">สมาชิก</option>
                     <option value="guest">ผู้เยี่ยมชม</option>
                   </select>
@@ -889,6 +941,8 @@ export default function AdminPage() {
                     >
                       <option value="guest">ผู้เยี่ยมชม (Guest)</option>
                       <option value="member">สมาชิก (Member)</option>
+                      <option value="event-co">ผู้ประสานงาน (Event-Co)</option>
+                      <option value="event-staff">เจ้าหน้าที่ (Event-Staff)</option>
                       <option value="committee">กรรมการ (Committee)</option>
                       <option value="admin">ผู้ดูแลระบบ (Admin)</option>
                     </select>
@@ -1055,6 +1109,56 @@ export default function AdminPage() {
                     <span className="text-sm font-medium text-gray-700">เปิดใช้งาน (Active)</span>
                   </label>
                 </div>
+
+                {/* Event Assignment Section - Only for event-staff and event-co */}
+                {(editForm.role === 'event-staff' || editForm.role === 'event-co') && (
+                  <div className="border-t border-gray-200 pt-4 mt-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">มอบหมายกิจกรรม</h4>
+                    <p className="text-xs text-gray-600 mb-3">
+                      เลือกกิจกรรมที่ต้องการมอบหมายให้จัดการ (เฉพาะกิจกรรมที่เปิดใช้งานและเผยแพร่แล้ว)
+                    </p>
+                    {loadingEvents ? (
+                      <div className="text-sm text-gray-500">กำลังโหลดกิจกรรม...</div>
+                    ) : activePublishedEvents.length === 0 ? (
+                      <div className="text-sm text-gray-500">ไม่มีกิจกรรมที่สามารถมอบหมายได้</div>
+                    ) : (
+                      <div className="max-h-60 overflow-y-auto border rounded-md p-3 space-y-2">
+                        {activePublishedEvents.map((event) => (
+                          <label
+                            key={event.eventId}
+                            className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={editForm.assignedEventIds?.includes(event.eventId) || false}
+                              onChange={(e) => {
+                                const current = editForm.assignedEventIds || [];
+                                const updated = e.target.checked
+                                  ? [...current, event.eventId]
+                                  : current.filter(id => id !== event.eventId);
+                                setEditForm({ ...editForm, assignedEventIds: updated });
+                              }}
+                              className="mt-0.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {event.eventName}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {event.eventDate} • ปี {event.year}
+                              </p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    {editForm.assignedEventIds && editForm.assignedEventIds.length > 0 && (
+                      <p className="text-xs text-gray-600 mt-2">
+                        เลือกแล้ว {editForm.assignedEventIds.length} กิจกรรม
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Reset LINE Connection Section - Only for verified members with memberId */}
                 {editingUser.memberId && (editingUser.verificationStatus === 'verified' || editingUser.role === 'member' || editingUser.role === 'committee' || editingUser.role === 'admin') && (

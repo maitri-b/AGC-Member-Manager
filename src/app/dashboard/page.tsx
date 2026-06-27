@@ -582,7 +582,42 @@ function DashboardContent() {
               color="red"
             />
           )}
+
+          {/* Event Management for Event-Staff */}
+          {session.user.role === 'event-staff' && (
+            <QuickActionCard
+              title="กิจกรรมที่ดูแล"
+              description="จัดการผู้ลงทะเบียนและข้อมูลกิจกรรม"
+              href="/admin/events"
+              icon={
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              }
+              color="orange"
+            />
+          )}
+
+          {/* Event Management for Event-Co */}
+          {session.user.role === 'event-co' && (
+            <QuickActionCard
+              title="จัดการกิจกรรม"
+              description="จัดการกิจกรรมที่ได้รับมอบหมาย"
+              href="/admin/events"
+              icon={
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              }
+              color="purple"
+            />
+          )}
         </div>
+
+        {/* Member Status Warning */}
+        {(session.user.role === 'member' || session.user.role === 'event-co') && session.user.memberId && (
+          <MemberStatusWarning />
+        )}
 
         {/* Guest Message - Verification Status */}
         {session.user.role === 'guest' && (
@@ -695,7 +730,7 @@ function QuickActionCard({
   description: string;
   href: string;
   icon: React.ReactNode;
-  color: 'blue' | 'green' | 'yellow' | 'pink' | 'purple' | 'red';
+  color: 'blue' | 'green' | 'yellow' | 'pink' | 'purple' | 'red' | 'orange';
 }) {
   const colorClasses = {
     blue: 'bg-blue-500 group-hover:bg-blue-600',
@@ -704,6 +739,7 @@ function QuickActionCard({
     pink: 'bg-pink-500 group-hover:bg-pink-600',
     purple: 'bg-purple-500 group-hover:bg-purple-600',
     red: 'bg-red-500 group-hover:bg-red-600',
+    orange: 'bg-orange-500 group-hover:bg-orange-600',
   };
 
   return (
@@ -721,5 +757,74 @@ function QuickActionCard({
         </div>
       </div>
     </Link>
+  );
+}
+
+// Member Status Warning Component
+function MemberStatusWarning() {
+  const [statusInfo, setStatusInfo] = useState<{
+    isRestricted: boolean;
+    status?: string;
+    lineGroupStatus?: string;
+    isActive?: boolean;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/member/status-check')
+      .then(res => res.json())
+      .then(data => {
+        setStatusInfo(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error checking member status:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return null;
+  if (!statusInfo?.isRestricted) return null;
+
+  return (
+    <div className="mt-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
+      <div className="flex items-start gap-4">
+        <svg className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div className="flex-1">
+          <h3 className="font-semibold text-orange-800 mb-2">แจ้งเตือน: สถานะสมาชิกไม่ครบถ้วน</h3>
+          <p className="text-sm text-orange-700 mb-3">
+            บัญชีของคุณถูกจำกัดสิทธิ์เนื่องจากสถานะไม่ครบถ้วน กรุณาติดต่อผู้ดูแลระบบเพื่อตรวจสอบ
+          </p>
+          <ul className="space-y-1 text-sm text-orange-700">
+            {!statusInfo.isActive && (
+              <li className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                สถานะบัญชี: ไม่ Active
+              </li>
+            )}
+            {statusInfo.status !== 'ปกติ' && (
+              <li className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                สถานะสมาชิก: {statusInfo.status || 'ไม่ระบุ'}
+              </li>
+            )}
+            {statusInfo.lineGroupStatus !== 'ปกติ' && (
+              <li className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                สถานะ LINE Group: {statusInfo.lineGroupStatus || 'ไม่ระบุ'}
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 }

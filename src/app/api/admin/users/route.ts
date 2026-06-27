@@ -79,6 +79,8 @@ export async function GET() {
         licenseNumber: verificationData?.licenseNumber || userData.licenseNumber || '',
         phone: verificationData?.phone || userData.phone || '',
         verificationStatus: finalVerificationStatus,
+        // Include assigned events for event-staff and event-co
+        assignedEventIds: userData.assignedEventIds || [],
       };
     });
 
@@ -101,7 +103,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { userId, role, memberId, isActive, unlockSearch, resetLineConnection, resetReason } = await request.json();
+    const { userId, role, memberId, isActive, assignedEventIds, unlockSearch, resetLineConnection, resetReason } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -135,6 +137,10 @@ export async function PUT(request: NextRequest) {
 
     if (isActive !== undefined) {
       updates.isActive = isActive;
+    }
+
+    if (assignedEventIds !== undefined) {
+      updates.assignedEventIds = assignedEventIds;
     }
 
     // Handle unlock search

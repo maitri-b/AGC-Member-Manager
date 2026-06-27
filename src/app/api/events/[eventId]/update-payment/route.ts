@@ -9,6 +9,7 @@ import { getEventRegistrations, updateEventRegistration } from '@/lib/event-shee
 import { Event } from '@/types/event';
 import { calculateRemainingDeadline } from '@/lib/payment-deadlines';
 import { determinePaymentStatus } from '@/lib/payment-status';
+import { hasPermission, canManageEvent } from '@/lib/permissions';
 
 // PUT - Update payment status (Admin confirms deposit or remaining payment)
 export async function PUT(
@@ -18,15 +19,30 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
 
-    // Check admin permissions
-    const isAdmin = session?.user?.permissions?.includes('admin:access') ||
-                     session?.user?.permissions?.includes('members:list');
-
-    if (!session?.user || !isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized - Admin only' }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { eventId } = await params;
+
+    // Check permissions: either has full access OR can manage assigned event
+    const hasFullAccess = hasPermission(session.user.permissions || [], 'admin:access') ||
+                          hasPermission(session.user.permissions || [], 'members:list');
+    const canManageAssigned = hasPermission(session.user.permissions || [], 'events:manage-assigned');
+
+    if (!hasFullAccess && !canManageAssigned) {
+      return NextResponse.json({ error: 'Unauthorized - Admin only' }, { status: 401 });
+    }
+
+    // Verify assignment for event-staff/event-co
+    if (!hasFullAccess && canManageAssigned) {
+      const userRole = session.user.role;
+      const assignedEventIds = session.user.assignedEventIds || [];
+
+      if (!canManageEvent(userRole, assignedEventIds, eventId)) {
+        return NextResponse.json({ error: 'Not assigned to this event' }, { status: 403 });
+      }
+    }
     const body = await request.json();
     const { registrationId, paymentType, amount, slipUrl, paidDate } = body;
 

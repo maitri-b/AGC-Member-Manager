@@ -198,7 +198,15 @@ export default function AdminEventsPage() {
       const response = await fetch('/api/admin/events');
       if (response.ok) {
         const data = await response.json();
-        setEvents(data.events || []);
+        let allEvents = data.events || [];
+
+        // Filter for event-staff - show only assigned events
+        if (session?.user?.role === 'event-staff') {
+          const assignedIds = session.user.assignedEventIds || [];
+          allEvents = allEvents.filter((e: Event) => assignedIds.includes(e.eventId));
+        }
+
+        setEvents(allEvents);
       } else {
         setError('ไม่สามารถโหลดข้อมูลกิจกรรมได้');
       }
@@ -551,15 +559,17 @@ export default function AdminEventsPage() {
               </Link>
               <h1 className="text-2xl font-bold text-gray-900">จัดการกิจกรรม</h1>
             </div>
-            <button
-              onClick={() => handleOpenModal()}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              เพิ่มกิจกรรมใหม่
-            </button>
+            {session?.user?.role !== 'event-staff' && (
+              <button
+                onClick={() => handleOpenModal()}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                เพิ่มกิจกรรมใหม่
+              </button>
+            )}
           </div>
         </div>
       </header>

@@ -18,7 +18,9 @@
       "Bash(ls:*)",
       "Bash(curl:*)",
       "Bash(grep:*)",
-      "Bash(node check-event-data.js:*)"
+      "Bash(node check-event-data.js:*)",
+      "Bash(Select-String -Pattern \"error|Error|warning|Warning|Failed|failed\")",
+      "Bash(Select-Object -First 30)"
     ]
   }
 }

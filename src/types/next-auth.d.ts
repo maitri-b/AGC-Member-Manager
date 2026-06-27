@@ -12,6 +12,7 @@ declare module 'next-auth' {
       role: UserRole;
       memberId?: string;
       permissions: string[];
+      assignedEventIds?: string[];
     };
     accessToken?: string;
   }
@@ -25,6 +26,7 @@ declare module 'next-auth' {
     role: UserRole;
     memberId?: string;
     permissions: string[];
+    assignedEventIds?: string[];
   }
 }
 
@@ -34,11 +36,12 @@ declare module 'next-auth/jwt' {
     role: UserRole;
     memberId?: string;
     permissions: string[];
+    assignedEventIds?: string[];
     accessToken?: string;
   }
 }
 
-export type UserRole = 'admin' | 'committee' | 'member' | 'guest';
+export type UserRole = 'admin' | 'committee' | 'event-co' | 'event-staff' | 'member' | 'guest';
 
 export interface Permission {
   name: string;
@@ -56,6 +59,9 @@ export const PERMISSIONS = {
   // Report permissions
   'report:view': 'View reports',
   'report:export': 'Export reports',
+
+  // Event permissions
+  'events:manage-assigned': 'Manage assigned events',
 
   // Admin permissions
   'admin:access': 'Access admin panel',
@@ -76,6 +82,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'admin:access', // Access admin panel
     'admin:users',  // Manage users (except roles)
     // Note: 'admin:roles' is NOT included - committee cannot change user roles
+  ],
+  'event-co': [
+    'events:manage-assigned', // Can manage assigned events
+  ],
+  'event-staff': [
+    'events:manage-assigned', // Can manage assigned events only
   ],
   member: [
     // Members can only view their own profile via /profile page

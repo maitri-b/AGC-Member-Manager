@@ -3,7 +3,8 @@ import { NextAuthOptions } from 'next-auth';
 import type { Provider } from 'next-auth/providers/index';
 import { adminDb } from './firebase-admin';
 import { ROLE_PERMISSIONS, UserRole } from '@/types/next-auth.d';
-import { updateMember } from './google-sheets';
+import { updateMember, getMemberById } from './google-sheets';
+import { getEffectivePermissions } from './permissions';
 
 // Custom LINE Provider that handles HS256 JWT algorithm issue
 // LINE uses HS256 for ID tokens but openid-client expects RS256
@@ -109,6 +110,7 @@ export const authOptions: NextAuthOptions = {
               permissions: ROLE_PERMISSIONS.guest,
               memberId: null,
               isActive: true,
+              assignedEventIds: [],
               createdAt: new Date(),
               lastLoginAt: new Date(),
             });
@@ -179,14 +181,42 @@ export const authOptions: NextAuthOptions = {
           if (userDoc.exists) {
             const userData = userDoc.data();
             const role = (userData?.role as UserRole) || 'guest';
+            const memberId = userData?.memberId;
+            const isActive = userData?.isActive;
+            const assignedEventIds = userData?.assignedEventIds || [];
+
             token.role = role;
-            token.memberId = userData?.memberId;
-            // Always use ROLE_PERMISSIONS based on current role
-            // This ensures permissions are always in sync with the role
-            token.permissions = ROLE_PERMISSIONS[role] || [];
+            token.memberId = memberId;
+            token.assignedEventIds = assignedEventIds;
+
+            // Fetch member status from Google Sheets if memberId exists
+            let memberStatus: string | undefined;
+            let lineGroupStatus: string | undefined;
+
+            if (memberId) {
+              try {
+                const memberData = await getMemberById(memberId);
+                if (memberData) {
+                  memberStatus = memberData.status;
+                  lineGroupStatus = memberData.lineGroupStatus;
+                }
+              } catch (error) {
+                console.error('Error fetching member data from Google Sheets:', error);
+                // Continue without member status - will use default permissions
+              }
+            }
+
+            // Calculate effective permissions based on role and member status
+            token.permissions = getEffectivePermissions(
+              role,
+              isActive,
+              memberStatus,
+              lineGroupStatus
+            );
           } else {
             token.role = 'guest';
             token.memberId = undefined;
+            token.assignedEventIds = [];
             token.permissions = ROLE_PERMISSIONS.guest;
           }
         } catch (error) {
@@ -194,6 +224,7 @@ export const authOptions: NextAuthOptions = {
           // Keep existing values on error, don't downgrade to guest
           if (!token.role) {
             token.role = 'guest';
+            token.assignedEventIds = [];
             token.permissions = ROLE_PERMISSIONS.guest;
           }
         }
@@ -208,6 +239,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.memberId = token.memberId;
         session.user.permissions = token.permissions;
+        session.user.assignedEventIds = token.assignedEventIds;
         session.accessToken = token.accessToken;
       }
       return session;

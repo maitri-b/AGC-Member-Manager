@@ -38,8 +38,19 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check admin routes
-  if (pathname.startsWith('/admin') && token.role !== 'admin') {
-    return NextResponse.redirect(new URL('/unauthorized', request.url));
+  if (pathname.startsWith('/admin')) {
+    const allowedAdminRoles = ['admin', 'committee', 'event-staff', 'event-co'];
+
+    if (!allowedAdminRoles.includes(token.role as string)) {
+      return NextResponse.redirect(new URL('/unauthorized', request.url));
+    }
+
+    // Event-staff and event-co can only access /admin/events/*
+    if (token.role === 'event-staff' || token.role === 'event-co') {
+      if (!pathname.startsWith('/admin/events')) {
+        return NextResponse.redirect(new URL('/unauthorized', request.url));
+      }
+    }
   }
 
   return NextResponse.next();

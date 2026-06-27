@@ -52,6 +52,8 @@ export function hasMinimumRole(
   const roleHierarchy: Record<UserRole, number> = {
     admin: 4,
     committee: 3,
+    'event-co': 2.7,
+    'event-staff': 2.5,
     member: 2,
     guest: 1,
   };
@@ -75,4 +77,62 @@ export function canAccessMemberData(
     return userMemberId === targetMemberId;
   }
   return false;
+}
+
+/**
+ * Check if user can manage a specific event
+ * Admins and committee can manage all events
+ * Event-staff and event-co can only manage assigned events
+ */
+export function canManageEvent(
+  userRole: UserRole,
+  assignedEventIds: string[] | undefined,
+  eventId: string
+): boolean {
+  // Admins and committee have full access
+  if (userRole === 'admin' || userRole === 'committee') {
+    return true;
+  }
+  // Event-staff and event-co can only manage assigned events
+  if (userRole === 'event-staff' || userRole === 'event-co') {
+    return assignedEventIds?.includes(eventId) || false;
+  }
+  return false;
+}
+
+/**
+ * Check if member has full status (all 3 criteria met)
+ * Required for members and event-co to maintain full permissions
+ */
+export function isFullMember(
+  userIsActive: boolean | undefined,
+  memberStatus: string | undefined,
+  lineGroupStatus: string | undefined
+): boolean {
+  return (
+    userIsActive === true &&
+    memberStatus === 'ปกติ' &&
+    lineGroupStatus === 'ปกติ'
+  );
+}
+
+/**
+ * Get effective permissions based on role and member status
+ * Members and event-co with incomplete status get downgraded to guest permissions
+ */
+export function getEffectivePermissions(
+  role: UserRole,
+  isActive: boolean | undefined,
+  memberStatus: string | undefined,
+  lineGroupStatus: string | undefined
+): string[] {
+  // Check if member status restriction applies
+  if (role === 'member' || role === 'event-co') {
+    if (!isFullMember(isActive, memberStatus, lineGroupStatus)) {
+      // Downgrade to guest permissions
+      return ROLE_PERMISSIONS.guest;
+    }
+  }
+  // Return normal permissions for the role
+  return ROLE_PERMISSIONS[role] || [];
 }

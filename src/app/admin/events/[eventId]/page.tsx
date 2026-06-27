@@ -17,6 +17,24 @@ interface Event {
   location: string;
   description: string;
   year: number;
+  // Attendee type pricing
+  useAttendeeTypePricing?: boolean;
+  attendeeTypes?: Array<{
+    typeId: string;
+    typeName: string;
+    price: number;
+    isActive: boolean;
+    sortOrder: number;
+  }>;
+  // Room allocation
+  roomTypes?: Array<{
+    typeId: string;
+    typeName: string;
+    capacity: number;
+    price: number;
+    isActive: boolean;
+    sortOrder: number;
+  }>;
 }
 
 interface Attendee {
@@ -110,6 +128,19 @@ export default function EventDetailPage() {
     paidDate: new Date().toISOString().split('T')[0],
   });
   const [confirmingPayment, setConfirmingPayment] = useState(false);
+
+  // Special charges state
+  const [specialChargesModalOpen, setSpecialChargesModalOpen] = useState(false);
+  const [specialChargeFormData, setSpecialChargeFormData] = useState<{
+    registrationId: string;
+    description: string;
+    amount: number;
+  }>({
+    registrationId: '',
+    description: '',
+    amount: 0,
+  });
+  const [addingCharge, setAddingCharge] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {

@@ -42,6 +42,9 @@ interface Attendee {
     depositDeadline: string;
     remainingDeadline: string;
     paymentStatus: string;
+    // Attendee type pricing and room allocation (New)
+    attendeeTypeSelections?: string; // JSON stringified
+    roomAllocations?: string; // JSON stringified
   };
   member: {
     memberId: string;
@@ -86,6 +89,8 @@ export default function EventDetailPage() {
     attendeeCount: number;
     attendeeNames: string[];
     status: string;
+    attendeeTypeSelections?: Array<{ typeId: string; quantity: number }>;
+    roomAllocations?: Array<{ roomTypeId: string; roomCount: number }>;
   }>({ attendeeCount: 1, attendeeNames: [''], status: 'pending' });
   const [updating, setUpdating] = useState(false);
 
@@ -243,10 +248,32 @@ export default function EventDetailPage() {
       names = [attendee.registration.attendeeNames || ''];
     }
 
+    // Parse attendee type selections
+    let attendeeTypeSelections: Array<{ typeId: string; quantity: number }> = [];
+    try {
+      if (attendee.registration.attendeeTypeSelections) {
+        attendeeTypeSelections = JSON.parse(attendee.registration.attendeeTypeSelections);
+      }
+    } catch (e) {
+      console.error('Error parsing attendeeTypeSelections:', e);
+    }
+
+    // Parse room allocations
+    let roomAllocations: Array<{ roomTypeId: string; roomCount: number }> = [];
+    try {
+      if (attendee.registration.roomAllocations) {
+        roomAllocations = JSON.parse(attendee.registration.roomAllocations);
+      }
+    } catch (e) {
+      console.error('Error parsing roomAllocations:', e);
+    }
+
     setEditFormData({
       attendeeCount: attendee.registration.attendeeCount || 1,
       attendeeNames: names,
       status: attendee.registration.status || 'pending',
+      attendeeTypeSelections,
+      roomAllocations,
     });
   };
 

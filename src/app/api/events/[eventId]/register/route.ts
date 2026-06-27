@@ -186,6 +186,7 @@ export async function POST(
     let depositAmount = 0;
     let remainingAmount = totalFee;
     let depositDeadline = '';
+    let remainingDeadline = '';
     let paymentStatus = totalFee > 0 ? 'รอชำระเงิน' : 'ลงทะเบียนแล้ว';
 
     if (eventData.paymentMode === 'deposit' && totalFee > 0) {
@@ -196,6 +197,11 @@ export async function POST(
       // Calculate deposit deadline
       const registrationDate = new Date().toISOString();
       depositDeadline = calculateDepositDeadline(eventData as Event, registrationDate);
+
+      // Calculate remaining deadline (if configured)
+      if (eventData.remainingDeadlineType && eventData.remainingDeadlineType !== 'none') {
+        remainingDeadline = calculateRemainingDeadline(eventData as Event, registrationDate);
+      }
 
       paymentStatus = 'รอชำระมัดจำ';
     }
@@ -232,7 +238,7 @@ export async function POST(
       deposit_slip_url: '',
       remaining_slip_url: '',
       deposit_deadline: depositDeadline,
-      remaining_deadline: '',
+      remaining_deadline: remainingDeadline,
       payment_status: paymentStatus,
       // End deposit payment fields
       // Attendee type pricing (New)

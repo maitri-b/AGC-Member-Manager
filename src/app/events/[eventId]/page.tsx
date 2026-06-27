@@ -741,6 +741,61 @@ export default function EventDetailPage() {
                         </select>
                       </div>
 
+                      {/* Attendee Names */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          รายชื่อผู้สมัครร่วมกิจกรรม
+                        </label>
+
+                        {/* Warning for requireMemberAttendance */}
+                        {event.requireMemberAttendance && (
+                          <div className="mb-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                            <p className="text-xs text-orange-800 font-medium">
+                              ⚠️ ผู้เข้าร่วมกิจกรรมท่านแรกต้องเป็นสมาชิกชมรม (ไม่สามารถแก้ไขได้)
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          {Array.from({ length: attendeeCount }).map((_, index) => {
+                            // First attendee is member (non-editable) when requireMemberAttendance is true
+                            const isFirstAttendeeAndMemberRequired = index === 0 && event.requireMemberAttendance;
+                            const isDisabled = isFirstAttendeeAndMemberRequired || !(event.allowMemberEdit ?? true);
+
+                            return (
+                              <div key={index}>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  {isFirstAttendeeAndMemberRequired
+                                    ? 'ผู้เข้าร่วมกิจกรรมท่านที่ 1 (สมาชิก)'
+                                    : event.requireMemberAttendance && index > 0
+                                      ? `ผู้เข้าร่วมกิจกรรมท่านที่ ${index + 1} (ถ้ามี)`
+                                      : `ผู้เข้าร่วมกิจกรรมท่านที่ ${index + 1}`}
+                                </label>
+                                <input
+                                  type="text"
+                                  value={attendeeNames[index] || ''}
+                                  onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
+                                  disabled={isDisabled}
+                                  placeholder={
+                                    isFirstAttendeeAndMemberRequired
+                                      ? memberName || 'ชื่อสมาชิก'
+                                      : event.requireMemberAttendance && index > 0
+                                        ? 'ระบุชื่อเต็ม (ถ้ามี)'
+                                        : index === 0
+                                          ? 'ชื่อของคุณ'
+                                          : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`
+                                  }
+                                  required={index === 0}
+                                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                    isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
+                                  } ${isFirstAttendeeAndMemberRequired ? 'font-semibold text-orange-800 bg-orange-50 border-orange-300' : ''}`}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       {/* Contact Information Card */}
                       {memberName && memberPhone && (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -838,61 +893,6 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
-
-                      {/* Attendee Names */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          รายชื่อผู้สมัครร่วมกิจกรรม
-                        </label>
-
-                        {/* Warning for requireMemberAttendance */}
-                        {event.requireMemberAttendance && (
-                          <div className="mb-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
-                            <p className="text-xs text-orange-800 font-medium">
-                              ⚠️ ผู้เข้าร่วมกิจกรรมท่านแรกต้องเป็นสมาชิกชมรม (ไม่สามารถแก้ไขได้)
-                            </p>
-                          </div>
-                        )}
-
-                        <div className="space-y-2">
-                          {Array.from({ length: attendeeCount }).map((_, index) => {
-                            // First attendee is member (non-editable) when requireMemberAttendance is true
-                            const isFirstAttendeeAndMemberRequired = index === 0 && event.requireMemberAttendance;
-                            const isDisabled = isFirstAttendeeAndMemberRequired || !(event.allowMemberEdit ?? true);
-
-                            return (
-                              <div key={index}>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">
-                                  {isFirstAttendeeAndMemberRequired
-                                    ? 'ผู้เข้าร่วมกิจกรรมท่านที่ 1 (สมาชิก)'
-                                    : event.requireMemberAttendance && index > 0
-                                      ? `ผู้เข้าร่วมกิจกรรมท่านที่ ${index + 1} (ถ้ามี)`
-                                      : `ผู้เข้าร่วมกิจกรรมท่านที่ ${index + 1}`}
-                                </label>
-                                <input
-                                  type="text"
-                                  value={attendeeNames[index] || ''}
-                                  onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
-                                  disabled={isDisabled}
-                                  placeholder={
-                                    isFirstAttendeeAndMemberRequired
-                                      ? memberName || 'ชื่อสมาชิก'
-                                      : event.requireMemberAttendance && index > 0
-                                        ? 'ระบุชื่อเต็ม (ถ้ามี)'
-                                        : index === 0
-                                          ? 'ชื่อของคุณ'
-                                          : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`
-                                  }
-                                  required={index === 0}
-                                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                    isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
-                                  } ${isFirstAttendeeAndMemberRequired ? 'font-semibold text-orange-800 bg-orange-50 border-orange-300' : ''}`}
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
 
                       {/* Room Allocation (only when attendee type pricing is enabled and room types are configured) */}
                       {event.useAttendeeTypePricing && event.roomTypes && event.roomTypes.length > 0 && (

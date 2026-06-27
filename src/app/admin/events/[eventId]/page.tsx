@@ -296,16 +296,28 @@ export default function EventDetailPage() {
     setActionMessage(null);
 
     try {
+      const updateData: any = {
+        attendee_count: editFormData.attendeeCount,
+        attendee_names: JSON.stringify(filledNames),
+        status: editFormData.status,
+      };
+
+      // Include attendee type selections if present
+      if (editFormData.attendeeTypeSelections && editFormData.attendeeTypeSelections.length > 0) {
+        updateData.attendee_type_selections = JSON.stringify(editFormData.attendeeTypeSelections);
+      }
+
+      // Include room allocations if present
+      if (editFormData.roomAllocations && editFormData.roomAllocations.length > 0) {
+        updateData.room_allocations = JSON.stringify(editFormData.roomAllocations);
+      }
+
       const response = await fetch(`/api/events/${eventId}/admin-update-registration`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           registrationId: editingRegistration,
-          updateData: {
-            attendee_count: editFormData.attendeeCount,
-            attendee_names: JSON.stringify(filledNames),
-            status: editFormData.status,
-          },
+          updateData,
         }),
       });
 
@@ -783,6 +795,64 @@ export default function EventDetailPage() {
                         </p>
                       )}
 
+                      {/* Attendee Type Selections Display */}
+                      {(() => {
+                        try {
+                          if (attendee.registration.attendeeTypeSelections) {
+                            const selections = JSON.parse(attendee.registration.attendeeTypeSelections);
+                            if (selections && selections.length > 0) {
+                              return (
+                                <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                                  <p className="text-xs font-semibold text-blue-900 mb-1">ประเภทผู้เข้าร่วม:</p>
+                                  <div className="space-y-1">
+                                    {selections.map((sel: any, idx: number) => {
+                                      const type = eventData?.attendeeTypes?.find((t: any) => t.typeId === sel.typeId);
+                                      return type ? (
+                                        <div key={idx} className="text-xs text-gray-700">
+                                          • {type.typeName}: {sel.quantity} คน
+                                        </div>
+                                      ) : null;
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          console.error('Error parsing attendee types:', e);
+                        }
+                        return null;
+                      })()}
+
+                      {/* Room Allocations Display */}
+                      {(() => {
+                        try {
+                          if (attendee.registration.roomAllocations) {
+                            const allocations = JSON.parse(attendee.registration.roomAllocations);
+                            if (allocations && allocations.length > 0) {
+                              return (
+                                <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
+                                  <p className="text-xs font-semibold text-amber-900 mb-1">การจัดห้องพัก:</p>
+                                  <div className="space-y-1">
+                                    {allocations.map((alloc: any, idx: number) => {
+                                      const roomType = eventData?.roomTypes?.find((rt: any) => rt.typeId === alloc.roomTypeId);
+                                      return roomType ? (
+                                        <div key={idx} className="text-xs text-gray-700">
+                                          • {roomType.typeName}: {alloc.roomCount} ห้อง (รองรับ {roomType.capacity * alloc.roomCount} คน)
+                                        </div>
+                                      ) : null;
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          console.error('Error parsing room allocations:', e);
+                        }
+                        return null;
+                      })()}
+
                       {/* Payment Status & Actions (NEW) */}
                       {attendee.registration.totalAmount > 0 && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -920,6 +990,90 @@ export default function EventDetailPage() {
                               ))}
                             </div>
                           </div>
+
+                          {/* Attendee Type Selections (Editable) */}
+                          {eventData?.useAttendeeTypePricing && eventData?.attendeeTypes && eventData.attendeeTypes.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <label className="block text-xs font-semibold text-blue-900 mb-2">
+                                ประเภทผู้เข้าร่วม
+                              </label>
+                              <div className="space-y-2">
+                                {eventData.attendeeTypes
+                                  .filter((t: any) => t.isActive)
+                                  .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                                  .map((type: any) => {
+                                    const selection = editFormData.attendeeTypeSelections?.find(s => s.typeId === type.typeId);
+                                    const quantity = selection?.quantity || 0;
+                                    return (
+                                      <div key={type.typeId} className="flex items-center gap-2 bg-white p-2 rounded">
+                                        <span className="text-xs font-medium text-gray-700 flex-1">{type.typeName}:</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          max="50"
+                                          value={quantity}
+                                          onChange={(e) => {
+                                            const qty = parseInt(e.target.value) || 0;
+                                            const newSelections = (editFormData.attendeeTypeSelections || []).filter(s => s.typeId !== type.typeId);
+                                            if (qty > 0) {
+                                              newSelections.push({ typeId: type.typeId, quantity: qty });
+                                            }
+                                            setEditFormData({ ...editFormData, attendeeTypeSelections: newSelections });
+                                          }}
+                                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
+                                        />
+                                        <span className="text-xs text-gray-600">คน</span>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                              <p className="text-xs text-gray-500 mt-2">
+                                หมายเหตุ: การแก้ไขจำนวนที่นี่จะไม่คำนวณค่าใช้จ่ายใหม่โดยอัตโนมัติ
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Room Allocations (Editable) */}
+                          {eventData?.roomTypes && eventData.roomTypes.length > 0 && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                              <label className="block text-xs font-semibold text-amber-900 mb-2">
+                                การจัดห้องพัก
+                              </label>
+                              <div className="space-y-2">
+                                {eventData.roomTypes
+                                  .filter((rt: any) => rt.isActive)
+                                  .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                                  .map((roomType: any) => {
+                                    const allocation = editFormData.roomAllocations?.find(ra => ra.roomTypeId === roomType.typeId);
+                                    const roomCount = allocation?.roomCount || 0;
+                                    return (
+                                      <div key={roomType.typeId} className="flex items-center gap-2 bg-white p-2 rounded">
+                                        <span className="text-xs font-medium text-gray-700 flex-1">{roomType.typeName}:</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          max="20"
+                                          value={roomCount}
+                                          onChange={(e) => {
+                                            const count = parseInt(e.target.value) || 0;
+                                            const newAllocations = (editFormData.roomAllocations || []).filter(ra => ra.roomTypeId !== roomType.typeId);
+                                            if (count > 0) {
+                                              newAllocations.push({ roomTypeId: roomType.typeId, roomCount: count });
+                                            }
+                                            setEditFormData({ ...editFormData, roomAllocations: newAllocations });
+                                          }}
+                                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
+                                        />
+                                        <span className="text-xs text-gray-600">ห้อง ({roomType.capacity} คน/ห้อง)</span>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                              <p className="text-xs text-gray-500 mt-2">
+                                หมายเหตุ: การแก้ไขจำนวนที่นี่จะไม่คำนวณค่าใช้จ่ายใหม่โดยอัตโนมัติ
+                              </p>
+                            </div>
+                          )}
 
                           <div className="flex gap-2">
                             <button

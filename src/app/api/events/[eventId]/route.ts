@@ -92,6 +92,9 @@ export async function GET(
           status: status,
           checkinSections: String(attendee.registration.checkinSections || ''),
           tableNumber: String(attendee.registration.tableNumber || ''),
+          // Contact information
+          contactPhone: String(attendee.registration.contactPhone || ''),
+          contactEmail: String(attendee.registration.contactEmail || ''),
           // Deposit payment fields (New)
           totalAmount: Number(attendee.registration.totalAmount) || 0,
           depositAmount: Number(attendee.registration.depositAmount) || 0,
@@ -103,6 +106,13 @@ export async function GET(
           depositDeadline: String(attendee.registration.depositDeadline || ''),
           remainingDeadline: String(attendee.registration.remainingDeadline || ''),
           paymentStatus: String(attendee.registration.paymentStatus || status),
+          // Attendee type pricing and room allocation
+          attendeeTypeSelections: String(attendee.registration.attendeeTypeSelections || ''),
+          roomAllocations: String(attendee.registration.roomAllocations || ''),
+          // Special charges
+          specialCharges: String(attendee.registration.specialCharges || ''),
+          // Special requests
+          specialRequests: String(attendee.registration.specialRequests || ''),
         },
         member: attendee.member,
         lineProfile: lineProfile || null,
@@ -119,6 +129,10 @@ export async function GET(
         location: event.location,
         description: event.description,
         year: event.year,
+        // Event configuration for attendee types and room allocation
+        useAttendeeTypePricing: event.useAttendeeTypePricing || false,
+        attendeeTypes: event.attendeeTypes || [],
+        roomTypes: event.roomTypes || [],
       },
       summary: {
         totalRegistrations: summary.totalRegistrations,

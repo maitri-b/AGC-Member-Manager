@@ -28,7 +28,7 @@ export async function PUT(
 
     const { eventId } = await params;
     const body = await request.json();
-    const { registrationId, paymentType, slipUrl, paidDate } = body;
+    const { registrationId, paymentType, amount, slipUrl, paidDate } = body;
 
     if (!registrationId || !paymentType || !paidDate) {
       return NextResponse.json({
@@ -36,9 +36,9 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    if (paymentType !== 'deposit' && paymentType !== 'remaining') {
+    if (!['deposit', 'remaining', 'full'].includes(paymentType)) {
       return NextResponse.json({
-        error: 'paymentType must be either "deposit" or "remaining"'
+        error: 'paymentType must be "deposit", "remaining", or "full"'
       }, { status: 400 });
     }
 
@@ -76,6 +76,14 @@ export async function PUT(
     // Prepare update data
     const updateData: Record<string, unknown> = {};
 
+    // Record payment amount in admin notes
+    if (amount) {
+      const currentNotes = registration.adminNotes || '';
+      const paymentTypeLabel = paymentType === 'deposit' ? 'มัดจำ' : paymentType === 'remaining' ? 'ยอดที่เหลือ' : 'เต็มจำนวน';
+      const paymentNote = `\n[${paidDate}] Admin บันทึกการชำระ${paymentTypeLabel}: ${amount.toLocaleString()} บาท (โดย ${session.user.fullName || session.user.email})`;
+      updateData.admin_notes = currentNotes + paymentNote;
+    }
+
     if (paymentType === 'deposit') {
       // Mark deposit as paid
       updateData.deposit_paid = true;
@@ -96,6 +104,14 @@ export async function PUT(
       }
       // Note: We don't set a specific 'remaining_paid' flag,
       // status is determined by having both depositPaid and remainingSlipUrl
+    } else if (paymentType === 'full') {
+      // Mark both deposit and remaining as paid (full payment)
+      updateData.deposit_paid = true;
+      updateData.deposit_paid_date = paidDate;
+      if (slipUrl) {
+        updateData.deposit_slip_url = slipUrl;
+        updateData.remaining_slip_url = slipUrl;
+      }
     }
 
     // Recalculate payment status
@@ -110,6 +126,7 @@ export async function PUT(
       [`${paymentType}_payment_confirmed`]: {
         by: session.user.id,
         at: new Date().toISOString(),
+        amount,
       },
     });
 
@@ -126,11 +143,15 @@ export async function PUT(
 
       console.log('[Update Payment] Payment updated successfully');
 
+      const successMessage = paymentType === 'deposit'
+        ? 'บันทึกการชำระมัดจำเรียบร้อยแล้ว'
+        : paymentType === 'remaining'
+          ? 'บันทึกการชำระยอดคงเหลือเรียบร้อยแล้ว'
+          : 'บันทึกการชำระเต็มจำนวนเรียบร้อยแล้ว';
+
       return NextResponse.json({
         success: true,
-        message: paymentType === 'deposit'
-          ? 'บันทึกการชำระมัดจำเรียบร้อยแล้ว'
-          : 'บันทึกการชำระยอดคงเหลือเรียบร้อยแล้ว',
+        message: successMessage,
         newStatus,
       });
     } catch (updateError) {

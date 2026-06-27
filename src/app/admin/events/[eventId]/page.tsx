@@ -93,12 +93,14 @@ export default function EventDetailPage() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentFormData, setPaymentFormData] = useState<{
     registrationId: string;
-    paymentType: 'deposit' | 'remaining';
+    paymentType: 'deposit' | 'remaining' | 'full';
+    amount: number;
     slipUrl: string;
     paidDate: string;
   }>({
     registrationId: '',
     paymentType: 'deposit',
+    amount: 0,
     slipUrl: '',
     paidDate: new Date().toISOString().split('T')[0],
   });
@@ -348,10 +350,21 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleOpenPaymentModal = (attendee: Attendee, paymentType: 'deposit' | 'remaining') => {
+  const handleOpenPaymentModal = (attendee: Attendee, paymentType: 'deposit' | 'remaining' | 'full' = 'deposit') => {
+    // Auto-fill amount based on payment type
+    let defaultAmount = 0;
+    if (paymentType === 'deposit') {
+      defaultAmount = attendee.registration.depositAmount || 0;
+    } else if (paymentType === 'remaining') {
+      defaultAmount = attendee.registration.remainingAmount || 0;
+    } else if (paymentType === 'full') {
+      defaultAmount = attendee.registration.totalAmount || 0;
+    }
+
     setPaymentFormData({
       registrationId: attendee.registration.registrationId,
       paymentType,
+      amount: defaultAmount,
       slipUrl: paymentType === 'deposit' ? attendee.registration.depositSlipUrl : attendee.registration.remainingSlipUrl,
       paidDate: new Date().toISOString().split('T')[0],
     });
@@ -363,6 +376,7 @@ export default function EventDetailPage() {
     setPaymentFormData({
       registrationId: '',
       paymentType: 'deposit',
+      amount: 0,
       slipUrl: '',
       paidDate: new Date().toISOString().split('T')[0],
     });
@@ -371,6 +385,11 @@ export default function EventDetailPage() {
   const handleConfirmPayment = async () => {
     if (!paymentFormData.paidDate) {
       setActionMessage({ type: 'error', text: 'กรุณาระบุวันที่ชำระเงิน' });
+      return;
+    }
+
+    if (paymentFormData.amount <= 0) {
+      setActionMessage({ type: 'error', text: 'กรุณาระบุจำนวนเงินที่ชำระ' });
       return;
     }
 
@@ -384,6 +403,7 @@ export default function EventDetailPage() {
         body: JSON.stringify({
           registrationId: paymentFormData.registrationId,
           paymentType: paymentFormData.paymentType,
+          amount: paymentFormData.amount,
           slipUrl: paymentFormData.slipUrl,
           paidDate: paymentFormData.paidDate,
         }),
@@ -933,10 +953,70 @@ export default function EventDetailPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {paymentFormData.paymentType === 'deposit' ? 'ยืนยันการรับชำระมัดจำ' : 'ยืนยันการรับชำระยอดคงเหลือ'}
+              บันทึกการชำระเงิน
             </h2>
 
             <div className="space-y-4">
+              {/* Payment Type Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ประเภทการชำระเงิน *
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      value="deposit"
+                      checked={paymentFormData.paymentType === 'deposit'}
+                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm">ชำระมัดจำ (งวดที่ 1)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      value="remaining"
+                      checked={paymentFormData.paymentType === 'remaining'}
+                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm">ชำระยอดที่เหลือ (งวดที่ 2)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      value="full"
+                      checked={paymentFormData.paymentType === 'full'}
+                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm font-semibold text-green-700">ชำระเต็มจำนวน (ทั้งหมด)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  จำนวนเงินที่ชำระ (บาท) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={paymentFormData.amount}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ระบุยอดเงินที่ลูกค้าชำระจริง
+                </p>
+              </div>
+
+              {/* Payment Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   วันที่ชำระเงิน *
@@ -953,6 +1033,7 @@ export default function EventDetailPage() {
                 </p>
               </div>
 
+              {/* Slip URL */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   URL สลิปการโอนเงิน (ถ้ามี)
@@ -969,10 +1050,12 @@ export default function EventDetailPage() {
                 </p>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                <p className="text-sm text-yellow-800">
+              {/* Note */}
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="text-sm text-blue-800">
                   <strong>หมายเหตุ:</strong> การกดยืนยันจะบันทึกการชำระเงินลงในระบบและอัพเดทสถานะอัตโนมัติ
                   {paymentFormData.paymentType === 'deposit' && ' และคำนวณกำหนดชำระยอดคงเหลือ'}
+                  {paymentFormData.paymentType === 'full' && ' (ทั้งมัดจำและยอดคงเหลือ)'}
                 </p>
               </div>
             </div>
@@ -980,7 +1063,7 @@ export default function EventDetailPage() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={handleConfirmPayment}
-                disabled={confirmingPayment || !paymentFormData.paidDate}
+                disabled={confirmingPayment || !paymentFormData.paidDate || paymentFormData.amount <= 0}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {confirmingPayment ? 'กำลังบันทึก...' : 'ยืนยันการชำระ'}

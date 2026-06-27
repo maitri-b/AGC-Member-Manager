@@ -7,7 +7,7 @@ import { getMemberById } from '@/lib/google-sheets';
 import { getEventRegistrations, addEventRegistration } from '@/lib/event-sheets';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
-import { calculatePaymentSplit, calculateDepositDeadline } from '@/lib/payment-deadlines';
+import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline } from '@/lib/payment-deadlines';
 
 // Generate a unique 6-character registration ID
 function generateRegistrationId(): string {

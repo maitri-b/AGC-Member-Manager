@@ -108,6 +108,7 @@ export default function EventDetailPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [expandedRegistrations, setExpandedRegistrations] = useState<Set<string>>(new Set());
   const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<{
     attendeeCount: number;
@@ -150,6 +151,19 @@ export default function EventDetailPage() {
     amount: 0,
   });
   const [addingCharge, setAddingCharge] = useState(false);
+
+  // Toggle expand/collapse for registration details
+  const toggleExpandRegistration = (registrationId: string) => {
+    setExpandedRegistrations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(registrationId)) {
+        newSet.delete(registrationId);
+      } else {
+        newSet.add(registrationId);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -964,8 +978,22 @@ export default function EventDetailPage() {
                       )}
                     </div>
 
-                    {/* Edit/Cancel Button */}
+                    {/* Expand/Collapse & Edit/Cancel Buttons */}
                     <div className="flex-shrink-0 flex items-center gap-2">
+                      <button
+                        onClick={() => toggleExpandRegistration(attendee.registration.registrationId)}
+                        className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                        title={expandedRegistrations.has(attendee.registration.registrationId) ? "ซ่อนรายละเอียด" : "แสดงรายละเอียด"}
+                      >
+                        <svg
+                          className={`w-5 h-5 transition-transform duration-200 ${expandedRegistrations.has(attendee.registration.registrationId) ? 'rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
                       <button
                         onClick={() => isEditing ? setEditingRegistration(null) : handleEditRegistration(attendee)}
                         className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -984,12 +1012,13 @@ export default function EventDetailPage() {
                     </div>
                   </div>
 
-                  {/* Full-Width Cards Section - Below Header */}
-                  <div className="space-y-3">
-                    {/* View-Only Cards - Hide when editing */}
-                    {!isEditing && (
-                      <>
-                        {/* Attendee Type Selections Display */}
+                  {/* Full-Width Cards Section - Below Header (Expandable) */}
+                  {expandedRegistrations.has(attendee.registration.registrationId) && (
+                    <div className="space-y-3 mt-3 pt-3 border-t border-gray-200">
+                      {/* View-Only Cards - Hide when editing */}
+                      {!isEditing && (
+                        <>
+                          {/* Attendee Type Selections Display */}
                         {(() => {
                           try {
                             if (attendee.registration.attendeeTypeSelections) {
@@ -1465,7 +1494,8 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
-                  </div>
+                    </div>
+                  )}
                 </div>
                 );
               })}

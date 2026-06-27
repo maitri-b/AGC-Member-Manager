@@ -1234,9 +1234,12 @@ export default function EventDetailPage() {
                                   .map((type: any) => {
                                     const selection = editFormData.attendeeTypeSelections?.find(s => s.typeId === type.typeId);
                                     const quantity = selection?.quantity || 0;
+                                    const subtotal = type.price * quantity;
                                     return (
                                       <div key={type.typeId} className="flex items-center gap-2 bg-white p-2 rounded">
-                                        <span className="text-xs font-medium text-gray-700 flex-1">{type.typeName}:</span>
+                                        <span className="text-xs font-medium text-gray-700 flex-1">
+                                          {type.typeName} <span className="text-gray-500">({type.price.toLocaleString()} บาท/คน)</span>
+                                        </span>
                                         <input
                                           type="number"
                                           min="0"
@@ -1252,7 +1255,12 @@ export default function EventDetailPage() {
                                           }}
                                           className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
                                         />
-                                        <span className="text-xs text-gray-600">คน</span>
+                                        <span className="text-xs text-gray-600 w-12 text-right">คน</span>
+                                        {quantity > 0 && (
+                                          <span className="text-xs font-semibold text-blue-600 w-24 text-right">
+                                            = {subtotal.toLocaleString()} ฿
+                                          </span>
+                                        )}
                                       </div>
                                     );
                                   })}
@@ -1276,9 +1284,12 @@ export default function EventDetailPage() {
                                   .map((roomType: any) => {
                                     const allocation = editFormData.roomAllocations?.find(ra => ra.roomTypeId === roomType.typeId);
                                     const roomCount = allocation?.roomCount || 0;
+                                    const subtotal = roomType.price * roomCount;
                                     return (
                                       <div key={roomType.typeId} className="flex items-center gap-2 bg-white p-2 rounded">
-                                        <span className="text-xs font-medium text-gray-700 flex-1">{roomType.typeName}:</span>
+                                        <span className="text-xs font-medium text-gray-700 flex-1">
+                                          {roomType.typeName} <span className="text-gray-500">({roomType.price.toLocaleString()} บาท/ห้อง, {roomType.capacity} คน/ห้อง)</span>
+                                        </span>
                                         <input
                                           type="number"
                                           min="0"
@@ -1294,7 +1305,12 @@ export default function EventDetailPage() {
                                           }}
                                           className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
                                         />
-                                        <span className="text-xs text-gray-600">ห้อง ({roomType.capacity} คน/ห้อง)</span>
+                                        <span className="text-xs text-gray-600 w-12 text-right">ห้อง</span>
+                                        {roomCount > 0 && (
+                                          <span className="text-xs font-semibold text-amber-600 w-24 text-right">
+                                            = {subtotal.toLocaleString()} ฿
+                                          </span>
+                                        )}
                                       </div>
                                     );
                                   })}

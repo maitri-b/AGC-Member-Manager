@@ -85,8 +85,11 @@ export async function POST(
     specialCharges.push(newCharge);
 
     // Calculate new total amount
+    // eventFee = base event fee (from attendee types or tiered pricing, including room fees)
+    // totalAmount = eventFee + special charges
+    const eventFee = registration.eventFee || 0;
     const chargesTotal = specialCharges.reduce((sum, charge) => sum + charge.amount, 0);
-    const newTotalAmount = (registration.eventFee || 0) + chargesTotal;
+    const newTotalAmount = eventFee + chargesTotal;
 
     // Prepare update data
     const updateData: Record<string, unknown> = {
@@ -214,8 +217,11 @@ export async function DELETE(
     specialCharges = specialCharges.filter(c => c.chargeId !== chargeId);
 
     // Calculate new total amount
+    // eventFee = base event fee (from attendee types or tiered pricing, including room fees)
+    // totalAmount = eventFee + special charges
+    const eventFee = registration.eventFee || 0;
     const chargesTotal = specialCharges.reduce((sum, charge) => sum + charge.amount, 0);
-    const newTotalAmount = (registration.eventFee || 0) + chargesTotal;
+    const newTotalAmount = eventFee + chargesTotal;
 
     // Prepare update data
     const updateData: Record<string, unknown> = {

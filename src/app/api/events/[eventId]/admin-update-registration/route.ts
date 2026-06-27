@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { updateEventRegistration } from '@/lib/event-sheets';
+import { updateEventRegistration, getEventRegistrations } from '@/lib/event-sheets';
 import { hasPermission } from '@/lib/permissions';
+import { Event, AttendeeType, RoomType } from '@/types/event';
 
 // PUT - Admin update registration
 export async function PUT(
@@ -47,18 +48,105 @@ export async function PUT(
       return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่พร้อมรับการแก้ไข' }, { status: 400 });
     }
 
+    // Get current registration data to retrieve existing special charges
+    const registrations = await getEventRegistrations(eventData.sheetName);
+    const currentRegistration = registrations.find(r => r.registrationId === registrationId);
+
+    if (!currentRegistration) {
+      return NextResponse.json({ error: 'ไม่พบข้อมูลการลงทะเบียน' }, { status: 404 });
+    }
+
+    // Recalculate eventFee if attendeeTypeSelections or roomAllocations are provided
+    let calculatedEventFee = currentRegistration.eventFee || 0;
+
+    // Check if we need to recalculate based on attendee type selections
+    if (updateData.attendee_type_selections !== undefined) {
+      let attendeeTypeSelections = [];
+      try {
+        attendeeTypeSelections = typeof updateData.attendee_type_selections === 'string'
+          ? JSON.parse(updateData.attendee_type_selections)
+          : updateData.attendee_type_selections;
+      } catch (e) {
+        return NextResponse.json({ error: 'รูปแบบข้อมูล attendee_type_selections ไม่ถูกต้อง' }, { status: 400 });
+      }
+
+      // Recalculate event fee from attendee types
+      if (eventData.useAttendeeTypePricing && eventData.attendeeTypes) {
+        calculatedEventFee = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
+          const type = eventData.attendeeTypes.find((t: AttendeeType) => t.typeId === s.typeId);
+          if (!type) return sum;
+          return sum + (type.price * s.quantity);
+        }, 0);
+
+        // Add room fees if room allocations are provided
+        if (updateData.room_allocations !== undefined) {
+          let roomAllocations = [];
+          try {
+            roomAllocations = typeof updateData.room_allocations === 'string'
+              ? JSON.parse(updateData.room_allocations)
+              : updateData.room_allocations;
+          } catch (e) {
+            return NextResponse.json({ error: 'รูปแบบข้อมูล room_allocations ไม่ถูกต้อง' }, { status: 400 });
+          }
+
+          if (eventData.roomTypes && eventData.roomTypes.length > 0) {
+            const roomFee = roomAllocations.reduce((sum: number, alloc: { roomTypeId: string; roomCount: number }) => {
+              const roomType = eventData.roomTypes.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+              if (!roomType) return sum;
+              return sum + (roomType.price * alloc.roomCount);
+            }, 0);
+            calculatedEventFee += roomFee;
+          }
+        }
+      }
+    }
+
+    // Calculate total amount including special charges
+    let specialChargesTotal = 0;
+    try {
+      if (currentRegistration.specialCharges) {
+        const specialCharges = JSON.parse(currentRegistration.specialCharges);
+        specialChargesTotal = specialCharges.reduce((sum: number, charge: { amount: number }) => sum + charge.amount, 0);
+      }
+    } catch (e) {
+      console.error('Error parsing special charges:', e);
+    }
+
+    const newTotalAmount = calculatedEventFee + specialChargesTotal;
+
     // Prepare update data with admin info
     const finalUpdateData: Record<string, unknown> = {
       ...updateData,
-      last_update_info: JSON.stringify({
-        updated: {
-          by: 'admin',
-          userId: session.user.id,
-          userName: session.user.name,
-          at: new Date().toISOString(),
-        },
-      }),
     };
+
+    // Only update eventFee and totalAmount if they were recalculated
+    if (updateData.attendee_type_selections !== undefined || updateData.room_allocations !== undefined) {
+      finalUpdateData.event_fee = calculatedEventFee;
+      finalUpdateData.total_amount = newTotalAmount;
+
+      // Recalculate remaining amount if in deposit mode
+      if (currentRegistration.depositAmount && currentRegistration.depositAmount > 0) {
+        finalUpdateData.remaining_amount = newTotalAmount - currentRegistration.depositAmount;
+      }
+    }
+
+    // Add admin update info
+    finalUpdateData.last_update_info = JSON.stringify({
+      updated: {
+        by: 'admin',
+        userId: session.user.id,
+        userName: session.user.name,
+        at: new Date().toISOString(),
+      },
+    });
+
+    console.log('[Admin Update Registration] Update data:', {
+      registrationId,
+      calculatedEventFee,
+      specialChargesTotal,
+      newTotalAmount,
+      finalUpdateData,
+    });
 
     // Update in Google Sheets
     await updateEventRegistration(eventData.sheetName, registrationId, finalUpdateData);
@@ -66,6 +154,8 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       message: 'อัพเดทข้อมูลเรียบร้อยแล้ว',
+      calculatedEventFee,
+      newTotalAmount,
     });
   } catch (error) {
     console.error('Error updating registration (admin):', error);

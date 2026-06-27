@@ -806,7 +806,7 @@ export default function EventDetailPage() {
                                   <p className="text-xs font-semibold text-blue-900 mb-1">ประเภทผู้เข้าร่วม:</p>
                                   <div className="space-y-1">
                                     {selections.map((sel: any, idx: number) => {
-                                      const type = eventData?.attendeeTypes?.find((t: any) => t.typeId === sel.typeId);
+                                      const type = eventData?.event?.attendeeTypes?.find((t: any) => t.typeId === sel.typeId);
                                       return type ? (
                                         <div key={idx} className="text-xs text-gray-700">
                                           • {type.typeName}: {sel.quantity} คน
@@ -835,7 +835,7 @@ export default function EventDetailPage() {
                                   <p className="text-xs font-semibold text-amber-900 mb-1">การจัดห้องพัก:</p>
                                   <div className="space-y-1">
                                     {allocations.map((alloc: any, idx: number) => {
-                                      const roomType = eventData?.roomTypes?.find((rt: any) => rt.typeId === alloc.roomTypeId);
+                                      const roomType = eventData?.event?.roomTypes?.find((rt: any) => rt.typeId === alloc.roomTypeId);
                                       return roomType ? (
                                         <div key={idx} className="text-xs text-gray-700">
                                           • {roomType.typeName}: {alloc.roomCount} ห้อง (รองรับ {roomType.capacity * alloc.roomCount} คน)
@@ -992,13 +992,13 @@ export default function EventDetailPage() {
                           </div>
 
                           {/* Attendee Type Selections (Editable) */}
-                          {eventData?.useAttendeeTypePricing && eventData?.attendeeTypes && eventData.attendeeTypes.length > 0 && (
+                          {eventData?.event?.useAttendeeTypePricing && eventData?.event?.attendeeTypes && eventData.event.attendeeTypes.length > 0 && (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                               <label className="block text-xs font-semibold text-blue-900 mb-2">
                                 ประเภทผู้เข้าร่วม
                               </label>
                               <div className="space-y-2">
-                                {eventData.attendeeTypes
+                                {eventData.event.attendeeTypes
                                   .filter((t: any) => t.isActive)
                                   .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
                                   .map((type: any) => {
@@ -1034,13 +1034,13 @@ export default function EventDetailPage() {
                           )}
 
                           {/* Room Allocations (Editable) */}
-                          {eventData?.roomTypes && eventData.roomTypes.length > 0 && (
+                          {eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0 && (
                             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                               <label className="block text-xs font-semibold text-amber-900 mb-2">
                                 การจัดห้องพัก
                               </label>
                               <div className="space-y-2">
-                                {eventData.roomTypes
+                                {eventData.event.roomTypes
                                   .filter((rt: any) => rt.isActive)
                                   .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
                                   .map((roomType: any) => {

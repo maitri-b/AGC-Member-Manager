@@ -77,6 +77,9 @@ export interface EventRegistration {
 
   // Room Allocation (New - for events with accommodation)
   roomAllocations?: string;         // room_allocations (JSON stringified RoomAllocation[])
+
+  // Special Charges (New - admin can add custom charges to specific registrations)
+  specialCharges?: string;          // special_charges (JSON stringified SpecialCharge[])
 }
 
 // Event metadata (for managing multiple events)
@@ -282,6 +285,15 @@ export interface RoomAllocation {
   roomCount: number;             // Number of rooms of this type
 }
 
+// Special Charge (New - admin can add custom charges to specific registrations)
+export interface SpecialCharge {
+  chargeId: string;              // Unique ID for this charge
+  description: string;           // Description of the charge (e.g., "ค่าตั๋วเครื่องบินเพิ่ม", "อัพเกรดห้อง")
+  amount: number;                // Charge amount
+  addedBy: string;               // Admin user ID who added this charge
+  addedAt: string;               // ISO timestamp when added
+}
+
 // Google Sheet column mapping for Event Registration
 export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, string> = {
   registrationId: 'registration_id',
@@ -333,6 +345,8 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   attendeeTypeSelections: 'attendee_type_selections',
   // Room allocation (New)
   roomAllocations: 'room_allocations',
+  // Special charges (New)
+  specialCharges: 'special_charges',
 };
 
 // Reverse mapping for sheet to registration conversion

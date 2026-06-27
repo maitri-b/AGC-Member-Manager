@@ -328,6 +328,40 @@ export default function EventDetailPage() {
   const handleSaveEdit = async () => {
     if (!editingRegistration || !eventData) return;
 
+    // Validate attendee type selections (if enabled)
+    if (eventData.event.useAttendeeTypePricing && eventData.event.attendeeTypes && eventData.event.attendeeTypes.length > 0) {
+      if (!editFormData.attendeeTypeSelections || editFormData.attendeeTypeSelections.length === 0) {
+        setActionMessage({ type: 'error', text: 'กรุณาเลือกประเภทผู้เข้าร่วม' });
+        return;
+      }
+
+      // Note: attendeeCount is already auto-calculated from attendeeTypeSelections
+      // No need to validate separately - they will always match
+    }
+
+    // Validate room allocations (if room types are configured)
+    if (eventData.event.roomTypes && eventData.event.roomTypes.length > 0) {
+      if (editFormData.roomAllocations && editFormData.roomAllocations.length > 0) {
+        // Calculate total capacity from room allocations
+        let totalCapacity = 0;
+        for (const alloc of editFormData.roomAllocations) {
+          const roomType = eventData.event.roomTypes.find(rt => rt.typeId === alloc.roomTypeId);
+          if (roomType) {
+            totalCapacity += roomType.capacity * alloc.roomCount;
+          }
+        }
+
+        // Must match exactly with attendee count
+        if (totalCapacity !== editFormData.attendeeCount) {
+          setActionMessage({
+            type: 'error',
+            text: `จำนวนที่นั่งในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${editFormData.attendeeCount} คน)`
+          });
+          return;
+        }
+      }
+    }
+
     // Validate attendee names
     const filledNames = editFormData.attendeeNames.filter(name => name.trim());
     if (filledNames.length !== editFormData.attendeeCount) {
@@ -1032,19 +1066,32 @@ export default function EventDetailPage() {
                     {isEditing && (
                       <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                              จำนวนผู้เข้าร่วม
-                            </label>
-                            <input
-                              type="number"
-                              min="1"
-                              max="20"
-                              value={editFormData.attendeeCount}
-                              onChange={(e) => handleAttendeeCountChange(parseInt(e.target.value) || 1)}
-                              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
+                          {/* Show attendee count input only if NOT using attendee type pricing */}
+                          {!eventData?.event?.useAttendeeTypePricing ? (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                จำนวนผู้เข้าร่วม
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={editFormData.attendeeCount}
+                                onChange={(e) => handleAttendeeCountChange(parseInt(e.target.value) || 1)}
+                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                จำนวนผู้เข้าร่วมทั้งหมด
+                              </label>
+                              <div className="w-full px-3 py-1.5 text-sm bg-gray-100 border border-gray-300 rounded font-semibold text-blue-700">
+                                {editFormData.attendeeCount} คน
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">คำนวณจากประเภทผู้เข้าร่วม</p>
+                            </div>
+                          )}
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">
                               สถานะ
@@ -1111,12 +1158,21 @@ export default function EventDetailPage() {
                                           if (qty > 0) {
                                             newSelections.push({ typeId: type.typeId, quantity: qty });
                                           }
-                                          setEditFormData({ ...editFormData, attendeeTypeSelections: newSelections });
+
+                                          // Auto-calculate total attendee count
+                                          const totalCount = newSelections.reduce((sum, s) => sum + s.quantity, 0);
+
+                                          // Auto-adjust attendee names array
+                                          handleAttendeeCountChange(totalCount);
+
+                                          setEditFormData({ ...editFormData, attendeeTypeSelections: newSelections, attendeeCount: totalCount });
                                         }}
                                         onBlur={(e) => {
                                           if (e.target.value === '') {
                                             const newSelections = (editFormData.attendeeTypeSelections || []).filter(s => s.typeId !== type.typeId);
-                                            setEditFormData({ ...editFormData, attendeeTypeSelections: newSelections });
+                                            const totalCount = newSelections.reduce((sum, s) => sum + s.quantity, 0);
+                                            handleAttendeeCountChange(totalCount);
+                                            setEditFormData({ ...editFormData, attendeeTypeSelections: newSelections, attendeeCount: totalCount });
                                           }
                                         }}
                                         className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"

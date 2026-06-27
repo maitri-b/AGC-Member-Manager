@@ -712,41 +712,53 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* Attendee Count */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          จำนวนผู้เข้าร่วม
-                          {event?.maxPerCompany && event.maxPerCompany > 0 && (
-                            <span className="text-xs text-gray-500 ml-2">
-                              (สูงสุด {event.maxPerCompany} คน)
-                            </span>
-                          )}
-                        </label>
-                        <select
-                          value={attendeeCount}
-                          onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
-                          disabled={!(event.allowMemberEdit ?? true)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        >
-                          {Array.from(
-                            { length: event?.maxPerCompany && event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
-                            (_, i) => i + 1
-                          ).map(num => {
-                            // Calculate if this option would exceed capacity
-                            const difference = num - userRegistration.attendeeCount;
-                            const availableSlots = event?.maxCapacity && event.maxCapacity > 0 && summary
-                              ? event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount
-                              : Infinity;
-                            const isDisabled = num > availableSlots;
+                      {/* Attendee Count - Only show if NOT using attendee type pricing */}
+                      {!event.useAttendeeTypePricing ? (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            จำนวนผู้เข้าร่วม
+                            {event?.maxPerCompany && event.maxPerCompany > 0 && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                (สูงสุด {event.maxPerCompany} คน)
+                              </span>
+                            )}
+                          </label>
+                          <select
+                            value={attendeeCount}
+                            onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
+                            disabled={!(event.allowMemberEdit ?? true)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          >
+                            {Array.from(
+                              { length: event?.maxPerCompany && event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
+                              (_, i) => i + 1
+                            ).map(num => {
+                              // Calculate if this option would exceed capacity
+                              const difference = num - userRegistration.attendeeCount;
+                              const availableSlots = event?.maxCapacity && event.maxCapacity > 0 && summary
+                                ? event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount
+                                : Infinity;
+                              const isDisabled = num > availableSlots;
 
-                            return (
-                              <option key={num} value={num} disabled={isDisabled}>
-                                {num} คน{isDisabled ? ' (เกินที่นั่งที่เหลือ)' : ''}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
+                              return (
+                                <option key={num} value={num} disabled={isDisabled}>
+                                  {num} คน{isDisabled ? ' (เกินที่นั่งที่เหลือ)' : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            จำนวนผู้เข้าร่วมทั้งหมด
+                          </label>
+                          <div className="w-full px-4 py-2 bg-blue-50 border border-blue-300 rounded-lg font-semibold text-blue-700 text-lg">
+                            {attendeeCount} คน
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">คำนวณจากประเภทผู้เข้าร่วมด้านล่าง</p>
+                        </div>
+                      )}
 
                       {/* Attendee Names */}
                       <div>

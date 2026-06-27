@@ -837,7 +837,8 @@ export default function EventDetailPage() {
 
                 return (
                 <div key={attendee.registration.registrationId || index} className="p-4 hover:bg-gray-50">
-                  <div className="flex items-start gap-4">
+                  {/* Header Section with LINE Profile - Horizontal Layout */}
+                  <div className="flex items-start gap-4 mb-3">
                     {/* LINE Profile Picture */}
                     <div className="flex-shrink-0">
                       {attendee.lineProfile?.lineProfilePicture ? (
@@ -857,7 +858,7 @@ export default function EventDetailPage() {
                       )}
                     </div>
 
-                    {/* Info */}
+                    {/* Basic Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         {/* Name from LINE profile or registration */}
@@ -932,75 +933,174 @@ export default function EventDetailPage() {
                           ผู้ร่วม: {attendee.registration.attendeeNames}
                         </p>
                       )}
+                    </div>
 
-                      {/* Attendee Type Selections Display */}
-                      {(() => {
-                        try {
-                          if (attendee.registration.attendeeTypeSelections) {
-                            const selections = JSON.parse(attendee.registration.attendeeTypeSelections);
-                            if (selections && selections.length > 0) {
-                              return (
-                                <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
-                                  <p className="text-xs font-semibold text-blue-900 mb-1">ประเภทผู้เข้าร่วม:</p>
-                                  <div className="space-y-1">
-                                    {selections.map((sel: any, idx: number) => {
-                                      const type = eventData?.event?.attendeeTypes?.find((t: any) => t.typeId === sel.typeId);
-                                      return type ? (
-                                        <div key={idx} className="text-xs text-gray-700">
-                                          • {type.typeName}: {sel.quantity} คน
-                                        </div>
-                                      ) : null;
-                                    })}
+                    {/* Edit/Cancel Button */}
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      <button
+                        onClick={() => isEditing ? setEditingRegistration(null) : handleEditRegistration(attendee)}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title={isEditing ? "ยกเลิกการแก้ไข" : "แก้ไขข้อมูล"}
+                      >
+                        {isEditing ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Full-Width Cards Section - Below Header */}
+                  <div className="space-y-3">
+                    {/* View-Only Cards - Hide when editing */}
+                    {!isEditing && (
+                      <>
+                        {/* Attendee Type Selections Display */}
+                        {(() => {
+                          try {
+                            if (attendee.registration.attendeeTypeSelections) {
+                              const selections = JSON.parse(attendee.registration.attendeeTypeSelections);
+                              if (selections && selections.length > 0) {
+                                return (
+                                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <p className="text-xs font-semibold text-blue-900 mb-2">ประเภทผู้เข้าร่วม:</p>
+                                    <div className="space-y-1">
+                                      {selections.map((sel: any, idx: number) => {
+                                        const type = eventData?.event?.attendeeTypes?.find((t: any) => t.typeId === sel.typeId);
+                                        return type ? (
+                                          <div key={idx} className="text-xs text-gray-700">
+                                            • {type.typeName}: {sel.quantity} คน
+                                          </div>
+                                        ) : null;
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            console.error('Error parsing attendee types:', e);
+                          }
+                          return null;
+                        })()}
+
+                        {/* Room Allocations Display */}
+                        {(() => {
+                          try {
+                            if (attendee.registration.roomAllocations) {
+                              const allocations = JSON.parse(attendee.registration.roomAllocations);
+                              if (allocations && allocations.length > 0) {
+                                return (
+                                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                    <p className="text-xs font-semibold text-amber-900 mb-2">การจัดห้องพัก:</p>
+                                    <div className="space-y-1">
+                                      {allocations.map((alloc: any, idx: number) => {
+                                        const roomType = eventData?.event?.roomTypes?.find((rt: any) => rt.typeId === alloc.roomTypeId);
+                                        return roomType ? (
+                                          <div key={idx} className="text-xs text-gray-700">
+                                            • {roomType.typeName}: {alloc.roomCount} ห้อง (รองรับ {roomType.capacity * alloc.roomCount} คน)
+                                          </div>
+                                        ) : null;
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            console.error('Error parsing room allocations:', e);
+                          }
+                          return null;
+                        })()}
+
+                        {/* Special Requests Display */}
+                        {attendee.registration.specialRequests && attendee.registration.specialRequests.trim() !== '' && (
+                          <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <p className="text-xs font-semibold text-yellow-900 mb-2">ความต้องการพิเศษ:</p>
+                            <p className="text-xs text-gray-700 whitespace-pre-line">{attendee.registration.specialRequests}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Special Charges Section - Always visible, reordered BEFORE Payment Status */}
+                    {attendee.registration.totalAmount > 0 && (() => {
+                      try {
+                        const specialCharges = attendee.registration.specialCharges
+                          ? JSON.parse(attendee.registration.specialCharges)
+                          : [];
+
+                        return (
+                          <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-sm font-semibold text-purple-900">ค่าใช้จ่ายพิเศษ</span>
+                              <button
+                                onClick={() => handleOpenSpecialChargeModal(attendee)}
+                                className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                              >
+                                + เพิ่มค่าใช้จ่ายพิเศษ
+                              </button>
+                            </div>
+
+                            {specialCharges.length > 0 ? (
+                              <div className="space-y-2">
+                                {specialCharges.map((charge: any) => (
+                                  <div key={charge.chargeId} className="flex items-start justify-between bg-white border border-purple-200 rounded p-2">
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-gray-800">{charge.description}</p>
+                                      <p className="text-xs text-gray-500 mt-0.5">
+                                        เพิ่มเมื่อ: {new Date(charge.addedAt).toLocaleDateString('th-TH', {
+                                          year: 'numeric',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 ml-2">
+                                      <span className="text-sm font-bold text-purple-700">
+                                        +฿{charge.amount.toLocaleString()}
+                                      </span>
+                                      <button
+                                        onClick={() => handleDeleteSpecialCharge(attendee.registration.registrationId, charge.chargeId)}
+                                        className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                        title="ลบค่าใช้จ่ายพิเศษ"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                                <div className="pt-2 border-t border-purple-200">
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="font-medium text-gray-600">รวมค่าใช้จ่ายพิเศษ:</span>
+                                    <span className="font-bold text-purple-700">
+                                      +฿{specialCharges.reduce((sum: number, c: any) => sum + c.amount, 0).toLocaleString()}
+                                    </span>
                                   </div>
                                 </div>
-                              );
-                            }
-                          }
-                        } catch (e) {
-                          console.error('Error parsing attendee types:', e);
-                        }
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-500 italic">ไม่มีค่าใช้จ่ายพิเศษ</p>
+                            )}
+                          </div>
+                        );
+                      } catch (e) {
+                        console.error('Error parsing special charges:', e);
                         return null;
-                      })()}
+                      }
+                    })()}
 
-                      {/* Room Allocations Display */}
-                      {(() => {
-                        try {
-                          if (attendee.registration.roomAllocations) {
-                            const allocations = JSON.parse(attendee.registration.roomAllocations);
-                            if (allocations && allocations.length > 0) {
-                              return (
-                                <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
-                                  <p className="text-xs font-semibold text-amber-900 mb-1">การจัดห้องพัก:</p>
-                                  <div className="space-y-1">
-                                    {allocations.map((alloc: any, idx: number) => {
-                                      const roomType = eventData?.event?.roomTypes?.find((rt: any) => rt.typeId === alloc.roomTypeId);
-                                      return roomType ? (
-                                        <div key={idx} className="text-xs text-gray-700">
-                                          • {roomType.typeName}: {alloc.roomCount} ห้อง (รองรับ {roomType.capacity * alloc.roomCount} คน)
-                                        </div>
-                                      ) : null;
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            }
-                          }
-                        } catch (e) {
-                          console.error('Error parsing room allocations:', e);
-                        }
-                        return null;
-                      })()}
-
-                      {/* Special Requests Display */}
-                      {attendee.registration.specialRequests && attendee.registration.specialRequests.trim() !== '' && (
-                        <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
-                          <p className="text-xs font-semibold text-yellow-900 mb-1">ความต้องการพิเศษ:</p>
-                          <p className="text-xs text-gray-700 whitespace-pre-line">{attendee.registration.specialRequests}</p>
-                        </div>
-                      )}
-
-                      {/* Payment Status & Actions (NEW) */}
-                      {attendee.registration.totalAmount > 0 && (
+                    {/* Payment Status & Actions - Moved AFTER Special Charges */}
+                    {attendee.registration.totalAmount > 0 && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="text-xs font-semibold text-gray-700">สถานะการชำระเงิน</h4>
@@ -1081,90 +1181,6 @@ export default function EventDetailPage() {
                                 )}
                               </>
                             )}
-
-                            {/* Special Charges Section */}
-                            {(() => {
-                              try {
-                                const specialCharges = attendee.registration.specialCharges
-                                  ? JSON.parse(attendee.registration.specialCharges)
-                                  : [];
-
-                                return (
-                                  <div className="border-t pt-3 mt-3">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <span className="text-sm font-semibold text-gray-700">ค่าใช้จ่ายพิเศษ</span>
-                                      <button
-                                        onClick={() => handleOpenSpecialChargeModal(attendee)}
-                                        className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
-                                      >
-                                        + เพิ่มค่าใช้จ่ายพิเศษ
-                                      </button>
-                                    </div>
-
-                                    {specialCharges.length > 0 ? (
-                                      <div className="space-y-2">
-                                        {specialCharges.map((charge: any) => (
-                                          <div key={charge.chargeId} className="flex items-start justify-between bg-purple-50 border border-purple-200 rounded p-2">
-                                            <div className="flex-1">
-                                              <p className="text-sm font-medium text-gray-800">{charge.description}</p>
-                                              <p className="text-xs text-gray-500 mt-0.5">
-                                                เพิ่มเมื่อ: {new Date(charge.addedAt).toLocaleDateString('th-TH', {
-                                                  year: 'numeric',
-                                                  month: 'short',
-                                                  day: 'numeric',
-                                                  hour: '2-digit',
-                                                  minute: '2-digit'
-                                                })}
-                                              </p>
-                                            </div>
-                                            <div className="flex items-center gap-2 ml-2">
-                                              <span className="text-sm font-bold text-purple-700">
-                                                +฿{charge.amount.toLocaleString()}
-                                              </span>
-                                              <button
-                                                onClick={() => handleDeleteSpecialCharge(attendee.registration.registrationId, charge.chargeId)}
-                                                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                                                title="ลบค่าใช้จ่ายพิเศษ"
-                                              >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                              </button>
-                                            </div>
-                                          </div>
-                                        ))}
-                                        <div className="pt-2 border-t border-purple-200">
-                                          <div className="flex justify-between items-center text-sm">
-                                            <span className="font-medium text-gray-600">รวมค่าใช้จ่ายพิเศษ:</span>
-                                            <span className="font-bold text-purple-700">
-                                              +฿{specialCharges.reduce((sum: number, c: any) => sum + c.amount, 0).toLocaleString()}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <p className="text-xs text-gray-500 italic">ไม่มีค่าใช้จ่ายพิเศษ</p>
-                                    )}
-                                  </div>
-                                );
-                              } catch (e) {
-                                console.error('Error parsing special charges:', e);
-                                return (
-                                  <div className="border-t pt-3 mt-3">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <span className="text-sm font-semibold text-gray-700">ค่าใช้จ่ายพิเศษ</span>
-                                      <button
-                                        onClick={() => handleOpenSpecialChargeModal(attendee)}
-                                        className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
-                                      >
-                                        + เพิ่มค่าใช้จ่ายพิเศษ
-                                      </button>
-                                    </div>
-                                    <p className="text-xs text-gray-500 italic">ไม่มีค่าใช้จ่ายพิเศษ</p>
-                                  </div>
-                                );
-                              }
-                            })()}
                           </div>
                         </div>
                       )}
@@ -1382,33 +1398,6 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-2">
-                      {!isEditing && (
-                        <>
-                          <button
-                            onClick={() => handleEditRegistration(attendee)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="แก้ไข"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleCancelRegistration(attendee.registration.registrationId)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="ยกเลิก"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </>
-                      )}
-                    </div>
                   </div>
                 </div>
                 );

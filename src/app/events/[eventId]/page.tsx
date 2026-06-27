@@ -1181,7 +1181,7 @@ export default function EventDetailPage() {
                           <span className="text-lg font-bold">{userRegistration.depositAmount?.toLocaleString() || 0} บาท</span>
                         </div>
 
-                        {userRegistration.depositDeadline && (
+                        {userRegistration.depositDeadline && !userRegistration.depositPaid && (
                           <div className="text-sm text-gray-600 mb-2">
                             ครบกำหนด: {formatDeadline(userRegistration.depositDeadline)}
                             <br />
@@ -1211,7 +1211,7 @@ export default function EventDetailPage() {
                             </span>
                           </div>
 
-                          {userRegistration.remainingDeadline && (
+                          {userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl && (
                             <div className="text-sm text-gray-600 mb-2">
                               ครบกำหนด: {formatDeadline(userRegistration.remainingDeadline)}
                               <br />

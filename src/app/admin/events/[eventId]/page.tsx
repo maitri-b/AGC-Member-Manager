@@ -49,6 +49,8 @@ interface Attendee {
     status: string;
     checkinSections: string;
     tableNumber: string;
+    contactPhone: string;
+    contactEmail: string;
     // Deposit payment fields (New)
     totalAmount: number;
     depositAmount: number;
@@ -65,6 +67,8 @@ interface Attendee {
     roomAllocations?: string; // JSON stringified
     // Special charges (New)
     specialCharges?: string; // JSON stringified
+    // Special requests (New)
+    specialRequests?: string;
   };
   member: {
     memberId: string;
@@ -109,6 +113,9 @@ export default function EventDetailPage() {
     attendeeCount: number;
     attendeeNames: string[];
     status: string;
+    contactPhone?: string;
+    contactEmail?: string;
+    specialRequests?: string;
     attendeeTypeSelections?: Array<{ typeId: string; quantity: number }>;
     roomAllocations?: Array<{ roomTypeId: string; roomCount: number }>;
   }>({ attendeeCount: 1, attendeeNames: [''], status: 'pending' });
@@ -305,6 +312,9 @@ export default function EventDetailPage() {
       attendeeCount: attendee.registration.attendeeCount || 1,
       attendeeNames: names,
       status: attendee.registration.status || 'pending',
+      contactPhone: attendee.registration.contactPhone || '',
+      contactEmail: attendee.registration.contactEmail || '',
+      specialRequests: attendee.registration.specialRequests || '',
       attendeeTypeSelections,
       roomAllocations,
     });
@@ -334,6 +344,19 @@ export default function EventDetailPage() {
         attendee_names: JSON.stringify(filledNames),
         status: editFormData.status,
       };
+
+      // Include contact info
+      if (editFormData.contactPhone !== undefined) {
+        updateData.contact_phone = editFormData.contactPhone;
+      }
+      if (editFormData.contactEmail !== undefined) {
+        updateData.contact_email = editFormData.contactEmail;
+      }
+
+      // Include special requests
+      if (editFormData.specialRequests !== undefined) {
+        updateData.special_requests = editFormData.specialRequests;
+      }
 
       // Include attendee type selections if present
       if (editFormData.attendeeTypeSelections && editFormData.attendeeTypeSelections.length > 0) {
@@ -968,6 +991,14 @@ export default function EventDetailPage() {
                         return null;
                       })()}
 
+                      {/* Special Requests Display */}
+                      {attendee.registration.specialRequests && attendee.registration.specialRequests.trim() !== '' && (
+                        <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                          <p className="text-xs font-semibold text-yellow-900 mb-1">ความต้องการพิเศษ:</p>
+                          <p className="text-xs text-gray-700 whitespace-pre-line">{attendee.registration.specialRequests}</p>
+                        </div>
+                      )}
+
                       {/* Payment Status & Actions (NEW) */}
                       {attendee.registration.totalAmount > 0 && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -1273,6 +1304,49 @@ export default function EventDetailPage() {
                               </p>
                             </div>
                           )}
+
+                          {/* Contact Information */}
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <label className="block text-xs font-semibold text-gray-700 mb-2">
+                              ข้อมูลติดต่อ
+                            </label>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1">เบอร์โทรศัพท์</label>
+                                <input
+                                  type="text"
+                                  value={editFormData.contactPhone || ''}
+                                  onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
+                                  placeholder="เบอร์โทรศัพท์"
+                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1">อีเมล</label>
+                                <input
+                                  type="email"
+                                  value={editFormData.contactEmail || ''}
+                                  onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
+                                  placeholder="อีเมล"
+                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Special Requests */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              ความต้องการพิเศษ
+                            </label>
+                            <textarea
+                              value={editFormData.specialRequests || ''}
+                              onChange={(e) => setEditFormData({ ...editFormData, specialRequests: e.target.value })}
+                              placeholder="เช่น ต้องการอาหารเจ, แพ้อาหารทะเล, ต้องการห้องชั้นล่าง"
+                              rows={3}
+                              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
 
                           <div className="flex gap-2">
                             <button

@@ -134,9 +134,10 @@ export async function GET(
             // Calculate current payment status
             const currentStatus = determinePaymentStatus(latestReg, eventData as Event);
 
-            // Parse attendee type selections and room allocations from JSON strings
+            // Parse attendee type selections, room allocations, and special charges from JSON strings
             let attendeeTypeSelections = [];
             let roomAllocations = [];
+            let specialCharges = [];
             try {
               if (latestReg.attendeeTypeSelections) {
                 attendeeTypeSelections = JSON.parse(latestReg.attendeeTypeSelections);
@@ -150,6 +151,13 @@ export async function GET(
               }
             } catch (e) {
               console.error('Error parsing roomAllocations:', e);
+            }
+            try {
+              if (latestReg.specialCharges) {
+                specialCharges = JSON.parse(latestReg.specialCharges);
+              }
+            } catch (e) {
+              console.error('Error parsing specialCharges:', e);
             }
 
             userRegistration = {
@@ -169,9 +177,10 @@ export async function GET(
               depositDeadline: latestReg.depositDeadline,
               remainingDeadline: latestReg.remainingDeadline,
               paymentStatus: currentStatus,
-              // Attendee type selections and room allocations (New)
+              // Attendee type selections, room allocations, and special charges (New)
               attendeeTypeSelections,
               roomAllocations,
+              specialCharges,
             };
           }
         }

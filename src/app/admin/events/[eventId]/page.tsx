@@ -499,6 +499,88 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleOpenSpecialChargeModal = (attendee: Attendee) => {
+    setSpecialChargeFormData({
+      registrationId: attendee.registration.registrationId,
+      description: '',
+      amount: 0,
+    });
+    setSpecialChargesModalOpen(true);
+  };
+
+  const handleCloseSpecialChargeModal = () => {
+    setSpecialChargesModalOpen(false);
+    setSpecialChargeFormData({
+      registrationId: '',
+      description: '',
+      amount: 0,
+    });
+  };
+
+  const handleAddSpecialCharge = async () => {
+    if (!specialChargeFormData.description || specialChargeFormData.amount <= 0) {
+      setActionMessage({ type: 'error', text: 'กรุณากรอกรายละเอียดและจำนวนเงิน' });
+      return;
+    }
+
+    setAddingCharge(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/special-charges`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(specialChargeFormData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่สามารถเพิ่มค่าใช้จ่ายได้');
+      }
+
+      setActionMessage({ type: 'success', text: data.message || 'เพิ่มค่าใช้จ่ายพิเศษเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      handleCloseSpecialChargeModal();
+      fetchEventData(); // Refresh data
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
+    } finally {
+      setAddingCharge(false);
+    }
+  };
+
+  const handleDeleteSpecialCharge = async (registrationId: string, chargeId: string) => {
+    if (!confirm('ยืนยันการลบค่าใช้จ่ายพิเศษนี้?')) return;
+
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/events/${eventId}/special-charges?registrationId=${registrationId}&chargeId=${chargeId}`,
+        { method: 'DELETE' }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่สามารถลบค่าใช้จ่ายได้');
+      }
+
+      setActionMessage({ type: 'success', text: data.message || 'ลบค่าใช้จ่ายพิเศษเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      fetchEventData(); // Refresh data
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
+    }
+  };
+
   const filteredAttendees = eventData?.attendees.filter(attendee => {
     // Filter by status
     if (filter === 'confirmed' && !attendee.isConfirmed) return false;
@@ -966,6 +1048,90 @@ export default function EventDetailPage() {
                                 )}
                               </>
                             )}
+
+                            {/* Special Charges Section */}
+                            {(() => {
+                              try {
+                                const specialCharges = attendee.registration.specialCharges
+                                  ? JSON.parse(attendee.registration.specialCharges)
+                                  : [];
+
+                                return (
+                                  <div className="border-t pt-3 mt-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-sm font-semibold text-gray-700">ค่าใช้จ่ายพิเศษ</span>
+                                      <button
+                                        onClick={() => handleOpenSpecialChargeModal(attendee)}
+                                        className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                                      >
+                                        + เพิ่มค่าใช้จ่ายพิเศษ
+                                      </button>
+                                    </div>
+
+                                    {specialCharges.length > 0 ? (
+                                      <div className="space-y-2">
+                                        {specialCharges.map((charge: any) => (
+                                          <div key={charge.chargeId} className="flex items-start justify-between bg-purple-50 border border-purple-200 rounded p-2">
+                                            <div className="flex-1">
+                                              <p className="text-sm font-medium text-gray-800">{charge.description}</p>
+                                              <p className="text-xs text-gray-500 mt-0.5">
+                                                เพิ่มเมื่อ: {new Date(charge.addedAt).toLocaleDateString('th-TH', {
+                                                  year: 'numeric',
+                                                  month: 'short',
+                                                  day: 'numeric',
+                                                  hour: '2-digit',
+                                                  minute: '2-digit'
+                                                })}
+                                              </p>
+                                            </div>
+                                            <div className="flex items-center gap-2 ml-2">
+                                              <span className="text-sm font-bold text-purple-700">
+                                                +฿{charge.amount.toLocaleString()}
+                                              </span>
+                                              <button
+                                                onClick={() => handleDeleteSpecialCharge(attendee.registration.registrationId, charge.chargeId)}
+                                                className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                                title="ลบค่าใช้จ่ายพิเศษ"
+                                              >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                        <div className="pt-2 border-t border-purple-200">
+                                          <div className="flex justify-between items-center text-sm">
+                                            <span className="font-medium text-gray-600">รวมค่าใช้จ่ายพิเศษ:</span>
+                                            <span className="font-bold text-purple-700">
+                                              +฿{specialCharges.reduce((sum: number, c: any) => sum + c.amount, 0).toLocaleString()}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-gray-500 italic">ไม่มีค่าใช้จ่ายพิเศษ</p>
+                                    )}
+                                  </div>
+                                );
+                              } catch (e) {
+                                console.error('Error parsing special charges:', e);
+                                return (
+                                  <div className="border-t pt-3 mt-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-sm font-semibold text-gray-700">ค่าใช้จ่ายพิเศษ</span>
+                                      <button
+                                        onClick={() => handleOpenSpecialChargeModal(attendee)}
+                                        className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                                      >
+                                        + เพิ่มค่าใช้จ่ายพิเศษ
+                                      </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 italic">ไม่มีค่าใช้จ่ายพิเศษ</p>
+                                  </div>
+                                );
+                              }
+                            })()}
                           </div>
                         </div>
                       )}
@@ -1283,6 +1449,81 @@ export default function EventDetailPage() {
               <button
                 onClick={handleClosePaymentModal}
                 disabled={confirmingPayment}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Special Charges Modal */}
+      {specialChargesModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              เพิ่มค่าใช้จ่ายพิเศษ
+            </h2>
+
+            <div className="space-y-4">
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  รายการค่าใช้จ่าย *
+                </label>
+                <input
+                  type="text"
+                  value={specialChargeFormData.description}
+                  onChange={(e) => setSpecialChargeFormData({ ...specialChargeFormData, description: e.target.value })}
+                  placeholder="เช่น ค่าตั๋วเครื่องบินเพิ่มเติม, อัพเกรดห้องพัก"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ระบุรายละเอียดของค่าใช้จ่ายพิเศษ
+                </p>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  จำนวนเงิน (บาท) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={specialChargeFormData.amount}
+                  onChange={(e) => setSpecialChargeFormData({ ...specialChargeFormData, amount: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="0.00"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ระบุยอดเงินที่จะเพิ่มเข้าไปในบิล
+                </p>
+              </div>
+
+              {/* Note */}
+              <div className="bg-purple-50 border border-purple-200 rounded p-3">
+                <p className="text-sm text-purple-800">
+                  <strong>หมายเหตุ:</strong> ค่าใช้จ่ายพิเศษจะถูกเพิ่มเข้าไปในยอดรวมทั้งหมด และจะแสดงเฉพาะกับสมาชิกท่านนี้เท่านั้น
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleAddSpecialCharge}
+                disabled={addingCharge || !specialChargeFormData.description || specialChargeFormData.amount <= 0}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {addingCharge ? 'กำลังเพิ่ม...' : 'เพิ่มค่าใช้จ่าย'}
+              </button>
+              <button
+                onClick={handleCloseSpecialChargeModal}
+                disabled={addingCharge}
                 className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
                 ยกเลิก

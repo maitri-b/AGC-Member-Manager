@@ -63,6 +63,8 @@ interface Attendee {
     // Attendee type pricing and room allocation (New)
     attendeeTypeSelections?: string; // JSON stringified
     roomAllocations?: string; // JSON stringified
+    // Special charges (New)
+    specialCharges?: string; // JSON stringified
   };
   member: {
     memberId: string;

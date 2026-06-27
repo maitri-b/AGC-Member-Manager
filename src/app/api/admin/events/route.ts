@@ -84,6 +84,7 @@ export async function GET() {
         remainingDeadlineHours: data.remainingDeadlineHours ?? 0,
         // Registration edit control
         allowMemberEdit: data.allowMemberEdit ?? true,
+        requireMemberAttendance: data.requireMemberAttendance ?? false,
         // Attendee type pricing
         useAttendeeTypePricing: data.useAttendeeTypePricing ?? false,
         attendeeTypes: data.attendeeTypes || [],
@@ -177,6 +178,7 @@ export async function POST(request: NextRequest) {
       remainingDeadlineHours: body.remainingDeadlineHours ?? 0,
       // Registration edit control
       allowMemberEdit: body.allowMemberEdit ?? true,
+      requireMemberAttendance: body.requireMemberAttendance ?? false,
       // Attendee type pricing
       useAttendeeTypePricing: body.useAttendeeTypePricing ?? false,
       attendeeTypes: body.attendeeTypes || [],

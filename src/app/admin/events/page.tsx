@@ -102,6 +102,7 @@ interface EventFormData {
   remainingDeadlineHours: number;
   // Registration edit control
   allowMemberEdit: boolean;
+  requireMemberAttendance: boolean;
   // Attendee type pricing (New)
   useAttendeeTypePricing: boolean;
   attendeeTypes: AttendeeType[];
@@ -150,6 +151,7 @@ const initialFormData: EventFormData = {
   remainingDeadlineHours: 0,
   // Registration edit control
   allowMemberEdit: true,
+  requireMemberAttendance: false,
   // Attendee type pricing (New)
   useAttendeeTypePricing: false,
   attendeeTypes: [],
@@ -271,6 +273,7 @@ export default function AdminEventsPage() {
         remainingDeadlineHours: event.remainingDeadlineHours ?? 0,
         // Registration edit control
         allowMemberEdit: (event as any).allowMemberEdit !== false,
+        requireMemberAttendance: (event as any).requireMemberAttendance ?? false,
         // Attendee type pricing (New)
         useAttendeeTypePricing: (event as any).useAttendeeTypePricing ?? false,
         attendeeTypes: (event as any).attendeeTypes ?? [],
@@ -1634,6 +1637,16 @@ export default function AdminEventsPage() {
                         className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                       />
                       <span className="text-sm text-gray-700">อนุญาตให้สมาชิกแก้ไขข้อมูลหลังลงทะเบียน</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.requireMemberAttendance ?? false}
+                        onChange={(e) => setFormData({ ...formData, requireMemberAttendance: e.target.checked })}
+                        className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <span className="text-sm text-gray-700">ผู้เข้าร่วมคนแรกต้องเป็นสมาชิก</span>
                     </label>
                   </div>
                 </div>

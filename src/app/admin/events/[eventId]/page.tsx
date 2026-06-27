@@ -1373,7 +1373,7 @@ export default function EventDetailPage() {
                                       onClick={() => handleOpenPaymentModal(attendee, 'deposit')}
                                       className="mt-2 w-full px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
                                     >
-                                      ✓ ยืนยันการรับชำระมัดจำ
+                                      ✓ บันทึกการชำระเงิน
                                     </button>
                                   )}
                                 </div>
@@ -1404,7 +1404,7 @@ export default function EventDetailPage() {
                                         onClick={() => handleOpenPaymentModal(attendee, 'remaining')}
                                         className="mt-2 w-full px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
                                       >
-                                        ✓ ยืนยันการรับชำระยอดคงเหลือ
+                                        ✓ บันทึกการชำระเงิน
                                       </button>
                                     )}
                                   </div>
@@ -1480,8 +1480,17 @@ export default function EventDetailPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={paymentFormData.amount}
-                  onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: parseFloat(e.target.value) || 0 })}
+                  value={paymentFormData.amount === 0 ? '' : paymentFormData.amount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const amount = value === '' ? 0 : parseFloat(value);
+                    setPaymentFormData({ ...paymentFormData, amount });
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      setPaymentFormData({ ...paymentFormData, amount: 0 });
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="0.00"
                   required
@@ -1591,8 +1600,17 @@ export default function EventDetailPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={specialChargeFormData.amount}
-                  onChange={(e) => setSpecialChargeFormData({ ...specialChargeFormData, amount: parseFloat(e.target.value) || 0 })}
+                  value={specialChargeFormData.amount === 0 ? '' : specialChargeFormData.amount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const amount = value === '' ? 0 : parseFloat(value);
+                    setSpecialChargeFormData({ ...specialChargeFormData, amount });
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      setSpecialChargeFormData({ ...specialChargeFormData, amount: 0 });
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="0.00"
                   required

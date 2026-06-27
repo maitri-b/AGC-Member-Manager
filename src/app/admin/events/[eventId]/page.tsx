@@ -1028,6 +1028,236 @@ export default function EventDetailPage() {
                       </>
                     )}
 
+                    {/* Edit Form - Positioned BEFORE Special Charges */}
+                    {isEditing && (
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              จำนวนผู้เข้าร่วม
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={editFormData.attendeeCount}
+                              onChange={(e) => handleAttendeeCountChange(parseInt(e.target.value) || 1)}
+                              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              สถานะ
+                            </label>
+                            <select
+                              value={editFormData.status}
+                              onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="pending">รอดำเนินการ</option>
+                              <option value="confirmed">ยืนยันแล้ว</option>
+                              <option value="cancelled">ยกเลิก</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Attendee Names */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            ชื่อผู้เข้าร่วม
+                          </label>
+                          <div className="space-y-2">
+                            {Array.from({ length: editFormData.attendeeCount }).map((_, index) => (
+                              <input
+                                key={index}
+                                type="text"
+                                value={editFormData.attendeeNames[index] || ''}
+                                onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
+                                placeholder={index === 0 ? 'ชื่อผู้ติดต่อ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Attendee Type Selections (Editable) */}
+                        {eventData?.event?.useAttendeeTypePricing && eventData?.event?.attendeeTypes && eventData.event.attendeeTypes.length > 0 && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <label className="block text-xs font-semibold text-blue-900 mb-2">
+                              ประเภทผู้เข้าร่วม
+                            </label>
+                            <div className="space-y-2">
+                              {eventData.event.attendeeTypes
+                                .filter((t: any) => t.isActive)
+                                .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                                .map((type: any) => {
+                                  const selection = editFormData.attendeeTypeSelections?.find(s => s.typeId === type.typeId);
+                                  const quantity = selection?.quantity || 0;
+                                  const subtotal = type.price * quantity;
+                                  return (
+                                    <div key={type.typeId} className="flex items-center gap-2 bg-white p-2 rounded">
+                                      <span className="text-xs font-medium text-gray-700 flex-1">
+                                        {type.typeName} <span className="text-gray-500">({type.price.toLocaleString()} บาท/คน)</span>
+                                      </span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="50"
+                                        value={quantity === 0 ? '' : quantity}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          const qty = value === '' ? 0 : parseInt(value);
+                                          const newSelections = (editFormData.attendeeTypeSelections || []).filter(s => s.typeId !== type.typeId);
+                                          if (qty > 0) {
+                                            newSelections.push({ typeId: type.typeId, quantity: qty });
+                                          }
+                                          setEditFormData({ ...editFormData, attendeeTypeSelections: newSelections });
+                                        }}
+                                        onBlur={(e) => {
+                                          if (e.target.value === '') {
+                                            const newSelections = (editFormData.attendeeTypeSelections || []).filter(s => s.typeId !== type.typeId);
+                                            setEditFormData({ ...editFormData, attendeeTypeSelections: newSelections });
+                                          }
+                                        }}
+                                        className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
+                                        placeholder="0"
+                                      />
+                                      <span className="text-xs text-gray-600 w-12 text-right">คน</span>
+                                      {quantity > 0 && (
+                                        <span className="text-xs font-semibold text-blue-600 w-24 text-right">
+                                          = {subtotal.toLocaleString()} ฿
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                              หมายเหตุ: การแก้ไขจำนวนที่นี่จะคำนวณค่าใช้จ่ายใหม่โดยอัตโนมัติ
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Room Allocations (Editable) */}
+                        {eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0 && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            <label className="block text-xs font-semibold text-amber-900 mb-2">
+                              การจัดห้องพัก
+                            </label>
+                            <div className="space-y-2">
+                              {eventData.event.roomTypes
+                                .filter((rt: any) => rt.isActive)
+                                .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                                .map((roomType: any) => {
+                                  const allocation = editFormData.roomAllocations?.find(ra => ra.roomTypeId === roomType.typeId);
+                                  const roomCount = allocation?.roomCount || 0;
+                                  const subtotal = roomType.price * roomCount;
+                                  return (
+                                    <div key={roomType.typeId} className="flex items-center gap-2 bg-white p-2 rounded">
+                                      <span className="text-xs font-medium text-gray-700 flex-1">
+                                        {roomType.typeName} <span className="text-gray-500">({roomType.price.toLocaleString()} บาท/ห้อง, {roomType.capacity} คน/ห้อง)</span>
+                                      </span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="20"
+                                        value={roomCount === 0 ? '' : roomCount}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          const count = value === '' ? 0 : parseInt(value);
+                                          const newAllocations = (editFormData.roomAllocations || []).filter(ra => ra.roomTypeId !== roomType.typeId);
+                                          if (count > 0) {
+                                            newAllocations.push({ roomTypeId: roomType.typeId, roomCount: count });
+                                          }
+                                          setEditFormData({ ...editFormData, roomAllocations: newAllocations });
+                                        }}
+                                        onBlur={(e) => {
+                                          if (e.target.value === '') {
+                                            const newAllocations = (editFormData.roomAllocations || []).filter(ra => ra.roomTypeId !== roomType.typeId);
+                                            setEditFormData({ ...editFormData, roomAllocations: newAllocations });
+                                          }
+                                        }}
+                                        className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
+                                        placeholder="0"
+                                      />
+                                      <span className="text-xs text-gray-600 w-12 text-right">ห้อง</span>
+                                      {roomCount > 0 && (
+                                        <span className="text-xs font-semibold text-amber-600 w-24 text-right">
+                                          = {subtotal.toLocaleString()} ฿
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                              หมายเหตุ: การแก้ไขจำนวนที่นี่จะคำนวณค่าใช้จ่ายใหม่โดยอัตโนมัติ
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Contact Information */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                          <label className="block text-xs font-semibold text-gray-700 mb-2">
+                            ข้อมูลติดต่อ
+                          </label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">เบอร์โทรศัพท์</label>
+                              <input
+                                type="text"
+                                value={editFormData.contactPhone || ''}
+                                onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
+                                placeholder="เบอร์โทรศัพท์"
+                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-600 mb-1">อีเมล</label>
+                              <input
+                                type="email"
+                                value={editFormData.contactEmail || ''}
+                                onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
+                                placeholder="อีเมล"
+                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Special Requests */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            ความต้องการพิเศษ
+                          </label>
+                          <textarea
+                            value={editFormData.specialRequests || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, specialRequests: e.target.value })}
+                            placeholder="เช่น ต้องการอาหารเจ, แพ้อาหารทะเล, ต้องการห้องชั้นล่าง"
+                            rows={3}
+                            className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleSaveEdit}
+                            disabled={updating}
+                            className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          >
+                            {updating ? 'กำลังบันทึก...' : 'บันทึก'}
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            disabled={updating}
+                            className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition-colors disabled:opacity-50"
+                          >
+                            ยกเลิก
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Special Charges Section - Always visible, reordered BEFORE Payment Status */}
                     {attendee.registration.totalAmount > 0 && (() => {
                       try {
@@ -1181,220 +1411,6 @@ export default function EventDetailPage() {
                                 )}
                               </>
                             )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Edit Form */}
-                      {isEditing && (
-                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                จำนวนผู้เข้าร่วม
-                              </label>
-                              <input
-                                type="number"
-                                min="1"
-                                max="20"
-                                value={editFormData.attendeeCount}
-                                onChange={(e) => handleAttendeeCountChange(parseInt(e.target.value) || 1)}
-                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                สถานะ
-                              </label>
-                              <select
-                                value={editFormData.status}
-                                onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              >
-                                <option value="pending">รอดำเนินการ</option>
-                                <option value="confirmed">ยืนยันแล้ว</option>
-                                <option value="cancelled">ยกเลิก</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Attendee Names */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                              ชื่อผู้เข้าร่วม
-                            </label>
-                            <div className="space-y-2">
-                              {Array.from({ length: editFormData.attendeeCount }).map((_, index) => (
-                                <input
-                                  key={index}
-                                  type="text"
-                                  value={editFormData.attendeeNames[index] || ''}
-                                  onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
-                                  placeholder={index === 0 ? 'ชื่อผู้ติดต่อ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
-                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Attendee Type Selections (Editable) */}
-                          {eventData?.event?.useAttendeeTypePricing && eventData?.event?.attendeeTypes && eventData.event.attendeeTypes.length > 0 && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                              <label className="block text-xs font-semibold text-blue-900 mb-2">
-                                ประเภทผู้เข้าร่วม
-                              </label>
-                              <div className="space-y-2">
-                                {eventData.event.attendeeTypes
-                                  .filter((t: any) => t.isActive)
-                                  .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
-                                  .map((type: any) => {
-                                    const selection = editFormData.attendeeTypeSelections?.find(s => s.typeId === type.typeId);
-                                    const quantity = selection?.quantity || 0;
-                                    const subtotal = type.price * quantity;
-                                    return (
-                                      <div key={type.typeId} className="flex items-center gap-2 bg-white p-2 rounded">
-                                        <span className="text-xs font-medium text-gray-700 flex-1">
-                                          {type.typeName} <span className="text-gray-500">({type.price.toLocaleString()} บาท/คน)</span>
-                                        </span>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          max="50"
-                                          value={quantity}
-                                          onChange={(e) => {
-                                            const qty = parseInt(e.target.value) || 0;
-                                            const newSelections = (editFormData.attendeeTypeSelections || []).filter(s => s.typeId !== type.typeId);
-                                            if (qty > 0) {
-                                              newSelections.push({ typeId: type.typeId, quantity: qty });
-                                            }
-                                            setEditFormData({ ...editFormData, attendeeTypeSelections: newSelections });
-                                          }}
-                                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
-                                        />
-                                        <span className="text-xs text-gray-600 w-12 text-right">คน</span>
-                                        {quantity > 0 && (
-                                          <span className="text-xs font-semibold text-blue-600 w-24 text-right">
-                                            = {subtotal.toLocaleString()} ฿
-                                          </span>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                              <p className="text-xs text-gray-500 mt-2">
-                                หมายเหตุ: การแก้ไขจำนวนที่นี่จะไม่คำนวณค่าใช้จ่ายใหม่โดยอัตโนมัติ
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Room Allocations (Editable) */}
-                          {eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0 && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                              <label className="block text-xs font-semibold text-amber-900 mb-2">
-                                การจัดห้องพัก
-                              </label>
-                              <div className="space-y-2">
-                                {eventData.event.roomTypes
-                                  .filter((rt: any) => rt.isActive)
-                                  .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
-                                  .map((roomType: any) => {
-                                    const allocation = editFormData.roomAllocations?.find(ra => ra.roomTypeId === roomType.typeId);
-                                    const roomCount = allocation?.roomCount || 0;
-                                    const subtotal = roomType.price * roomCount;
-                                    return (
-                                      <div key={roomType.typeId} className="flex items-center gap-2 bg-white p-2 rounded">
-                                        <span className="text-xs font-medium text-gray-700 flex-1">
-                                          {roomType.typeName} <span className="text-gray-500">({roomType.price.toLocaleString()} บาท/ห้อง, {roomType.capacity} คน/ห้อง)</span>
-                                        </span>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          max="20"
-                                          value={roomCount}
-                                          onChange={(e) => {
-                                            const count = parseInt(e.target.value) || 0;
-                                            const newAllocations = (editFormData.roomAllocations || []).filter(ra => ra.roomTypeId !== roomType.typeId);
-                                            if (count > 0) {
-                                              newAllocations.push({ roomTypeId: roomType.typeId, roomCount: count });
-                                            }
-                                            setEditFormData({ ...editFormData, roomAllocations: newAllocations });
-                                          }}
-                                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center"
-                                        />
-                                        <span className="text-xs text-gray-600 w-12 text-right">ห้อง</span>
-                                        {roomCount > 0 && (
-                                          <span className="text-xs font-semibold text-amber-600 w-24 text-right">
-                                            = {subtotal.toLocaleString()} ฿
-                                          </span>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                              <p className="text-xs text-gray-500 mt-2">
-                                หมายเหตุ: การแก้ไขจำนวนที่นี่จะไม่คำนวณค่าใช้จ่ายใหม่โดยอัตโนมัติ
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Contact Information */}
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                            <label className="block text-xs font-semibold text-gray-700 mb-2">
-                              ข้อมูลติดต่อ
-                            </label>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1">เบอร์โทรศัพท์</label>
-                                <input
-                                  type="text"
-                                  value={editFormData.contactPhone || ''}
-                                  onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
-                                  placeholder="เบอร์โทรศัพท์"
-                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1">อีเมล</label>
-                                <input
-                                  type="email"
-                                  value={editFormData.contactEmail || ''}
-                                  onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
-                                  placeholder="อีเมล"
-                                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Special Requests */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                              ความต้องการพิเศษ
-                            </label>
-                            <textarea
-                              value={editFormData.specialRequests || ''}
-                              onChange={(e) => setEditFormData({ ...editFormData, specialRequests: e.target.value })}
-                              placeholder="เช่น ต้องการอาหารเจ, แพ้อาหารทะเล, ต้องการห้องชั้นล่าง"
-                              rows={3}
-                              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              onClick={handleSaveEdit}
-                              disabled={updating}
-                              className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-                            >
-                              {updating ? 'กำลังบันทึก...' : 'บันทึก'}
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              disabled={updating}
-                              className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition-colors disabled:opacity-50"
-                            >
-                              ยกเลิก
-                            </button>
                           </div>
                         </div>
                       )}

@@ -854,10 +854,11 @@ export default function EventDetailPage() {
                                       type="number"
                                       min="0"
                                       max="50"
-                                      value={quantity}
+                                      value={quantity === 0 ? '' : quantity}
                                       disabled={!(event.allowMemberEdit ?? true)}
                                       onChange={(e) => {
-                                        const qty = parseInt(e.target.value) || 0;
+                                        const value = e.target.value;
+                                        const qty = value === '' ? 0 : parseInt(value);
                                         const newSelections = attendeeTypeSelections.filter(s => s.typeId !== type.typeId);
                                         if (qty > 0) {
                                           newSelections.push({ typeId: type.typeId, quantity: qty });
@@ -874,6 +875,14 @@ export default function EventDetailPage() {
                                         }, 0);
                                         setCalculatedTotalFee(totalFee);
                                       }}
+                                      onBlur={(e) => {
+                                        if (e.target.value === '') {
+                                          // Clean up empty values when field loses focus
+                                          const newSelections = attendeeTypeSelections.filter(s => s.typeId !== type.typeId);
+                                          setAttendeeTypeSelections(newSelections);
+                                        }
+                                      }}
+                                      placeholder="0"
                                       className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     />
                                     <span className="text-sm text-gray-600">
@@ -925,9 +934,10 @@ export default function EventDetailPage() {
                                       type="number"
                                       min="0"
                                       max="20"
-                                      value={roomCount}
+                                      value={roomCount === 0 ? '' : roomCount}
                                       onChange={(e) => {
-                                        const count = parseInt(e.target.value) || 0;
+                                        const value = e.target.value;
+                                        const count = value === '' ? 0 : parseInt(value);
                                         const newAllocations = roomAllocations.filter(ra => ra.roomTypeId !== roomType.typeId);
                                         if (count > 0) {
                                           newAllocations.push({ roomTypeId: roomType.typeId, roomCount: count });
@@ -962,6 +972,14 @@ export default function EventDetailPage() {
                                         }
                                         setCalculatedRoomFee(roomFee);
                                       }}
+                                      onBlur={(e) => {
+                                        if (e.target.value === '') {
+                                          // Clean up empty values when field loses focus
+                                          const newAllocations = roomAllocations.filter(ra => ra.roomTypeId !== roomType.typeId);
+                                          setRoomAllocations(newAllocations);
+                                        }
+                                      }}
+                                      placeholder="0"
                                       className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center"
                                     />
                                     <span className="text-sm text-gray-600">
@@ -1361,9 +1379,10 @@ export default function EventDetailPage() {
                                   type="number"
                                   min="0"
                                   max="50"
-                                  value={quantity}
+                                  value={quantity === 0 ? '' : quantity}
                                   onChange={(e) => {
-                                    const qty = parseInt(e.target.value) || 0;
+                                    const value = e.target.value;
+                                    const qty = value === '' ? 0 : parseInt(value);
                                     const newSelections = attendeeTypeSelections.filter(s => s.typeId !== type.typeId);
                                     if (qty > 0) {
                                       newSelections.push({ typeId: type.typeId, quantity: qty });
@@ -1383,6 +1402,14 @@ export default function EventDetailPage() {
                                     // Auto-adjust attendee names array
                                     handleAttendeeCountChange(totalCount);
                                   }}
+                                  onBlur={(e) => {
+                                    if (e.target.value === '') {
+                                      // Clean up empty values when field loses focus
+                                      const newSelections = attendeeTypeSelections.filter(s => s.typeId !== type.typeId);
+                                      setAttendeeTypeSelections(newSelections);
+                                    }
+                                  }}
+                                  placeholder="0"
                                   className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center"
                                 />
                                 <span className="text-sm text-gray-600">
@@ -1539,9 +1566,10 @@ export default function EventDetailPage() {
                                   type="number"
                                   min="0"
                                   max="20"
-                                  value={roomCount}
+                                  value={roomCount === 0 ? '' : roomCount}
                                   onChange={(e) => {
-                                    const count = parseInt(e.target.value) || 0;
+                                    const value = e.target.value;
+                                    const count = value === '' ? 0 : parseInt(value);
                                     const newAllocations = roomAllocations.filter(ra => ra.roomTypeId !== roomType.typeId);
                                     if (count > 0) {
                                       newAllocations.push({ roomTypeId: roomType.typeId, roomCount: count });
@@ -1576,6 +1604,14 @@ export default function EventDetailPage() {
                                     }
                                     setCalculatedRoomFee(roomFee);
                                   }}
+                                  onBlur={(e) => {
+                                    if (e.target.value === '') {
+                                      // Clean up empty values when field loses focus
+                                      const newAllocations = roomAllocations.filter(ra => ra.roomTypeId !== roomType.typeId);
+                                      setRoomAllocations(newAllocations);
+                                    }
+                                  }}
+                                  placeholder="0"
                                   className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center"
                                 />
                                 <span className="text-sm text-gray-600">

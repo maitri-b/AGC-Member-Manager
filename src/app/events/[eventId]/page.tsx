@@ -52,6 +52,7 @@ interface Event {
   remainingDeadlineHours?: number;
   // Registration edit control
   allowMemberEdit?: boolean;
+  requireMemberAttendance?: boolean;
   // Attendee type pricing (New)
   useAttendeeTypePricing?: boolean;
   attendeeTypes?: AttendeeType[];
@@ -1183,39 +1184,19 @@ export default function EventDetailPage() {
                           </div>
                         )}
 
-                        <div className="mt-2">
-                          {userRegistration.depositPaid ? (
-                            <span className="text-sm text-green-600 flex items-center gap-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                              ชำระแล้ว {userRegistration.depositPaidDate && `(${formatDeadline(userRegistration.depositPaidDate)})`}
-                            </span>
-                          ) : (
-                            <div className="text-sm text-gray-600">
-                              {event.paymentSlipSubmissionUrl ? (
-                                <p className="mb-1">
-                                  โปรดชำระเงินและส่งหลักฐานการชำระมาที่{' '}
-                                  <a
-                                    href={event.paymentSlipSubmissionUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                  >
-                                    ฟอร์มส่งหลักฐาน
-                                  </a>
-                                </p>
-                              ) : (
-                                <p className="mb-1">โปรดชำระเงินและส่งหลักฐานการชำระตามที่แจ้งไว้ที่ข้อมูลการชำระเงิน</p>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        {userRegistration.depositPaid && (
+                          <span className="text-sm text-green-600 flex items-center gap-1">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            ชำระแล้ว {userRegistration.depositPaidDate && `(${formatDeadline(userRegistration.depositPaidDate)})`}
+                          </span>
+                        )}
                       </div>
 
-                      {/* Remaining Payment (always show, with conditional note) */}
+                      {/* Remaining Payment */}
                       {userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && (
-                        <div className={`bg-white rounded-lg p-4 ${!userRegistration.depositPaid ? 'opacity-75' : ''}`}>
+                        <div className="bg-white rounded-lg p-4 mb-3">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium">งวดที่ 2: ยอดคงเหลือ</span>
                             <span className="text-lg font-bold text-orange-600">
@@ -1223,7 +1204,6 @@ export default function EventDetailPage() {
                             </span>
                           </div>
 
-                          {/* Show deadline immediately (even before deposit is paid) */}
                           {userRegistration.remainingDeadline && (
                             <div className="text-sm text-gray-600 mb-2">
                               ครบกำหนด: {formatDeadline(userRegistration.remainingDeadline)}
@@ -1234,48 +1214,44 @@ export default function EventDetailPage() {
                             </div>
                           )}
 
-                          {!userRegistration.depositPaid && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2">
-                              <p className="text-xs text-yellow-800">
-                                <strong>หมายเหตุ:</strong> กรุณาชำระมัดจำก่อน จึงจะสามารถชำระส่วนที่เหลือได้
-                              </p>
-                            </div>
+                          {userRegistration.remainingSlipUrl && (
+                            <span className="text-sm text-green-600 flex items-center gap-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              ชำระครบแล้ว
+                            </span>
                           )}
-
-                          <div className="mt-2">
-                            {userRegistration.remainingSlipUrl ? (
-                              <span className="text-sm text-green-600 flex items-center gap-1">
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                ชำระครบแล้ว
-                              </span>
-                            ) : userRegistration.depositPaid ? (
-                              <div className="text-sm text-gray-600">
-                                {event.paymentSlipSubmissionUrl ? (
-                                  <p className="mb-1">
-                                    โปรดชำระเงินและส่งหลักฐานการชำระมาที่{' '}
-                                    <a
-                                      href={event.paymentSlipSubmissionUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                    >
-                                      ฟอร์มส่งหลักฐาน
-                                    </a>
-                                  </p>
-                                ) : (
-                                  <p className="mb-1">โปรดชำระเงินและส่งหลักฐานการชำระตามที่แจ้งไว้ที่ข้อมูลการชำระเงิน</p>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="text-xs text-gray-500 italic">
-                                กรุณาชำระมัดจำก่อน
-                              </div>
-                            )}
-                          </div>
                         </div>
                       )}
+
+                      {/* Single Payment Submission Button */}
+                      {!userRegistration.depositPaid || (userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl) ? (
+                        <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4">
+                          <p className="text-sm text-gray-700 mb-3">
+                            <strong>คำแนะนำ:</strong> คุณสามารถชำระเงินแบบเต็มจำนวนหรือแบบแบ่งงวดก็ได้ โปรดส่งหลักฐานการชำระเงินผ่านลิงก์ด้านล่าง
+                          </p>
+                          {event.paymentSlipSubmissionUrl ? (
+                            <a
+                              href={event.paymentSlipSubmissionUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                            >
+                              <span className="flex items-center justify-center gap-2">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                ส่งหลักฐานชำระเงิน
+                              </span>
+                            </a>
+                          ) : (
+                            <div className="text-sm text-gray-600 bg-white rounded p-3 border border-gray-200">
+                              <p>โปรดชำระเงินและส่งหลักฐานการชำระตามช่องทางที่ระบุไว้ในข้อมูลการชำระเงินด้านบน</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
 
                       {/* Payment Status Badge */}
                       {userRegistration.paymentStatus && (

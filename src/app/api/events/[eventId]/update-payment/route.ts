@@ -80,7 +80,7 @@ export async function PUT(
     if (amount) {
       const currentNotes = registration.adminNotes || '';
       const paymentTypeLabel = paymentType === 'deposit' ? 'มัดจำ' : paymentType === 'remaining' ? 'ยอดที่เหลือ' : 'เต็มจำนวน';
-      const paymentNote = `\n[${paidDate}] Admin บันทึกการชำระ${paymentTypeLabel}: ${amount.toLocaleString()} บาท (โดย ${session.user.fullName || session.user.email})`;
+      const paymentNote = `\n[${paidDate}] Admin บันทึกการชำระ${paymentTypeLabel}: ${amount.toLocaleString()} บาท (โดย ${session.user.name || session.user.email})`;
       updateData.admin_notes = currentNotes + paymentNote;
     }
 

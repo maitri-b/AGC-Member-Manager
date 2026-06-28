@@ -684,6 +684,38 @@ export default function EventDetailPage() {
                         </div>
                       </div>
 
+                      {/* Admin Contact Message */}
+                      {!isEditing && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                          <p className="text-sm text-gray-700 mb-2">
+                            หากต้องการเปลี่ยนแปลงการลงทะเบียนโปรดติดต่อ Admin ที่{' '}
+                            <a href="https://lin.ee/nzAjXXq" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                              https://lin.ee/nzAjXXq
+                            </a>
+                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm text-gray-700">
+                              โดยแจ้งรหัสลงทะเบียน 6 หลัก รหัสของคุณคือ
+                            </span>
+                            <span className="font-mono font-bold text-lg text-blue-600">
+                              {userRegistration.registrationId}
+                            </span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(userRegistration.registrationId);
+                                toast.success('คัดลอกรหัสลงทะเบียนแล้ว');
+                              }}
+                              className="p-1 hover:bg-yellow-100 rounded transition-colors"
+                              title="คัดลอกรหัส"
+                            >
+                              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {!isEditing && (
                         <button
                           onClick={() => {
@@ -726,51 +758,28 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* Attendee Count - Only show if NOT using attendee type pricing */}
+                      {/* Attendee Count - Read-only display */}
                       {!event.useAttendeeTypePricing ? (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             จำนวนผู้เข้าร่วม
-                            {event?.maxPerCompany && event.maxPerCompany > 0 && (
-                              <span className="text-xs text-gray-500 ml-2">
-                                (สูงสุด {event.maxPerCompany} คน)
-                              </span>
-                            )}
                           </label>
-                          <select
-                            value={attendeeCount}
-                            onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
-                            disabled={!(event.allowMemberEdit ?? true)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                          >
-                            {Array.from(
-                              { length: event?.maxPerCompany && event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
-                              (_, i) => i + 1
-                            ).map(num => {
-                              // Calculate if this option would exceed capacity
-                              const difference = num - userRegistration.attendeeCount;
-                              const availableSlots = event?.maxCapacity && event.maxCapacity > 0 && summary
-                                ? event.maxCapacity - summary.totalAttendees + userRegistration.attendeeCount
-                                : Infinity;
-                              const isDisabled = num > availableSlots;
-
-                              return (
-                                <option key={num} value={num} disabled={isDisabled}>
-                                  {num} คน{isDisabled ? ' (เกินที่นั่งที่เหลือ)' : ''}
-                                </option>
-                              );
-                            })}
-                          </select>
+                          <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-medium">
+                            {attendeeCount} คน
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            * กรณีต้องการเปลี่ยนแปลงจำนวนผู้เข้าร่วม กรุณาติดต่อ Admin
+                          </p>
                         </div>
                       ) : (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             จำนวนผู้เข้าร่วมทั้งหมด
                           </label>
-                          <div className="w-full px-4 py-2 bg-blue-50 border border-blue-300 rounded-lg font-semibold text-blue-700 text-lg">
+                          <div className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg text-blue-700 font-semibold text-lg">
                             {attendeeCount} คน
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">คำนวณจากประเภทผู้เข้าร่วมด้านล่าง</p>
+                          <p className="text-xs text-gray-500 mt-1">คำนวณจากประเภทผู้เข้าร่วมด้านล่าง *</p>
                         </div>
                       )}
 
@@ -834,11 +843,11 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* Attendee Type Selection in Edit Mode (if enabled) */}
+                      {/* Attendee Type Selection - Read-only display */}
                       {event.useAttendeeTypePricing && event.attendeeTypes && event.attendeeTypes.length > 0 && (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                           <h4 className="text-sm font-semibold text-blue-900 mb-3">
-                            จำนวนผู้เข้าร่วมตามประเภท *
+                            จำนวนผู้เข้าร่วมตามประเภท
                           </h4>
 
                           <div className="space-y-3">
@@ -849,54 +858,21 @@ export default function EventDetailPage() {
                                 const selection = attendeeTypeSelections.find(s => s.typeId === type.typeId);
                                 const quantity = selection?.quantity || 0;
 
+                                if (quantity === 0) return null;
+
                                 return (
-                                  <div key={type.typeId} className="flex items-center gap-3 bg-white p-3 rounded">
-                                    <span className="text-sm font-medium text-gray-700 w-40">
-                                      {type.typeName}:
-                                    </span>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="50"
-                                      value={quantity === 0 ? '' : quantity}
-                                      disabled={!(event.allowMemberEdit ?? true)}
-                                      onChange={(e) => {
-                                        const value = e.target.value;
-                                        const qty = value === '' ? 0 : parseInt(value);
-                                        const newSelections = attendeeTypeSelections.filter(s => s.typeId !== type.typeId);
-                                        if (qty > 0) {
-                                          newSelections.push({ typeId: type.typeId, quantity: qty });
-                                        }
-                                        setAttendeeTypeSelections(newSelections);
-
-                                        // Auto-calculate total count and fee
-                                        const totalCount = newSelections.reduce((sum, s) => sum + s.quantity, 0);
-                                        setAttendeeCount(totalCount);
-
-                                        const totalFee = newSelections.reduce((sum, s) => {
-                                          const t = event.attendeeTypes?.find((at: AttendeeType) => at.typeId === s.typeId);
-                                          return sum + (t?.price || 0) * s.quantity;
-                                        }, 0);
-                                        setCalculatedTotalFee(totalFee);
-                                      }}
-                                      onBlur={(e) => {
-                                        if (e.target.value === '') {
-                                          // Clean up empty values when field loses focus
-                                          const newSelections = attendeeTypeSelections.filter(s => s.typeId !== type.typeId);
-                                          setAttendeeTypeSelections(newSelections);
-                                        }
-                                      }}
-                                      placeholder="0"
-                                      className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                    />
-                                    <span className="text-sm text-gray-600">
-                                      คน × {type.price.toLocaleString()} บาท
-                                    </span>
-                                    {quantity > 0 && (
-                                      <span className="text-sm font-semibold text-blue-600 ml-auto">
-                                        = {(type.price * quantity).toLocaleString()} บาท
+                                  <div key={type.typeId} className="flex items-center justify-between bg-white p-3 rounded">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-sm font-medium text-gray-700">
+                                        {type.typeName}:
                                       </span>
-                                    )}
+                                      <span className="text-sm text-gray-600">
+                                        {quantity} คน × {type.price.toLocaleString()} บาท
+                                      </span>
+                                    </div>
+                                    <span className="text-sm font-semibold text-blue-600">
+                                      = {(type.price * quantity).toLocaleString()} บาท
+                                    </span>
                                   </div>
                                 );
                               })}
@@ -911,14 +887,17 @@ export default function EventDetailPage() {
                               ค่าลงทะเบียน: {calculatedTotalFee.toLocaleString()} บาท
                             </span>
                           </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            * กรณีต้องการเปลี่ยนแปลงจำนวนและประเภทผู้เข้าร่วม กรุณาติดต่อ Admin
+                          </p>
                         </div>
                       )}
 
-                      {/* Room Allocation (available for all pricing types when room types are configured) */}
-                      {event.roomTypes && event.roomTypes.length > 0 && (
+                      {/* Room Allocation - Read-only display */}
+                      {event.roomTypes && event.roomTypes.length > 0 && roomAllocations.length > 0 && (
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                           <h4 className="text-sm font-semibold text-amber-900 mb-3">
-                            เลือกประเภทห้องพัก *
+                            ประเภทห้องพัก
                           </h4>
 
                           <div className="space-y-3">
@@ -929,125 +908,65 @@ export default function EventDetailPage() {
                                 const currentAlloc = roomAllocations.find(ra => ra.roomTypeId === roomType.typeId);
                                 const roomCount = currentAlloc?.roomCount || 0;
 
+                                if (roomCount === 0) return null;
+
                                 return (
-                                  <div key={roomType.typeId} className="flex items-center gap-3 bg-white p-3 rounded">
-                                    <span className="text-sm font-medium text-gray-700 w-36">
-                                      {roomType.typeName}:
-                                    </span>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="20"
-                                      value={roomCount === 0 ? '' : roomCount}
-                                      onChange={(e) => {
-                                        const value = e.target.value;
-                                        const count = value === '' ? 0 : parseInt(value);
-                                        const newAllocations = roomAllocations.filter(ra => ra.roomTypeId !== roomType.typeId);
-                                        if (count > 0) {
-                                          newAllocations.push({ roomTypeId: roomType.typeId, roomCount: count });
-                                        }
-                                        setRoomAllocations(newAllocations);
-
-                                        // Calculate total capacity
-                                        let totalCapacity = 0;
-                                        for (const alloc of newAllocations) {
-                                          const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
-                                          if (rt) {
-                                            totalCapacity += rt.capacity * alloc.roomCount;
-                                          }
-                                        }
-
-                                        // Validate
-                                        if (totalCapacity !== attendeeCount) {
-                                          setRoomValidationError(
-                                            `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
-                                          );
-                                        } else {
-                                          setRoomValidationError(null);
-                                        }
-
-                                        // Calculate room fee
-                                        let roomFee = 0;
-                                        for (const alloc of newAllocations) {
-                                          const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
-                                          if (rt) {
-                                            roomFee += rt.price * alloc.roomCount;
-                                          }
-                                        }
-                                        setCalculatedRoomFee(roomFee);
-                                      }}
-                                      onBlur={(e) => {
-                                        if (e.target.value === '') {
-                                          // Clean up empty values when field loses focus
-                                          const newAllocations = roomAllocations.filter(ra => ra.roomTypeId !== roomType.typeId);
-                                          setRoomAllocations(newAllocations);
-                                        }
-                                      }}
-                                      placeholder="0"
-                                      className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center"
-                                    />
-                                    <span className="text-sm text-gray-600">
-                                      ห้อง ({roomType.capacity} คน/ห้อง)
-                                    </span>
-                                    {roomType.price > 0 && (
+                                  <div key={roomType.typeId} className="flex items-center justify-between bg-white p-3 rounded">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-sm font-medium text-gray-700">
+                                        {roomType.typeName}:
+                                      </span>
                                       <span className="text-sm text-gray-600">
-                                        × {roomType.price.toLocaleString()} บาท
+                                        {roomCount} ห้อง ({roomType.capacity} คน/ห้อง)
+                                        {roomType.price > 0 && ` × ${roomType.price.toLocaleString()} บาท`}
                                       </span>
-                                    )}
-                                    {roomCount > 0 && (
-                                      <span className="text-sm font-semibold text-amber-700 ml-auto">
-                                        = รองรับ {roomType.capacity * roomCount} คน
-                                        {roomType.price > 0 && ` (+${(roomType.price * roomCount).toLocaleString()} บาท)`}
-                                      </span>
-                                    )}
+                                    </div>
+                                    <span className="text-sm font-semibold text-amber-700">
+                                      = รองรับ {roomType.capacity * roomCount} คน
+                                      {roomType.price > 0 && ` (+${(roomType.price * roomCount).toLocaleString()} บาท)`}
+                                    </span>
                                   </div>
                                 );
                               })}
                           </div>
 
-                          {/* Validation Summary */}
+                          {/* Summary */}
                           <div className="mt-3 pt-3 border-t border-amber-200">
-                            {roomValidationError ? (
-                              <p className="text-sm text-red-600 font-medium">⚠️ {roomValidationError}</p>
-                            ) : roomAllocations.length > 0 && (
-                              <div className="space-y-1">
-                                <p className="text-sm text-green-600 font-medium">
-                                  ✓ รองรับ {roomAllocations.reduce((sum, ra) => {
-                                    const rt = event.roomTypes?.find((r: RoomType) => r.typeId === ra.roomTypeId);
-                                    return sum + (rt?.capacity || 0) * ra.roomCount;
-                                  }, 0)} คน (ลงทะเบียน {attendeeCount} คน)
+                            <div className="space-y-1">
+                              <p className="text-sm text-green-600 font-medium">
+                                ✓ รองรับ {roomAllocations.reduce((sum, ra) => {
+                                  const rt = event.roomTypes?.find((r: RoomType) => r.typeId === ra.roomTypeId);
+                                  return sum + (rt?.capacity || 0) * ra.roomCount;
+                                }, 0)} คน (ลงทะเบียน {attendeeCount} คน)
+                              </p>
+                              {calculatedRoomFee > 0 && (
+                                <p className="text-sm text-amber-700 font-semibold">
+                                  ค่าห้องพักเพิ่มเติม: {calculatedRoomFee.toLocaleString()} บาท
                                 </p>
-                                {calculatedRoomFee > 0 && (
-                                  <p className="text-sm text-amber-700 font-semibold">
-                                    ค่าห้องพักเพิ่มเติม: {calculatedRoomFee.toLocaleString()} บาท
-                                  </p>
-                                )}
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
 
                           <p className="text-xs text-gray-500 mt-2">
-                            กรุณาเลือกจำนวนห้องให้ครบพอดีตามจำนวนคนที่ลงทะเบียน
+                            * กรณีต้องการเปลี่ยนแปลงประเภทห้องพัก กรุณาติดต่อ Admin
                           </p>
                         </div>
                       )}
 
-                      {/* Special Requests */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          ความต้องการพิเศษ (ถ้ามี)
-                        </label>
-                        <textarea
-                          value={specialRequests}
-                          onChange={(e) => setSpecialRequests(e.target.value)}
-                          placeholder="เช่น ต้องการอาหารเจ, แพ้อาหารทะเล, ต้องการห้องชั้นล่าง, ผู้สูงอายุ/ผู้พิการ"
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          ระบุความต้องการพิเศษ เช่น อาหาร การเข้าพัก หรือความช่วยเหลือพิเศษ
-                        </p>
-                      </div>
+                      {/* Special Requests - Read-only display */}
+                      {specialRequests && specialRequests.trim() !== '' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            ความต้องการพิเศษ
+                          </label>
+                          <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 whitespace-pre-wrap">
+                            {specialRequests}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            * กรณีต้องการเปลี่ยนแปลงความต้องการพิเศษ กรุณาติดต่อ Admin
+                          </p>
+                        </div>
+                      )}
 
                       {/* Total Amount */}
                       {event && calculateRegistrationFee(event, attendeeCount, true) > 0 && (
@@ -1075,6 +994,38 @@ export default function EventDetailPage() {
                                 {calculateRegistrationFee(event, attendeeCount, true).toLocaleString()} บาท
                               </p>
                             </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Admin Contact Message - Edit Mode */}
+                      {isEditing && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                          <p className="text-sm text-gray-700 mb-2">
+                            หากต้องการเปลี่ยนแปลงการลงทะเบียนโปรดติดต่อ Admin ที่{' '}
+                            <a href="https://lin.ee/nzAjXXq" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                              https://lin.ee/nzAjXXq
+                            </a>
+                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm text-gray-700">
+                              โดยแจ้งรหัสลงทะเบียน 6 หลัก รหัสของคุณคือ
+                            </span>
+                            <span className="font-mono font-bold text-lg text-blue-600">
+                              {userRegistration.registrationId}
+                            </span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(userRegistration.registrationId);
+                                toast.success('คัดลอกรหัสลงทะเบียนแล้ว');
+                              }}
+                              className="p-1 hover:bg-yellow-100 rounded transition-colors"
+                              title="คัดลอกรหัส"
+                            >
+                              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
                       )}

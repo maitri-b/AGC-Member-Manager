@@ -1324,9 +1324,16 @@ export default function EventDetailPage() {
                       {/* Single Payment Submission Button */}
                       {!userRegistration.depositPaid || (userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl) ? (
                         <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4">
-                          <p className="text-sm text-gray-700 mb-3">
-                            <strong>คำแนะนำ:</strong> คุณสามารถชำระเงินแบบเต็มจำนวนหรือแบบแบ่งงวดก็ได้ โปรดส่งหลักฐานการชำระเงินผ่านลิงก์ด้านล่าง
-                          </p>
+                          {(event as any).paymentInstructionText && (
+                            <p className="text-sm text-gray-700 mb-3">
+                              {(event as any).paymentInstructionText}
+                            </p>
+                          )}
+                          {!(event as any).paymentInstructionText && (
+                            <p className="text-sm text-gray-700 mb-3">
+                              <strong>คำแนะนำ:</strong> คุณสามารถชำระเงินแบบเต็มจำนวนหรือแบบแบ่งงวดก็ได้ โปรดส่งหลักฐานการชำระเงินผ่านลิงก์ด้านล่าง
+                            </p>
+                          )}
                           {event.paymentSlipSubmissionUrl ? (
                             <a
                               href={event.paymentSlipSubmissionUrl}
@@ -1338,7 +1345,7 @@ export default function EventDetailPage() {
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                 </svg>
-                                ส่งหลักฐานชำระเงิน
+                                {(event as any).paymentSlipButtonText || 'ส่งหลักฐานการชำระเงิน'}
                               </span>
                             </a>
                           ) : (

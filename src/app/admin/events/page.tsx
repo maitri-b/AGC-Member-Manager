@@ -89,6 +89,8 @@ interface EventFormData {
   paymentQrCodeUrl: string;
   paymentTerms: string;
   paymentSlipSubmissionUrl: string;
+  paymentSlipButtonText: string;
+  paymentInstructionText: string;
   // Deposit payment configuration (New)
   paymentMode: 'full' | 'deposit';
   depositAmount: number;
@@ -138,6 +140,8 @@ const initialFormData: EventFormData = {
   paymentQrCodeUrl: '',
   paymentTerms: '',
   paymentSlipSubmissionUrl: '',
+  paymentSlipButtonText: '',
+  paymentInstructionText: '',
   // Deposit payment configuration (New)
   paymentMode: 'full',
   depositAmount: 0,
@@ -268,6 +272,8 @@ export default function AdminEventsPage() {
         paymentQrCodeUrl: event.paymentQrCodeUrl ?? '',
         paymentTerms: event.paymentTerms ?? '',
         paymentSlipSubmissionUrl: (event as any).paymentSlipSubmissionUrl ?? '',
+        paymentSlipButtonText: (event as any).paymentSlipButtonText ?? '',
+        paymentInstructionText: (event as any).paymentInstructionText ?? '',
         // Deposit payment configuration (New)
         paymentMode: event.paymentMode ?? 'full',
         depositAmount: event.depositAmount ?? 0,
@@ -1610,6 +1616,38 @@ export default function AdminEventsPage() {
                         />
                         <p className="text-xs text-gray-500 mt-1">
                           URL ของ Google Form หรือฟอร์มอื่นๆ ที่ให้สมาชิกส่งหลักฐานการชำระเงิน (ใช้ร่วมกันทั้งมัดจำ/ยอดคงเหลือ/ชำระเต็ม)
+                        </p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          ข้อความคำแนะนำการชำระเงิน
+                        </label>
+                        <textarea
+                          value={formData.paymentInstructionText || ''}
+                          onChange={(e) => setFormData({ ...formData, paymentInstructionText: e.target.value })}
+                          placeholder="คำแนะนำ: คุณสามารถชำระเงินแบบเต็มจำนวนหรือแบบแบ่งงวดก็ได้ โปรดส่งหลักฐานการชำระเงินผ่านลิงก์ด้านล่าง"
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          ข้อความที่แสดงให้สมาชิกเห็นก่อนปุ่มส่งหลักฐาน (ถ้าไม่กรอกจะใช้ค่า default)
+                        </p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          ข้อความบนปุ่มส่งหลักฐานการชำระเงิน
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.paymentSlipButtonText || ''}
+                          onChange={(e) => setFormData({ ...formData, paymentSlipButtonText: e.target.value })}
+                          placeholder="ส่งหลักฐานการชำระเงิน"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          ข้อความที่แสดงบนปุ่ม (ถ้าไม่กรอกจะแสดง "ส่งหลักฐานการชำระเงิน")
                         </p>
                       </div>
                     </div>

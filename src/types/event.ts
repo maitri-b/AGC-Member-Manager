@@ -112,6 +112,8 @@ export interface Event {
   paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
   paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
   paymentSlipSubmissionUrl?: string; // URL สำหรับส่งหลักฐานการชำระเงิน (Google Form / ฟอร์มอื่นๆ)
+  paymentSlipButtonText?: string;   // ข้อความปุ่มส่งหลักฐานการชำระเงิน (Default: "ส่งหลักฐานการชำระเงิน")
+  paymentInstructionText?: string;  // ข้อความคำแนะนำการชำระเงิน (แสดงก่อนปุ่ม)
 
   // Deposit Payment Configuration (New)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')
@@ -175,6 +177,8 @@ export interface EventInput {
   paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
   paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
   paymentSlipSubmissionUrl?: string; // URL สำหรับส่งหลักฐานการชำระเงิน (Google Form / ฟอร์มอื่นๆ)
+  paymentSlipButtonText?: string;   // ข้อความปุ่มส่งหลักฐานการชำระเงิน (Default: "ส่งหลักฐานการชำระเงิน")
+  paymentInstructionText?: string;  // ข้อความคำแนะนำการชำระเงิน (แสดงก่อนปุ่ม)
 
   // Deposit Payment Configuration (New)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')

@@ -71,6 +71,8 @@ export async function GET() {
         paymentQrCodeUrl: data.paymentQrCodeUrl || '',
         paymentTerms: data.paymentTerms || '',
         paymentSlipSubmissionUrl: data.paymentSlipSubmissionUrl || '',
+        paymentSlipButtonText: data.paymentSlipButtonText || '',
+        paymentInstructionText: data.paymentInstructionText || '',
         // Deposit payment configuration (New)
         paymentMode: data.paymentMode || 'full',
         depositAmount: data.depositAmount ?? 0,
@@ -165,6 +167,8 @@ export async function POST(request: NextRequest) {
       paymentQrCodeUrl: body.paymentQrCodeUrl || '',
       paymentTerms: body.paymentTerms || '',
       paymentSlipSubmissionUrl: body.paymentSlipSubmissionUrl || '',
+      paymentSlipButtonText: body.paymentSlipButtonText || '',
+      paymentInstructionText: body.paymentInstructionText || '',
       // Deposit payment configuration (New)
       paymentMode: body.paymentMode || 'full',
       depositAmount: body.depositAmount ?? 0,

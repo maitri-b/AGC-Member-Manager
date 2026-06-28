@@ -186,6 +186,21 @@ export default function AdminEventsPage() {
   // Dropdown menu state
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (openDropdown && !target.closest('.dropdown-container')) {
+        setOpenDropdown(null);
+      }
+    };
+
+    if (openDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openDropdown]);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/');
@@ -715,9 +730,12 @@ export default function AdminEventsPage() {
                     </Link>
 
                     {/* Secondary: More Options Dropdown */}
-                    <div className="relative">
+                    <div className="relative dropdown-container">
                       <button
-                        onClick={() => setOpenDropdown(openDropdown === event.eventId ? null : event.eventId)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDropdown(openDropdown === event.eventId ? null : event.eventId);
+                        }}
                         className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                         title="ตัวเลือกเพิ่มเติม"
                       >
@@ -727,7 +745,9 @@ export default function AdminEventsPage() {
                       </button>
 
                       {openDropdown === event.eventId && (
-                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <button
                             onClick={() => {
                               handleOpenModal(event);

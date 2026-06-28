@@ -104,7 +104,7 @@ interface EventFormData {
   remainingDeadlineHours: number;
   // Registration edit control
   allowMemberEdit: boolean;
-  requireMemberAttendance: boolean;
+  requireAttendeeNames: boolean;
   // Attendee type pricing (New)
   useAttendeeTypePricing: boolean;
   attendeeTypes: AttendeeType[];
@@ -155,7 +155,7 @@ const initialFormData: EventFormData = {
   remainingDeadlineHours: 0,
   // Registration edit control
   allowMemberEdit: true,
-  requireMemberAttendance: false,
+  requireAttendeeNames: true,
   // Attendee type pricing (New)
   useAttendeeTypePricing: false,
   attendeeTypes: [],
@@ -302,7 +302,7 @@ export default function AdminEventsPage() {
         remainingDeadlineHours: event.remainingDeadlineHours ?? 0,
         // Registration edit control
         allowMemberEdit: (event as any).allowMemberEdit !== false,
-        requireMemberAttendance: (event as any).requireMemberAttendance ?? false,
+        requireAttendeeNames: (event as any).requireAttendeeNames ?? true,
         // Attendee type pricing (New)
         useAttendeeTypePricing: (event as any).useAttendeeTypePricing ?? false,
         attendeeTypes: (event as any).attendeeTypes ?? [],
@@ -1734,11 +1734,11 @@ export default function AdminEventsPage() {
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={formData.requireMemberAttendance ?? false}
-                        onChange={(e) => setFormData({ ...formData, requireMemberAttendance: e.target.checked })}
-                        className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                        checked={formData.requireAttendeeNames ?? true}
+                        onChange={(e) => setFormData({ ...formData, requireAttendeeNames: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
-                      <span className="text-sm text-gray-700">ผู้เข้าร่วมคนแรกต้องเป็นสมาชิก</span>
+                      <span className="text-sm text-gray-700">จำเป็นต้องกรอกชื่อผู้เข้าร่วมกิจกรรม</span>
                     </label>
                   </div>
                 </div>

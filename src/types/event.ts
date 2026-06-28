@@ -133,7 +133,7 @@ export interface Event {
 
   // Registration Edit Control
   allowMemberEdit?: boolean;        // อนุญาตให้สมาชิกแก้ไขข้อมูลการลงทะเบียนหลังจากลงทะเบียนแล้ว (Default: true)
-  requireMemberAttendance?: boolean; // ผู้เข้าร่วมคนแรกต้องเป็นสมาชิก (Default: false)
+  requireAttendeeNames?: boolean;    // จำเป็นต้องกรอกชื่อผู้เข้าร่วมกิจกรรม (Default: true) // ผู้เข้าร่วมคนแรกต้องเป็นสมาชิก (Default: false)
 
   // Attendee Type Pricing (New - for events with accommodation or different attendee categories)
   useAttendeeTypePricing?: boolean; // ใช้ระบบราคาตามประเภทผู้เข้าร่วม (Default: false)
@@ -198,7 +198,7 @@ export interface EventInput {
 
   // Registration Edit Control
   allowMemberEdit?: boolean;        // อนุญาตให้สมาชิกแก้ไขข้อมูลการลงทะเบียนหลังจากลงทะเบียนแล้ว (Default: true)
-  requireMemberAttendance?: boolean; // ผู้เข้าร่วมคนแรกต้องเป็นสมาชิก (Default: false)
+  requireAttendeeNames?: boolean;    // จำเป็นต้องกรอกชื่อผู้เข้าร่วมกิจกรรม (Default: true) // ผู้เข้าร่วมคนแรกต้องเป็นสมาชิก (Default: false)
 
   // Attendee Type Pricing (New - for events with accommodation or different attendee categories)
   useAttendeeTypePricing?: boolean; // ใช้ระบบราคาตามประเภทผู้เข้าร่วม (Default: false)

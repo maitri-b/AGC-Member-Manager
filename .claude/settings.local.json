@@ -24,7 +24,8 @@
       "Bash(Select-String -Pattern \"error|Error|warning|Warning|Failed|failed|✓ Compiled|Route \\\\\\(app\\\\\\)\")",
       "Bash(node -e:*)",
       "Bash(Select-Object -First 50)",
-      "Bash(timeout /t 60 /nobreak)"
+      "Bash(timeout /t 60 /nobreak)",
+      "Bash(git restore:*)"
     ]
   }
 }

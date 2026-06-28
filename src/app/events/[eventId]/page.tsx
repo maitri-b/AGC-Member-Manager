@@ -51,7 +51,7 @@ interface Event {
   remainingDeadlineHours?: number;
   // Registration edit control
   allowMemberEdit?: boolean;
-  requireMemberAttendance?: boolean;
+  requireAttendeeNames?: boolean;
   // Attendee type pricing (New)
   useAttendeeTypePricing?: boolean;
   attendeeTypes?: AttendeeType[];
@@ -195,14 +195,7 @@ export default function EventDetailPage() {
             }
           }
 
-          // If requireMemberAttendance is true, ensure first attendee is member name
-          if (data.event.requireMemberAttendance && data.memberName) {
-            const existingNames = data.userRegistration.attendeeNames?.split(',').map((n: string) => n.trim()) || [];
-            if (existingNames.length > 0) {
-              existingNames[0] = data.memberName; // Replace first name with member name
-              setAttendeeNames(existingNames);
-            }
-          }
+          // Load existing attendee names (no auto-replace logic)
         } else {
           // Set first attendee name from member data for new registration
           if (data.memberName) {
@@ -247,9 +240,9 @@ export default function EventDetailPage() {
       return;
     }
 
-    // Validate attendee names
+    // Validate attendee names (conditional based on requireAttendeeNames)
     const filledNames = attendeeNames.filter(name => name.trim());
-    if (filledNames.length !== attendeeCount) {
+    if ((event.requireAttendeeNames ?? true) && filledNames.length !== attendeeCount) {
       toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
       return;
     }
@@ -787,48 +780,26 @@ export default function EventDetailPage() {
                           รายชื่อผู้สมัครร่วมกิจกรรม
                         </label>
 
-                        {/* Warning for requireMemberAttendance */}
-                        {event.requireMemberAttendance && (
-                          <div className="mb-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
-                            <p className="text-xs text-orange-800 font-medium">
-                              ⚠️ ผู้เข้าร่วมกิจกรรมท่านแรกต้องเป็นสมาชิกชมรม (ไม่สามารถแก้ไขได้)
-                            </p>
-                          </div>
-                        )}
-
                         <div className="space-y-2">
                           {Array.from({ length: attendeeCount }).map((_, index) => {
-                            // First attendee is member (non-editable) when requireMemberAttendance is true
-                            const isFirstAttendeeAndMemberRequired = index === 0 && event.requireMemberAttendance;
-                            const isDisabled = isFirstAttendeeAndMemberRequired || !(event.allowMemberEdit ?? true);
+                            const isDisabled = !(event.allowMemberEdit ?? true);
+                            const isRequired = event.requireAttendeeNames ?? true;
 
                             return (
                               <div key={index}>
                                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                                  {isFirstAttendeeAndMemberRequired
-                                    ? 'ผู้เข้าร่วมกิจกรรมท่านที่ 1 (สมาชิก)'
-                                    : event.requireMemberAttendance && index > 0
-                                      ? `ผู้เข้าร่วมกิจกรรมท่านที่ ${index + 1} (ถ้ามี)`
-                                      : `ผู้เข้าร่วมกิจกรรมท่านที่ ${index + 1}`}
+                                  ผู้เข้าร่วมกิจกรรมท่านที่ {index + 1} {!isRequired && '(ถ้ามี)'}
                                 </label>
                                 <input
                                   type="text"
                                   value={attendeeNames[index] || ''}
                                   onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
                                   disabled={isDisabled}
-                                  placeholder={
-                                    isFirstAttendeeAndMemberRequired
-                                      ? memberName || 'ชื่อสมาชิก'
-                                      : event.requireMemberAttendance && index > 0
-                                        ? 'ระบุชื่อเต็ม (ถ้ามี)'
-                                        : index === 0
-                                          ? 'ชื่อของคุณ'
-                                          : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`
-                                  }
-                                  required={index === 0}
+                                  placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                                  required={isRequired}
                                   className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                                     isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
-                                  } ${isFirstAttendeeAndMemberRequired ? 'font-semibold text-orange-800 bg-orange-50 border-orange-300' : ''}`}
+                                  }`}
                                 />
                               </div>
                             );
@@ -1116,9 +1087,9 @@ export default function EventDetailPage() {
                               onClick={async () => {
                                 if (!event) return;
 
-                                // Validate attendee names
+                                // Validate attendee names (conditional based on requireAttendeeNames)
                                 const filledNames = attendeeNames.filter(name => name.trim());
-                                if (filledNames.length !== attendeeCount) {
+                                if ((event.requireAttendeeNames ?? true) && filledNames.length !== attendeeCount) {
                                   toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
                                   return;
                                 }
@@ -1534,47 +1505,22 @@ export default function EventDetailPage() {
                       รายชื่อผู้สมัครร่วมกิจกรรม
                     </label>
 
-                    {/* Warning for requireMemberAttendance */}
-                    {event.requireMemberAttendance && (
-                      <div className="mb-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
-                        <p className="text-xs text-orange-800 font-medium">
-                          ⚠️ ผู้เข้าร่วมกิจกรรมท่านแรกต้องเป็นสมาชิกชมรม (ไม่สามารถแก้ไขได้)
-                        </p>
-                      </div>
-                    )}
-
                     <div className="space-y-2">
                       {Array.from({ length: attendeeCount }).map((_, index) => {
-                        // First attendee is member (non-editable) when requireMemberAttendance is true
-                        const isFirstAttendeeAndMemberRequired = index === 0 && event.requireMemberAttendance;
+                        const isRequired = event.requireAttendeeNames ?? true;
 
                         return (
                           <div key={index}>
                             <label className="block text-xs font-medium text-gray-600 mb-1">
-                              {isFirstAttendeeAndMemberRequired
-                                ? 'ผู้เข้าร่วมกิจกรรมท่านที่ 1 (สมาชิก)'
-                                : event.requireMemberAttendance && index > 0
-                                  ? `ผู้เข้าร่วมกิจกรรมท่านที่ ${index + 1} (ถ้ามี)`
-                                  : `ผู้เข้าร่วมกิจกรรมท่านที่ ${index + 1}`}
+                              ผู้เข้าร่วมกิจกรรมท่านที่ {index + 1} {!isRequired && '(ถ้ามี)'}
                             </label>
                             <input
                               type="text"
                               value={attendeeNames[index] || ''}
                               onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
-                              disabled={isFirstAttendeeAndMemberRequired}
-                              placeholder={
-                                isFirstAttendeeAndMemberRequired
-                                  ? memberName || 'ชื่อสมาชิก'
-                                  : event.requireMemberAttendance && index > 0
-                                    ? 'ระบุชื่อเต็ม (ถ้ามี)'
-                                    : index === 0
-                                      ? 'ชื่อของคุณ'
-                                      : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`
-                              }
-                              required={index === 0}
-                              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                isFirstAttendeeAndMemberRequired ? 'bg-gray-100 cursor-not-allowed font-semibold text-orange-800 border-orange-300' : ''
-                              }`}
+                              placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                              required={isRequired}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                           </div>
                         );

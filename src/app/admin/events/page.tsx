@@ -963,33 +963,68 @@ export default function AdminEventsPage() {
 
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ประเภทการคิดราคา
+                        ระบบคิดราคา <span className="text-red-500">*</span>
                       </label>
                       <div className="space-y-2">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
                             value="fixed"
-                            checked={formData.pricingType === 'fixed'}
-                            onChange={(e) => setFormData({ ...formData, pricingType: 'fixed' })}
+                            checked={formData.pricingType === 'fixed' && !formData.useAttendeeTypePricing}
+                            onChange={() => setFormData({
+                              ...formData,
+                              pricingType: 'fixed',
+                              useAttendeeTypePricing: false,
+                              attendeeTypes: [],
+                              roomTypes: []
+                            })}
                             className="w-4 h-4 text-blue-600"
                           />
-                          <span className="text-sm">ราคาเหมา (Fixed) - ทุกคนจ่ายเท่ากัน</span>
+                          <div>
+                            <div className="text-sm font-medium">ราคาเหมา (Fixed)</div>
+                            <div className="text-xs text-gray-500">ทุกคนจ่ายเท่ากัน - เหมาะสำหรับกิจกรรมทั่วไป</div>
+                          </div>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
                             value="tiered"
-                            checked={formData.pricingType === 'tiered'}
-                            onChange={(e) => setFormData({ ...formData, pricingType: 'tiered' })}
+                            checked={formData.pricingType === 'tiered' && !formData.useAttendeeTypePricing}
+                            onChange={() => setFormData({
+                              ...formData,
+                              pricingType: 'tiered',
+                              useAttendeeTypePricing: false,
+                              attendeeTypes: [],
+                              roomTypes: []
+                            })}
                             className="w-4 h-4 text-blue-600"
                           />
-                          <span className="text-sm">ราคาขั้นบันได (Tiered) - คนแรกและคนที่ 2+ ราคาต่างกัน</span>
+                          <div>
+                            <div className="text-sm font-medium">ราคาขั้นบันได (Tiered)</div>
+                            <div className="text-xs text-gray-500">คนแรกและคนที่ 2+ ราคาต่างกัน - เหมาะสำหรับกิจกรรมที่มีส่วนลด</div>
+                          </div>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            value="attendee"
+                            checked={formData.useAttendeeTypePricing === true}
+                            onChange={() => setFormData({
+                              ...formData,
+                              useAttendeeTypePricing: true,
+                              pricingType: 'fixed' // Set to fixed as fallback
+                            })}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <div>
+                            <div className="text-sm font-medium">ราคาตามประเภทผู้เข้าร่วม (Attendee Type)</div>
+                            <div className="text-xs text-gray-500">แยกราคาตามประเภท (ผู้ใหญ่/เด็ก) + ค่าห้องพัก - เหมาะสำหรับกิจกรรมที่มีที่พัก</div>
+                          </div>
                         </label>
                       </div>
                     </div>
 
-                    {formData.pricingType === 'tiered' ? (
+                    {!formData.useAttendeeTypePricing && formData.pricingType === 'tiered' ? (
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1036,7 +1071,7 @@ export default function AdminEventsPage() {
                           <p className="text-xs text-gray-500 mt-1">ส่วนลดจากราคารวม (บาท)</p>
                         </div>
                       </>
-                    ) : (
+                    ) : !formData.useAttendeeTypePricing ? (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           ค่าสมัคร (บาท/คน)
@@ -1051,7 +1086,7 @@ export default function AdminEventsPage() {
                         />
                         <p className="text-xs text-gray-500 mt-1">กรอก 0 หากไม่มีค่าใช้จ่าย</p>
                       </div>
-                    )}
+                    ) : null}
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1070,30 +1105,10 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
 
-                {/* Attendee Type Pricing Configuration (NEW) */}
-                <div className="md:col-span-2 border-t pt-4 mt-4">
-                  <label className="flex items-center gap-2 cursor-pointer mb-3">
-                    <input
-                      type="checkbox"
-                      checked={formData.useAttendeeTypePricing || false}
-                      onChange={(e) => {
-                        const isChecked = e.target.checked;
-                        setFormData({
-                          ...formData,
-                          useAttendeeTypePricing: isChecked,
-                          // Reset attendee types if unchecked
-                          attendeeTypes: isChecked ? formData.attendeeTypes : []
-                        });
-                      }}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm font-semibold text-gray-800">
-                      ใช้ราคาแยกตามประเภทผู้เข้าร่วม
-                      <span className="text-gray-500 font-normal ml-1">(เหมาะสำหรับกิจกรรมที่มีที่พัก)</span>
-                    </span>
-                  </label>
-
-                  {formData.useAttendeeTypePricing && (
+                {/* Attendee Type Pricing Configuration */}
+                {formData.useAttendeeTypePricing && (
+                  <div className="md:col-span-2 border-t pt-4 mt-4">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3">ตั้งค่าราคาตามประเภทผู้เข้าร่วม</h3>
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                       <p className="text-sm text-gray-600 mb-3">
                         กำหนดประเภทผู้เข้าร่วมและราคาสำหรับแต่ละประเภท:
@@ -1286,12 +1301,13 @@ export default function AdminEventsPage() {
                         </p>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Deposit Payment Configuration (NEW) */}
-                {((formData.pricingType === 'fixed' && formData.registrationFee > 0) ||
-                  (formData.pricingType === 'tiered' && (formData.baseFee > 0 || formData.additionalFeePerPerson > 0))) && (
+                {((formData.pricingType === 'fixed' && formData.registrationFee > 0 && !formData.useAttendeeTypePricing) ||
+                  (formData.pricingType === 'tiered' && (formData.baseFee > 0 || formData.additionalFeePerPerson > 0) && !formData.useAttendeeTypePricing) ||
+                  (formData.useAttendeeTypePricing && formData.attendeeTypes.length > 0)) && (
                   <div className="md:col-span-2 border-t pt-4 mt-4">
                     <h3 className="text-sm font-semibold text-gray-800 mb-3">
                       ตั้งค่าการชำระเงิน (Deposit System)
@@ -1503,10 +1519,15 @@ export default function AdminEventsPage() {
                 </div>
 
                 {/* Payment Information */}
-                {((formData.pricingType === 'fixed' && formData.registrationFee > 0) ||
-                  (formData.pricingType === 'tiered' && (formData.baseFee > 0 || formData.additionalFeePerPerson > 0))) && (
-                  <div className="md:col-span-2 border-t pt-4 mt-2">
-                    <h3 className="text-sm font-semibold text-gray-800 mb-3">ข้อมูลการชำระเงิน</h3>
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">ข้อมูลการชำระเงิน</h3>
+                  {((formData.pricingType === 'fixed' && formData.registrationFee > 0 && !formData.useAttendeeTypePricing) ||
+                    (formData.pricingType === 'tiered' && (formData.baseFee > 0 || formData.additionalFeePerPerson > 0) && !formData.useAttendeeTypePricing) ||
+                    (formData.useAttendeeTypePricing && formData.attendeeTypes.length > 0)) ? (
+                    <>
+                    <div className="text-xs text-blue-600 mb-3 p-2 bg-blue-50 rounded">
+                      กรอกข้อมูลบัญชีธนาคารสำหรับการชำระเงิน
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1592,8 +1613,13 @@ export default function AdminEventsPage() {
                         </p>
                       </div>
                     </div>
-                  </div>
-                )}
+                    </>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      ตั้งค่าราคากิจกรรมก่อนเพื่อเปิดใช้งานข้อมูลการชำระเงิน
+                    </div>
+                  )}
+                </div>
 
                 {/* Status Checkboxes */}
                 <div className="md:col-span-2 border-t pt-4 mt-2">

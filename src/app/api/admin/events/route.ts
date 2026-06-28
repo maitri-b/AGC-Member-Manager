@@ -15,8 +15,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Require admin:access permission
-    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
+    // Require admin:access OR events:manage-assigned permission
+    const hasAdminAccess = hasPermission(session.user.permissions || [], 'admin:access');
+    const hasEventAccess = hasPermission(session.user.permissions || [], 'events:manage-assigned');
+
+    if (!hasAdminAccess && !hasEventAccess) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
@@ -211,15 +214,27 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
-
     const body = await request.json();
     const { eventId, ...updates } = body;
 
     if (!eventId) {
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
+    }
+
+    // Check permissions
+    const hasAdminAccess = hasPermission(session.user.permissions || [], 'admin:access');
+    const hasEventAccess = hasPermission(session.user.permissions || [], 'events:manage-assigned');
+
+    if (!hasAdminAccess && !hasEventAccess) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
+    // If event-staff/event-co, check if they have access to this specific event
+    if (!hasAdminAccess && hasEventAccess) {
+      const assignedEventIds = session.user.assignedEventIds || [];
+      if (!assignedEventIds.includes(eventId)) {
+        return NextResponse.json({ error: 'You are not assigned to this event' }, { status: 403 });
+      }
     }
 
     const db = adminDb();

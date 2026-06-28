@@ -197,10 +197,7 @@ export default function EventDetailPage() {
 
           // Load existing attendee names (no auto-replace logic)
         } else {
-          // Set first attendee name from member data for new registration
-          if (data.memberName) {
-            setAttendeeNames([data.memberName]);
-          }
+          // No pre-fill for new registrations - let members enter names manually
         }
       } else if (response.status === 404) {
         router.push('/events');
@@ -681,41 +678,40 @@ export default function EventDetailPage() {
                               * จำกัด {event.maxPerCompany} คนต่อ 1 บริษัท
                             </p>
                           )}
+
+                          {/* Admin Contact Message */}
+                          {!isEditing && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                              <p className="text-sm text-gray-700 mb-2">
+                                หากต้องการเปลี่ยนแปลงการลงทะเบียนโปรดติดต่อ Admin ที่{' '}
+                                <a href="https://lin.ee/nzAjXXq" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                                  https://lin.ee/nzAjXXq
+                                </a>
+                              </p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm text-gray-700">
+                                  โดยแจ้งรหัสลงทะเบียน 6 หลัก รหัสของคุณคือ
+                                </span>
+                                <span className="font-mono font-bold text-lg text-blue-600">
+                                  {userRegistration.registrationId}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(userRegistration.registrationId);
+                                    toast.success('คัดลอกรหัสลงทะเบียนแล้ว');
+                                  }}
+                                  className="p-1 hover:bg-yellow-100 rounded transition-colors"
+                                  title="คัดลอกรหัส"
+                                >
+                                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-
-                      {/* Admin Contact Message */}
-                      {!isEditing && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                          <p className="text-sm text-gray-700 mb-2">
-                            หากต้องการเปลี่ยนแปลงการลงทะเบียนโปรดติดต่อ Admin ที่{' '}
-                            <a href="https://lin.ee/nzAjXXq" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
-                              https://lin.ee/nzAjXXq
-                            </a>
-                          </p>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm text-gray-700">
-                              โดยแจ้งรหัสลงทะเบียน 6 หลัก รหัสของคุณคือ
-                            </span>
-                            <span className="font-mono font-bold text-lg text-blue-600">
-                              {userRegistration.registrationId}
-                            </span>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(userRegistration.registrationId);
-                                toast.success('คัดลอกรหัสลงทะเบียนแล้ว');
-                              }}
-                              className="p-1 hover:bg-yellow-100 rounded transition-colors"
-                              title="คัดลอกรหัส"
-                            >
-                              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
                       {!isEditing && (
                         <button
                           onClick={() => {
@@ -807,7 +803,7 @@ export default function EventDetailPage() {
                                   placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
                                   required={isRequired}
                                   className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                    isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
+                                    isDisabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
                                   }`}
                                 />
                               </div>
@@ -1029,6 +1025,36 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Admin Contact Message */}
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                        <p className="text-sm text-gray-700 mb-2">
+                          หากต้องการเปลี่ยนแปลงการลงทะเบียนโปรดติดต่อ Admin ที่{' '}
+                          <a href="https://lin.ee/nzAjXXq" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                            https://lin.ee/nzAjXXq
+                          </a>
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm text-gray-700">
+                            โดยแจ้งรหัสลงทะเบียน 6 หลัก รหัสของคุณคือ
+                          </span>
+                          <span className="font-mono font-bold text-lg text-blue-600">
+                            {userRegistration.registrationId}
+                          </span>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(userRegistration.registrationId);
+                              toast.success('คัดลอกรหัสลงทะเบียนแล้ว');
+                            }}
+                            className="p-1 hover:bg-yellow-100 rounded transition-colors"
+                            title="คัดลอกรหัส"
+                          >
+                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
 
                       {/* Action Buttons */}
                       <div className="flex gap-3 pt-2">

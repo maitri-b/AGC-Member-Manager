@@ -1264,14 +1264,27 @@ export default function EventDetailPage() {
                     <svg className="w-6 h-6 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    <div>
-                      <p className="font-semibold text-yellow-800">ยังไม่ได้เชื่อมต่อบัญชีสมาชิก</p>
-                      <p className="text-sm text-yellow-700">
-                        กรุณาเชื่อมต่อบัญชีสมาชิกก่อนจึงจะสามารถลงทะเบียนกิจกรรมได้
-                      </p>
-                      <Link href="/verify" className="text-sm text-yellow-800 font-medium hover:underline mt-2 inline-block">
-                        ไปยืนยันตัวตน →
-                      </Link>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="font-semibold text-yellow-800 mb-1">กิจกรรมสำหรับสมาชิกเอเจ้นท์คลับเท่านั้น</p>
+                        <p className="text-sm text-yellow-700">
+                          สนใจสมัครสมาชิก{' '}
+                          <Link href="/apply" className="text-yellow-800 font-medium hover:underline">
+                            คลิกที่นี่
+                          </Link>
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-yellow-200">
+                        <p className="text-sm text-yellow-700 mb-1">
+                          หากคุณเป็นสมาชิกเอเจ้นท์คลับอยู่แล้ว
+                        </p>
+                        <p className="text-sm text-yellow-700">
+                          กรุณา Login ด้วย LINE ที่ลงทะเบียนเข้าร่วมกลุ่ม
+                        </p>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          หากคุณยังไม่ได้ทำการยืนยันตัวตน กรุณาติดต่อทีมนายทะเบียน
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -88,6 +88,8 @@ export default function ApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [checkingLicense, setCheckingLicense] = useState(false);
+  const [licenseExists, setLicenseExists] = useState(false);
 
   // Pre-fill LINE name from session
   useEffect(() => {
@@ -98,6 +100,49 @@ export default function ApplyPage() {
       }));
     }
   }, [session]);
+
+  // Check if license number already exists
+  const checkLicenseNumber = async (licenseNumber: string) => {
+    // Only check if format is valid (xx/xxxxx)
+    if (!/^\d{2}\/\d{5}$/.test(licenseNumber)) {
+      return;
+    }
+
+    setCheckingLicense(true);
+    setLicenseExists(false);
+
+    try {
+      const response = await fetch('/api/apply/check-license', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ licenseNumber }),
+      });
+
+      const data = await response.json();
+
+      if (data.exists) {
+        setLicenseExists(true);
+        setErrors(prev => ({
+          ...prev,
+          licenseNumber: data.message,
+        }));
+      } else {
+        setLicenseExists(false);
+        // Clear error if license is available
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.licenseNumber;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error('Error checking license:', error);
+    } finally {
+      setCheckingLicense(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -114,6 +159,16 @@ export default function ApplyPage() {
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+
+    // Check license number when it changes
+    if (name === 'licenseNumber') {
+      // Debounce the check
+      const timeoutId = setTimeout(() => {
+        checkLicenseNumber(formattedValue);
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
     }
   };
 
@@ -155,6 +210,12 @@ export default function ApplyPage() {
 
     if (!validateForm()) {
       toast.error('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
+
+    // Double-check license number before submitting
+    if (licenseExists) {
+      toast.error('ไม่สามารถส่งใบสมัครได้ เนื่องจากเลขที่ใบอนุญาตนี้มีในระบบแล้ว');
       return;
     }
 
@@ -484,15 +545,51 @@ export default function ApplyPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   ใบอนุญาตนำเที่ยวเลขที่ <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  name="licenseNumber"
-                  value={formData.licenseNumber}
-                  onChange={handleInputChange}
-                  placeholder="xx/xxxxx"
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.licenseNumber ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                {errors.licenseNumber && <p className="text-red-500 text-xs mt-1">{errors.licenseNumber}</p>}
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="licenseNumber"
+                    value={formData.licenseNumber}
+                    onChange={handleInputChange}
+                    placeholder="xx/xxxxx"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.licenseNumber
+                        ? 'border-red-500'
+                        : licenseExists
+                        ? 'border-red-500'
+                        : 'border-gray-300'
+                    }`}
+                    disabled={submitting}
+                  />
+                  {checkingLicense && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                    </div>
+                  )}
+                  {!checkingLicense && licenseExists && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                  )}
+                  {!checkingLicense && formData.licenseNumber && /^\d{2}\/\d{5}$/.test(formData.licenseNumber) && !licenseExists && !errors.licenseNumber && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                {errors.licenseNumber && (
+                  <p className="text-red-500 text-xs mt-1 flex items-start gap-1">
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{errors.licenseNumber}</span>
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">รูปแบบ: xx/xxxxx (เช่น 11/12345)</p>
               </div>
             </div>
           </div>

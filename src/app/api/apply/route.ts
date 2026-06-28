@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
+import { getAllMembers } from '@/lib/google-sheets';
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'คุณได้ส่งใบสมัครแล้ว กรุณารอการพิจารณา' }, { status: 400 });
     }
 
-    // Check if license number already exists
+    // Check if license number already exists in applications
     const existingLicense = await db.collection('membershipApplications')
       .where('licenseNumber', '==', applicationData.licenseNumber)
       .where('status', 'in', ['pending', 'approved'])
@@ -78,7 +79,24 @@ export async function POST(request: NextRequest) {
       .get();
 
     if (!existingLicense.empty) {
-      return NextResponse.json({ error: 'เลขใบอนุญาตนี้มีการสมัครแล้ว' }, { status: 400 });
+      return NextResponse.json({
+        error: 'มีข้อมูลเลขที่ใบอนุญาตนี้ในระบบการสมัครสมาชิกแล้ว ไม่สามารถลงทะเบียนซ้ำได้ กรุณาติดต่อทีมนายทะเบียน'
+      }, { status: 400 });
+    }
+
+    // Check if license number already exists in member database
+    try {
+      const allMembers = await getAllMembers();
+      const existingMember = allMembers.find(member => member.licenseNumber === applicationData.licenseNumber);
+
+      if (existingMember) {
+        return NextResponse.json({
+          error: 'มีข้อมูลเลขที่ใบอนุญาตนี้ในฐานข้อมูลสมาชิกแล้ว ไม่สามารถลงทะเบียนซ้ำได้ กรุณาติดต่อทีมนายทะเบียน'
+        }, { status: 400 });
+      }
+    } catch (sheetsError) {
+      console.error('Error checking member database:', sheetsError);
+      // Continue even if sheets check fails
     }
 
     // Generate application ID

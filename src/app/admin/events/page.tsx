@@ -879,8 +879,8 @@ export default function AdminEventsPage() {
                   </label>
                   <input
                     type="number"
-                    value={formData.year}
-                    onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) || 0 })}
+                    value={formData.year || ''}
+                    onChange={(e) => setFormData({ ...formData, year: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min={2500}
                     max={2600}
@@ -952,8 +952,8 @@ export default function AdminEventsPage() {
                       </label>
                       <input
                         type="number"
-                        value={formData.maxCapacity}
-                        onChange={(e) => setFormData({ ...formData, maxCapacity: parseInt(e.target.value) || 0 })}
+                        value={formData.maxCapacity || ''}
+                        onChange={(e) => setFormData({ ...formData, maxCapacity: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                         placeholder="0 = ไม่จำกัด"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min={0}
@@ -997,8 +997,8 @@ export default function AdminEventsPage() {
                           </label>
                           <input
                             type="number"
-                            value={formData.baseFee}
-                            onChange={(e) => setFormData({ ...formData, baseFee: parseInt(e.target.value) || 0 })}
+                            value={formData.baseFee || ''}
+                            onChange={(e) => setFormData({ ...formData, baseFee: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                             placeholder="0 = ฟรี"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             min={0}
@@ -1012,8 +1012,8 @@ export default function AdminEventsPage() {
                           </label>
                           <input
                             type="number"
-                            value={formData.additionalFeePerPerson}
-                            onChange={(e) => setFormData({ ...formData, additionalFeePerPerson: parseInt(e.target.value) || 0 })}
+                            value={formData.additionalFeePerPerson || ''}
+                            onChange={(e) => setFormData({ ...formData, additionalFeePerPerson: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                             placeholder="0 = ฟรี"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             min={0}
@@ -1027,8 +1027,8 @@ export default function AdminEventsPage() {
                           </label>
                           <input
                             type="number"
-                            value={formData.memberDiscount}
-                            onChange={(e) => setFormData({ ...formData, memberDiscount: parseInt(e.target.value) || 0 })}
+                            value={formData.memberDiscount || ''}
+                            onChange={(e) => setFormData({ ...formData, memberDiscount: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                             placeholder="0 = ไม่มีส่วนลด"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             min={0}
@@ -1043,8 +1043,8 @@ export default function AdminEventsPage() {
                         </label>
                         <input
                           type="number"
-                          value={formData.registrationFee}
-                          onChange={(e) => setFormData({ ...formData, registrationFee: parseInt(e.target.value) || 0 })}
+                          value={formData.registrationFee || ''}
+                          onChange={(e) => setFormData({ ...formData, registrationFee: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                           placeholder="0 = ฟรี"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min={0}
@@ -1059,8 +1059,8 @@ export default function AdminEventsPage() {
                       </label>
                       <input
                         type="number"
-                        value={formData.maxPerCompany}
-                        onChange={(e) => setFormData({ ...formData, maxPerCompany: parseInt(e.target.value) || 0 })}
+                        value={formData.maxPerCompany || ''}
+                        onChange={(e) => setFormData({ ...formData, maxPerCompany: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                         placeholder="0 = ไม่จำกัด"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         min={0}
@@ -1137,13 +1137,13 @@ export default function AdminEventsPage() {
                               {isActive ? (
                                 <input
                                   type="text"
-                                  value={existingType?.typeName || type.name}
+                                  value={existingType?.typeName || ''}
                                   placeholder={type.name}
                                   onChange={(e) => {
                                     const newTypes = [...(formData.attendeeTypes || [])];
                                     const idx = newTypes.findIndex(at => at.typeId === type.id);
                                     if (idx > -1) {
-                                      newTypes[idx].typeName = e.target.value;
+                                      newTypes[idx].typeName = e.target.value || type.name;
                                       setFormData({ ...formData, attendeeTypes: newTypes });
                                     }
                                   }}
@@ -1159,12 +1159,12 @@ export default function AdminEventsPage() {
                                     type="number"
                                     min="0"
                                     step="1"
-                                    value={price}
+                                    value={price || ''}
                                     onChange={(e) => {
                                       const newTypes = [...(formData.attendeeTypes || [])];
                                       const idx = newTypes.findIndex(at => at.typeId === type.id);
                                       if (idx > -1) {
-                                        newTypes[idx].price = parseFloat(e.target.value) || 0;
+                                        newTypes[idx].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
                                         setFormData({ ...formData, attendeeTypes: newTypes });
                                       }
                                     }}
@@ -1234,13 +1234,13 @@ export default function AdminEventsPage() {
                                 {isActive ? (
                                   <input
                                     type="text"
-                                    value={typeName}
+                                    value={typeName || ''}
                                     placeholder={room.name}
                                     onChange={(e) => {
                                       const newRooms = [...(formData.roomTypes || [])];
                                       const idx = newRooms.findIndex(rt => rt.typeId === room.id);
                                       if (idx > -1) {
-                                        newRooms[idx].typeName = e.target.value;
+                                        newRooms[idx].typeName = e.target.value || room.name;
                                         setFormData({ ...formData, roomTypes: newRooms });
                                       }
                                     }}
@@ -1259,12 +1259,12 @@ export default function AdminEventsPage() {
                                       type="number"
                                       min="0"
                                       step="1"
-                                      value={price}
+                                      value={price || ''}
                                       onChange={(e) => {
                                         const newRooms = [...(formData.roomTypes || [])];
                                         const idx = newRooms.findIndex(rt => rt.typeId === room.id);
                                         if (idx > -1) {
-                                          newRooms[idx].price = parseFloat(e.target.value) || 0;
+                                          newRooms[idx].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
                                           setFormData({ ...formData, roomTypes: newRooms });
                                         }
                                       }}
@@ -1343,7 +1343,7 @@ export default function AdminEventsPage() {
                             <input
                               type="number"
                               value={formData.depositAmount || ''}
-                              onChange={(e) => setFormData({ ...formData, depositAmount: parseInt(e.target.value) || 0 })}
+                              onChange={(e) => setFormData({ ...formData, depositAmount: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                               disabled={formData.useDepositPercentage}
                               className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100"
                               placeholder="เช่น 500"
@@ -1361,7 +1361,7 @@ export default function AdminEventsPage() {
                             <input
                               type="number"
                               value={formData.depositPercentage || ''}
-                              onChange={(e) => setFormData({ ...formData, depositPercentage: parseInt(e.target.value) || 0 })}
+                              onChange={(e) => setFormData({ ...formData, depositPercentage: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                               disabled={!formData.useDepositPercentage}
                               className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100"
                               placeholder="เช่น 30"
@@ -1400,7 +1400,7 @@ export default function AdminEventsPage() {
                               <input
                                 type="number"
                                 value={formData.depositDeadlineHours || ''}
-                                onChange={(e) => setFormData({ ...formData, depositDeadlineHours: parseInt(e.target.value) || 0 })}
+                                onChange={(e) => setFormData({ ...formData, depositDeadlineHours: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                                 className="w-full px-3 py-2 border rounded-md"
                                 placeholder="เช่น 72 (3 วัน)"
                                 min="1"
@@ -1441,7 +1441,7 @@ export default function AdminEventsPage() {
                               <input
                                 type="number"
                                 value={formData.remainingDeadlineHours || ''}
-                                onChange={(e) => setFormData({ ...formData, remainingDeadlineHours: parseInt(e.target.value) || 0 })}
+                                onChange={(e) => setFormData({ ...formData, remainingDeadlineHours: e.target.value === '' ? 0 : parseInt(e.target.value) })}
                                 className="w-full px-3 py-2 border rounded-md"
                                 placeholder="เช่น 168 (7 วัน)"
                                 min="1"

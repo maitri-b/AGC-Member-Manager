@@ -745,7 +745,7 @@ export default function AdminEventsPage() {
                       </button>
 
                       {openDropdown === event.eventId && (
-                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[9999]"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button

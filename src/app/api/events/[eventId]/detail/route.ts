@@ -76,6 +76,8 @@ export async function GET(
       paymentQrCodeUrl: eventData?.paymentQrCodeUrl || '',
       paymentTerms: eventData?.paymentTerms || '',
       paymentSlipSubmissionUrl: eventData?.paymentSlipSubmissionUrl || '',
+      paymentSlipButtonText: eventData?.paymentSlipButtonText || '',
+      paymentInstructionText: eventData?.paymentInstructionText || '',
       allowMemberEdit: eventData?.allowMemberEdit ?? true,
       createdAt: eventData?.createdAt || '',
       updatedAt: eventData?.updatedAt || '',

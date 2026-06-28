@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
 import { Toast, useToast } from '@/components/Toast';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation } from '@/types/event';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
@@ -334,7 +333,6 @@ export default function EventDetailPage() {
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
@@ -345,7 +343,6 @@ export default function EventDetailPage() {
   if (!event) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="text-center py-12">
             <p className="text-gray-500">ไม่พบข้อมูลกิจกรรม</p>
@@ -360,7 +357,6 @@ export default function EventDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
       <Toast toasts={toast.toasts} onRemove={toast.removeToast} />
 
       <main className="max-w-4xl mx-auto px-4 py-8">

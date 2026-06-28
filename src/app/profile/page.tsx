@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Member, formatThaiDate as formatLicenseDate } from '@/types/member';
-import Navbar from '@/components/Navbar';
 import { Toast, useToast } from '@/components/Toast';
 
 interface UserProfile {
@@ -293,7 +292,6 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
       <Toast toasts={toast.toasts} onRemove={toast.removeToast} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -595,166 +595,151 @@ export default function AdminEventsPage() {
           </div>
         )}
 
-        {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">วิธีการเพิ่มกิจกรรมใหม่:</p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>สร้าง Sheet ใหม่ใน Google Spreadsheet สำหรับเก็บข้อมูลลงทะเบียน</li>
-                <li>ตั้งชื่อ Sheet และใส่ columns ที่จำเป็น (ต้องมี <code className="bg-blue-100 px-1 rounded">license_number</code>)</li>
-                <li>กดปุ่ม &quot;เพิ่มกิจกรรมใหม่&quot; และกรอกข้อมูล โดยใส่ชื่อ Sheet ให้ตรงกับที่สร้างไว้</li>
-              </ol>
+        {/* Info Box - Only show for admins who can create events */}
+        {isAdmin && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">วิธีการเพิ่มกิจกรรมใหม่:</p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>สร้าง Sheet ใหม่ใน Google Spreadsheet สำหรับเก็บข้อมูลลงทะเบียน</li>
+                  <li>ตั้งชื่อ Sheet และใส่ columns ที่จำเป็น (ต้องมี <code className="bg-blue-100 px-1 rounded">license_number</code>)</li>
+                  <li>กดปุ่ม &quot;เพิ่มกิจกรรมใหม่&quot; และกรอกข้อมูล โดยใส่ชื่อ Sheet ให้ตรงกับที่สร้างไว้</li>
+                </ol>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Events Table */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  กิจกรรม
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ปี
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sheet Name
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  บริษัท / คน / สมาชิก
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  สถานะ
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  จัดการ
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {events.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    ยังไม่มีกิจกรรม กดปุ่ม &quot;เพิ่มกิจกรรมใหม่&quot; เพื่อเริ่มต้น
-                  </td>
-                </tr>
-              ) : (
-                events.map((event) => (
-                  <tr key={event.eventId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{event.eventName}</div>
-                        {event.eventNameEN && (
-                          <div className="text-sm text-gray-500">{event.eventNameEN}</div>
-                        )}
-                        {event.location && (
-                          <div className="text-xs text-gray-400 mt-1">
-                            <svg className="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            </svg>
-                            {event.location}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">พ.ศ. {event.year}</div>
+        {/* Events Grid - Mobile Friendly */}
+        {events.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">
+            {isAdmin ? 'ยังไม่มีกิจกรรม กดปุ่ม "เพิ่มกิจกรรมใหม่" เพื่อเริ่มต้น' : 'ยังไม่มีกิจกรรมที่ได้รับมอบหมาย'}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {events.map((event) => (
+              <div key={event.eventId} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden">
+                {/* Card Content */}
+                <div className="p-4">
+                  {/* Header: Event Name & Year */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-gray-900 truncate">{event.eventName}</h3>
+                      {event.eventNameEN && (
+                        <p className="text-sm text-gray-500 truncate">{event.eventNameEN}</p>
+                      )}
+                      {event.location && (
+                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+                          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          </svg>
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <div className="text-sm font-medium text-gray-900">พ.ศ. {event.year}</div>
                       <div className="text-xs text-gray-500">ค.ศ. {event.year - 543}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <code className="text-xs bg-gray-100 px-2 py-1 rounded">{event.sheetName}</code>
-                    </td>
-                    <td className="px-6 py-4 text-center">
+                    </div>
+                  </div>
+
+                  {/* Sheet Name & Statistics */}
+                  <div className="flex flex-wrap items-center gap-3 mb-3 pb-3 border-b border-gray-200">
+                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">{event.sheetName}</code>
+                    <div className="flex items-center gap-2 text-sm">
                       {loadingSummaries ? (
-                        <span className="text-gray-400 text-sm">กำลังโหลด...</span>
+                        <span className="text-gray-400 text-xs">กำลังโหลด...</span>
                       ) : summaries.has(event.eventId) ? (
-                        <div className="text-sm">
-                          <span className="font-semibold text-blue-600" title="จำนวนบริษัท (unique license)">
+                        <>
+                          <span className="font-semibold text-blue-600" title="จำนวนบริษัท">
                             {summaries.get(event.eventId)?.agentRegistrations || 0}
                           </span>
-                          <span className="text-gray-400 mx-1">/</span>
-                          <span className="font-semibold text-indigo-600" title="จำนวนคน (รวม attendeeCount)">
+                          <span className="text-gray-400">/</span>
+                          <span className="font-semibold text-indigo-600" title="จำนวนคน">
                             {summaries.get(event.eventId)?.totalAttendees || 0}
                           </span>
-                          <span className="text-gray-400 mx-1">/</span>
+                          <span className="text-gray-400">/</span>
                           <span className="font-semibold text-purple-600" title="สมาชิกชมรม">
                             {summaries.get(event.eventId)?.clubMemberCount || 0}
                           </span>
-                        </div>
+                        </>
                       ) : (
-                        <span className="text-gray-400 text-sm">-</span>
+                        <span className="text-gray-400 text-xs">-</span>
                       )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        <button
-                          onClick={() => handleToggleActive(event)}
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors ${
-                            event.isActive
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                          }`}
-                        >
-                          {event.isActive ? 'Active' : 'Inactive'}
-                        </button>
-                        {event.isPublished && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            Published
-                          </span>
-                        )}
-                        {event.registrationOpen && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                            เปิดรับสมัคร
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {event.registrationFee ? `฿${event.registrationFee.toLocaleString()}` : 'ฟรี'}
-                        {event.maxCapacity > 0 && ` | รับ ${event.maxCapacity} คน`}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="relative inline-block">
-                        <button
-                          onClick={() => setOpenDropdown(openDropdown === event.eventId ? null : event.eventId)}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                          </svg>
-                        </button>
+                    </div>
+                  </div>
 
-                        {openDropdown === event.eventId && (
-                          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                            <Link
-                              href={`/admin/events/${event.eventId}`}
-                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                              onClick={() => setOpenDropdown(null)}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                              </svg>
-                              ดูรายชื่อ
-                            </Link>
-                            <button
-                              onClick={() => {
-                                handleOpenModal(event);
-                                setOpenDropdown(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                              แก้ไข
-                            </button>
+                  {/* Status Badges & Fee */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <button
+                      onClick={() => handleToggleActive(event)}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                        event.isActive
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                      }`}
+                    >
+                      {event.isActive ? 'Active' : 'Inactive'}
+                    </button>
+                    {event.isPublished && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Published
+                      </span>
+                    )}
+                    {event.registrationOpen && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        เปิดรับสมัคร
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-600 px-2 py-0.5">
+                      {event.registrationFee ? `฿${event.registrationFee.toLocaleString()}` : 'ฟรี'}
+                      {event.maxCapacity > 0 && ` | รับ ${event.maxCapacity} คน`}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    {/* Primary: Manage Attendees Button */}
+                    <Link
+                      href={`/admin/events/${event.eventId}`}
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      จัดการรายชื่อ
+                    </Link>
+
+                    {/* Secondary: More Options Dropdown */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setOpenDropdown(openDropdown === event.eventId ? null : event.eventId)}
+                        className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                        title="ตัวเลือกเพิ่มเติม"
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                        </svg>
+                      </button>
+
+                      {openDropdown === event.eventId && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                          <button
+                            onClick={() => {
+                              handleOpenModal(event);
+                              setOpenDropdown(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            แก้ไข
+                          </button>
                             <button
                               onClick={() => {
                                 handleFixHeaders(event);
@@ -831,17 +816,15 @@ export default function AdminEventsPage() {
                               </svg>
                               ลบ
                             </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </main>
 
       {/* Create/Edit Modal */}

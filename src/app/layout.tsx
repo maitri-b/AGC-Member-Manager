@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sarabun } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/lib/auth-provider";
+import LayoutWrapper from "@/components/LayoutWrapper";
 
 const sarabun = Sarabun({
   weight: ["300", "400", "500", "600", "700"],
@@ -25,7 +26,9 @@ export default function RootLayout({
   return (
     <html lang="th" className={`${sarabun.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sarabun bg-gray-50">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </AuthProvider>
       </body>
     </html>
   );

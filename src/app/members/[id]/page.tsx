@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { Member, formatThaiDate } from '@/types/member';
-import Navbar from '@/components/Navbar';
 import { hasPermission } from '@/lib/permissions';
 import { Toast, useToast } from '@/components/Toast';
 
@@ -206,7 +205,6 @@ export default function MemberDetailPage() {
   if (error || !member) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             {error || 'ไม่พบข้อมูลสมาชิก'}
@@ -224,8 +222,6 @@ export default function MemberDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button and Edit Button */}
         <div className="flex items-center justify-between mb-6">

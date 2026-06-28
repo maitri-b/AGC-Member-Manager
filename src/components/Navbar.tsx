@@ -19,6 +19,7 @@ export default function Navbar() {
 
   const canAccessAdmin = hasPermission(session.user.permissions, 'admin:access');
   const canViewMembers = hasPermission(session.user.permissions, 'members:list');
+  const canManageEvents = hasPermission(session.user.permissions, 'events:manage-assigned');
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -126,6 +127,14 @@ export default function Navbar() {
             >
               กิจกรรม
             </Link>
+            {canManageEvents && (
+              <Link
+                href="/admin/events"
+                className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                กิจกรรมที่ดูแล
+              </Link>
+            )}
             {canAccessAdmin && (
               <Link
                 href="/admin"
@@ -327,6 +336,15 @@ export default function Navbar() {
             >
               กิจกรรม
             </Link>
+            {canManageEvents && (
+              <Link
+                href="/admin/events"
+                className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                กิจกรรมที่ดูแล
+              </Link>
+            )}
             {canAccessAdmin && (
               <Link
                 href="/admin"

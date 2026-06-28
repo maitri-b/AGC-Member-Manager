@@ -529,6 +529,8 @@ export default function AdminEventsPage() {
   };
 
   const isAdmin = session?.user?.permissions?.includes('admin:access');
+  const canManageEvents = session?.user?.permissions?.includes('events:manage-assigned');
+  const hasAccess = isAdmin || canManageEvents;
 
   if (status === 'loading' || loading) {
     return (
@@ -538,7 +540,7 @@ export default function AdminEventsPage() {
     );
   }
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

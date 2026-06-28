@@ -272,7 +272,7 @@ export default function EventDetailPage() {
       }
 
       if (totalCapacity !== attendeeCount) {
-        toast.error(`จำนวนที่นั่งในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`);
+        toast.error(`จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`);
         return;
       }
     }
@@ -993,7 +993,7 @@ export default function EventDetailPage() {
                                         // Validate
                                         if (totalCapacity !== attendeeCount) {
                                           setRoomValidationError(
-                                            `จำนวนที่นั่งในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
+                                            `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
                                           );
                                         } else {
                                           setRoomValidationError(null);
@@ -1144,7 +1144,7 @@ export default function EventDetailPage() {
                                   }
 
                                   if (totalCapacity !== attendeeCount) {
-                                    toast.error(`จำนวนที่นั่งในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`);
+                                    toast.error(`จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`);
                                     return;
                                   }
                                 }
@@ -1625,7 +1625,7 @@ export default function EventDetailPage() {
                                     // Validate
                                     if (totalCapacity !== attendeeCount) {
                                       setRoomValidationError(
-                                        `จำนวนที่นั่งในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
+                                        `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
                                       );
                                     } else {
                                       setRoomValidationError(null);

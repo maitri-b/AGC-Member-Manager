@@ -369,7 +369,7 @@ export default function EventDetailPage() {
         if (totalCapacity !== editFormData.attendeeCount) {
           setActionMessage({
             type: 'error',
-            text: `จำนวนที่นั่งในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${editFormData.attendeeCount} คน)`
+            text: `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${editFormData.attendeeCount} คน)`
           });
           return;
         }

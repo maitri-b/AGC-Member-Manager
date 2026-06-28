@@ -214,7 +214,7 @@ export async function PUT(
           // Exact match required
           if (totalRoomCapacity !== attendeeCount) {
             return NextResponse.json({
-              error: `จำนวนที่นั่งในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalRoomCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
+              error: `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalRoomCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
             }, { status: 400 });
           }
 

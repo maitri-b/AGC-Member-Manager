@@ -25,8 +25,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Require admin:access permission
-    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
+    // Require admin:access OR events:manage-assigned permission
+    const hasAdminAccess = hasPermission(session.user.permissions || [], 'admin:access');
+    const hasEventAccess = hasPermission(session.user.permissions || [], 'events:manage-assigned');
+
+    if (!hasAdminAccess && !hasEventAccess) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 

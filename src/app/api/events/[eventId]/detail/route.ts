@@ -37,10 +37,13 @@ export async function GET(
 
     const eventData = eventDoc.data();
 
-    // Check if event is published (unless user is admin or committee)
+    // Check if event is published (unless user is admin, committee, or event staff)
     const isCommitteeOrAdmin = session.user.permissions?.includes('admin:access') ||
                                session.user.permissions?.includes('members:list');
-    if (!isCommitteeOrAdmin && !eventData?.isPublished) {
+    const canManageEvents = session.user.permissions?.includes('events:manage-assigned');
+    const hasAccess = isCommitteeOrAdmin || canManageEvents;
+
+    if (!hasAccess && !eventData?.isPublished) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 

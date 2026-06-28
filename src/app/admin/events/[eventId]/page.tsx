@@ -679,6 +679,8 @@ export default function EventDetailPage() {
 
   const isCommitteeOrAdmin = session?.user?.permissions?.includes('members:list') ||
                              session?.user?.permissions?.includes('admin:access');
+  const canManageEvents = session?.user?.permissions?.includes('events:manage-assigned');
+  const hasAccess = isCommitteeOrAdmin || canManageEvents;
 
   if (status === 'loading' || loading) {
     return (
@@ -688,7 +690,7 @@ export default function EventDetailPage() {
     );
   }
 
-  if (!isCommitteeOrAdmin) {
+  if (!hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

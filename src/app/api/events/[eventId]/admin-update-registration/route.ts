@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { updateEventRegistration, getEventRegistrations } from '@/lib/event-sheets';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
-import { Event, AttendeeType, RoomType } from '@/types/event';
+import { Event, AttendeeType, RoomType, calculateRegistrationFee } from '@/types/event';
 
 // PUT - Admin update registration
 export async function PUT(
@@ -69,47 +69,65 @@ export async function PUT(
       return NextResponse.json({ error: 'ไม่พบข้อมูลการลงทะเบียน' }, { status: 404 });
     }
 
-    // Recalculate eventFee if attendeeTypeSelections or roomAllocations are provided
+    // Recalculate eventFee based on pricing type
     let calculatedEventFee = currentRegistration.eventFee || 0;
+    let shouldRecalculate = false;
 
-    // Check if we need to recalculate based on attendee type selections
-    if (updateData.attendee_type_selections !== undefined) {
-      let attendeeTypeSelections = [];
-      try {
-        attendeeTypeSelections = typeof updateData.attendee_type_selections === 'string'
-          ? JSON.parse(updateData.attendee_type_selections)
-          : updateData.attendee_type_selections;
-      } catch (e) {
-        return NextResponse.json({ error: 'รูปแบบข้อมูล attendee_type_selections ไม่ถูกต้อง' }, { status: 400 });
+    // Determine if we need to recalculate
+    if (eventData.useAttendeeTypePricing) {
+      // Attendee Type Pricing: recalculate if attendee_type_selections is provided
+      shouldRecalculate = updateData.attendee_type_selections !== undefined;
+    } else {
+      // Fixed or Tiered Pricing: recalculate if attendee_count changes
+      shouldRecalculate = updateData.attendee_count !== undefined && updateData.attendee_count !== currentRegistration.attendeeCount;
+    }
+
+    if (shouldRecalculate) {
+      if (eventData.useAttendeeTypePricing) {
+        // Attendee Type Pricing
+        let attendeeTypeSelections = [];
+        try {
+          attendeeTypeSelections = typeof updateData.attendee_type_selections === 'string'
+            ? JSON.parse(updateData.attendee_type_selections)
+            : updateData.attendee_type_selections;
+        } catch (e) {
+          return NextResponse.json({ error: 'รูปแบบข้อมูล attendee_type_selections ไม่ถูกต้อง' }, { status: 400 });
+        }
+
+        // Calculate event fee from attendee types
+        if (eventData.attendeeTypes) {
+          calculatedEventFee = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
+            const type = eventData.attendeeTypes.find((t: AttendeeType) => t.typeId === s.typeId);
+            if (!type) return sum;
+            return sum + (type.price * s.quantity);
+          }, 0);
+        }
+      } else {
+        // Fixed or Tiered Pricing: use calculateRegistrationFee function
+        const newAttendeeCount = updateData.attendee_count;
+        // Check if this is a member registration (assume true for existing registrations with licenseNumber)
+        const isMember = !!currentRegistration.licenseNumber;
+        calculatedEventFee = calculateRegistrationFee(eventData as Event, newAttendeeCount, isMember);
       }
 
-      // Recalculate event fee from attendee types
-      if (eventData.useAttendeeTypePricing && eventData.attendeeTypes) {
-        calculatedEventFee = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
-          const type = eventData.attendeeTypes.find((t: AttendeeType) => t.typeId === s.typeId);
-          if (!type) return sum;
-          return sum + (type.price * s.quantity);
-        }, 0);
+      // Add room fees if room allocations are provided (for all pricing types)
+      if (updateData.room_allocations !== undefined) {
+        let roomAllocations = [];
+        try {
+          roomAllocations = typeof updateData.room_allocations === 'string'
+            ? JSON.parse(updateData.room_allocations)
+            : updateData.room_allocations;
+        } catch (e) {
+          return NextResponse.json({ error: 'รูปแบบข้อมูล room_allocations ไม่ถูกต้อง' }, { status: 400 });
+        }
 
-        // Add room fees if room allocations are provided
-        if (updateData.room_allocations !== undefined) {
-          let roomAllocations = [];
-          try {
-            roomAllocations = typeof updateData.room_allocations === 'string'
-              ? JSON.parse(updateData.room_allocations)
-              : updateData.room_allocations;
-          } catch (e) {
-            return NextResponse.json({ error: 'รูปแบบข้อมูล room_allocations ไม่ถูกต้อง' }, { status: 400 });
-          }
-
-          if (eventData.roomTypes && eventData.roomTypes.length > 0) {
-            const roomFee = roomAllocations.reduce((sum: number, alloc: { roomTypeId: string; roomCount: number }) => {
-              const roomType = eventData.roomTypes.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
-              if (!roomType) return sum;
-              return sum + (roomType.price * alloc.roomCount);
-            }, 0);
-            calculatedEventFee += roomFee;
-          }
+        if (eventData.roomTypes && eventData.roomTypes.length > 0) {
+          const roomFee = roomAllocations.reduce((sum: number, alloc: { roomTypeId: string; roomCount: number }) => {
+            const roomType = eventData.roomTypes.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+            if (!roomType) return sum;
+            return sum + (roomType.price * alloc.roomCount);
+          }, 0);
+          calculatedEventFee += roomFee;
         }
       }
     }
@@ -133,7 +151,7 @@ export async function PUT(
     };
 
     // Only update eventFee and totalAmount if they were recalculated
-    if (updateData.attendee_type_selections !== undefined || updateData.room_allocations !== undefined) {
+    if (shouldRecalculate) {
       finalUpdateData.event_fee = calculatedEventFee;
       finalUpdateData.total_amount = newTotalAmount;
 

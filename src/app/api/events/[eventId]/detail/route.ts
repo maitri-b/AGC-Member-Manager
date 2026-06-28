@@ -79,6 +79,7 @@ export async function GET(
       paymentSlipButtonText: eventData?.paymentSlipButtonText || '',
       paymentInstructionText: eventData?.paymentInstructionText || '',
       allowMemberEdit: eventData?.allowMemberEdit ?? true,
+      requireAttendeeNames: eventData?.requireAttendeeNames ?? true,
       createdAt: eventData?.createdAt || '',
       updatedAt: eventData?.updatedAt || '',
       // Deposit payment configuration (New)

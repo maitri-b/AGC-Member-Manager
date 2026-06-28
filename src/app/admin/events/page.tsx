@@ -544,8 +544,10 @@ export default function AdminEventsPage() {
   };
 
   const isAdmin = session?.user?.permissions?.includes('admin:access');
+  const isCommittee = session?.user?.permissions?.includes('members:list');
   const canManageEvents = session?.user?.permissions?.includes('events:manage-assigned');
   const hasAccess = isAdmin || canManageEvents;
+  const isAdminOrCommittee = isAdmin || isCommittee;
 
   if (status === 'loading' || loading) {
     return (
@@ -575,11 +577,13 @@ export default function AdminEventsPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/admin" className="text-gray-500 hover:text-gray-700">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-              </Link>
+              {isAdminOrCommittee && (
+                <Link href="/admin" className="text-gray-500 hover:text-gray-700">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </Link>
+              )}
               <h1 className="text-2xl font-bold text-gray-900">จัดการกิจกรรม</h1>
             </div>
             {session?.user?.role !== 'event-staff' && (
@@ -748,31 +752,35 @@ export default function AdminEventsPage() {
                         <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-[9999]"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <button
-                            onClick={() => {
-                              handleOpenModal(event);
-                              setOpenDropdown(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            แก้ไข
-                          </button>
-                            <button
-                              onClick={() => {
-                                handleFixHeaders(event);
-                              }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                              title="แก้ไขหัวตาราง Google Sheet ให้ครบถ้วน"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7V5c0-2 1-3 3-3h10c2 0 3 1 3 3v2M4 7h16M10 11v6M14 11v6" />
-                              </svg>
-                              แก้ไขหัวตาราง
-                            </button>
-                            <div className="border-t border-gray-200 my-1"></div>
+                          {isAdminOrCommittee && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  handleOpenModal(event);
+                                  setOpenDropdown(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                แก้ไข
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleFixHeaders(event);
+                                }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                title="แก้ไขหัวตาราง Google Sheet ให้ครบถ้วน"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7V5c0-2 1-3 3-3h10c2 0 3 1 3 3v2M4 7h16M10 11v6M14 11v6" />
+                                </svg>
+                                แก้ไขหัวตาราง
+                              </button>
+                              <div className="border-t border-gray-200 my-1"></div>
+                            </>
+                          )}
                             <button
                               onClick={() => {
                                 handleExportExcel(event);
@@ -797,45 +805,49 @@ export default function AdminEventsPage() {
                               </svg>
                               Copy รายชื่อ
                             </button>
-                            <div className="border-t border-gray-200 my-1"></div>
-                            <button
-                              onClick={() => {
-                                handleToggleRegistration(event);
-                                setOpenDropdown(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              {event.registrationOpen ? 'ปิดรับสมัคร' : 'เปิดรับสมัคร'}
-                            </button>
-                            <button
-                              onClick={() => {
-                                handleToggleActive(event);
-                                setOpenDropdown(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              {event.isActive ? 'จบกิจกรรม' : 'เปิดกิจกรรม'}
-                            </button>
-                            <div className="border-t border-gray-200 my-1"></div>
-                            <button
-                              onClick={() => {
-                                setDeletingEventId(event.eventId);
-                                setShowDeleteConfirm(true);
-                                setOpenDropdown(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                              ลบ
-                            </button>
+                            {isAdminOrCommittee && (
+                              <>
+                                <div className="border-t border-gray-200 my-1"></div>
+                                <button
+                                  onClick={() => {
+                                    handleToggleRegistration(event);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  {event.registrationOpen ? 'ปิดรับสมัคร' : 'เปิดรับสมัคร'}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handleToggleActive(event);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  {event.isActive ? 'จบกิจกรรม' : 'เปิดกิจกรรม'}
+                                </button>
+                                <div className="border-t border-gray-200 my-1"></div>
+                                <button
+                                  onClick={() => {
+                                    setDeletingEventId(event.eventId);
+                                    setShowDeleteConfirm(true);
+                                    setOpenDropdown(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                  ลบ
+                                </button>
+                              </>
+                            )}
                         </div>
                       )}
                     </div>

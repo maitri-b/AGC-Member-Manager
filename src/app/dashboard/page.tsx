@@ -472,7 +472,7 @@ function DashboardContent() {
         )}
 
         {/* Activity Warning for Members */}
-        {session.user.role !== 'guest' && session.user.memberId && !loadingAttendance && attendance?.noActivityWarning && (
+        {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && !loadingAttendance && attendance?.noActivityWarning && (
           <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
@@ -492,7 +492,7 @@ function DashboardContent() {
         )}
 
         {/* Attendance Summary for Members */}
-        {session.user.role !== 'guest' && session.user.memberId && !loadingAttendance && attendance && (
+        {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && !loadingAttendance && attendance && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">สถิติการเข้าร่วมกิจกรรม</h2>
             <div className="bg-white rounded-lg shadow p-6">
@@ -513,6 +513,36 @@ function DashboardContent() {
                     กิจกรรมล่าสุด {attendance.lastAttendedDate ? `(${attendance.lastAttendedDate})` : ''}
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Guest Invitation Card */}
+        {session.user.role === 'guest' && (
+          <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-8 shadow-md">
+            <div className="flex items-start gap-6">
+              <div className="flex-shrink-0">
+                <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-blue-900 mb-3">เข้าร่วมชมรมเอเจ้นท์คลับ</h3>
+                <p className="text-blue-800 leading-relaxed mb-4">
+                  ชมรมเอเจ้นท์คลับ เป็นชมรมสำหรับตัวแทนจำหน่ายทัวร์ที่มุ่งมั่นในการสร้างเครือข่ายแห่งการเรียนรู้และแบ่งปัน
+                  เรามุ่งหวังที่จะสร้างสังคมของตัวแทนให้เติบโตร่วมกัน ผ่านกิจกรรมและการแลกเปลี่ยนประสบการณ์
+                  มาร่วมเป็นส่วนหนึ่งของครอบครัวเอเจ้นท์คลับกับเรา
+                </p>
+                <Link
+                  href="/register"
+                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+                >
+                  สมัครสมาชิก
+                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
               </div>
             </div>
           </div>

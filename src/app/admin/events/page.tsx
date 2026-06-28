@@ -637,7 +637,7 @@ export default function AdminEventsPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {events.map((event) => (
-              <div key={event.eventId} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden">
+              <div key={event.eventId} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-visible">
                 {/* Card Content */}
                 <div className="p-4">
                   {/* Header: Event Name & Year */}

@@ -238,10 +238,13 @@ export default function EventDetailPage() {
     }
 
     // Validate attendee names (conditional based on requireAttendeeNames)
-    const filledNames = attendeeNames.filter(name => name.trim());
-    if ((event.requireAttendeeNames ?? true) && filledNames.length !== attendeeCount) {
-      toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
-      return;
+    // Only validate if requireAttendeeNames is explicitly true
+    if (event.requireAttendeeNames === true) {
+      const filledNames = attendeeNames.filter(name => name.trim());
+      if (filledNames.length !== attendeeCount) {
+        toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
+        return;
+      }
     }
 
     // Validate room allocation (required for all pricing types when room types are configured)
@@ -273,7 +276,7 @@ export default function EventDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           attendeeCount,
-          attendeeNames: filledNames,
+          attendeeNames: attendeeNames,
           specialRequests,
           attendeeTypeSelections, // Add attendee type selections
           roomAllocations, // Add room allocations
@@ -788,7 +791,7 @@ export default function EventDetailPage() {
                         <div className="space-y-2">
                           {Array.from({ length: attendeeCount }).map((_, index) => {
                             const isDisabled = !(event.allowMemberEdit ?? true);
-                            const isRequired = event.requireAttendeeNames ?? true;
+                            const isRequired = event.requireAttendeeNames === true;
 
                             return (
                               <div key={index}>
@@ -994,68 +997,6 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* Admin Contact Message - Edit Mode */}
-                      {isEditing && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                          <p className="text-sm text-gray-700 mb-2">
-                            หากต้องการเปลี่ยนแปลงการลงทะเบียนโปรดติดต่อ Admin ที่{' '}
-                            <a href="https://lin.ee/nzAjXXq" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
-                              https://lin.ee/nzAjXXq
-                            </a>
-                          </p>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm text-gray-700">
-                              โดยแจ้งรหัสลงทะเบียน 6 หลัก รหัสของคุณคือ
-                            </span>
-                            <span className="font-mono font-bold text-lg text-blue-600">
-                              {userRegistration.registrationId}
-                            </span>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(userRegistration.registrationId);
-                                toast.success('คัดลอกรหัสลงทะเบียนแล้ว');
-                              }}
-                              className="p-1 hover:bg-yellow-100 rounded transition-colors"
-                              title="คัดลอกรหัส"
-                            >
-                              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Admin Contact Message */}
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                        <p className="text-sm text-gray-700 mb-2">
-                          หากต้องการเปลี่ยนแปลงการลงทะเบียนโปรดติดต่อ Admin ที่{' '}
-                          <a href="https://lin.ee/nzAjXXq" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
-                            https://lin.ee/nzAjXXq
-                          </a>
-                        </p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm text-gray-700">
-                            โดยแจ้งรหัสลงทะเบียน 6 หลัก รหัสของคุณคือ
-                          </span>
-                          <span className="font-mono font-bold text-lg text-blue-600">
-                            {userRegistration.registrationId}
-                          </span>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(userRegistration.registrationId);
-                              toast.success('คัดลอกรหัสลงทะเบียนแล้ว');
-                            }}
-                            className="p-1 hover:bg-yellow-100 rounded transition-colors"
-                            title="คัดลอกรหัส"
-                          >
-                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-
                       {/* Action Buttons */}
                       <div className="flex gap-3 pt-2">
                         {(event.allowMemberEdit ?? true) ? (
@@ -1065,10 +1006,13 @@ export default function EventDetailPage() {
                                 if (!event) return;
 
                                 // Validate attendee names (conditional based on requireAttendeeNames)
-                                const filledNames = attendeeNames.filter(name => name.trim());
-                                if ((event.requireAttendeeNames ?? true) && filledNames.length !== attendeeCount) {
-                                  toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
-                                  return;
+                                // Only validate if requireAttendeeNames is explicitly true
+                                if (event.requireAttendeeNames === true) {
+                                  const filledNames = attendeeNames.filter(name => name.trim());
+                                  if (filledNames.length !== attendeeCount) {
+                                    toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
+                                    return;
+                                  }
                                 }
 
                                 // Validate room allocation (required for all pricing types when room types are configured)
@@ -1100,7 +1044,7 @@ export default function EventDetailPage() {
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                       attendeeCount,
-                                      attendeeNames: filledNames,
+                                      attendeeNames: attendeeNames,
                                       specialRequests,
                                       attendeeTypeSelections, // Add attendee type selections
                                       roomAllocations, // Add room allocations
@@ -1484,7 +1428,7 @@ export default function EventDetailPage() {
 
                     <div className="space-y-2">
                       {Array.from({ length: attendeeCount }).map((_, index) => {
-                        const isRequired = event.requireAttendeeNames ?? true;
+                        const isRequired = event.requireAttendeeNames === true;
 
                         return (
                           <div key={index}>

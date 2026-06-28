@@ -376,12 +376,7 @@ export default function EventDetailPage() {
       }
     }
 
-    // Validate attendee names
-    const filledNames = editFormData.attendeeNames.filter(name => name.trim());
-    if (filledNames.length !== editFormData.attendeeCount) {
-      setActionMessage({ type: 'error', text: 'กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน' });
-      return;
-    }
+    // Admin can leave attendee names empty - no validation required
 
     setUpdating(true);
     setActionMessage(null);
@@ -389,7 +384,7 @@ export default function EventDetailPage() {
     try {
       const updateData: any = {
         attendee_count: editFormData.attendeeCount,
-        attendee_names: JSON.stringify(filledNames),
+        attendee_names: JSON.stringify(editFormData.attendeeNames),
         status: editFormData.status,
       };
 

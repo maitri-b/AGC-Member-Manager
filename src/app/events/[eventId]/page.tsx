@@ -254,8 +254,8 @@ export default function EventDetailPage() {
       return;
     }
 
-    // Validate room allocation (if required)
-    if (event.useAttendeeTypePricing && event.roomTypes && event.roomTypes.length > 0) {
+    // Validate room allocation (required for all pricing types when room types are configured)
+    if (event.roomTypes && event.roomTypes.length > 0) {
       if (roomAllocations.length === 0) {
         toast.error('กรุณาเลือกประเภทห้องพัก');
         return;
@@ -943,8 +943,8 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* Room Allocation (only when attendee type pricing is enabled and room types are configured) */}
-                      {event.useAttendeeTypePricing && event.roomTypes && event.roomTypes.length > 0 && (
+                      {/* Room Allocation (available for all pricing types when room types are configured) */}
+                      {event.roomTypes && event.roomTypes.length > 0 && (
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                           <h4 className="text-sm font-semibold text-amber-900 mb-3">
                             เลือกประเภทห้องพัก *
@@ -1123,8 +1123,8 @@ export default function EventDetailPage() {
                                   return;
                                 }
 
-                                // Validate room allocation (if required)
-                                if (event.useAttendeeTypePricing && event.roomTypes && event.roomTypes.length > 0) {
+                                // Validate room allocation (required for all pricing types when room types are configured)
+                                if (event.roomTypes && event.roomTypes.length > 0) {
                                   if (roomAllocations.length === 0) {
                                     toast.error('กรุณาเลือกประเภทห้องพัก');
                                     return;
@@ -1582,8 +1582,8 @@ export default function EventDetailPage() {
                     </div>
                   </div>
 
-                  {/* Room Allocation in Edit Mode (only when attendee type pricing is enabled and room types are configured) */}
-                  {event.useAttendeeTypePricing && event.roomTypes && event.roomTypes.length > 0 && (
+                  {/* Room Allocation in Edit Mode (available for all pricing types when room types are configured) */}
+                  {event.roomTypes && event.roomTypes.length > 0 && (
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                       <h4 className="text-sm font-semibold text-amber-900 mb-3">
                         เลือกประเภทห้องพัก *

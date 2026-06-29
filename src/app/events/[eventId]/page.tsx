@@ -198,7 +198,25 @@ export default function EventDetailPage() {
             }
           }
 
-          // Load existing attendee names (no auto-replace logic)
+          // Load existing attendee names
+          if (data.userRegistration.attendeeNames) {
+            try {
+              const names = JSON.parse(data.userRegistration.attendeeNames);
+              if (Array.isArray(names)) {
+                setAttendeeNames(names);
+              } else {
+                setAttendeeNames([data.userRegistration.attendeeNames]);
+              }
+            } catch {
+              // If not JSON, treat as single name string
+              setAttendeeNames([data.userRegistration.attendeeNames]);
+            }
+          }
+
+          // Load attendee count
+          if (data.userRegistration.attendeeCount) {
+            setAttendeeCount(data.userRegistration.attendeeCount);
+          }
         } else {
           // No pre-fill for new registrations - let members enter names manually
         }

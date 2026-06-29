@@ -869,13 +869,14 @@ export default function MembersPage() {
   }, [status, session, router]);
 
   useEffect(() => {
-    if (session?.user && hasPermission(session.user.permissions || [], 'members:list')) {
+    if (status === 'authenticated' && session?.user && hasPermission(session.user.permissions || [], 'members:list')) {
       fetchAllMembers();
       fetchStaff();
       // Fetch attendance in the background - don't block page load
       fetchAttendanceStatus();
     }
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // Only run when authentication status changes, not on every session update
 
   // Fetch staff list for contact modal
   const fetchStaff = async () => {

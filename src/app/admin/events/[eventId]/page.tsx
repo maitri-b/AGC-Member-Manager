@@ -18,6 +18,9 @@ interface Event {
   location: string;
   description: string;
   year: number;
+  registrationOpen: boolean;
+  isPublished: boolean;
+  maxCapacity: number;
   // Attendee type pricing
   useAttendeeTypePricing?: boolean;
   attendeeTypes?: Array<{
@@ -264,27 +267,35 @@ export default function EventDetailPage() {
     setActionMessage(null);
 
     try {
-      // Format attendee list for copying
+      // Count unique companies
+      const uniqueCompanies = new Set(
+        filteredAttendees
+          .filter(a => a.member?.companyNameTH || a.registration.companyName)
+          .map(a => a.member?.companyNameTH || a.registration.companyName)
+      );
+      const companyCount = uniqueCompanies.size;
+
+      // Count total attendees
+      const totalPeople = filteredAttendees.reduce((sum, a) => sum + (a.registration.attendeeCount || 1), 0);
+
+      // Format header
+      const header = `รายนามชื่อบริษัทที่เข้าร่วมกิจกรรม\n${eventData.event.eventName}\n${eventData.event.eventDate}\nจำนวนลงทะเบียน ${companyCount} บริษัท / ${totalPeople} คน\n`;
+
+      // Format attendee list
       const listText = filteredAttendees.map((attendee, index) => {
-        const companyName = attendee.registration.companyName || attendee.member?.companyNameTH || '';
+        const companyName = attendee.registration.companyName || attendee.member?.companyNameTH || 'ไม่ระบุบริษัท';
+        const attendeeCount = attendee.registration.attendeeCount || 1;
         const contactName = attendee.registration.contactName || attendee.member?.fullNameTH || attendee.lineProfile?.lineDisplayName || '';
+        const phone = attendee.registration.contactPhone || '';
 
-        // Parse attendee names
-        let attendeeNames = '';
-        try {
-          const names = JSON.parse(attendee.registration.attendeeNames || '[]');
-          attendeeNames = Array.isArray(names) ? names.join(', ') : attendee.registration.attendeeNames;
-        } catch {
-          attendeeNames = attendee.registration.attendeeNames || contactName;
-        }
-
-        const phone = ''; // Phone data would need to be fetched from member data if available
-
-        return `${index + 1}. ${companyName} | ${attendeeNames}${phone ? ' | ' + phone : ''}`;
+        return `${index + 1}. ${companyName} (${attendeeCount} คน) ติดต่อ ${contactName}${phone ? ' โทร ' + phone : ''}`;
       }).join('\n');
 
+      // Combine header and list
+      const fullText = header + listText;
+
       // Copy to clipboard
-      await navigator.clipboard.writeText(listText);
+      await navigator.clipboard.writeText(fullText);
 
       setActionMessage({ type: 'success', text: 'คัดลอกรายชื่อแล้ว' });
       setTimeout(() => setActionMessage(null), 3000);
@@ -742,11 +753,62 @@ export default function EventDetailPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </Link>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">{eventData.event.eventName}</h1>
               {eventData.event.eventNameEN && (
-                <p className="text-sm text-gray-500">{eventData.event.eventNameEN}</p>
+                <p className="text-sm text-gray-500 mb-2">{eventData.event.eventNameEN}</p>
               )}
+              {/* Status Badges */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {/* Capacity Status - Highest priority */}
+                {(() => {
+                  const isFull = eventData.event.maxCapacity > 0 && eventData.summary.totalAttendees >= eventData.event.maxCapacity;
+                  if (isFull) {
+                    return (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold bg-red-100 text-red-800 border-2 border-red-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        เต็ม/ปิดรับสมัคร ({eventData.summary.totalAttendees}/{eventData.event.maxCapacity})
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
+                {/* Registration Status */}
+                {eventData.event.registrationOpen ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    เปิดรับสมัคร
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-300">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    ปิดรับสมัคร
+                  </span>
+                )}
+                {/* Published Status */}
+                {eventData.event.isPublished ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Published (แสดงให้สมาชิกทั่วไป)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-300">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                    ยังไม่ Published
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -139,14 +139,7 @@ export default function RegisterOnBehalfModal({
   const handleSubmit = async () => {
     if (!selectedUser) return;
 
-    // Validation
-    if (requireAttendeeNames) {
-      const filledNames = attendeeNames.filter(name => name.trim());
-      if (filledNames.length !== attendeeCount) {
-        toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบถ้วน');
-        return;
-      }
-    }
+    // No validation required for attendee names - admin can submit without filling all names
 
     setSubmitting(true);
     try {

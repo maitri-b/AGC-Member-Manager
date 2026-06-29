@@ -46,6 +46,10 @@ interface Event {
   remainingDeadlineType?: 'none' | 'fixed' | 'hours';
   remainingDeadlineFixed?: string;
   remainingDeadlineHours?: number;
+  // Attendee type pricing (New)
+  useAttendeeTypePricing?: boolean;
+  attendeeTypes?: AttendeeType[];
+  roomTypes?: RoomType[];
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
@@ -715,7 +719,28 @@ export default function AdminEventsPage() {
                       </span>
                     )}
                     <span className="text-xs text-gray-600 px-2 py-0.5">
-                      {event.registrationFee ? `฿${event.registrationFee.toLocaleString()}` : 'ฟรี'}
+                      {(() => {
+                        // Attendee Type Pricing
+                        if (event.useAttendeeTypePricing && event.attendeeTypes && event.attendeeTypes.length > 0) {
+                          const minPrice = Math.min(...event.attendeeTypes.map(t => t.price));
+                          const maxPrice = Math.max(...event.attendeeTypes.map(t => t.price));
+                          if (minPrice === maxPrice) {
+                            return minPrice === 0 ? 'ฟรี' : `฿${minPrice.toLocaleString()}`;
+                          }
+                          return `฿${minPrice.toLocaleString()}-${maxPrice.toLocaleString()}`;
+                        }
+
+                        // Tiered Pricing
+                        if (event.pricingType === 'tiered' && (event.baseFee || event.additionalFeePerPerson)) {
+                          if (event.baseFee === 0 && event.additionalFeePerPerson === 0) {
+                            return 'ฟรี';
+                          }
+                          return `เริ่มต้น ฿${(event.baseFee || 0).toLocaleString()}`;
+                        }
+
+                        // Fixed Pricing
+                        return event.registrationFee ? `฿${event.registrationFee.toLocaleString()}` : 'ฟรี';
+                      })()}
                       {event.maxCapacity > 0 && ` | รับ ${event.maxCapacity} คน`}
                     </span>
                   </div>

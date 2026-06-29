@@ -15,6 +15,7 @@ declare module 'next-auth' {
       assignedEventIds?: string[];
     };
     accessToken?: string;
+    error?: string; // Error state for token refresh failures
   }
 
   interface User {
@@ -38,6 +39,11 @@ declare module 'next-auth/jwt' {
     permissions: string[];
     assignedEventIds?: string[];
     accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpires?: number;
+    lineDisplayName?: string;
+    lineProfilePicture?: string | null;
+    error?: string;
   }
 }
 

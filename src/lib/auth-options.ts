@@ -1,10 +1,94 @@
 // NextAuth Configuration with LINE Provider
 import { NextAuthOptions } from 'next-auth';
 import type { Provider } from 'next-auth/providers/index';
+import { JWT } from 'next-auth/jwt';
 import { adminDb } from './firebase-admin';
 import { ROLE_PERMISSIONS, UserRole } from '@/types/next-auth.d';
 import { updateMember, getMemberById } from './google-sheets';
 import { getEffectivePermissions } from './permissions';
+
+/**
+ * Refresh LINE Access Token using Refresh Token
+ * This allows us to keep users logged in and get updated profile data
+ * without requiring them to re-authenticate
+ */
+async function refreshLineAccessToken(token: JWT): Promise<JWT> {
+  try {
+    console.log('[LINE Token Refresh] Starting refresh process...');
+
+    const response = await fetch('https://api.line.me/oauth2/v2.1/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: token.refreshToken as string,
+        client_id: process.env.LINE_CHANNEL_ID || '',
+        client_secret: process.env.LINE_CHANNEL_SECRET || '',
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('[LINE Token Refresh] Failed:', response.status, response.statusText);
+      throw new Error('Failed to refresh LINE access token');
+    }
+
+    const refreshedTokens = await response.json();
+    console.log('[LINE Token Refresh] Success - got new tokens');
+
+    // Fetch updated profile data from LINE
+    const profileResponse = await fetch('https://api.line.me/v2/profile', {
+      headers: {
+        Authorization: `Bearer ${refreshedTokens.access_token}`,
+      },
+    });
+
+    if (!profileResponse.ok) {
+      console.error('[LINE Token Refresh] Profile fetch failed:', profileResponse.status);
+      throw new Error('Failed to fetch LINE profile');
+    }
+
+    const profile = await profileResponse.json();
+    console.log('[LINE Token Refresh] Profile updated:', {
+      displayName: profile.displayName,
+      hasImage: !!profile.pictureUrl,
+    });
+
+    // Update Firestore with latest profile data
+    try {
+      const db = adminDb();
+      const userId = token.lineUserId || token.sub;
+      if (userId) {
+        await db.collection('users').doc(userId as string).update({
+          lineDisplayName: profile.displayName,
+          lineProfilePicture: profile.pictureUrl || null,
+          lastProfileRefresh: new Date(),
+        });
+        console.log('[LINE Token Refresh] Firestore updated');
+      }
+    } catch (firestoreError) {
+      console.error('[LINE Token Refresh] Firestore update failed:', firestoreError);
+      // Don't fail the refresh if Firestore update fails
+    }
+
+    return {
+      ...token,
+      accessToken: refreshedTokens.access_token,
+      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken, // Fall back to old refresh token if not provided
+      accessTokenExpires: Date.now() + (refreshedTokens.expires_in * 1000),
+      lineDisplayName: profile.displayName,
+      lineProfilePicture: profile.pictureUrl || null,
+      error: undefined, // Clear any previous errors
+    };
+  } catch (error) {
+    console.error('[LINE Token Refresh] Error:', error);
+    return {
+      ...token,
+      error: 'RefreshAccessTokenError',
+    };
+  }
+}
 
 // Custom LINE Provider that handles HS256 JWT algorithm issue
 // LINE uses HS256 for ID tokens but openid-client expects RS256
@@ -43,6 +127,11 @@ const LineProvider = {
       });
 
       const tokens = await response.json();
+      console.log('[LINE OAuth] Received tokens:', {
+        hasAccessToken: !!tokens.access_token,
+        hasRefreshToken: !!tokens.refresh_token,
+        expiresIn: tokens.expires_in,
+      });
       return { tokens };
     },
   },
@@ -164,10 +253,25 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account }) {
-      // On initial sign in, set the lineUserId and accessToken
+      // On initial sign in, capture all tokens and set expiry
       if (account && user) {
+        console.log('[JWT Callback] Initial sign in - storing tokens');
         token.lineUserId = user.id;
         token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+        token.accessTokenExpires = account.expires_at
+          ? account.expires_at * 1000
+          : Date.now() + (30 * 24 * 60 * 60 * 1000); // Default: 30 days
+        token.lineDisplayName = user.name || undefined;
+        token.lineProfilePicture = user.image || undefined;
+      }
+
+      // Check if access token needs refresh (refresh 1 hour before expiry)
+      const shouldRefresh = token.accessTokenExpires && Date.now() > (token.accessTokenExpires as number) - (60 * 60 * 1000);
+
+      if (shouldRefresh && token.refreshToken) {
+        console.log('[JWT Callback] Token expiring soon, refreshing...');
+        token = await refreshLineAccessToken(token);
       }
 
       // Always fetch latest role/permissions from Firestore
@@ -241,6 +345,19 @@ export const authOptions: NextAuthOptions = {
         session.user.permissions = token.permissions;
         session.user.assignedEventIds = token.assignedEventIds;
         session.accessToken = token.accessToken;
+
+        // Include updated profile data from token
+        if (token.lineDisplayName) {
+          session.user.name = token.lineDisplayName as string;
+        }
+        if (token.lineProfilePicture) {
+          session.user.image = token.lineProfilePicture as string;
+        }
+
+        // If token refresh failed, add error to session
+        if (token.error) {
+          session.error = token.error as string;
+        }
       }
       return session;
     },
@@ -253,7 +370,8 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 7 * 24 * 60 * 60, // 7 days - shorter to ensure profile data stays fresh
+    updateAge: 24 * 60 * 60, // Update session every 24 hours to trigger token refresh check
   },
 
   secret: process.env.NEXTAUTH_SECRET,

@@ -109,6 +109,8 @@ interface EventFormData {
   // Registration edit control
   allowMemberEdit: boolean;
   requireAttendeeNames: boolean;
+  // LINE notification control
+  sendLineNotification: boolean;
   // Attendee type pricing (New)
   useAttendeeTypePricing: boolean;
   attendeeTypes: AttendeeType[];
@@ -160,6 +162,8 @@ const initialFormData: EventFormData = {
   // Registration edit control
   allowMemberEdit: true,
   requireAttendeeNames: true,
+  // LINE notification control
+  sendLineNotification: true, // Default: checked (send notifications)
   // Attendee type pricing (New)
   useAttendeeTypePricing: false,
   attendeeTypes: [],
@@ -353,6 +357,8 @@ export default function AdminEventsPage() {
         // Registration edit control
         allowMemberEdit: (event as any).allowMemberEdit !== false,
         requireAttendeeNames: (event as any).requireAttendeeNames ?? true,
+        // LINE notification control
+        sendLineNotification: (event as any).sendLineNotification ?? true, // Default: true if not set
         // Attendee type pricing (New)
         useAttendeeTypePricing: (event as any).useAttendeeTypePricing ?? false,
         attendeeTypes: (event as any).attendeeTypes ?? [],
@@ -763,33 +769,57 @@ export default function AdminEventsPage() {
                     )}
 
                     {/* Registration Status with Capacity Check */}
-                    {event.registrationOpen && event.isPublished && (() => {
+                    {(() => {
                       const summary = summaries.get(event.eventId);
                       const isFull = event.maxCapacity > 0 && summary && summary.totalAttendees >= event.maxCapacity;
 
-                      return isFull ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          เต็ม/ปิดรับสมัคร
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          เปิดรับสมัคร
-                        </span>
-                      );
-                    })()}
+                      // Show full status if at capacity (regardless of registrationOpen status)
+                      if (isFull) {
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-300">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            เต็ม/ปิดรับสมัครแล้ว
+                          </span>
+                        );
+                      }
 
-                    {/* Registration Open but Not Published */}
-                    {event.registrationOpen && !event.isPublished && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                        ยังไม่ Published
-                      </span>
-                    )}
+                      // Show open status if registration is open and published
+                      if (event.registrationOpen && event.isPublished) {
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            เปิดรับสมัคร
+                          </span>
+                        );
+                      }
+
+                      // Show not published if registration is open but not published
+                      if (event.registrationOpen && !event.isPublished) {
+                        return (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            ยังไม่ Published
+                          </span>
+                        );
+                      }
+
+                      // Show closed status if registration is closed (and not full)
+                      if (!event.registrationOpen) {
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-300">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            ปิดรับสมัคร
+                          </span>
+                        );
+                      }
+
+                      return null;
+                    })()}
 
                     <span className="text-xs text-gray-600 px-2 py-0.5">
                       {(() => {
@@ -1863,6 +1893,16 @@ export default function AdminEventsPage() {
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">จำเป็นต้องกรอกชื่อผู้เข้าร่วมกิจกรรม</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.sendLineNotification ?? true}
+                        onChange={(e) => setFormData({ ...formData, sendLineNotification: e.target.checked })}
+                        className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                      />
+                      <span className="text-sm text-gray-700">ส่งการแจ้งเตือนผ่าน LINE ให้สมาชิกที่ลงทะเบียน</span>
                     </label>
                   </div>
                 </div>

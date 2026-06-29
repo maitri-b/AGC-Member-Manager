@@ -64,6 +64,7 @@ export async function POST(
       specialRequests = '',
       attendeeTypeSelections = [],
       roomAllocations = [],
+      sendNotification = true, // Default: send notification
     } = body;
 
     if (!targetUserId) {
@@ -301,8 +302,8 @@ export async function POST(
       }
     }
 
-    // Send LINE confirmation message to the registered user
-    if (targetLineUserId) {
+    // Send LINE confirmation message to the registered user (if enabled)
+    if (sendNotification && targetLineUserId) {
       try {
         await sendEventRegistrationConfirmationOnBehalf(targetLineUserId, {
           eventName: eventData.eventName || '',

@@ -90,6 +90,8 @@ export async function GET() {
         // Registration edit control
         allowMemberEdit: data.allowMemberEdit ?? true,
         requireAttendeeNames: data.requireAttendeeNames ?? true,
+        // LINE notification control
+        sendLineNotification: data.sendLineNotification ?? true,
         // Attendee type pricing
         useAttendeeTypePricing: data.useAttendeeTypePricing ?? false,
         attendeeTypes: data.attendeeTypes || [],
@@ -186,6 +188,8 @@ export async function POST(request: NextRequest) {
       // Registration edit control
       allowMemberEdit: body.allowMemberEdit ?? true,
       requireAttendeeNames: body.requireAttendeeNames ?? true,
+      // LINE notification control
+      sendLineNotification: body.sendLineNotification ?? true,
       // Attendee type pricing
       useAttendeeTypePricing: body.useAttendeeTypePricing ?? false,
       attendeeTypes: body.attendeeTypes || [],

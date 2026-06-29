@@ -308,8 +308,9 @@ export async function POST(
       }
     }
 
-    // Send LINE confirmation message
-    if (session.user.id) {
+    // Send LINE confirmation message (only if event has notification enabled)
+    const sendNotification = eventData.sendLineNotification ?? true; // Default: true (backward compatibility)
+    if (sendNotification && session.user.id) {
       try {
         await sendEventRegistrationConfirmation(session.user.id, {
           eventName: eventData.eventName || '',

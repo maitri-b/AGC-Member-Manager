@@ -1278,18 +1278,24 @@ export default function EventDetailPage() {
                       </div>
 
                       {/* Single Payment Submission Button */}
-                      {!userRegistration.depositPaid || (userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl) ? (
+                      {event.paymentAccountNumber && (!userRegistration.depositPaid || (userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl)) ? (
                         <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4">
-                          {(event as any).paymentInstructionText && (
-                            <p className="text-sm text-gray-700 mb-3">
-                              {(event as any).paymentInstructionText}
-                            </p>
+                          {/* Show instruction text only when there's a payment slip URL */}
+                          {event.paymentSlipSubmissionUrl && (
+                            <>
+                              {(event as any).paymentInstructionText && (
+                                <p className="text-sm text-gray-700 mb-3">
+                                  {(event as any).paymentInstructionText}
+                                </p>
+                              )}
+                              {!(event as any).paymentInstructionText && (
+                                <p className="text-sm text-gray-700 mb-3">
+                                  <strong>คำแนะนำ:</strong> คุณสามารถชำระเงินแบบเต็มจำนวนหรือแบบแบ่งงวดก็ได้ โปรดส่งหลักฐานการชำระเงินผ่านลิงก์ด้านล่าง
+                                </p>
+                              )}
+                            </>
                           )}
-                          {!(event as any).paymentInstructionText && (
-                            <p className="text-sm text-gray-700 mb-3">
-                              <strong>คำแนะนำ:</strong> คุณสามารถชำระเงินแบบเต็มจำนวนหรือแบบแบ่งงวดก็ได้ โปรดส่งหลักฐานการชำระเงินผ่านลิงก์ด้านล่าง
-                            </p>
-                          )}
+
                           {event.paymentSlipSubmissionUrl ? (
                             <a
                               href={event.paymentSlipSubmissionUrl}
@@ -1304,11 +1310,11 @@ export default function EventDetailPage() {
                                 {(event as any).paymentSlipButtonText || 'ส่งหลักฐานการชำระเงิน'}
                               </span>
                             </a>
-                          ) : (event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) ? (
+                          ) : (
                             <div className="text-sm text-gray-600 bg-white rounded p-3 border border-gray-200">
                               <p>โปรดชำระเงินและส่งหลักฐานการชำระตามช่องทางที่ระบุไว้ในข้อมูลการชำระเงินด้านบน</p>
                             </div>
-                          ) : null}
+                          )}
                         </div>
                       ) : null}
 

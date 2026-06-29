@@ -329,9 +329,9 @@ export default function AdminPage() {
       const response = await fetch('/api/admin/events');
       if (response.ok) {
         const data = await response.json();
-        // Filter for active and published events only
+        // Filter for active events only
         const activePublished = (data.events || [])
-          .filter((event: any) => event.isActive && event.isPublished)
+          .filter((event: any) => event.isActive)
           .map((event: any) => ({
             eventId: event.eventId,
             eventName: event.eventName,
@@ -1112,7 +1112,7 @@ export default function AdminPage() {
                   <div className="border-t border-gray-200 pt-4 mt-4">
                     <h4 className="text-sm font-semibold text-gray-900 mb-3">มอบหมายกิจกรรม</h4>
                     <p className="text-xs text-gray-600 mb-3">
-                      เลือกกิจกรรมที่ต้องการมอบหมายให้จัดการ (เฉพาะกิจกรรมที่เปิดใช้งานและเผยแพร่แล้ว)
+                      เลือกกิจกรรมที่ต้องการมอบหมายให้จัดการ (เฉพาะกิจกรรมที่เปิดใช้งาน)
                     </p>
                     {loadingEvents ? (
                       <div className="text-sm text-gray-500">กำลังโหลดกิจกรรม...</div>

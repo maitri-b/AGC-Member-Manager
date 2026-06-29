@@ -280,6 +280,7 @@ export interface RoomType {
   typeName: string;              // 'พักเดี่ยว', 'พักคู่ Double', 'พักคู่ Twin', 'พัก 3 ท่าน'
   capacity: number;              // Number of people per room (1, 2, 3)
   price: number;                 // Additional price for this room type
+  note?: string;                 // Optional note/description for this room type
   isActive: boolean;             // Admin can enable/disable
   sortOrder: number;             // Display order
 }

@@ -1716,6 +1716,31 @@ export default function EventDetailPage() {
                       <p className="text-xs text-gray-500 mt-2">
                         กรุณาเลือกจำนวนห้องให้ครบพอดีตามจำนวนคนที่ลงทะเบียน
                       </p>
+
+                      {/* Display notes for selected room types */}
+                      {roomAllocations.length > 0 && (() => {
+                        // Get notes from selected rooms
+                        const selectedRoomNotes = roomAllocations
+                          .map(allocation => {
+                            const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === allocation.roomTypeId);
+                            return roomType?.note ? { name: roomType.typeName, note: roomType.note } : null;
+                          })
+                          .filter(item => item !== null);
+
+                        // Only render if there are notes to show
+                        if (selectedRoomNotes.length > 0) {
+                          return (
+                            <div className="mt-3 pt-3 border-t border-amber-200 space-y-1">
+                              {selectedRoomNotes.map((item, index) => (
+                                <p key={index} className="text-xs text-amber-800">
+                                  <span className="font-medium">{item!.name}:</span> {item!.note}
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   )}
 

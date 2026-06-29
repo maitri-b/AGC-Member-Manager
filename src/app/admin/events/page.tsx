@@ -164,7 +164,53 @@ const initialFormData: EventFormData = {
   useAttendeeTypePricing: false,
   attendeeTypes: [],
   // Room allocation (New)
-  roomTypes: [],
+  roomTypes: [
+    {
+      typeId: 'single',
+      typeName: 'พักเดี่ยว',
+      capacity: 1,
+      price: 0,
+      note: '',
+      isActive: true,
+      sortOrder: 0
+    },
+    {
+      typeId: 'single-pair',
+      typeName: 'พักเดี่ยว-รอจับคู่',
+      capacity: 1,
+      price: 0,
+      note: 'กรุณาระบุชื่อคู่ที่ท่านต้องการพักด้วยในช่องความต้องการพิเศษ กรณีที่ให้ทีมงานจัดคู่ให้ขอสงวนสิทธิ์คิดค่าพักเดี่ยวกรณีที่ไม่สามารถจัดคู่ให้ได้',
+      isActive: true,
+      sortOrder: 1
+    },
+    {
+      typeId: 'twin',
+      typeName: 'พักคู่ Twin',
+      capacity: 2,
+      price: 0,
+      note: '',
+      isActive: true,
+      sortOrder: 2
+    },
+    {
+      typeId: 'double',
+      typeName: 'พักคู่ Double',
+      capacity: 2,
+      price: 0,
+      note: '',
+      isActive: true,
+      sortOrder: 3
+    },
+    {
+      typeId: 'triple',
+      typeName: 'พัก 3 คน',
+      capacity: 3,
+      price: 0,
+      note: '',
+      isActive: true,
+      sortOrder: 4
+    }
+  ],
 };
 
 export default function AdminEventsPage() {
@@ -1266,65 +1312,84 @@ export default function AdminEventsPage() {
                   {/* Dynamic room types list */}
                   <div className="space-y-3">
                     {formData.roomTypes?.map((room, index) => (
-                      <div key={room.typeId} className="flex items-center gap-3 bg-white p-3 rounded border">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newRooms = formData.roomTypes.filter(rt => rt.typeId !== room.typeId);
-                            setFormData({ ...formData, roomTypes: newRooms });
-                          }}
-                          className="text-red-500 hover:text-red-700"
-                          title="ลบประเภทห้องนี้"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-
-                        <input
-                          type="text"
-                          value={room.typeName}
-                          placeholder="ชื่อประเภทห้อง"
-                          onChange={(e) => {
-                            const newRooms = [...formData.roomTypes];
-                            newRooms[index].typeName = e.target.value;
-                            setFormData({ ...formData, roomTypes: newRooms });
-                          }}
-                          className="w-40 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
-                        />
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">รองรับ:</span>
-                          <input
-                            type="number"
-                            min="1"
-                            max="10"
-                            value={room.capacity || ''}
-                            onChange={(e) => {
-                              const newRooms = [...formData.roomTypes];
-                              newRooms[index].capacity = e.target.value === '' ? 1 : parseInt(e.target.value);
+                      <div key={room.typeId} className="bg-white p-3 rounded border space-y-2">
+                        {/* First row: Main info */}
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newRooms = formData.roomTypes.filter(rt => rt.typeId !== room.typeId);
                               setFormData({ ...formData, roomTypes: newRooms });
                             }}
-                            className="w-16 px-3 py-1 border border-gray-300 rounded-md text-center"
+                            className="text-red-500 hover:text-red-700"
+                            title="ลบประเภทห้องนี้"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+
+                          <input
+                            type="text"
+                            value={room.typeName}
+                            placeholder="ชื่อประเภทห้อง"
+                            onChange={(e) => {
+                              const newRooms = [...formData.roomTypes];
+                              newRooms[index].typeName = e.target.value;
+                              setFormData({ ...formData, roomTypes: newRooms });
+                            }}
+                            className="w-40 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
                           />
-                          <span className="text-sm text-gray-600">คน</span>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">รองรับ:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="10"
+                              value={room.capacity || ''}
+                              onChange={(e) => {
+                                const newRooms = [...formData.roomTypes];
+                                newRooms[index].capacity = e.target.value === '' ? 1 : parseInt(e.target.value);
+                                setFormData({ ...formData, roomTypes: newRooms });
+                              }}
+                              className="w-16 px-3 py-1 border border-gray-300 rounded-md text-center"
+                            />
+                            <span className="text-sm text-gray-600">คน</span>
+                          </div>
+
+                          <div className="flex items-center gap-2 ml-auto">
+                            <span className="text-sm text-gray-600">ราคาเพิ่ม:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={room.price || ''}
+                              onChange={(e) => {
+                                const newRooms = [...formData.roomTypes];
+                                newRooms[index].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                setFormData({ ...formData, roomTypes: newRooms });
+                              }}
+                              className="w-24 px-3 py-1 border border-gray-300 rounded-md text-right"
+                            />
+                            <span className="text-sm text-gray-600">บาท</span>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2 ml-auto">
-                          <span className="text-sm text-gray-600">ราคาเพิ่ม:</span>
+                        {/* Second row: Note field */}
+                        <div className="flex items-center gap-2 pl-8">
+                          <span className="text-xs text-gray-600">หมายเหตุ:</span>
                           <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={room.price || ''}
+                            type="text"
+                            value={room.note || ''}
+                            placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)"
                             onChange={(e) => {
                               const newRooms = [...formData.roomTypes];
-                              newRooms[index].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                              newRooms[index].note = e.target.value;
                               setFormData({ ...formData, roomTypes: newRooms });
                             }}
-                            className="w-24 px-3 py-1 border border-gray-300 rounded-md text-right"
+                            className="flex-1 px-3 py-1 border border-gray-300 rounded-md text-xs"
                           />
-                          <span className="text-sm text-gray-600">บาท</span>
                         </div>
                       </div>
                     ))}

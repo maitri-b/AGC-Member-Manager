@@ -1304,11 +1304,11 @@ export default function EventDetailPage() {
                                 {(event as any).paymentSlipButtonText || 'ส่งหลักฐานการชำระเงิน'}
                               </span>
                             </a>
-                          ) : (
+                          ) : (event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) ? (
                             <div className="text-sm text-gray-600 bg-white rounded p-3 border border-gray-200">
                               <p>โปรดชำระเงินและส่งหลักฐานการชำระตามช่องทางที่ระบุไว้ในข้อมูลการชำระเงินด้านบน</p>
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       ) : null}
 

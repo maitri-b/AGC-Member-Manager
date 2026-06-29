@@ -320,6 +320,12 @@ export async function POST(
           attendeeCount,
           registrationFee: totalFee,
           memberName: member ? (member.fullNameTH || member.nickname || '') : (guestInfo?.contactName || session.user.name || ''),
+          eventId,
+          paymentMode: eventData.paymentMode || 'full',
+          depositAmount,
+          remainingAmount,
+          depositDeadline,
+          remainingDeadline,
         });
       } catch (lineError) {
         console.error('Failed to send LINE confirmation:', lineError);

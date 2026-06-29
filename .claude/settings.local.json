@@ -33,7 +33,8 @@
       "Bash(Select-String \"error|Error|warning|Warning|Failed|failed|✓ Compiled|Route \\\\\\(app\\\\\\)\")",
       "Bash(Select-String -Pattern \"^[\\\\+\\\\-]\")",
       "Bash(Select-Object -First 40)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(npm install:*)"
     ]
   }
 }

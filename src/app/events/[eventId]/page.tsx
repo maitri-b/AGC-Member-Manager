@@ -1689,9 +1689,9 @@ export default function EventDetailPage() {
                                     </span>
                                   )}
                                 </div>
-                                {/* Show note directly below input if exists */}
-                                {roomType.note && (
-                                  <p className="text-xs text-amber-700 mt-2 ml-2">
+                                {/* Show note directly below input if exists and room count > 0 */}
+                                {roomType.note && roomCount > 0 && (
+                                  <p className="text-xs text-amber-700 mt-2 ml-36 pl-3">
                                     {roomType.note}
                                   </p>
                                 )}

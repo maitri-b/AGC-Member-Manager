@@ -127,6 +127,12 @@ export default function EventDetailPage() {
   const [roomValidationError, setRoomValidationError] = useState<string | null>(null);
   const [calculatedRoomFee, setCalculatedRoomFee] = useState(0);
 
+  // Guest registration form state (for Event-Co without memberId)
+  const [guestCompanyName, setGuestCompanyName] = useState('');
+  const [guestLicenseNumber, setGuestLicenseNumber] = useState('');
+  const [guestContactName, setGuestContactName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+
   // Copy to clipboard helper
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -253,7 +259,30 @@ export default function EventDetailPage() {
   };
 
   const handleRegister = async () => {
-    if (!event || !session?.user?.memberId) {
+    if (!event) {
+      toast.error('ไม่พบข้อมูลกิจกรรม');
+      return;
+    }
+
+    // Check if user is staff without memberId - require guest form
+    const isStaffWithoutMember = !session?.user?.memberId && ['admin', 'committee', 'event-co', 'event-staff'].includes(session?.user?.role || '');
+
+    if (isStaffWithoutMember) {
+      // Validate guest information form
+      if (!guestCompanyName.trim()) {
+        toast.error('กรุณากรอกชื่อบริษัท');
+        return;
+      }
+      if (!guestContactName.trim()) {
+        toast.error('กรุณากรอกชื่อผู้ติดต่อ');
+        return;
+      }
+      if (!guestPhone.trim()) {
+        toast.error('กรุณากรอกเบอร์โทรศัพท์');
+        return;
+      }
+    } else if (!session?.user?.memberId) {
+      // Regular user without memberId
       toast.error('กรุณาเชื่อมต่อบัญชีสมาชิกก่อนลงทะเบียน');
       return;
     }
@@ -301,6 +330,13 @@ export default function EventDetailPage() {
           specialRequests,
           attendeeTypeSelections, // Add attendee type selections
           roomAllocations, // Add room allocations
+          // Guest information for staff without memberId
+          guestInfo: isStaffWithoutMember ? {
+            companyName: guestCompanyName,
+            licenseNumber: guestLicenseNumber,
+            contactName: guestContactName,
+            phone: guestPhone,
+          } : undefined,
         }),
       });
 
@@ -1331,6 +1367,71 @@ export default function EventDetailPage() {
               ) : (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900">ลงทะเบียนเข้าร่วมกิจกรรม</h3>
+
+                  {/* Guest Information Form for Event-Co without memberId */}
+                  {!session?.user?.memberId && ['admin', 'committee', 'event-co', 'event-staff'].includes(session?.user?.role || '') && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-purple-900 mb-3">
+                        ข้อมูลผู้ลงทะเบียน
+                      </h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            ชื่อบริษัท *
+                          </label>
+                          <input
+                            type="text"
+                            value={guestCompanyName}
+                            onChange={(e) => setGuestCompanyName(e.target.value)}
+                            placeholder="กรอกชื่อบริษัท"
+                            required
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            เลขที่ใบอนุญาต (ถ้ามี)
+                          </label>
+                          <input
+                            type="text"
+                            value={guestLicenseNumber}
+                            onChange={(e) => setGuestLicenseNumber(e.target.value)}
+                            placeholder="เลขที่ใบอนุญาต ทท./นท."
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            ชื่อผู้ติดต่อ *
+                          </label>
+                          <input
+                            type="text"
+                            value={guestContactName}
+                            onChange={(e) => setGuestContactName(e.target.value)}
+                            placeholder="ชื่อ-นามสกุล ผู้ติดต่อ"
+                            required
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            เบอร์โทรศัพท์ *
+                          </label>
+                          <input
+                            type="tel"
+                            value={guestPhone}
+                            onChange={(e) => setGuestPhone(e.target.value)}
+                            placeholder="08X-XXX-XXXX"
+                            required
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-purple-600 mt-3">
+                        * กรุณากรอกข้อมูลให้ครบถ้วน ข้อมูลนี้จะใช้ในการติดต่อกลับและออกใบเสร็จ
+                      </p>
+                    </div>
+                  )}
 
                   {/* Attendee Type Selection (if enabled) */}
                   {event.useAttendeeTypePricing && event.attendeeTypes && event.attendeeTypes.length > 0 ? (

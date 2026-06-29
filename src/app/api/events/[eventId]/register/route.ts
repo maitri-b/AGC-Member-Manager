@@ -31,13 +31,24 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!session.user.memberId) {
+    const { eventId } = await params;
+    const body = await request.json();
+    const { attendeeCount = 1, attendeeNames = [], specialRequests = '', attendeeTypeSelections = [], roomAllocations = [], guestInfo } = body;
+
+    // Check if user is staff without memberId
+    const isStaffWithoutMember = !session.user.memberId && ['admin', 'committee', 'event-co', 'event-staff'].includes(session.user.role || '');
+
+    // Validate based on user type
+    if (!isStaffWithoutMember && !session.user.memberId) {
       return NextResponse.json({ error: 'กรุณาเชื่อมต่อบัญชีสมาชิกก่อนลงทะเบียน' }, { status: 400 });
     }
 
-    const { eventId } = await params;
-    const body = await request.json();
-    const { attendeeCount = 1, attendeeNames = [], specialRequests = '', attendeeTypeSelections = [], roomAllocations = [] } = body;
+    // For staff without member, validate guest info
+    if (isStaffWithoutMember) {
+      if (!guestInfo || !guestInfo.companyName || !guestInfo.contactName || !guestInfo.phone) {
+        return NextResponse.json({ error: 'กรุณากรอกข้อมูลผู้ลงทะเบียนให้ครบถ้วน' }, { status: 400 });
+      }
+    }
 
     const db = adminDb();
 
@@ -59,10 +70,13 @@ export async function POST(
       return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่พร้อมรับลงทะเบียน' }, { status: 400 });
     }
 
-    // Get member details
-    const member = await getMemberById(session.user.memberId);
-    if (!member) {
-      return NextResponse.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 });
+    // Get member details (skip for staff without memberId)
+    let member = null;
+    if (session.user.memberId) {
+      member = await getMemberById(session.user.memberId);
+      if (!member) {
+        return NextResponse.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 });
+      }
     }
 
     // Helper function to check if registration is cancelled
@@ -84,16 +98,21 @@ export async function POST(
     const activeRegistrations = existingRegistrations.filter(r => !isRegistrationCancelled(r));
 
     // Check if company (by license number) already registered (check only active registrations)
-    const companyAlreadyRegistered = activeRegistrations.find(r => {
-      const regData = r as unknown as Record<string, unknown>;
-      // Check by license number (1 company = 1 license = 1 registration)
-      return member.licenseNumber && regData.license_number === member.licenseNumber;
-    });
+    // For staff without member, use guest license number or company name
+    const checkLicenseNumber = member?.licenseNumber || guestInfo?.licenseNumber;
 
-    if (companyAlreadyRegistered) {
-      return NextResponse.json({
-        error: 'บริษัทของคุณลงทะเบียนกิจกรรมนี้แล้ว หากต้องการเพิ่ม/ลดจำนวนผู้เข้าร่วม กรุณาใช้ปุ่มแก้ไขข้อมูลการลงทะเบียน'
-      }, { status: 400 });
+    if (checkLicenseNumber) {
+      const companyAlreadyRegistered = activeRegistrations.find(r => {
+        const regData = r as unknown as Record<string, unknown>;
+        // Check by license number (1 company = 1 license = 1 registration)
+        return regData.license_number === checkLicenseNumber;
+      });
+
+      if (companyAlreadyRegistered) {
+        return NextResponse.json({
+          error: 'บริษัทของคุณลงทะเบียนกิจกรรมนี้แล้ว หากต้องการเพิ่ม/ลดจำนวนผู้เข้าร่วม กรุณาใช้ปุ่มแก้ไขข้อมูลการลงทะเบียน'
+        }, { status: 400 });
+      }
     }
 
     // Check maxPerCompany limit
@@ -208,22 +227,23 @@ export async function POST(
 
     // Prepare registration data (matching sheet columns)
     // Write to BOTH old and new column names for backward compatibility
+    // Use guest info if staff without member, otherwise use member data
     const registrationData = {
       registration_id: registrationId,
       registration_date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }),
-      company_name: member.companyNameTH || member.companyNameEN || '',
-      license_number: member.licenseNumber || '',
-      contact_name: member.fullNameTH || member.nickname || session.user.name || '',
-      contact_phone: member.mobile || member.phone || '',
-      contact_email: member.email || '',
+      company_name: member ? (member.companyNameTH || member.companyNameEN || '') : (guestInfo?.companyName || ''),
+      license_number: member ? (member.licenseNumber || '') : (guestInfo?.licenseNumber || ''),
+      contact_name: member ? (member.fullNameTH || member.nickname || session.user.name || '') : (guestInfo?.contactName || session.user.name || ''),
+      contact_phone: member ? (member.mobile || member.phone || '') : (guestInfo?.phone || ''),
+      contact_email: member?.email || '',
       // New format (lowercase)
       line_userid: session.user.id || '',
-      memberid: session.user.memberId || '',
+      memberid: session.user.memberId || '', // Will be empty for staff without member
       // Old format (mixed case) - for backward compatibility
       LINE_userID: session.user.id || '',
-      memberID: session.user.memberId || '',
+      memberID: session.user.memberId || '', // Will be empty for staff without member
       attendee_count: attendeeCount,
-      attendee_names: JSON.stringify(attendeeNames.length > 0 ? attendeeNames : [member.fullNameTH || member.nickname || '']),
+      attendee_names: JSON.stringify(attendeeNames.length > 0 ? attendeeNames : [member ? (member.fullNameTH || member.nickname || '') : (guestInfo?.contactName || '')]),
       shirt_count: 0,
       shirt_sizes: '[]',
       event_fee: totalFee,
@@ -293,7 +313,7 @@ export async function POST(
           registrationId,
           attendeeCount,
           registrationFee: totalFee,
-          memberName: member.fullNameTH || member.nickname || '',
+          memberName: member ? (member.fullNameTH || member.nickname || '') : (guestInfo?.contactName || session.user.name || ''),
         });
       } catch (lineError) {
         console.error('Failed to send LINE confirmation:', lineError);

@@ -183,15 +183,6 @@ export default function EventsPage() {
                       สิ้นสุดแล้ว
                     </span>
                   )}
-                  {/* Show unpublished badge for event managers (admin, committee, event-co, event-staff) */}
-                  {canManageEvents && event.registrationOpen && !event.isPublished && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      ยังไม่ Published ให้สมาชิกทั่วไปสมัคร
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -266,7 +257,15 @@ export default function EventsPage() {
               {event.maxCapacity !== undefined && event.maxCapacity > 0 && event.totalAttendees !== undefined && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between text-sm mb-2">
-                    {event.totalAttendees >= event.maxCapacity ? (
+                    {/* Show unpublished status for event managers when registrationOpen but not published */}
+                    {canManageEvents && event.registrationOpen && !event.isPublished ? (
+                      <span className="text-orange-600 font-medium flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        ยังไม่ Published ให้สมาชิกทั่วไปสมัคร
+                      </span>
+                    ) : event.totalAttendees >= event.maxCapacity ? (
                       <span className="text-red-600 font-semibold flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -292,7 +291,13 @@ export default function EventsPage() {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className={`h-2 rounded-full ${event.totalAttendees >= event.maxCapacity ? 'bg-red-500' : 'bg-blue-500'}`}
+                      className={`h-2 rounded-full ${
+                        canManageEvents && event.registrationOpen && !event.isPublished
+                          ? 'bg-orange-500'
+                          : event.totalAttendees >= event.maxCapacity
+                          ? 'bg-red-500'
+                          : 'bg-blue-500'
+                      }`}
                       style={{ width: `${Math.min((event.totalAttendees / event.maxCapacity) * 100, 100)}%` }}
                     ></div>
                   </div>
@@ -355,15 +360,6 @@ export default function EventsPage() {
                       สิ้นสุดแล้ว
                     </span>
                   )}
-                  {/* Show unpublished badge for event managers (admin, committee, event-co, event-staff) */}
-                  {canManageEvents && event.registrationOpen && !event.isPublished && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      ยังไม่ Published ให้สมาชิกทั่วไปสมัคร
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -438,7 +434,15 @@ export default function EventsPage() {
               {event.maxCapacity !== undefined && event.maxCapacity > 0 && event.totalAttendees !== undefined && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between text-sm mb-2">
-                    {event.totalAttendees >= event.maxCapacity ? (
+                    {/* Show unpublished status for event managers when registrationOpen but not published */}
+                    {canManageEvents && event.registrationOpen && !event.isPublished ? (
+                      <span className="text-orange-600 font-medium flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        ยังไม่ Published ให้สมาชิกทั่วไปสมัคร
+                      </span>
+                    ) : event.totalAttendees >= event.maxCapacity ? (
                       <span className="text-red-600 font-semibold flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -464,7 +468,13 @@ export default function EventsPage() {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className={`h-2 rounded-full ${event.totalAttendees >= event.maxCapacity ? 'bg-red-500' : 'bg-blue-500'}`}
+                      className={`h-2 rounded-full ${
+                        canManageEvents && event.registrationOpen && !event.isPublished
+                          ? 'bg-orange-500'
+                          : event.totalAttendees >= event.maxCapacity
+                          ? 'bg-red-500'
+                          : 'bg-blue-500'
+                      }`}
                       style={{ width: `${Math.min((event.totalAttendees / event.maxCapacity) * 100, 100)}%` }}
                     ></div>
                   </div>

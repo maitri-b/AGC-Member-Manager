@@ -133,12 +133,13 @@ export default function AdminPage() {
   }, [status, session, router]);
 
   useEffect(() => {
-    if (session && hasPermission(session.user.permissions || [], 'admin:users')) {
+    if (status === 'authenticated' && session && hasPermission(session.user.permissions || [], 'admin:users')) {
       fetchUsers();
       fetchPendingCounts();
       fetchAllMembersData();
     }
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // Only run when authentication status changes, not on every session update
 
   const fetchPendingCounts = async () => {
     try {

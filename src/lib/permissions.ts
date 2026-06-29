@@ -102,7 +102,7 @@ export function canManageEvent(
 
 /**
  * Check if member has full status (all 3 criteria met)
- * Required for members and event-co to maintain full permissions
+ * Required for members to maintain full permissions
  */
 export function isFullMember(
   userIsActive: boolean | undefined,
@@ -118,7 +118,8 @@ export function isFullMember(
 
 /**
  * Get effective permissions based on role and member status
- * Members and event-co with incomplete status get downgraded to guest permissions
+ * Members with incomplete status get downgraded to guest permissions
+ * Event-co, event-staff, admin, and committee bypass this check
  */
 export function getEffectivePermissions(
   role: UserRole,
@@ -126,13 +127,14 @@ export function getEffectivePermissions(
   memberStatus: string | undefined,
   lineGroupStatus: string | undefined
 ): string[] {
-  // Check if member status restriction applies
-  if (role === 'member' || role === 'event-co') {
+  // Check if member status restriction applies (only for 'member' role)
+  if (role === 'member') {
     if (!isFullMember(isActive, memberStatus, lineGroupStatus)) {
       // Downgrade to guest permissions
       return ROLE_PERMISSIONS.guest;
     }
   }
   // Return normal permissions for the role
+  // Event-co, event-staff, admin, and committee get their full permissions regardless of member status
   return ROLE_PERMISSIONS[role] || [];
 }

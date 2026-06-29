@@ -22,14 +22,16 @@ export async function GET() {
     }
 
     // Allow members to view events (for their own attendance)
-    // Committee and admin can see full details
+    // Committee, admin, and event managers can see full details including unpublished events
     const isCommitteeOrAdmin = hasPermission(session.user.permissions || [], 'members:list') ||
                                hasPermission(session.user.permissions || [], 'admin:access');
+    const canManageEvents = hasPermission(session.user.permissions || [], 'events:manage-assigned');
 
     const events = await getTrackedEvents();
 
     // Filter to only published events for regular members
-    const publishedEvents = isCommitteeOrAdmin ? events : events.filter(e => e.isPublished);
+    // Event managers (event-co, event-staff) can see unpublished events
+    const publishedEvents = (isCommitteeOrAdmin || canManageEvents) ? events : events.filter(e => e.isPublished);
 
     if (!isCommitteeOrAdmin) {
       // For regular members, return basic event info with registration status

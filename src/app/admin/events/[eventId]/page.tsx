@@ -1047,6 +1047,23 @@ export default function EventDetailPage() {
                       {/* View-Only Cards - Hide when editing */}
                       {!isEditing && (
                         <>
+                          {/* Contact Information Display */}
+                          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-xs font-semibold text-gray-900 mb-2">ข้อมูลผู้ติดต่อ:</p>
+                            <div className="space-y-1">
+                              {attendee.registration.contactName && (
+                                <div className="text-xs text-gray-700">
+                                  <span className="font-medium">ชื่อ:</span> {attendee.registration.contactName}
+                                </div>
+                              )}
+                              {attendee.registration.contactPhone && (
+                                <div className="text-xs text-gray-700">
+                                  <span className="font-medium">โทร:</span> {attendee.registration.contactPhone}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
                           {/* Attendee Type Selections Display */}
                         {(() => {
                           try {

@@ -206,13 +206,26 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check admin/committee permission
-    if (!hasPermission(session.user.permissions, 'members:list') &&
-        !hasPermission(session.user.permissions, 'admin:access')) {
+    const { eventId } = await params;
+
+    // Check permissions: either has full access OR can manage assigned event
+    const hasFullAccess = hasPermission(session.user.permissions, 'members:list') ||
+                          hasPermission(session.user.permissions, 'admin:access');
+    const canManageAssigned = hasPermission(session.user.permissions, 'events:manage-assigned');
+
+    if (!hasFullAccess && !canManageAssigned) {
       return NextResponse.json({ error: 'ไม่มีสิทธิ์ในการยกเลิก' }, { status: 403 });
     }
 
-    const { eventId } = await params;
+    // Verify assignment for event-staff/event-co
+    if (!hasFullAccess && canManageAssigned) {
+      const userRole = session.user.role;
+      const assignedEventIds = session.user.assignedEventIds || [];
+
+      if (!canManageEvent(userRole, assignedEventIds, eventId)) {
+        return NextResponse.json({ error: 'Not assigned to this event' }, { status: 403 });
+      }
+    }
     const { searchParams } = new URL(request.url);
     const registrationId = searchParams.get('registrationId');
 

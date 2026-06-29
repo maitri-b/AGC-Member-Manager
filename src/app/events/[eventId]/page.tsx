@@ -1617,75 +1617,83 @@ export default function EventDetailPage() {
                             const roomCount = currentAlloc?.roomCount || 0;
 
                             return (
-                              <div key={roomType.typeId} className="flex items-center gap-3 bg-white p-3 rounded">
-                                <span className="text-sm font-medium text-gray-700 w-36">
-                                  {roomType.typeName}:
-                                </span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="20"
-                                  value={roomCount === 0 ? '' : roomCount}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    const count = value === '' ? 0 : parseInt(value);
-                                    const newAllocations = roomAllocations.filter(ra => ra.roomTypeId !== roomType.typeId);
-                                    if (count > 0) {
-                                      newAllocations.push({ roomTypeId: roomType.typeId, roomCount: count });
-                                    }
-                                    setRoomAllocations(newAllocations);
-
-                                    // Calculate total capacity
-                                    let totalCapacity = 0;
-                                    for (const alloc of newAllocations) {
-                                      const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
-                                      if (rt) {
-                                        totalCapacity += rt.capacity * alloc.roomCount;
-                                      }
-                                    }
-
-                                    // Validate
-                                    if (totalCapacity !== attendeeCount) {
-                                      setRoomValidationError(
-                                        `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
-                                      );
-                                    } else {
-                                      setRoomValidationError(null);
-                                    }
-
-                                    // Calculate room fee
-                                    let roomFee = 0;
-                                    for (const alloc of newAllocations) {
-                                      const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
-                                      if (rt) {
-                                        roomFee += rt.price * alloc.roomCount;
-                                      }
-                                    }
-                                    setCalculatedRoomFee(roomFee);
-                                  }}
-                                  onBlur={(e) => {
-                                    if (e.target.value === '') {
-                                      // Clean up empty values when field loses focus
+                              <div key={roomType.typeId} className="bg-white p-3 rounded">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-medium text-gray-700 w-36">
+                                    {roomType.typeName}:
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="20"
+                                    value={roomCount === 0 ? '' : roomCount}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      const count = value === '' ? 0 : parseInt(value);
                                       const newAllocations = roomAllocations.filter(ra => ra.roomTypeId !== roomType.typeId);
+                                      if (count > 0) {
+                                        newAllocations.push({ roomTypeId: roomType.typeId, roomCount: count });
+                                      }
                                       setRoomAllocations(newAllocations);
-                                    }
-                                  }}
-                                  placeholder="0"
-                                  className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center"
-                                />
-                                <span className="text-sm text-gray-600">
-                                  ห้อง ({roomType.capacity} คน/ห้อง)
-                                </span>
-                                {roomType.price > 0 && (
+
+                                      // Calculate total capacity
+                                      let totalCapacity = 0;
+                                      for (const alloc of newAllocations) {
+                                        const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                        if (rt) {
+                                          totalCapacity += rt.capacity * alloc.roomCount;
+                                        }
+                                      }
+
+                                      // Validate
+                                      if (totalCapacity !== attendeeCount) {
+                                        setRoomValidationError(
+                                          `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
+                                        );
+                                      } else {
+                                        setRoomValidationError(null);
+                                      }
+
+                                      // Calculate room fee
+                                      let roomFee = 0;
+                                      for (const alloc of newAllocations) {
+                                        const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
+                                        if (rt) {
+                                          roomFee += rt.price * alloc.roomCount;
+                                        }
+                                      }
+                                      setCalculatedRoomFee(roomFee);
+                                    }}
+                                    onBlur={(e) => {
+                                      if (e.target.value === '') {
+                                        // Clean up empty values when field loses focus
+                                        const newAllocations = roomAllocations.filter(ra => ra.roomTypeId !== roomType.typeId);
+                                        setRoomAllocations(newAllocations);
+                                      }
+                                    }}
+                                    placeholder="0"
+                                    className="w-20 px-3 py-2 border border-gray-300 rounded-md text-center"
+                                  />
                                   <span className="text-sm text-gray-600">
-                                    × {roomType.price.toLocaleString()} บาท
+                                    ห้อง ({roomType.capacity} คน/ห้อง)
                                   </span>
-                                )}
-                                {roomCount > 0 && (
-                                  <span className="text-sm font-semibold text-amber-700 ml-auto">
-                                    = รองรับ {roomType.capacity * roomCount} คน
-                                    {roomType.price > 0 && ` (+${(roomType.price * roomCount).toLocaleString()} บาท)`}
-                                  </span>
+                                  {roomType.price > 0 && (
+                                    <span className="text-sm text-gray-600">
+                                      × {roomType.price.toLocaleString()} บาท
+                                    </span>
+                                  )}
+                                  {roomCount > 0 && (
+                                    <span className="text-sm font-semibold text-amber-700 ml-auto">
+                                      = รองรับ {roomType.capacity * roomCount} คน
+                                      {roomType.price > 0 && ` (+${(roomType.price * roomCount).toLocaleString()} บาท)`}
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Show note directly below input if exists */}
+                                {roomType.note && (
+                                  <p className="text-xs text-amber-700 mt-2 ml-2">
+                                    {roomType.note}
+                                  </p>
                                 )}
                               </div>
                             );
@@ -1716,31 +1724,6 @@ export default function EventDetailPage() {
                       <p className="text-xs text-gray-500 mt-2">
                         กรุณาเลือกจำนวนห้องให้ครบพอดีตามจำนวนคนที่ลงทะเบียน
                       </p>
-
-                      {/* Display notes for selected room types */}
-                      {roomAllocations.length > 0 && (() => {
-                        // Get notes from selected rooms
-                        const selectedRoomNotes = roomAllocations
-                          .map(allocation => {
-                            const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === allocation.roomTypeId);
-                            return roomType?.note ? { name: roomType.typeName, note: roomType.note } : null;
-                          })
-                          .filter(item => item !== null);
-
-                        // Only render if there are notes to show
-                        if (selectedRoomNotes.length > 0) {
-                          return (
-                            <div className="mt-3 pt-3 border-t border-amber-200 space-y-1">
-                              {selectedRoomNotes.map((item, index) => (
-                                <p key={index} className="text-xs text-amber-800">
-                                  <span className="font-medium">{item!.name}:</span> {item!.note}
-                                </p>
-                              ))}
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
                     </div>
                   )}
 

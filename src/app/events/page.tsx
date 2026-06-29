@@ -254,16 +254,32 @@ export default function EventsPage() {
                 </div>
               )}
 
-              {/* Capacity progress bar (for all users when registration is open) */}
-              {event.registrationOpen && event.maxCapacity !== undefined && event.maxCapacity > 0 && event.totalAttendees !== undefined && (
+              {/* Capacity progress bar and status */}
+              {event.maxCapacity !== undefined && event.maxCapacity > 0 && event.totalAttendees !== undefined && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-green-600 font-medium flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      เปิดรับสมัคร
-                    </span>
+                    {event.totalAttendees >= event.maxCapacity ? (
+                      <span className="text-red-600 font-semibold flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        เต็ม/ปิดรับสมัคร
+                      </span>
+                    ) : event.registrationOpen ? (
+                      <span className="text-green-600 font-medium flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        เปิดรับสมัคร
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 font-medium flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        ปิดรับสมัคร
+                      </span>
+                    )}
                     <span className="text-xs text-gray-500">{event.totalAttendees} / {event.maxCapacity}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -272,9 +288,6 @@ export default function EventsPage() {
                       style={{ width: `${Math.min((event.totalAttendees / event.maxCapacity) * 100, 100)}%` }}
                     ></div>
                   </div>
-                  {event.totalAttendees >= event.maxCapacity && (
-                    <p className="text-xs text-red-600 mt-1 font-medium">เต็มแล้ว</p>
-                  )}
                 </div>
               )}
 
@@ -409,16 +422,32 @@ export default function EventsPage() {
                 </div>
               )}
 
-              {/* Capacity progress bar (for all users when registration is open) */}
-              {event.registrationOpen && event.maxCapacity !== undefined && event.maxCapacity > 0 && event.totalAttendees !== undefined && (
+              {/* Capacity progress bar and status */}
+              {event.maxCapacity !== undefined && event.maxCapacity > 0 && event.totalAttendees !== undefined && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-green-600 font-medium flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      เปิดรับสมัคร
-                    </span>
+                    {event.totalAttendees >= event.maxCapacity ? (
+                      <span className="text-red-600 font-semibold flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        เต็ม/ปิดรับสมัคร
+                      </span>
+                    ) : event.registrationOpen ? (
+                      <span className="text-green-600 font-medium flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        เปิดรับสมัคร
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 font-medium flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        ปิดรับสมัคร
+                      </span>
+                    )}
                     <span className="text-xs text-gray-500">{event.totalAttendees} / {event.maxCapacity}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -427,9 +456,6 @@ export default function EventsPage() {
                       style={{ width: `${Math.min((event.totalAttendees / event.maxCapacity) * 100, 100)}%` }}
                     ></div>
                   </div>
-                  {event.totalAttendees >= event.maxCapacity && (
-                    <p className="text-xs text-red-600 mt-1 font-medium">เต็มแล้ว</p>
-                  )}
                 </div>
               )}
 

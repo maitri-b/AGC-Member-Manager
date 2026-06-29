@@ -68,6 +68,7 @@ export const PERMISSIONS = {
 
   // Event permissions
   'events:manage-assigned': 'Manage assigned events',
+  'events:register-on-behalf': 'Register for events on behalf of members/guests',
 
   // Admin permissions
   'admin:access': 'Access admin panel',
@@ -85,12 +86,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'member:create',
     'report:view',
     'report:export',
+    'events:register-on-behalf', // Can register on behalf of members/guests
     'admin:access', // Access admin panel
     'admin:users',  // Manage users (except roles)
     // Note: 'admin:roles' is NOT included - committee cannot change user roles
   ],
   'event-co': [
     'events:manage-assigned', // Can manage assigned events
+    'events:register-on-behalf', // Can register on behalf of members/guests
   ],
   'event-staff': [
     'events:manage-assigned', // Can manage assigned events only

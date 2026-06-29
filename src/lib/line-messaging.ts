@@ -526,3 +526,134 @@ Helping & Sharing`;
     },
   ]);
 }
+
+// Send Event Registration Confirmation (Admin-Assisted Registration)
+export async function sendEventRegistrationConfirmationOnBehalf(
+  lineUserId: string,
+  eventData: {
+    eventName: string;
+    eventNameEN: string;
+    eventDate: string;
+    location: string;
+    registrationId: string;
+    attendeeCount: number;
+    registrationFee: number;
+    memberName: string;
+    eventId: string;
+    paymentMode?: string;
+    depositAmount?: number;
+    remainingAmount?: number;
+    depositDeadline?: string;
+    remainingDeadline?: string;
+    registeredBy: string;
+  }
+): Promise<boolean> {
+  const hasPayment = eventData.registrationFee > 0;
+  const isDepositMode = eventData.paymentMode === 'deposit' && hasPayment;
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://agentsclub.vercel.app';
+  const eventDetailUrl = `${baseUrl}/events/${eventData.eventId}`;
+
+  // Format Thai date/time for deadlines
+  const formatThaiDateTime = (isoString: string): string => {
+    if (!isoString) return '';
+    try {
+      const date = new Date(isoString);
+      const thaiDate = date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      const thaiTime = date.toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      return `${thaiDate} เวลา ${thaiTime} น.`;
+    } catch {
+      return isoString;
+    }
+  };
+
+  let message = `✅ ได้รับการลงทะเบียนกิจกรรมแล้ว
+
+สวัสดีครับ คุณ${eventData.memberName}
+
+ทีมงาน Agents Club ได้ทำการลงทะเบียนกิจกรรมให้คุณแล้ว
+
+📋 รายละเอียดกิจกรรม
+${eventData.eventName}${eventData.eventNameEN ? `\n${eventData.eventNameEN}` : ''}
+
+📅 วันที่จัดงาน: ${eventData.eventDate}
+📍 สถานที่: ${eventData.location}
+
+🎫 รหัสลงทะเบียน: ${eventData.registrationId}
+👥 จำนวนผู้เข้าร่วม: ${eventData.attendeeCount} ท่าน`;
+
+  if (!hasPayment) {
+    // Free event
+    message += `
+
+✅ สถานะการลงทะเบียน: ลงทะเบียนสำเร็จ`;
+  } else if (isDepositMode) {
+    // Deposit payment mode
+    message += `
+
+💵 การชำระเงิน (แบบมัดจำ)
+• ค่าลงทะเบียนรวม: ${eventData.registrationFee.toLocaleString()} บาท
+• เงินมัดจำ: ${(eventData.depositAmount || 0).toLocaleString()} บาท
+• ยอดคงเหลือ: ${(eventData.remainingAmount || 0).toLocaleString()} บาท`;
+
+    if (eventData.depositDeadline) {
+      message += `
+
+⏰ กำหนดชำระเงินมัดจำ
+กรุณาชำระภายในวันที่: ${formatThaiDateTime(eventData.depositDeadline)}`;
+    }
+
+    message += `
+
+📤 อัพโหลดสลิปการโอนเงินมัดจำได้ที่:
+${eventDetailUrl}
+
+⚠️ สถานะการลงทะเบียน: รอชำระเงินมัดจำ
+
+📌 หมายเหตุ: กรุณาชำระเงินมัดจำภายในกำหนดเพื่อยืนยันการเข้าร่วมงาน`;
+
+    if (eventData.remainingDeadline) {
+      message += `\nยอดคงเหลือสามารถชำระได้ภายในวันที่: ${formatThaiDateTime(eventData.remainingDeadline)}`;
+    } else {
+      message += `\nยอดคงเหลือสามารถชำระได้ภายหลัง`;
+    }
+  } else {
+    // Full payment mode
+    message += `
+💰 ค่าลงทะเบียน: ${eventData.registrationFee.toLocaleString()} บาท`;
+
+    if (eventData.depositDeadline) {
+      message += `
+
+⏰ กำหนดชำระเงิน
+กรุณาชำระภายในวันที่: ${formatThaiDateTime(eventData.depositDeadline)}`;
+    }
+
+    message += `
+
+📤 อัพโหลดสลิปการโอนได้ที่:
+${eventDetailUrl}
+
+⚠️ สถานะการลงทะเบียน: รอชำระเงิน`;
+  }
+
+  message += `
+
+ดูรายละเอียดเพิ่มเติมได้ที่: ${eventDetailUrl}
+
+ขอบคุณที่เข้าร่วมกิจกรรมของ Agents Club
+Helping & Sharing`;
+
+  return sendPushMessage(lineUserId, [
+    {
+      type: 'text',
+      text: message,
+    },
+  ]);
+}

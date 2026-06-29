@@ -8,6 +8,7 @@ import Image from 'next/image';
 import * as XLSX from 'xlsx';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
+import RegisterOnBehalfModal from './RegisterOnBehalfModal';
 
 interface Event {
   eventId: string;
@@ -35,6 +36,8 @@ interface Event {
     isActive: boolean;
     sortOrder: number;
   }>;
+  // Registration edit control
+  requireAttendeeNames?: boolean;
 }
 
 interface Attendee {
@@ -111,6 +114,7 @@ export default function EventDetailPage() {
   const [copyLoading, setCopyLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedRegistrations, setExpandedRegistrations] = useState<Set<string>>(new Set());
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<{
     attendeeCount: number;
@@ -875,6 +879,17 @@ export default function EventDetailPage() {
                   </>
                 )}
               </button>
+              {session?.user?.permissions?.includes('events:register-on-behalf') && (
+                <button
+                  onClick={() => setShowRegisterModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  ลงทะเบียนแทนสมาชิก
+                </button>
+              )}
             </div>
           </div>
 
@@ -1834,6 +1849,19 @@ export default function EventDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Register On Behalf Modal */}
+      <RegisterOnBehalfModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        eventId={eventId as string}
+        eventName={eventData?.event?.eventName || ''}
+        useAttendeeTypePricing={eventData?.event?.useAttendeeTypePricing || false}
+        attendeeTypes={eventData?.event?.attendeeTypes}
+        roomTypes={eventData?.event?.roomTypes}
+        requireAttendeeNames={eventData?.event?.requireAttendeeNames ?? true}
+        onSuccess={fetchEventData}
+      />
     </div>
   );
 }

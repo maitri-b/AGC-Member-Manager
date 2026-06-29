@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
 import { getTrackedEvents, getEventAttendanceSummary, getEventRegistrations } from '@/lib/event-sheets';
 import { EventRegistration } from '@/types/event';
+import { sheetsCache, CacheKeys, CacheTTL } from '@/lib/cache/google-sheets-cache';
 
 // Helper function to check if registration is cancelled
 function isRegistrationCancelled(registration: EventRegistration): boolean {
@@ -27,7 +28,15 @@ export async function GET() {
                                hasPermission(session.user.permissions || [], 'admin:access');
     const canManageEvents = hasPermission(session.user.permissions || [], 'events:manage-assigned');
 
-    const events = await getTrackedEvents();
+    // Try to get events list from cache first
+    const cacheKey = CacheKeys.allEvents();
+    const cachedEvents = sheetsCache.get<Awaited<ReturnType<typeof getTrackedEvents>>>(cacheKey);
+    const events = cachedEvents || await getTrackedEvents();
+
+    // Cache events list for 5 minutes if not already cached
+    if (!cachedEvents) {
+      sheetsCache.set(cacheKey, events, CacheTTL.MEDIUM);
+    }
 
     // Filter to only published events for regular members
     // Event managers (event-co, event-staff) can see unpublished events
@@ -124,7 +133,15 @@ export async function GET() {
     // For committee/admin, include attendance summaries
     const eventsWithSummary = await Promise.all(
       publishedEvents.map(async (event) => {
-        const summary = await getEventAttendanceSummary(event.eventId);
+        // Try cache first for attendance summary
+        const summaryCacheKey = CacheKeys.eventAttendees(event.eventId);
+        const cachedSummary = sheetsCache.get<Awaited<ReturnType<typeof getEventAttendanceSummary>>>(summaryCacheKey);
+        const summary = cachedSummary || await getEventAttendanceSummary(event.eventId);
+
+        // Cache summary for 2 minutes (shorter TTL because registrations change more frequently)
+        if (!cachedSummary) {
+          sheetsCache.set(summaryCacheKey, summary, CacheTTL.SHORT);
+        }
 
         // Check if current user has registered (for admin/committee too)
         let userRegistered = false;

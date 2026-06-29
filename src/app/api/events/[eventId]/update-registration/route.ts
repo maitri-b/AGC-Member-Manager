@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrations, updateEventRegistration } from '@/lib/event-sheets';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
+import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
 
 // Helper function to check if registration is cancelled
 function isRegistrationCancelled(registration: EventRegistration): boolean {
@@ -262,6 +263,11 @@ export async function PUT(
 
       try {
         await updateEventRegistration(eventData.sheetName, userReg.registrationId, updateData);
+
+        // ✅ Invalidate caches for this event (so next request gets fresh data)
+        sheetsCache.invalidate(CacheKeys.eventAttendees(eventId));
+        sheetsCache.invalidate(`event:${eventId}:registrations`);
+        sheetsCache.invalidate(CacheKeys.allEvents());
 
         console.log('[Update Registration] Update successful');
 

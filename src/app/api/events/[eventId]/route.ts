@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { getEventAttendanceSummary, getEventById } from '@/lib/event-sheets';
 import { adminDb } from '@/lib/firebase-admin';
+import { sheetsCache, CacheKeys, CacheTTL } from '@/lib/cache/google-sheets-cache';
 
 export async function GET(
   request: NextRequest,
@@ -41,12 +42,29 @@ export async function GET(
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
     }
 
-    const event = await getEventById(eventId);
+    // Try to get event from cache first
+    const eventCacheKey = CacheKeys.eventById(eventId);
+    const cachedEvent = sheetsCache.get<Awaited<ReturnType<typeof getEventById>>>(eventCacheKey);
+    const event = cachedEvent || await getEventById(eventId);
+
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    const summary = await getEventAttendanceSummary(eventId);
+    // Cache event data for 5 minutes
+    if (!cachedEvent) {
+      sheetsCache.set(eventCacheKey, event, CacheTTL.MEDIUM);
+    }
+
+    // Try to get attendance summary from cache
+    const summaryCacheKey = CacheKeys.eventAttendees(eventId);
+    const cachedSummary = sheetsCache.get<Awaited<ReturnType<typeof getEventAttendanceSummary>>>(summaryCacheKey);
+    const summary = cachedSummary || await getEventAttendanceSummary(eventId);
+
+    // Cache summary for 2 minutes (shorter because registrations change more frequently)
+    if (!cachedSummary) {
+      sheetsCache.set(summaryCacheKey, summary, CacheTTL.SHORT);
+    }
 
     // Get LINE profiles from users collection
     const db = adminDb();

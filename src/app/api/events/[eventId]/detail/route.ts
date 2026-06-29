@@ -6,6 +6,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrations } from '@/lib/event-sheets';
 import { EventRegistration, Event } from '@/types/event';
 import { determinePaymentStatus } from '@/lib/payment-status';
+import { sheetsCache, CacheKeys, CacheTTL } from '@/lib/cache/google-sheets-cache';
 
 // Helper function to check if registration is cancelled
 function isRegistrationCancelled(registration: EventRegistration): boolean {
@@ -110,7 +111,15 @@ export async function GET(
 
     if (eventData?.sheetName) {
       try {
-        const registrations = await getEventRegistrations(eventData.sheetName);
+        // Try to get registrations from cache first
+        const regCacheKey = `event:${eventId}:registrations`;
+        const cachedRegistrations = sheetsCache.get<EventRegistration[]>(regCacheKey);
+        const registrations = cachedRegistrations || await getEventRegistrations(eventData.sheetName);
+
+        // Cache registrations for 2 minutes
+        if (!cachedRegistrations) {
+          sheetsCache.set(regCacheKey, registrations, CacheTTL.SHORT);
+        }
 
         // Filter out cancelled registrations for summary
         const activeRegistrations = registrations.filter(r => !isRegistrationCancelled(r));

@@ -8,6 +8,7 @@ import { getEventRegistrations, addEventRegistration } from '@/lib/event-sheets'
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
 import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline } from '@/lib/payment-deadlines';
+import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
 
 // Generate a unique 6-character registration ID
 function generateRegistrationId(): string {
@@ -284,6 +285,11 @@ export async function POST(
 
     // Add to Google Sheet
     await addEventRegistration(eventData.sheetName, registrationData);
+
+    // ✅ Invalidate caches for this event (so next request gets fresh data)
+    sheetsCache.invalidate(CacheKeys.eventAttendees(eventId));
+    sheetsCache.invalidate(`event:${eventId}:registrations`);
+    sheetsCache.invalidate(CacheKeys.allEvents()); // Also invalidate events list
 
     // Check if event is now full and auto-close registration
     if (eventData.maxCapacity > 0) {

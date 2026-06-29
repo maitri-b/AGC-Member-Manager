@@ -782,144 +782,131 @@ export default function EventDetailPage() {
                     </div>
                   )}
 
+                  {/* Attendee Names Section */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-gray-900">
+                        รายชื่อผู้เข้าร่วมกิจกรรม
+                      </h4>
+                      {(event.allowMemberEdit ?? true) && !isEditingNames && (
+                        <button
+                          onClick={() => {
+                            setIsEditingNames(true);
+                            setTempAttendeeNames([...attendeeNames]);
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="แก้ไขรายชื่อ"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      {Array.from({ length: attendeeCount }).map((_, index) => {
+                        const isDisabled = !(event.allowMemberEdit ?? true) || !isEditingNames;
+                        const isRequired = event.requireAttendeeNames === true;
+                        const displayValue = isEditingNames ? tempAttendeeNames[index] : attendeeNames[index];
+
+                        return (
+                          <div key={index}>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              ผู้เข้าร่วมกิจกรรมท่านที่ {index + 1} {!isRequired && '(ถ้ามี)'}
+                            </label>
+                            <input
+                              type="text"
+                              value={displayValue || ''}
+                              onChange={(e) => {
+                                if (isEditingNames) {
+                                  const newNames = [...tempAttendeeNames];
+                                  newNames[index] = e.target.value;
+                                  setTempAttendeeNames(newNames);
+                                }
+                              }}
+                              disabled={isDisabled}
+                              placeholder="ระบุชื่อผู้เข้าร่วม"
+                              required={isRequired}
+                              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                isDisabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                              }`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Edit Action Buttons */}
+                    {isEditingNames && (
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={async () => {
+                            // Validate if required
+                            if (event.requireAttendeeNames === true) {
+                              const filledNames = tempAttendeeNames.filter(name => name.trim());
+                              if (filledNames.length !== attendeeCount) {
+                                toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
+                                return;
+                              }
+                            }
+
+                            setUpdating(true);
+                            try {
+                              const response = await fetch(`/api/events/${eventId}/update-registration`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  attendeeCount,
+                                  attendeeNames: tempAttendeeNames,
+                                  specialRequests,
+                                  attendeeTypeSelections,
+                                  roomAllocations,
+                                  requestNameChange: false,
+                                }),
+                              });
+
+                              const data = await response.json();
+
+                              if (!response.ok) {
+                                throw new Error(data.error || 'ไม่สามารถบันทึกได้');
+                              }
+
+                              toast.success('บันทึกรายชื่อเรียบร้อยแล้ว');
+                              setAttendeeNames(tempAttendeeNames);
+                              setIsEditingNames(false);
+                              fetchEventDetail();
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+                            } finally {
+                              setUpdating(false);
+                            }
+                          }}
+                          disabled={updating}
+                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {updating ? 'กำลังบันทึก...' : 'บันทึก'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingNames(false);
+                            setTempAttendeeNames([]);
+                          }}
+                          disabled={updating}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                        >
+                          ยกเลิก
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Edit Form */}
                   {isEditing && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
                       <h3 className="font-semibold text-blue-900">
                         {(event.allowMemberEdit ?? true) ? 'แก้ไขข้อมูลการลงทะเบียน' : 'ข้อมูลการลงทะเบียน'}
                       </h3>
-
-                      {/* Attendee Count - Read-only display */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          จำนวนผู้เข้าร่วม
-                        </label>
-                        <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-medium">
-                          {attendeeCount} คน
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          * กรณีต้องการเปลี่ยนแปลงจำนวนผู้เข้าร่วม กรุณาติดต่อ Admin
-                        </p>
-                      </div>
-
-                      {/* Attendee Names */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            รายชื่อผู้สมัครร่วมกิจกรรม
-                          </label>
-                          {(event.allowMemberEdit ?? true) && !isEditingNames && (
-                            <button
-                              onClick={() => {
-                                setIsEditingNames(true);
-                                setTempAttendeeNames([...attendeeNames]);
-                              }}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="แก้ไขรายชื่อ"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          {Array.from({ length: attendeeCount }).map((_, index) => {
-                            const isDisabled = !(event.allowMemberEdit ?? true) || !isEditingNames;
-                            const isRequired = event.requireAttendeeNames === true;
-                            const displayValue = isEditingNames ? tempAttendeeNames[index] : attendeeNames[index];
-
-                            return (
-                              <div key={index}>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">
-                                  ผู้เข้าร่วมกิจกรรมท่านที่ {index + 1} {!isRequired && '(ถ้ามี)'}
-                                </label>
-                                <input
-                                  type="text"
-                                  value={displayValue || ''}
-                                  onChange={(e) => {
-                                    if (isEditingNames) {
-                                      const newNames = [...tempAttendeeNames];
-                                      newNames[index] = e.target.value;
-                                      setTempAttendeeNames(newNames);
-                                    }
-                                  }}
-                                  disabled={isDisabled}
-                                  placeholder="ระบุชื่อผู้เข้าร่วม"
-                                  required={isRequired}
-                                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                    isDisabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
-                                  }`}
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Edit Action Buttons */}
-                        {isEditingNames && (
-                          <div className="flex gap-2 mt-3">
-                            <button
-                              onClick={async () => {
-                                // Validate if required
-                                if (event.requireAttendeeNames === true) {
-                                  const filledNames = tempAttendeeNames.filter(name => name.trim());
-                                  if (filledNames.length !== attendeeCount) {
-                                    toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
-                                    return;
-                                  }
-                                }
-
-                                setUpdating(true);
-                                try {
-                                  const response = await fetch(`/api/events/${eventId}/update-registration`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      attendeeCount,
-                                      attendeeNames: tempAttendeeNames,
-                                      specialRequests,
-                                      attendeeTypeSelections,
-                                      roomAllocations,
-                                      requestNameChange: false,
-                                    }),
-                                  });
-
-                                  const data = await response.json();
-
-                                  if (!response.ok) {
-                                    throw new Error(data.error || 'ไม่สามารถบันทึกได้');
-                                  }
-
-                                  toast.success('บันทึกรายชื่อเรียบร้อยแล้ว');
-                                  setAttendeeNames(tempAttendeeNames);
-                                  setIsEditingNames(false);
-                                  fetchEventDetail();
-                                } catch (err) {
-                                  toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
-                                } finally {
-                                  setUpdating(false);
-                                }
-                              }}
-                              disabled={updating}
-                              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                            >
-                              {updating ? 'กำลังบันทึก...' : 'บันทึก'}
-                            </button>
-                            <button
-                              onClick={() => {
-                                setIsEditingNames(false);
-                                setTempAttendeeNames([]);
-                              }}
-                              disabled={updating}
-                              className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
-                            >
-                              ยกเลิก
-                            </button>
-                          </div>
-                        )}
-                      </div>
 
                       {/* Attendee Type Selection - Read-only display */}
                       {event.useAttendeeTypePricing && event.attendeeTypes && event.attendeeTypes.length > 0 && (
@@ -1043,40 +1030,6 @@ export default function EventDetailPage() {
                           <p className="text-xs text-gray-500 mt-1">
                             * กรณีต้องการเปลี่ยนแปลงความต้องการพิเศษ กรุณาติดต่อ Admin
                           </p>
-                        </div>
-                      )}
-
-                      {/* Special Charges Display */}
-                      {userRegistration.specialCharges && userRegistration.specialCharges.length > 0 && (
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                          <h4 className="text-sm font-semibold text-purple-900 mb-3">ค่าใช้จ่ายพิเศษ</h4>
-                          <div className="space-y-2">
-                            {userRegistration.specialCharges.map((charge, index) => (
-                              <div key={charge.chargeId || index} className="flex justify-between items-start bg-white rounded p-2 border border-purple-100">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-gray-800">{charge.description}</p>
-                                  <p className="text-xs text-gray-500 mt-0.5">
-                                    เพิ่มเมื่อ: {new Date(charge.addedAt).toLocaleDateString('th-TH', {
-                                      year: 'numeric',
-                                      month: 'short',
-                                      day: 'numeric'
-                                    })}
-                                  </p>
-                                </div>
-                                <span className="text-sm font-bold text-purple-700 ml-2">
-                                  +{charge.amount.toLocaleString()} บาท
-                                </span>
-                              </div>
-                            ))}
-                            <div className="pt-2 border-t border-purple-200">
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-700">รวมค่าใช้จ่ายพิเศษ:</span>
-                                <span className="text-sm font-bold text-purple-700">
-                                  +{userRegistration.specialCharges.reduce((sum, c) => sum + c.amount, 0).toLocaleString()} บาท
-                                </span>
-                              </div>
-                            </div>
-                          </div>
                         </div>
                       )}
 

@@ -52,15 +52,26 @@ export async function GET(
     const db = adminDb();
     const usersSnapshot = await db.collection('users').get();
 
-    // Build a map of memberId -> LINE profile
-    const lineProfilesMap = new Map<string, { lineDisplayName: string; lineProfilePicture: string }>();
+    // Build maps for LINE profiles by memberId and by lineUserId
+    const lineProfilesByMemberId = new Map<string, { lineDisplayName: string; lineProfilePicture: string; role: string }>();
+    const lineProfilesByLineUserId = new Map<string, { lineDisplayName: string; lineProfilePicture: string; role: string }>();
+
     usersSnapshot.docs.forEach(doc => {
       const data = doc.data();
+      const profileData = {
+        lineDisplayName: data.lineDisplayName || data.name || '',
+        lineProfilePicture: data.lineProfilePicture || data.image || '',
+        role: data.role || 'guest',
+      };
+
+      // Map by memberId if available
       if (data.memberId) {
-        lineProfilesMap.set(data.memberId, {
-          lineDisplayName: data.lineDisplayName || data.name || '',
-          lineProfilePicture: data.lineProfilePicture || data.image || '',
-        });
+        lineProfilesByMemberId.set(data.memberId, profileData);
+      }
+
+      // Also map by LINE user ID for non-members
+      if (data.lineUserId || doc.id) {
+        lineProfilesByLineUserId.set(data.lineUserId || doc.id, profileData);
       }
     });
 
@@ -69,9 +80,15 @@ export async function GET(
     let clubMemberCount = 0;
 
     const attendeesWithProfile = summary.attendees.map(attendee => {
-      const lineProfile = attendee.member?.memberId
-        ? lineProfilesMap.get(attendee.member.memberId)
+      // Try to get LINE profile by memberId first, then by lineUserId
+      let lineProfile = attendee.member?.memberId
+        ? lineProfilesByMemberId.get(attendee.member.memberId)
         : null;
+
+      // If no profile found via memberId, try lineUserId
+      if (!lineProfile && attendee.registration.lineUserId) {
+        lineProfile = lineProfilesByLineUserId.get(attendee.registration.lineUserId);
+      }
 
       // Count club members (has member record = is in AGC_Membership)
       if (attendee.member?.memberId) {
@@ -100,6 +117,7 @@ export async function GET(
           companyName: String(attendee.registration.companyName || ''),
           contactName: String(attendee.registration.contactName || ''),
           licenseNumber: String(attendee.registration.licenseNumber || ''),
+          lineUserId: String(attendee.registration.lineUserId || ''),
           attendeeCount: Number(attendee.registration.attendeeCount) || 0,
           attendeeNames: String(attendee.registration.attendeeNames || ''),
           status: status,
@@ -128,7 +146,11 @@ export async function GET(
           specialRequests: String(attendee.registration.specialRequests || ''),
         },
         member: attendee.member,
-        lineProfile: lineProfile || null,
+        lineProfile: lineProfile ? {
+          lineDisplayName: lineProfile.lineDisplayName,
+          lineProfilePicture: lineProfile.lineProfilePicture,
+          role: lineProfile.role,
+        } : null,
         isConfirmed,
       };
     });

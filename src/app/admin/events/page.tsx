@@ -1057,11 +1057,21 @@ export default function AdminEventsPage() {
                             type="radio"
                             value="attendee"
                             checked={formData.useAttendeeTypePricing === true}
-                            onChange={() => setFormData({
-                              ...formData,
-                              useAttendeeTypePricing: true,
-                              pricingType: 'fixed' // Set to fixed as fallback
-                            })}
+                            onChange={() => {
+                              // Add default attendee types if none exist
+                              const defaultTypes: AttendeeType[] = formData.attendeeTypes && formData.attendeeTypes.length > 0
+                                ? formData.attendeeTypes
+                                : [
+                                    { typeId: 'adult', typeName: 'ผู้ใหญ่', price: 0, isActive: true, sortOrder: 0 }
+                                  ];
+
+                              setFormData({
+                                ...formData,
+                                useAttendeeTypePricing: true,
+                                pricingType: 'fixed', // Set to fixed as fallback
+                                attendeeTypes: defaultTypes
+                              });
+                            }}
                             className="w-4 h-4 text-blue-600"
                           />
                           <div>
@@ -1162,84 +1172,76 @@ export default function AdminEventsPage() {
                         กำหนดประเภทผู้เข้าร่วมและราคาสำหรับแต่ละประเภท:
                       </p>
 
-                      {/* Default attendee types */}
+                      {/* Dynamic attendee types list */}
                       <div className="space-y-3">
-                        {[
-                          { id: 'adult', name: 'ผู้ใหญ่', defaultPrice: 0 },
-                          { id: 'child_with_bed', name: 'เด็กพักเพิ่มเตียง', defaultPrice: 0 },
-                          { id: 'child_no_bed', name: 'เด็กไม่เพิ่มเตียง', defaultPrice: 0 },
-                          { id: 'infant', name: 'ทารก', defaultPrice: 0 }
-                        ].map((type, index) => {
-                          const existingType = formData.attendeeTypes?.find(at => at.typeId === type.id);
-                          const isActive = !!existingType;
-                          const price = existingType?.price ?? type.defaultPrice;
+                        {formData.attendeeTypes?.map((type, index) => (
+                          <div key={type.typeId} className="flex items-center gap-3 bg-white p-3 rounded border">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newTypes = formData.attendeeTypes.filter(at => at.typeId !== type.typeId);
+                                setFormData({ ...formData, attendeeTypes: newTypes });
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                              title="ลบประเภทนี้"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
 
-                          return (
-                            <div key={type.id} className="flex items-center gap-3 bg-white p-3 rounded border">
+                            <input
+                              type="text"
+                              value={type.typeName}
+                              placeholder="ชื่อประเภท"
+                              onChange={(e) => {
+                                const newTypes = [...formData.attendeeTypes];
+                                newTypes[index].typeName = e.target.value;
+                                setFormData({ ...formData, attendeeTypes: newTypes });
+                              }}
+                              className="flex-1 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
+                            />
+
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600">ราคา:</span>
                               <input
-                                type="checkbox"
-                                checked={isActive}
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={type.price || ''}
                                 onChange={(e) => {
-                                  const newTypes = [...(formData.attendeeTypes || [])];
-                                  if (e.target.checked) {
-                                    newTypes.push({
-                                      typeId: type.id,
-                                      typeName: type.name,
-                                      price: type.defaultPrice,
-                                      isActive: true,
-                                      sortOrder: index
-                                    });
-                                  } else {
-                                    const idx = newTypes.findIndex(at => at.typeId === type.id);
-                                    if (idx > -1) newTypes.splice(idx, 1);
-                                  }
+                                  const newTypes = [...formData.attendeeTypes];
+                                  newTypes[index].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
                                   setFormData({ ...formData, attendeeTypes: newTypes });
                                 }}
-                                className="w-4 h-4"
+                                className="w-24 px-3 py-1 border border-gray-300 rounded-md text-right"
                               />
-                              {isActive ? (
-                                <input
-                                  type="text"
-                                  value={existingType?.typeName || ''}
-                                  placeholder={type.name}
-                                  onChange={(e) => {
-                                    const newTypes = [...(formData.attendeeTypes || [])];
-                                    const idx = newTypes.findIndex(at => at.typeId === type.id);
-                                    if (idx > -1) {
-                                      newTypes[idx].typeName = e.target.value || type.name;
-                                      setFormData({ ...formData, attendeeTypes: newTypes });
-                                    }
-                                  }}
-                                  className="w-40 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
-                                />
-                              ) : (
-                                <span className="text-sm font-medium text-gray-400 w-40">{type.name}</span>
-                              )}
-                              {isActive && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-600">ราคา:</span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={price || ''}
-                                    onChange={(e) => {
-                                      const newTypes = [...(formData.attendeeTypes || [])];
-                                      const idx = newTypes.findIndex(at => at.typeId === type.id);
-                                      if (idx > -1) {
-                                        newTypes[idx].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                        setFormData({ ...formData, attendeeTypes: newTypes });
-                                      }
-                                    }}
-                                    className="w-24 px-3 py-1 border border-gray-300 rounded-md text-right"
-                                  />
-                                  <span className="text-sm text-gray-600">บาท</span>
-                                </div>
-                              )}
+                              <span className="text-sm text-gray-600">บาท</span>
                             </div>
-                          );
-                        })}
+                          </div>
+                        ))}
                       </div>
+
+                      {/* Add new attendee type button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newType: AttendeeType = {
+                            typeId: `type_${Date.now()}`,
+                            typeName: '',
+                            price: 0,
+                            isActive: true,
+                            sortOrder: formData.attendeeTypes?.length || 0
+                          };
+                          setFormData({
+                            ...formData,
+                            attendeeTypes: [...(formData.attendeeTypes || []), newType]
+                          });
+                        }}
+                        className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                      >
+                        + เพิ่มประเภทผู้เข้าร่วม
+                      </button>
 
                       <p className="text-xs text-gray-500 mt-2">
                         เมื่อใช้ระบบนี้ ราคาจะคำนวณจากจำนวนผู้เข้าร่วมแต่ละประเภท × ราคาของประเภทนั้น
@@ -1261,89 +1263,94 @@ export default function AdminEventsPage() {
                     หากกิจกรรมมีที่พัก สามารถตั้งค่าประเภทห้องพักได้ (ใช้ได้กับทุกวิธีคิดราคา)
                   </p>
 
+                  {/* Dynamic room types list */}
                   <div className="space-y-3">
-                    {[
-                      { id: 'single', name: 'พักเดี่ยว', capacity: 1, defaultPrice: 0 },
-                      { id: 'double', name: 'พักคู่ Double', capacity: 2, defaultPrice: 0 },
-                      { id: 'twin', name: 'พักคู่ Twin', capacity: 2, defaultPrice: 0 },
-                      { id: 'triple', name: 'พัก 3 ท่าน', capacity: 3, defaultPrice: 0 }
-                    ].map((room, index) => {
-                      const existingRoom = formData.roomTypes?.find(rt => rt.typeId === room.id);
-                      const isActive = !!existingRoom;
-                      const price = existingRoom?.price ?? room.defaultPrice;
-                      const typeName = existingRoom?.typeName || room.name;
+                    {formData.roomTypes?.map((room, index) => (
+                      <div key={room.typeId} className="flex items-center gap-3 bg-white p-3 rounded border">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newRooms = formData.roomTypes.filter(rt => rt.typeId !== room.typeId);
+                            setFormData({ ...formData, roomTypes: newRooms });
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                          title="ลบประเภทห้องนี้"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
 
-                      return (
-                        <div key={room.id} className="flex items-center gap-3 bg-white p-3 rounded border">
+                        <input
+                          type="text"
+                          value={room.typeName}
+                          placeholder="ชื่อประเภทห้อง"
+                          onChange={(e) => {
+                            const newRooms = [...formData.roomTypes];
+                            newRooms[index].typeName = e.target.value;
+                            setFormData({ ...formData, roomTypes: newRooms });
+                          }}
+                          className="w-40 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
+                        />
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">รองรับ:</span>
                           <input
-                            type="checkbox"
-                            checked={isActive}
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={room.capacity || ''}
                             onChange={(e) => {
-                              const newRooms = [...(formData.roomTypes || [])];
-                              if (e.target.checked) {
-                                newRooms.push({
-                                  typeId: room.id,
-                                  typeName: room.name,
-                                  capacity: room.capacity,
-                                  price: room.defaultPrice,
-                                  isActive: true,
-                                  sortOrder: index
-                                });
-                              } else {
-                                const idx = newRooms.findIndex(rt => rt.typeId === room.id);
-                                if (idx > -1) newRooms.splice(idx, 1);
-                              }
+                              const newRooms = [...formData.roomTypes];
+                              newRooms[index].capacity = e.target.value === '' ? 1 : parseInt(e.target.value);
                               setFormData({ ...formData, roomTypes: newRooms });
                             }}
-                            className="w-4 h-4"
+                            className="w-16 px-3 py-1 border border-gray-300 rounded-md text-center"
                           />
-
-                          {isActive ? (
-                            <input
-                              type="text"
-                              value={typeName || ''}
-                              placeholder={room.name}
-                              onChange={(e) => {
-                                const newRooms = [...(formData.roomTypes || [])];
-                                const idx = newRooms.findIndex(rt => rt.typeId === room.id);
-                                if (idx > -1) {
-                                  newRooms[idx].typeName = e.target.value || room.name;
-                                  setFormData({ ...formData, roomTypes: newRooms });
-                                }
-                              }}
-                              className="w-32 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
-                            />
-                          ) : (
-                            <span className="text-sm font-medium text-gray-400 w-32">{room.name}</span>
-                          )}
-
-                          <span className="text-xs text-gray-500">({room.capacity} คน)</span>
-
-                          {isActive && (
-                            <div className="flex items-center gap-2 ml-auto">
-                              <span className="text-sm text-gray-600">ราคาเพิ่ม:</span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="1"
-                                value={price || ''}
-                                onChange={(e) => {
-                                  const newRooms = [...(formData.roomTypes || [])];
-                                  const idx = newRooms.findIndex(rt => rt.typeId === room.id);
-                                  if (idx > -1) {
-                                    newRooms[idx].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                    setFormData({ ...formData, roomTypes: newRooms });
-                                  }
-                                }}
-                                className="w-24 px-3 py-1 border border-gray-300 rounded-md text-right"
-                              />
-                              <span className="text-sm text-gray-600">บาท</span>
-                            </div>
-                          )}
+                          <span className="text-sm text-gray-600">คน</span>
                         </div>
-                      );
-                    })}
+
+                        <div className="flex items-center gap-2 ml-auto">
+                          <span className="text-sm text-gray-600">ราคาเพิ่ม:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={room.price || ''}
+                            onChange={(e) => {
+                              const newRooms = [...formData.roomTypes];
+                              newRooms[index].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                              setFormData({ ...formData, roomTypes: newRooms });
+                            }}
+                            className="w-24 px-3 py-1 border border-gray-300 rounded-md text-right"
+                          />
+                          <span className="text-sm text-gray-600">บาท</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+
+                  {/* Add new room type button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newRoom: RoomType = {
+                        typeId: `room_${Date.now()}`,
+                        typeName: '',
+                        capacity: 2,
+                        price: 0,
+                        isActive: true,
+                        sortOrder: formData.roomTypes?.length || 0
+                      };
+                      setFormData({
+                        ...formData,
+                        roomTypes: [...(formData.roomTypes || []), newRoom]
+                      });
+                    }}
+                    className="w-full py-2 px-4 border-2 border-dashed border-amber-300 rounded-lg text-sm text-amber-700 hover:border-amber-500 hover:text-amber-800 transition-colors mt-3"
+                  >
+                    + เพิ่มประเภทห้องพัก
+                  </button>
 
                   <p className="text-xs text-amber-600 mt-2">
                     ค่าใช้จ่ายห้องพักจะถูกบวกเพิ่มจากค่าลงทะเบียน

@@ -112,6 +112,9 @@ export default function EventDetailPage() {
   const [specialRequests, setSpecialRequests] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
+  // Attendee names edit state (New)
+  const [isEditingNames, setIsEditingNames] = useState(false);
+  const [tempAttendeeNames, setTempAttendeeNames] = useState<string[]>([]);
   // Member contact info state (New)
   const [memberName, setMemberName] = useState('');
   const [memberPhone, setMemberPhone] = useState('');
@@ -548,193 +551,236 @@ export default function EventDetailPage() {
                 <div className="space-y-4">
                   {/* Registration Info Card */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <svg className="w-6 h-6 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div className="flex-1">
-                          <p className="font-semibold text-green-800 mb-2">คุณลงทะเบียนแล้ว</p>
+                    <div className="flex items-start gap-3 mb-3">
+                      <svg className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="font-semibold text-green-800">คุณลงทะเบียนแล้ว</p>
+                      </div>
+                    </div>
 
-                          {/* Prominent Registration ID */}
-                          <div className="bg-white border-2 border-green-400 rounded-lg p-3 mb-3">
-                            <p className="text-xs text-gray-600 mb-1">รหัสลงทะเบียน</p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-xl font-bold text-green-900 tracking-wider">
-                                {userRegistration.registrationId}
-                              </p>
-                              <button
-                                onClick={() => copyToClipboard(userRegistration.registrationId, 'รหัสลงทะเบียน')}
-                                className="p-2 text-green-700 hover:text-green-800 hover:bg-green-100 rounded-lg transition-colors"
-                                title="คัดลอกรหัสลงทะเบียน"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                              </button>
+                    {/* All details in single column without icon */}
+                    <div className="space-y-3">
+                      {/* Prominent Registration ID */}
+                      <div className="bg-white border-2 border-green-400 rounded-lg p-3">
+                        <p className="text-xs text-gray-600 mb-1">รหัสลงทะเบียน</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xl font-bold text-green-900 tracking-wider">
+                            {userRegistration.registrationId}
+                          </p>
+                          <button
+                            onClick={() => copyToClipboard(userRegistration.registrationId, 'รหัสลงทะเบียน')}
+                            className="p-2 text-green-700 hover:text-green-800 hover:bg-green-100 rounded-lg transition-colors"
+                            title="คัดลอกรหัสลงทะเบียน"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-sm text-green-700 space-y-1">
+                        {userRegistration.status && (
+                          <p>สถานะ: <span className="font-medium">{userRegistration.status}</span></p>
+                        )}
+                        <p>จำนวนผู้เข้าร่วม: <span className="font-medium">{userRegistration.attendeeCount} คน</span></p>
+                      </div>
+
+                      {/* Fee Breakdown */}
+                      <div className="mt-3 pt-3 border-t border-green-200">
+                        <p className="text-xs font-semibold text-green-800 mb-2">รายละเอียดค่าใช้จ่าย:</p>
+                        <div className="text-xs text-green-700 space-y-1">
+                          {event.useAttendeeTypePricing ? (
+                            // Attendee Type Pricing Breakdown
+                            <>
+                              {userRegistration.attendeeTypeSelections && userRegistration.attendeeTypeSelections.map((selection: AttendeeTypeSelection) => {
+                                const type = event.attendeeTypes?.find((t: AttendeeType) => t.typeId === selection.typeId);
+                                if (!type) return null;
+                                const subtotal = type.price * selection.quantity;
+                                return (
+                                  <div key={selection.typeId} className="flex justify-between">
+                                    <span>{type.typeName} {type.price.toLocaleString()} บาท × {selection.quantity} คน</span>
+                                    <span>{subtotal.toLocaleString()} บาท</span>
+                                  </div>
+                                );
+                              })}
+                            </>
+                          ) : event.pricingType === 'tiered' ? (
+                            // Tiered Pricing Breakdown
+                            <>
+                              <div className="flex justify-between">
+                                <span>ท่านแรก {event.baseFee?.toLocaleString()} บาท × 1 ท่าน</span>
+                                <span>{event.baseFee?.toLocaleString()} บาท</span>
+                              </div>
+                              {userRegistration.attendeeCount > 1 && (
+                                <div className="flex justify-between">
+                                  <span>ท่านที่เหลือ {event.additionalFeePerPerson?.toLocaleString()} บาท × {userRegistration.attendeeCount - 1} ท่าน</span>
+                                  <span>{((event.additionalFeePerPerson || 0) * (userRegistration.attendeeCount - 1)).toLocaleString()} บาท</span>
+                                </div>
+                              )}
+                              {event.memberDiscount && event.memberDiscount > 0 && (
+                                <div className="flex justify-between text-green-700">
+                                  <span>ส่วนลดสมาชิก</span>
+                                  <span>-{event.memberDiscount.toLocaleString()} บาท</span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            // Fixed Pricing Breakdown
+                            <div className="flex justify-between">
+                              <span>ท่านละ {event.registrationFee?.toLocaleString()} บาท × {userRegistration.attendeeCount} ท่าน</span>
+                              <span>{((event.registrationFee || 0) * userRegistration.attendeeCount).toLocaleString()} บาท</span>
                             </div>
-                          </div>
+                          )}
 
-                          <div className="text-sm text-green-700 space-y-1">
-                            {userRegistration.status && (
-                              <p>สถานะ: <span className="font-medium">{userRegistration.status}</span></p>
-                            )}
-                            <p>จำนวนผู้เข้าร่วม: <span className="font-medium">{userRegistration.attendeeCount} คน</span></p>
-                          </div>
+                          {/* Event Fee Subtotal */}
+                          {(() => {
+                            // Calculate event fee (total - special charges - room fees)
+                            let eventFee = userRegistration.totalAmount || 0;
+                            if (userRegistration.specialCharges && userRegistration.specialCharges.length > 0) {
+                              eventFee -= userRegistration.specialCharges.reduce((sum, c) => sum + c.amount, 0);
+                            }
+                            if (userRegistration.roomAllocations && event.roomTypes) {
+                              const roomFee = userRegistration.roomAllocations.reduce((sum: number, alloc: RoomAllocation) => {
+                                const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+                                return sum + (roomType?.price || 0) * alloc.roomCount;
+                              }, 0);
+                              eventFee -= roomFee;
+                            }
+                            return (
+                              <div className="flex justify-between font-medium pt-1 border-t border-green-300">
+                                <span>รวมค่าลงทะเบียน:</span>
+                                <span>{eventFee.toLocaleString()} บาท</span>
+                              </div>
+                            );
+                          })()}
 
-                          {/* Show fee breakdown for attendee type pricing events */}
-                          {event.useAttendeeTypePricing && userRegistration.attendeeTypeSelections && userRegistration.attendeeTypeSelections.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-green-200">
-                              <p className="text-xs font-semibold text-green-800 mb-2">รายละเอียดค่าใช้จ่าย:</p>
-
-                              {/* Attendee types breakdown */}
-                              <div className="text-xs text-green-700 space-y-1">
-                                {userRegistration.attendeeTypeSelections.map((selection: AttendeeTypeSelection) => {
-                                  const type = event.attendeeTypes?.find((t: AttendeeType) => t.typeId === selection.typeId);
-                                  if (!type) return null;
-                                  const subtotal = type.price * selection.quantity;
+                          {/* Room allocations breakdown */}
+                          {userRegistration.roomAllocations && userRegistration.roomAllocations.length > 0 && event.roomTypes && (
+                            <>
+                              <div className="mt-2 pt-2 border-t border-green-300">
+                                {userRegistration.roomAllocations.map((alloc: RoomAllocation) => {
+                                  const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+                                  if (!roomType) return null;
+                                  const subtotal = roomType.price * alloc.roomCount;
                                   return (
-                                    <div key={selection.typeId} className="flex justify-between">
-                                      <span>{type.typeName} × {selection.quantity} คน</span>
+                                    <div key={alloc.roomTypeId} className="flex justify-between">
+                                      <span>{roomType.typeName} {roomType.price.toLocaleString()} บาท × {alloc.roomCount} ห้อง</span>
                                       <span>{subtotal.toLocaleString()} บาท</span>
                                     </div>
                                   );
                                 })}
+                              </div>
 
-                                {/* Subtotal for attendee types */}
-                                {(() => {
-                                  const attendeeTypesTotal = userRegistration.attendeeTypeSelections.reduce((sum: number, s: AttendeeTypeSelection) => {
-                                    const type = event.attendeeTypes?.find((t: AttendeeType) => t.typeId === s.typeId);
-                                    return sum + (type?.price || 0) * s.quantity;
-                                  }, 0);
-                                  return (
-                                    <div className="flex justify-between font-medium pt-1 border-t border-green-300">
-                                      <span>รวมค่าลงทะเบียน:</span>
-                                      <span>{attendeeTypesTotal.toLocaleString()} บาท</span>
-                                    </div>
-                                  );
-                                })()}
-
-                                {/* Room allocations breakdown */}
-                                {userRegistration.roomAllocations && userRegistration.roomAllocations.length > 0 && event.roomTypes && (
-                                  <>
-                                    <div className="mt-2 pt-2 border-t border-green-300">
-                                      {userRegistration.roomAllocations.map((alloc: RoomAllocation) => {
-                                        const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
-                                        if (!roomType) return null;
-                                        const subtotal = roomType.price * alloc.roomCount;
-                                        return (
-                                          <div key={alloc.roomTypeId} className="flex justify-between">
-                                            <span>{roomType.typeName} × {alloc.roomCount} ห้อง</span>
-                                            <span>{subtotal.toLocaleString()} บาท</span>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-
-                                    {/* Subtotal for rooms */}
-                                    {(() => {
-                                      const roomTotal = userRegistration.roomAllocations.reduce((sum: number, alloc: RoomAllocation) => {
-                                        const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
-                                        return sum + (roomType?.price || 0) * alloc.roomCount;
-                                      }, 0);
-                                      return (
-                                        <div className="flex justify-between font-medium pt-1 border-t border-green-300">
-                                          <span>รวมค่าห้องพัก:</span>
-                                          <span>{roomTotal.toLocaleString()} บาท</span>
-                                        </div>
-                                      );
-                                    })()}
-                                  </>
-                                )}
-
-                                {/* Special charges breakdown */}
-                                {userRegistration.specialCharges && userRegistration.specialCharges.length > 0 && (
-                                  <div className="mt-2 pt-2 border-t border-green-300">
-                                    <p className="text-xs font-semibold text-purple-700 mb-1">ค่าใช้จ่ายพิเศษ:</p>
-                                    {userRegistration.specialCharges.map((charge) => (
-                                      <div key={charge.chargeId} className="flex justify-between text-purple-700">
-                                        <span>{charge.description}</span>
-                                        <span>+{charge.amount.toLocaleString()} บาท</span>
-                                      </div>
-                                    ))}
-                                    <div className="flex justify-between font-medium pt-1 border-t border-purple-300 text-purple-800">
-                                      <span>รวมค่าใช้จ่ายพิเศษ:</span>
-                                      <span>+{userRegistration.specialCharges.reduce((sum, c) => sum + c.amount, 0).toLocaleString()} บาท</span>
-                                    </div>
+                              {/* Subtotal for rooms */}
+                              {(() => {
+                                const roomTotal = userRegistration.roomAllocations.reduce((sum: number, alloc: RoomAllocation) => {
+                                  const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+                                  return sum + (roomType?.price || 0) * alloc.roomCount;
+                                }, 0);
+                                return (
+                                  <div className="flex justify-between font-medium pt-1 border-t border-green-300">
+                                    <span>รวมค่าห้องพัก:</span>
+                                    <span>{roomTotal.toLocaleString()} บาท</span>
                                   </div>
-                                )}
+                                );
+                              })()}
+                            </>
+                          )}
 
-                                {/* Grand total */}
-                                {userRegistration.totalAmount && (
-                                  <div className="flex justify-between font-bold text-sm pt-2 border-t-2 border-green-400 text-green-900">
-                                    <span>ยอดรวมทั้งหมด:</span>
-                                    <span>{userRegistration.totalAmount.toLocaleString()} บาท</span>
-                                  </div>
-                                )}
+                          {/* Special charges breakdown */}
+                          {userRegistration.specialCharges && userRegistration.specialCharges.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-green-300">
+                              <p className="text-xs font-semibold text-purple-700 mb-1">ค่าใช้จ่ายพิเศษ:</p>
+                              {userRegistration.specialCharges.map((charge) => (
+                                <div key={charge.chargeId} className="flex justify-between text-purple-700">
+                                  <span>{charge.description}</span>
+                                  <span>+{charge.amount.toLocaleString()} บาท</span>
+                                </div>
+                              ))}
+                              <div className="flex justify-between font-medium pt-1 border-t border-purple-300 text-purple-800">
+                                <span>รวมค่าใช้จ่ายพิเศษ:</span>
+                                <span>+{userRegistration.specialCharges.reduce((sum, c) => sum + c.amount, 0).toLocaleString()} บาท</span>
                               </div>
                             </div>
                           )}
 
-                          {event?.maxPerCompany && event.maxPerCompany > 0 && (
-                            <p className="text-xs text-green-600 mt-1">
-                              * จำกัด {event.maxPerCompany} คนต่อ 1 บริษัท
-                            </p>
-                          )}
-
-                          {/* Admin Contact Message */}
-                          {!isEditing && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                              <p className="text-sm text-gray-700 mb-2">
-                                หากต้องการเปลี่ยนแปลงการลงทะเบียนโปรดติดต่อ Admin ที่{' '}
-                                <a href="https://lin.ee/nzAjXXq" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
-                                  https://lin.ee/nzAjXXq
-                                </a>
-                              </p>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm text-gray-700">
-                                  โดยแจ้งรหัสลงทะเบียน 6 หลัก รหัสของคุณคือ
-                                </span>
-                                <span className="font-mono font-bold text-lg text-blue-600">
-                                  {userRegistration.registrationId}
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(userRegistration.registrationId);
-                                    toast.success('คัดลอกรหัสลงทะเบียนแล้ว');
-                                  }}
-                                  className="p-1 hover:bg-yellow-100 rounded transition-colors"
-                                  title="คัดลอกรหัส"
-                                >
-                                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                  </svg>
-                                </button>
-                              </div>
+                          {/* Grand total */}
+                          {userRegistration.totalAmount && (
+                            <div className="flex justify-between font-bold text-sm pt-2 border-t-2 border-green-400 text-green-900">
+                              <span>ยอดรวมทั้งหมด:</span>
+                              <span>{userRegistration.totalAmount.toLocaleString()} บาท</span>
                             </div>
                           )}
                         </div>
                       </div>
-                      {!isEditing && (
-                        <button
-                          onClick={() => {
-                            setIsEditing(true);
-                            setAttendeeCount(userRegistration.attendeeCount);
-                            // Parse attendee names from userRegistration
-                            try {
-                              const names = JSON.parse(userRegistration.attendeeNames || '[]');
-                              setAttendeeNames(Array.isArray(names) ? names : [userRegistration.attendeeNames || '']);
-                            } catch {
-                              setAttendeeNames([userRegistration.attendeeNames || '']);
-                            }
-                          }}
-                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          {(event.allowMemberEdit ?? true) ? 'แก้ไขข้อมูล' : 'ดูข้อมูล'}
-                        </button>
+
+                      {event?.maxPerCompany && event.maxPerCompany > 0 && (
+                        <p className="text-xs text-green-600 mt-2">
+                          * จำกัด {event.maxPerCompany} คนต่อ 1 บริษัท
+                        </p>
                       )}
+
+                      {/* Admin Contact Message */}
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <p className="text-sm text-gray-700 mb-2">
+                          หากต้องการเปลี่ยนแปลงการลงทะเบียนโปรดติดต่อ Admin ที่{' '}
+                          <a href="https://lin.ee/nzAjXXq" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                            https://lin.ee/nzAjXXq
+                          </a>
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm text-gray-700">
+                            โดยแจ้งรหัสลงทะเบียน 6 หลัก รหัสของคุณคือ
+                          </span>
+                          <span className="font-mono font-bold text-lg text-blue-600">
+                            {userRegistration.registrationId}
+                          </span>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(userRegistration.registrationId);
+                              toast.success('คัดลอกรหัสลงทะเบียนแล้ว');
+                            }}
+                            className="p-1 hover:bg-yellow-100 rounded transition-colors"
+                            title="คัดลอกรหัส"
+                          >
+                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Contact Information Card */}
+                  {memberName && memberPhone && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-blue-900">
+                          ข้อมูลผู้ติดต่อ
+                        </h4>
+                        <Link
+                          href="/profile"
+                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                        >
+                          แก้ไขข้อมูลติดต่อ
+                        </Link>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium w-20">ชื่อ:</span>
+                          <span className="text-gray-900">{memberName}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium w-20">เบอร์โทร:</span>
+                          <span className="text-gray-900">{memberPhone}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Edit Form */}
                   {isEditing && (
@@ -743,55 +789,46 @@ export default function EventDetailPage() {
                         {(event.allowMemberEdit ?? true) ? 'แก้ไขข้อมูลการลงทะเบียน' : 'ข้อมูลการลงทะเบียน'}
                       </h3>
 
-                      {/* Capacity Info */}
-                      {event?.maxCapacity && event.maxCapacity > 0 && summary && (
-                        <div className="bg-white border border-blue-300 rounded-lg p-3">
-                          <p className="text-sm text-gray-600">
-                            ที่นั่งเหลือ: <span className="font-semibold text-blue-600">
-                              {event.maxCapacity - summary.totalAttendees} ที่
-                            </span>
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            (คุณลงทะเบียนไว้ {userRegistration.attendeeCount} คน รวมอยู่ในจำนวนที่จองแล้ว)
-                          </p>
-                        </div>
-                      )}
-
                       {/* Attendee Count - Read-only display */}
-                      {!event.useAttendeeTypePricing ? (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            จำนวนผู้เข้าร่วม
-                          </label>
-                          <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-medium">
-                            {attendeeCount} คน
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            * กรณีต้องการเปลี่ยนแปลงจำนวนผู้เข้าร่วม กรุณาติดต่อ Admin
-                          </p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          จำนวนผู้เข้าร่วม
+                        </label>
+                        <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 font-medium">
+                          {attendeeCount} คน
                         </div>
-                      ) : (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            จำนวนผู้เข้าร่วมทั้งหมด
-                          </label>
-                          <div className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg text-blue-700 font-semibold text-lg">
-                            {attendeeCount} คน
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">คำนวณจากประเภทผู้เข้าร่วมด้านล่าง *</p>
-                        </div>
-                      )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          * กรณีต้องการเปลี่ยนแปลงจำนวนผู้เข้าร่วม กรุณาติดต่อ Admin
+                        </p>
+                      </div>
 
                       {/* Attendee Names */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          รายชื่อผู้สมัครร่วมกิจกรรม
-                        </label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            รายชื่อผู้สมัครร่วมกิจกรรม
+                          </label>
+                          {(event.allowMemberEdit ?? true) && !isEditingNames && (
+                            <button
+                              onClick={() => {
+                                setIsEditingNames(true);
+                                setTempAttendeeNames([...attendeeNames]);
+                              }}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="แก้ไขรายชื่อ"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
 
                         <div className="space-y-2">
                           {Array.from({ length: attendeeCount }).map((_, index) => {
-                            const isDisabled = !(event.allowMemberEdit ?? true);
+                            const isDisabled = !(event.allowMemberEdit ?? true) || !isEditingNames;
                             const isRequired = event.requireAttendeeNames === true;
+                            const displayValue = isEditingNames ? tempAttendeeNames[index] : attendeeNames[index];
 
                             return (
                               <div key={index}>
@@ -800,10 +837,16 @@ export default function EventDetailPage() {
                                 </label>
                                 <input
                                   type="text"
-                                  value={attendeeNames[index] || ''}
-                                  onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
+                                  value={displayValue || ''}
+                                  onChange={(e) => {
+                                    if (isEditingNames) {
+                                      const newNames = [...tempAttendeeNames];
+                                      newNames[index] = e.target.value;
+                                      setTempAttendeeNames(newNames);
+                                    }
+                                  }}
                                   disabled={isDisabled}
-                                  placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                                  placeholder="ระบุชื่อผู้เข้าร่วม"
                                   required={isRequired}
                                   className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                                     isDisabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
@@ -813,34 +856,70 @@ export default function EventDetailPage() {
                             );
                           })}
                         </div>
-                      </div>
 
-                      {/* Contact Information Card */}
-                      {memberName && memberPhone && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-semibold text-blue-900">
-                              ข้อมูลผู้ติดต่อ
-                            </h4>
-                            <Link
-                              href="/profile"
-                              className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                        {/* Edit Action Buttons */}
+                        {isEditingNames && (
+                          <div className="flex gap-2 mt-3">
+                            <button
+                              onClick={async () => {
+                                // Validate if required
+                                if (event.requireAttendeeNames === true) {
+                                  const filledNames = tempAttendeeNames.filter(name => name.trim());
+                                  if (filledNames.length !== attendeeCount) {
+                                    toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
+                                    return;
+                                  }
+                                }
+
+                                setUpdating(true);
+                                try {
+                                  const response = await fetch(`/api/events/${eventId}/update-registration`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      attendeeCount,
+                                      attendeeNames: tempAttendeeNames,
+                                      specialRequests,
+                                      attendeeTypeSelections,
+                                      roomAllocations,
+                                      requestNameChange: false,
+                                    }),
+                                  });
+
+                                  const data = await response.json();
+
+                                  if (!response.ok) {
+                                    throw new Error(data.error || 'ไม่สามารถบันทึกได้');
+                                  }
+
+                                  toast.success('บันทึกรายชื่อเรียบร้อยแล้ว');
+                                  setAttendeeNames(tempAttendeeNames);
+                                  setIsEditingNames(false);
+                                  fetchEventDetail();
+                                } catch (err) {
+                                  toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+                                } finally {
+                                  setUpdating(false);
+                                }
+                              }}
+                              disabled={updating}
+                              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                             >
-                              แก้ไขข้อมูลติดต่อ
-                            </Link>
+                              {updating ? 'กำลังบันทึก...' : 'บันทึก'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsEditingNames(false);
+                                setTempAttendeeNames([]);
+                              }}
+                              disabled={updating}
+                              className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                            >
+                              ยกเลิก
+                            </button>
                           </div>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-600 font-medium w-20">ชื่อ:</span>
-                              <span className="text-gray-900">{memberName}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-600 font-medium w-20">เบอร์โทร:</span>
-                              <span className="text-gray-900">{memberPhone}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
 
                       {/* Attendee Type Selection - Read-only display */}
                       {event.useAttendeeTypePricing && event.attendeeTypes && event.attendeeTypes.length > 0 && (
@@ -967,32 +1046,48 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* Total Amount */}
-                      {event && calculateRegistrationFee(event, attendeeCount, true) > 0 && (
-                        <div className="bg-white border border-blue-300 rounded-lg p-3">
+                      {/* Special Charges Display */}
+                      {userRegistration.specialCharges && userRegistration.specialCharges.length > 0 && (
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-purple-900 mb-3">ค่าใช้จ่ายพิเศษ</h4>
+                          <div className="space-y-2">
+                            {userRegistration.specialCharges.map((charge, index) => (
+                              <div key={charge.chargeId || index} className="flex justify-between items-start bg-white rounded p-2 border border-purple-100">
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-800">{charge.description}</p>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    เพิ่มเมื่อ: {new Date(charge.addedAt).toLocaleDateString('th-TH', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </p>
+                                </div>
+                                <span className="text-sm font-bold text-purple-700 ml-2">
+                                  +{charge.amount.toLocaleString()} บาท
+                                </span>
+                              </div>
+                            ))}
+                            <div className="pt-2 border-t border-purple-200">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-700">รวมค่าใช้จ่ายพิเศษ:</span>
+                                <span className="text-sm font-bold text-purple-700">
+                                  +{userRegistration.specialCharges.reduce((sum, c) => sum + c.amount, 0).toLocaleString()} บาท
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Total Amount Summary */}
+                      {userRegistration.totalAmount && userRegistration.totalAmount > 0 && (
+                        <div className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-300 rounded-lg p-4">
                           <div className="flex justify-between items-center">
-                            <div>
-                              <p className="text-sm text-gray-600">ค่าสมัครร่วมกิจกรรม</p>
-                              <p className="text-xs text-gray-500">
-                                {event.pricingType === 'tiered' ? (
-                                  <>
-                                    {attendeeCount === 1
-                                      ? `${event.baseFee?.toLocaleString()} บาท/คน`
-                                      : `${event.baseFee?.toLocaleString()} บาท (คนแรก) + ${event.additionalFeePerPerson?.toLocaleString()} บาท × ${attendeeCount - 1} คน`}
-                                    {(event.memberDiscount ?? 0) > 0 && (
-                                      <span> - ส่วนลด {event.memberDiscount!.toLocaleString()} บาท</span>
-                                    )}
-                                  </>
-                                ) : (
-                                  `${attendeeCount} คน × ${event.registrationFee.toLocaleString()} บาท/คน`
-                                )}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xl font-bold text-blue-600">
-                                {calculateRegistrationFee(event, attendeeCount, true).toLocaleString()} บาท
-                              </p>
-                            </div>
+                            <span className="text-base font-semibold text-gray-800">ยอดรวมทั้งหมด:</span>
+                            <span className="text-2xl font-bold text-blue-600">
+                              {userRegistration.totalAmount.toLocaleString()} บาท
+                            </span>
                           </div>
                         </div>
                       )}

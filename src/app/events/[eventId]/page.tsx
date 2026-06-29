@@ -1156,40 +1156,6 @@ export default function EventDetailPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                       <h3 className="font-semibold text-blue-900 mb-4">รายละเอียดการชำระเงิน</h3>
 
-                      {/* Special Charges Section - Moved to top */}
-                      {userRegistration.specialCharges && userRegistration.specialCharges.length > 0 && (
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                          <h4 className="font-semibold text-purple-900 mb-3">ค่าใช้จ่ายพิเศษ</h4>
-                          <div className="space-y-2">
-                            {userRegistration.specialCharges.map((charge, index) => (
-                              <div key={charge.chargeId || index} className="flex justify-between items-start bg-white rounded p-2 border border-purple-100">
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-gray-800">{charge.description}</p>
-                                  <p className="text-xs text-gray-500 mt-0.5">
-                                    เพิ่มเมื่อ: {new Date(charge.addedAt).toLocaleDateString('th-TH', {
-                                      year: 'numeric',
-                                      month: 'short',
-                                      day: 'numeric'
-                                    })}
-                                  </p>
-                                </div>
-                                <span className="text-sm font-bold text-purple-700 ml-2">
-                                  +฿{charge.amount.toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
-                            <div className="pt-2 border-t border-purple-200">
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-700">รวมค่าใช้จ่ายพิเศษ:</span>
-                                <span className="text-sm font-bold text-purple-700">
-                                  +฿{userRegistration.specialCharges.reduce((sum, c) => sum + c.amount, 0).toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
                       {/* Deposit Payment */}
                       <div className="bg-white rounded-lg p-4 mb-3">
                         <div className="flex items-center justify-between mb-2">

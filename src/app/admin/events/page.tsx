@@ -219,8 +219,8 @@ export default function AdminEventsPage() {
         const data = await response.json();
         let allEvents = data.events || [];
 
-        // Filter for event-staff - show only assigned events
-        if (session?.user?.role === 'event-staff') {
+        // Filter for event-staff and event-co - show only assigned events
+        if (session?.user?.role === 'event-staff' || session?.user?.role === 'event-co') {
           const assignedIds = session.user.assignedEventIds || [];
           allEvents = allEvents.filter((e: Event) => assignedIds.includes(e.eventId));
         }
@@ -586,7 +586,7 @@ export default function AdminEventsPage() {
               )}
               <h1 className="text-2xl font-bold text-gray-900">จัดการกิจกรรม</h1>
             </div>
-            {session?.user?.role !== 'event-staff' && (
+            {session?.user?.role !== 'event-staff' && session?.user?.role !== 'event-co' && (
               <button
                 onClick={() => handleOpenModal()}
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

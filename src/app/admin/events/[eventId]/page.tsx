@@ -1322,33 +1322,24 @@ export default function EventDetailPage() {
                           </div>
                         )}
 
-                        {/* Contact Information */}
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                          <label className="block text-xs font-semibold text-gray-700 mb-2">
-                            ข้อมูลติดต่อ
-                          </label>
-                          <div className="space-y-2">
-                            <div>
-                              <label className="block text-xs text-gray-600 mb-1">เบอร์โทรศัพท์</label>
-                              <input
-                                type="text"
-                                value={editFormData.contactPhone || ''}
-                                onChange={(e) => setEditFormData({ ...editFormData, contactPhone: e.target.value })}
-                                placeholder="เบอร์โทรศัพท์"
-                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs text-gray-600 mb-1">อีเมล</label>
-                              <input
-                                type="email"
-                                value={editFormData.contactEmail || ''}
-                                onChange={(e) => setEditFormData({ ...editFormData, contactEmail: e.target.value })}
-                                placeholder="อีเมล"
-                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
+                        {/* Contact Information - Read-Only Display */}
+                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <p className="text-xs font-semibold text-gray-900 mb-2">ข้อมูลผู้ติดต่อ:</p>
+                          <div className="space-y-1">
+                            {editFormData.contactPhone && (
+                              <div className="text-xs text-gray-700">
+                                <span className="font-medium">โทร:</span> {editFormData.contactPhone}
+                              </div>
+                            )}
+                            {editFormData.contactEmail && (
+                              <div className="text-xs text-gray-700">
+                                <span className="font-medium">อีเมล:</span> {editFormData.contactEmail}
+                              </div>
+                            )}
                           </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            * กรณีต้องการเปลี่ยนแปลงข้อมูลติดต่อ กรุณาติดต่อ Admin
+                          </p>
                         </div>
 
                         {/* Special Requests */}

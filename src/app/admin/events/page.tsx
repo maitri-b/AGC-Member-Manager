@@ -536,24 +536,71 @@ export default function AdminEventsPage() {
 
       const data = await response.json();
       const attendees = data.attendees || [];
+      const roomTypes = data.event?.roomTypes || [];
+      const sortedRoomTypes = [...roomTypes].sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-      // Prepare data for Excel
-      const excelData = attendees.map((a: any) => ({
-        'รหัสลงทะเบียน': a.registration?.registrationId || '',
-        'ชื่อบริษัท': a.registration?.companyName || '',
-        'เลขใบอนุญาต': a.registration?.licenseNumber || '',
-        'ผู้ติดต่อ': a.registration?.contactName || '',
-        'เบอร์โทร': a.registration?.contactPhone || '',
-        'จำนวนผู้เข้าร่วม': a.registration?.attendeeCount || 0,
-        'รายชื่อผู้เข้าร่วม': a.registration?.attendeeNames || '',
-        'สถานะ': a.registration?.status || '',
-        'MemberID': a.member?.memberId || 'ไม่พบ',
-      }));
+      // Prepare data for Excel with full details
+      const excelData = attendees.map((attendee: any) => {
+        // Parse room allocations
+        let roomAllocationMap: Record<string, number> = {};
+        try {
+          const roomAllocations = JSON.parse(attendee.registration.roomAllocations || '[]');
+          if (Array.isArray(roomAllocations)) {
+            roomAllocations.forEach((alloc: { roomTypeId: string; roomCount: number }) => {
+              roomAllocationMap[alloc.roomTypeId] = alloc.roomCount;
+            });
+          }
+        } catch {
+          // Ignore parse errors
+        }
+
+        // Parse special charges
+        let totalSpecialCharges = 0;
+        try {
+          const charges = JSON.parse(attendee.registration.specialCharges || '[]');
+          if (Array.isArray(charges)) {
+            totalSpecialCharges = charges.reduce((sum: number, charge: { amount: number }) => sum + (charge.amount || 0), 0);
+          }
+        } catch {
+          // Ignore parse errors
+        }
+
+        // Base columns
+        const row: Record<string, any> = {
+          'รหัสลงทะเบียน': attendee.registration.registrationId || '',
+          'ชื่อบริษัท': attendee.registration.companyName || attendee.member?.companyNameTH || '',
+          'ผู้ติดต่อ': attendee.registration.contactName || attendee.member?.fullNameTH || attendee.lineProfile?.lineDisplayName || '',
+          'เบอร์โทร': attendee.registration.contactPhone || '',
+          'ชื่อไลน์': attendee.lineProfile?.lineDisplayName || '',
+          'จำนวนผู้เข้าร่วม': attendee.registration.attendeeCount || 1,
+          'รายชื่อผู้เข้าร่วม': (() => {
+            try {
+              const names = JSON.parse(attendee.registration.attendeeNames || '[]');
+              return Array.isArray(names) ? names.join(', ') : attendee.registration.attendeeNames;
+            } catch {
+              return attendee.registration.attendeeNames || '';
+            }
+          })(),
+        };
+
+        // Add room allocation columns dynamically
+        sortedRoomTypes.forEach((roomType: any) => {
+          const columnName = roomType.typeName;
+          row[columnName] = roomAllocationMap[roomType.typeId] || 0;
+        });
+
+        // Add remaining columns
+        row['สถานะ'] = attendee.registration.status || '';
+        row['ความต้องการพิเศษ'] = attendee.registration.specialRequests || '';
+        row['ค่าบริการเพิ่มเติม'] = totalSpecialCharges;
+
+        return row;
+      });
 
       // Create workbook
       const ws = XLSX.utils.json_to_sheet(excelData);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'รายชื่อผู้เข้าร่วม');
+      XLSX.utils.book_append_sheet(wb, ws, 'Attendees');
 
       // Save file
       const fileName = `${event.eventName}_${new Date().toLocaleDateString('th-TH')}.xlsx`;

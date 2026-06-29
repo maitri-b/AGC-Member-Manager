@@ -265,8 +265,8 @@ export default function EventDetailPage() {
         };
 
         // Add room allocation columns dynamically
-        sortedRoomTypes.forEach((roomType, idx) => {
-          const columnName = `การจัดห้องพัก แบบที่ ${idx + 1} (${roomType.typeName})`;
+        sortedRoomTypes.forEach((roomType) => {
+          const columnName = roomType.typeName;
           row[columnName] = roomAllocationMap[roomType.typeId] || 0;
         });
 

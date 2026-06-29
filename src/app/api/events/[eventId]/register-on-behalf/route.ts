@@ -275,7 +275,9 @@ export async function POST(
       table_number: '',
       code_split: '',
       checkin_sections: '',
-      attendance_type: member ? 'agent' : 'guest',
+      // All registrations through admin-assisted flow are marked as 'agent'
+      // This includes members, guests, event staff, and event co
+      attendance_type: 'agent',
     };
 
     // Add to Google Sheet

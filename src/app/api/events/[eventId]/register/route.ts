@@ -107,6 +107,23 @@ export async function POST(
     // Filter out cancelled registrations
     const activeRegistrations = existingRegistrations.filter(r => !isRegistrationCancelled(r));
 
+    // Check if user already registered (by LINE User ID or Member ID)
+    // This prevents duplicate registrations from the same user
+    if (session.user.id || session.user.memberId) {
+      const userAlreadyRegistered = activeRegistrations.find(r => {
+        return (
+          (session.user.id && r.lineUserId === session.user.id) ||
+          (session.user.memberId && r.memberId === session.user.memberId)
+        );
+      });
+
+      if (userAlreadyRegistered) {
+        return NextResponse.json({
+          error: 'คุณลงทะเบียนกิจกรรมนี้แล้ว หากต้องการเพิ่ม/ลดจำนวนผู้เข้าร่วมหรือแก้ไขข้อมูล กรุณาใช้ปุ่มแก้ไขข้อมูลการลงทะเบียน'
+        }, { status: 400 });
+      }
+    }
+
     // Check if company (by license number) already registered (check only active registrations)
     // For staff without member, use guest license number or company name
     const checkLicenseNumber = member?.licenseNumber || guestInfo?.licenseNumber;

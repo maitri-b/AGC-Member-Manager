@@ -82,6 +82,11 @@ export async function PUT(
       shouldRecalculate = updateData.attendee_count !== undefined && updateData.attendee_count !== currentRegistration.attendeeCount;
     }
 
+    // Also recalculate if room allocations changed (applies to all pricing types)
+    if (updateData.room_allocations !== undefined) {
+      shouldRecalculate = true;
+    }
+
     if (shouldRecalculate) {
       if (eventData.useAttendeeTypePricing) {
         // Attendee Type Pricing
@@ -110,9 +115,10 @@ export async function PUT(
         calculatedEventFee = calculateRegistrationFee(eventData as Event, newAttendeeCount, isMember);
       }
 
-      // Add room fees if room allocations are provided (for all pricing types)
+      // Add room fees (for all pricing types)
+      // Use updated room allocations if provided, otherwise use existing
+      let roomAllocations = [];
       if (updateData.room_allocations !== undefined) {
-        let roomAllocations = [];
         try {
           roomAllocations = typeof updateData.room_allocations === 'string'
             ? JSON.parse(updateData.room_allocations)
@@ -120,15 +126,21 @@ export async function PUT(
         } catch (e) {
           return NextResponse.json({ error: 'รูปแบบข้อมูล room_allocations ไม่ถูกต้อง' }, { status: 400 });
         }
-
-        if (eventData.roomTypes && eventData.roomTypes.length > 0) {
-          const roomFee = roomAllocations.reduce((sum: number, alloc: { roomTypeId: string; roomCount: number }) => {
-            const roomType = eventData.roomTypes.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
-            if (!roomType) return sum;
-            return sum + (roomType.price * alloc.roomCount);
-          }, 0);
-          calculatedEventFee += roomFee;
+      } else if (currentRegistration.roomAllocations) {
+        try {
+          roomAllocations = JSON.parse(currentRegistration.roomAllocations);
+        } catch (e) {
+          console.error('Error parsing existing room allocations:', e);
         }
+      }
+
+      if (eventData.roomTypes && eventData.roomTypes.length > 0 && roomAllocations.length > 0) {
+        const roomFee = roomAllocations.reduce((sum: number, alloc: { roomTypeId: string; roomCount: number }) => {
+          const roomType = eventData.roomTypes.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+          if (!roomType) return sum;
+          return sum + (roomType.price * alloc.roomCount);
+        }, 0);
+        calculatedEventFee += roomFee;
       }
     }
 

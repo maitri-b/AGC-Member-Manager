@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { hasPermission } from '@/lib/permissions';
 
 interface LineHistoryEntry {
@@ -814,7 +815,19 @@ export default function AdminPage() {
                           </div>
                         )}
                         <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-900">{user.lineDisplayName || 'Unknown'}</p>
+                          {user.memberId ? (
+                            <Link
+                              href={`/members/${user.memberId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                              title="ดูโปรไฟล์สมาชิก (เปิดในแท็บใหม่)"
+                            >
+                              {user.lineDisplayName || 'Unknown'}
+                            </Link>
+                          ) : (
+                            <p className="text-sm font-medium text-gray-900">{user.lineDisplayName || 'Unknown'}</p>
+                          )}
                           {memberData && (
                             <>
                               {memberData.fullNameTH && (

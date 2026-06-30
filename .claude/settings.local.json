@@ -34,7 +34,9 @@
       "Bash(Select-String -Pattern \"^[\\\\+\\\\-]\")",
       "Bash(Select-Object -First 40)",
       "Bash(del nul)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(Select-String \"page.tsx\")",
+      "Bash(Select-Object -First 10)"
     ]
   }
 }

@@ -92,10 +92,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     // Note: 'admin:roles' is NOT included - committee cannot change user roles
   ],
   'event-co': [
+    'members:list', // View all members list and member profiles
     'events:manage-assigned', // Can manage assigned events
     'events:register-on-behalf', // Can register on behalf of members/guests
   ],
   'event-staff': [
+    'members:list', // View all members list and member profiles
     'events:manage-assigned', // Can manage assigned events only
   ],
   member: [

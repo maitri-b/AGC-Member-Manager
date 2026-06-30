@@ -26,6 +26,7 @@ interface Event {
   userRegistered?: boolean; // NEW: Registration status flag
   pricingType?: 'fixed' | 'tiered'; // NEW: Pricing type
   useAttendeeTypePricing?: boolean; // NEW: Attendee type pricing flag
+  mainImageUrl?: string; // Cover image URL
 }
 
 interface EventAttendee {
@@ -57,6 +58,7 @@ export default function EventsPage() {
   const [loadingAttendees, setLoadingAttendees] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLinked, setFilterLinked] = useState<'all' | 'linked' | 'unlinked'>('all');
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -67,6 +69,20 @@ export default function EventsPage() {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  // Close lightbox with ESC key
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && lightboxImage) {
+        setLightboxImage(null);
+      }
+    };
+
+    if (lightboxImage) {
+      document.addEventListener('keydown', handleEscKey);
+      return () => document.removeEventListener('keydown', handleEscKey);
+    }
+  }, [lightboxImage]);
 
   const fetchEvents = async () => {
     try {
@@ -167,8 +183,29 @@ export default function EventsPage() {
               }`}
               onClick={() => isCommittee && fetchEventAttendees(event.eventId)}
             >
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-3">
+                {/* Cover Image */}
+                {event.mainImageUrl && (
+                  <div
+                    className="flex-shrink-0 cursor-pointer group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxImage(event.mainImageUrl || null);
+                    }}
+                    title="คลิกเพื่อดูภาพขนาดเต็ม"
+                  >
+                    <img
+                      src={event.mainImageUrl}
+                      alt={event.eventName}
+                      className="w-20 h-auto rounded-md object-cover border border-gray-200 group-hover:border-blue-400 transition-colors"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-gray-900">{event.eventName}</h3>
                   <p className="text-sm text-gray-500">{event.eventNameEN}</p>
                 </div>
@@ -344,8 +381,29 @@ export default function EventsPage() {
               }`}
               onClick={() => isCommittee && fetchEventAttendees(event.eventId)}
             >
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-3">
+                {/* Cover Image */}
+                {event.mainImageUrl && (
+                  <div
+                    className="flex-shrink-0 cursor-pointer group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxImage(event.mainImageUrl || null);
+                    }}
+                    title="คลิกเพื่อดูภาพขนาดเต็ม"
+                  >
+                    <img
+                      src={event.mainImageUrl}
+                      alt={event.eventName}
+                      className="w-20 h-auto rounded-md object-cover border border-gray-200 group-hover:border-blue-400 transition-colors"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-gray-900">{event.eventName}</h3>
                   <p className="text-sm text-gray-500">{event.eventNameEN}</p>
                 </div>
@@ -679,6 +737,32 @@ export default function EventsPage() {
           </div>
         )}
       </main>
+
+      {/* Lightbox Modal for Full-Size Image */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div className="relative max-w-7xl max-h-[90vh]">
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+              title="ปิด (ESC)"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Event Cover"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

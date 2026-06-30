@@ -1032,13 +1032,28 @@ export default function EventDetailPage() {
                     {/* Basic Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        {/* Name from LINE profile or registration */}
-                        <h3 className="font-medium text-gray-900 truncate">
-                          {attendee.lineProfile?.lineDisplayName ||
-                           attendee.member?.fullNameTH ||
-                           attendee.registration.contactName ||
-                           'ไม่ระบุชื่อ'}
-                        </h3>
+                        {/* Name from LINE profile or registration - clickable if has memberId */}
+                        {attendee.member?.memberId ? (
+                          <Link
+                            href={`/members/${attendee.member.memberId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline truncate transition-colors"
+                            title="จัดการชื่อ (เปิดในแท็บใหม่)"
+                          >
+                            {attendee.lineProfile?.lineDisplayName ||
+                             attendee.member?.fullNameTH ||
+                             attendee.registration.contactName ||
+                             'ไม่ระบุชื่อ'}
+                          </Link>
+                        ) : (
+                          <h3 className="font-medium text-gray-900 truncate">
+                            {attendee.lineProfile?.lineDisplayName ||
+                             attendee.member?.fullNameTH ||
+                             attendee.registration.contactName ||
+                             'ไม่ระบุชื่อ'}
+                          </h3>
+                        )}
 
                         {/* Verified icon - has LINE profile */}
                         {attendee.lineProfile && (

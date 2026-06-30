@@ -140,7 +140,7 @@ export default function Navbar() {
                 href="/admin/events"
                 className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                กิจกรรมที่ดูแล
+                จัดการกิจกรรม
               </Link>
             )}
             {canAccessAdmin && (
@@ -350,7 +350,7 @@ export default function Navbar() {
                 className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
                 onClick={() => setIsMenuOpen(false)}
               >
-                กิจกรรมที่ดูแล
+                จัดการกิจกรรม
               </Link>
             )}
             {canAccessAdmin && (

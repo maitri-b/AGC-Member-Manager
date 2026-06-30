@@ -613,7 +613,7 @@ function DashboardContent() {
           {/* Event Management for Event-Staff */}
           {session.user.role === 'event-staff' && (
             <QuickActionCard
-              title="กิจกรรมที่ดูแล"
+              title="จัดการกิจกรรม"
               description="จัดการผู้ลงทะเบียนและข้อมูลกิจกรรม"
               href="/admin/events"
               icon={

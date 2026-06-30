@@ -592,7 +592,7 @@ export default function AdminEventsPage() {
         // Add remaining columns
         row['สถานะ'] = attendee.registration.status || '';
         row['ความต้องการพิเศษ'] = attendee.registration.specialRequests || '';
-        row['ค่าบริการเพิ่มเติม'] = totalSpecialCharges;
+        row['ค่าใช้จ่ายเสริม'] = totalSpecialCharges;
 
         return row;
       });

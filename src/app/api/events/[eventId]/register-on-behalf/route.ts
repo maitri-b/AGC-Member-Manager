@@ -222,7 +222,7 @@ export async function POST(
         remainingDeadline = calculateRemainingDeadline(eventData as Event, registrationDate);
       }
 
-      paymentStatus = 'รอชำระเงินมัดจำ';
+      paymentStatus = 'รอชำระมัดจำ';
     }
 
     // Generate unique registration ID
@@ -235,7 +235,7 @@ export async function POST(
     // Prepare registration data
     const registrationData = {
       registration_id: registrationId,
-      registration_date: new Date().toISOString(),
+      registration_date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }),
       event_id: eventId,
       company_name: member?.companyNameTH || member?.companyNameEN || '',
       contact_name: targetUserData?.lineDisplayName || member?.fullNameTH || member?.nickname || 'ไม่ระบุชื่อ',

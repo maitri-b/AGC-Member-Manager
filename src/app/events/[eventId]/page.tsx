@@ -8,6 +8,7 @@ import { Toast, useToast } from '@/components/Toast';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation } from '@/types/event';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
+import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
 
 interface Event {
   eventId: string;
@@ -118,6 +119,8 @@ export default function EventDetailPage() {
   // Member contact info state (New)
   const [memberName, setMemberName] = useState('');
   const [memberPhone, setMemberPhone] = useState('');
+  const [memberStatus, setMemberStatus] = useState('');
+  const [lineGroupStatus, setLineGroupStatus] = useState('');
   // Attendee type pricing state (New)
   const [attendeeTypeSelections, setAttendeeTypeSelections] = useState<AttendeeTypeSelection[]>([]);
   const [calculatedTotalFee, setCalculatedTotalFee] = useState(0);
@@ -166,12 +169,18 @@ export default function EventDetailPage() {
         setSummary(data.summary);
         setUserRegistration(data.userRegistration);
 
-        // Store member contact info
+        // Store member contact info and status
         if (data.memberName) {
           setMemberName(data.memberName);
         }
         if (data.memberPhone) {
           setMemberPhone(data.memberPhone);
+        }
+        if (data.memberStatus) {
+          setMemberStatus(data.memberStatus);
+        }
+        if (data.lineGroupStatus) {
+          setLineGroupStatus(data.lineGroupStatus);
         }
 
         // Load existing registration data if user has already registered
@@ -362,7 +371,18 @@ export default function EventDetailPage() {
     ? summary.totalAttendees >= event.maxCapacity
     : false;
 
-  const canRegister = event?.registrationOpen && !isFull && !userRegistration && session?.user?.memberId;
+  // Check if user can register
+  // 1. Event must be open for registration
+  // 2. Event must not be full
+  // 3. User must not have already registered
+  // 4. User must have memberId OR be an eligible guest (guest with valid status)
+  const isEligibleGuest = isGuestEligibleForEventRegistration(
+    session?.user?.role || 'guest',
+    session?.user?.memberId,
+    memberStatus,
+    lineGroupStatus
+  );
+  const canRegister = event?.registrationOpen && !isFull && !userRegistration && (session?.user?.memberId || isEligibleGuest);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';

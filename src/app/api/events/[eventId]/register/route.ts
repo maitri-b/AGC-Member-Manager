@@ -9,6 +9,7 @@ import { EventRegistration, calculateRegistrationFee, Event } from '@/types/even
 import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
 import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline } from '@/lib/payment-deadlines';
 import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
+import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
 
 // Generate a unique 6-character registration ID
 function generateRegistrationId(): string {
@@ -39,8 +40,25 @@ export async function POST(
     // Check if user is staff without memberId
     const isStaffWithoutMember = !session.user.memberId && ['admin', 'committee', 'event-co', 'event-staff'].includes(session.user.role || '');
 
+    // Get member details first if memberId exists
+    let member = null;
+    if (session.user.memberId) {
+      member = await getMemberById(session.user.memberId);
+      if (!member) {
+        return NextResponse.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 });
+      }
+    }
+
+    // Check if user is an eligible guest (guest with valid member status)
+    const isEligibleGuest = isGuestEligibleForEventRegistration(
+      session.user.role || 'guest',
+      session.user.memberId,
+      member?.status,
+      member?.lineGroupStatus
+    );
+
     // Validate based on user type
-    if (!isStaffWithoutMember && !session.user.memberId) {
+    if (!isStaffWithoutMember && !session.user.memberId && !isEligibleGuest) {
       return NextResponse.json({ error: 'กรุณาเชื่อมต่อบัญชีสมาชิกก่อนลงทะเบียน' }, { status: 400 });
     }
 
@@ -69,15 +87,6 @@ export async function POST(
 
     if (!eventData?.sheetName) {
       return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่พร้อมรับลงทะเบียน' }, { status: 400 });
-    }
-
-    // Get member details (skip for staff without memberId)
-    let member = null;
-    if (session.user.memberId) {
-      member = await getMemberById(session.user.memberId);
-      if (!member) {
-        return NextResponse.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 });
-      }
     }
 
     // Helper function to check if registration is cancelled

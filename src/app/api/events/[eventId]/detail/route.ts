@@ -208,6 +208,8 @@ export async function GET(
     // Get member name and contact info for pre-filling registration form and contact card
     let memberName = '';
     let memberPhone = '';
+    let memberStatus = '';
+    let lineGroupStatus = '';
     if (session.user.memberId) {
       try {
         const { getMemberById } = await import('@/lib/google-sheets');
@@ -215,6 +217,8 @@ export async function GET(
         if (member) {
           memberName = member.fullNameTH || member.nickname || '';
           memberPhone = member.mobile || member.phone || '';
+          memberStatus = member.status || '';
+          lineGroupStatus = member.lineGroupStatus || '';
         }
       } catch (err) {
         console.error('Error fetching member info:', err);
@@ -227,6 +231,8 @@ export async function GET(
       userRegistration,
       memberName,
       memberPhone,
+      memberStatus,
+      lineGroupStatus,
     });
   } catch (error) {
     console.error('Error fetching event detail:', error);

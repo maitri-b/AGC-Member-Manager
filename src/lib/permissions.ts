@@ -138,3 +138,35 @@ export function getEffectivePermissions(
   // Event-co, event-staff, admin, and committee get their full permissions regardless of member status
   return ROLE_PERMISSIONS[role] || [];
 }
+
+/**
+ * Check if a guest user is eligible to register for events
+ * A guest can register if they have:
+ * 1. A valid memberId
+ * 2. Member status is 'ปกติ' (normal/active)
+ * 3. LINE group status is 'รอนำเข้ากลุ่ม' (waiting to be added to group)
+ */
+export function isGuestEligibleForEventRegistration(
+  role: UserRole,
+  memberId: string | undefined,
+  memberStatus: string | undefined,
+  lineGroupStatus: string | undefined
+): boolean {
+  // Only applies to guest role
+  if (role !== 'guest') {
+    return false;
+  }
+
+  // Must have a memberId
+  if (!memberId) {
+    return false;
+  }
+
+  // Check if member status is valid
+  const hasValidMemberStatus = memberStatus === 'ปกติ';
+
+  // Check if LINE group status is 'รอนำเข้ากลุ่ม'
+  const isWaitingForLineGroup = lineGroupStatus === 'รอนำเข้ากลุ่ม';
+
+  return hasValidMemberStatus && isWaitingForLineGroup;
+}

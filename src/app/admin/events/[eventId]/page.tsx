@@ -1704,6 +1704,19 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
+
+                    {/* Delete button for free events (no payment required) */}
+                    {(!attendee.registration.totalAmount || attendee.registration.totalAmount === 0) && (
+                      <div className="mt-3">
+                        <button
+                          onClick={() => handleCancelRegistration(attendee.registration.registrationId)}
+                          className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                          title="ลบการลงทะเบียน"
+                        >
+                          🗑️ ลบการลงทะเบียน
+                        </button>
+                      </div>
+                    )}
                     </div>
                   )}
                 </div>

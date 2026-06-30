@@ -83,6 +83,14 @@ export async function POST(
     const targetMemberId = targetUserData?.memberId;
     const targetLineUserId = targetUserData?.lineUserId || targetUserId;
 
+    console.log('[Register On Behalf] Target user data:', {
+      targetUserId,
+      targetMemberId,
+      targetLineUserId,
+      hasUserData: !!targetUserData,
+      userDataKeys: targetUserData ? Object.keys(targetUserData) : [],
+    });
+
     // Get event details
     const eventDoc = await db.collection('events').doc(eventId).get();
 
@@ -232,8 +240,8 @@ export async function POST(
       company_name: member?.companyNameTH || member?.companyNameEN || '',
       contact_name: targetUserData?.lineDisplayName || member?.fullNameTH || member?.nickname || 'ไม่ระบุชื่อ',
       license_number: member?.licenseNumber || '',
-      member_id: targetMemberId || '',
-      line_user_id: targetLineUserId,
+      memberid: targetMemberId || '',
+      line_userid: targetLineUserId || '',
       attendee_count: attendeeCount,
       attendee_names: JSON.stringify(attendeeNames),
       contact_phone: member?.mobile || member?.phone || '',
@@ -279,6 +287,14 @@ export async function POST(
       // This includes members, guests, event staff, and event co
       attendance_type: 'agent',
     };
+
+    console.log('[Register On Behalf] Registration data to be saved:', {
+      registrationId,
+      memberid: registrationData.memberid,
+      line_userid: registrationData.line_userid,
+      contact_name: registrationData.contact_name,
+      company_name: registrationData.company_name,
+    });
 
     // Add to Google Sheet
     await addEventRegistration(eventData.sheetName, registrationData);

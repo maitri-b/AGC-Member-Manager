@@ -18,6 +18,7 @@ interface EventInfo {
   totalRegistrations?: number;
   agentRegistrations?: number;
   confirmedCount?: number;
+  totalAttendees?: number;
   userRegistered?: boolean;
 }
 
@@ -255,8 +256,8 @@ function DashboardContent() {
                             {/* Stats (for committee/admin) */}
                             {isCommitteeOrAdmin && event.totalRegistrations !== undefined && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-blue-600">{event.agentRegistrations || 0}</p>
-                                <p className="text-xs text-gray-500">บริษัท(เอเจ้นท์)<br />ที่ลงทะเบียน</p>
+                                <p className="text-2xl font-bold text-blue-600">{event.totalAttendees || 0}</p>
+                                <p className="text-xs text-gray-500">ผู้เข้าร่วม<br />(คน)</p>
                               </div>
                             )}
                           </div>
@@ -380,8 +381,8 @@ function DashboardContent() {
                               {/* Stats (for committee/admin) */}
                               {isCommitteeOrAdmin && event.totalRegistrations !== undefined && (
                                 <div className="text-center">
-                                  <p className="text-2xl font-bold text-gray-500">{event.agentRegistrations || 0}</p>
-                                  <p className="text-xs text-gray-400">บริษัท(เอเจ้นท์)<br />ที่ลงทะเบียน</p>
+                                  <p className="text-2xl font-bold text-gray-500">{event.totalAttendees || 0}</p>
+                                  <p className="text-xs text-gray-400">ผู้เข้าร่วม<br />(คน)</p>
                                 </div>
                               )}
                             </div>

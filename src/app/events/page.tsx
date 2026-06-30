@@ -251,8 +251,8 @@ export default function EventsPage() {
                       <p className="text-xs text-gray-500">ลงทะเบียนทั้งหมด</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-green-600">{event.agentRegistrations}</p>
-                      <p className="text-xs text-gray-500">สมาชิก Agent</p>
+                      <p className="text-2xl font-bold text-green-600">{event.totalAttendees || 0}</p>
+                      <p className="text-xs text-gray-500">ผู้เข้าร่วม (คน)</p>
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-purple-600">{event.confirmedCount}</p>
@@ -291,7 +291,7 @@ export default function EventsPage() {
               )}
 
               {/* Capacity progress bar and status */}
-              {event.maxCapacity !== undefined && event.maxCapacity > 0 && event.totalAttendees !== undefined && (
+              {event.maxCapacity !== undefined && event.maxCapacity > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between text-sm mb-2">
                     {/* Show unpublished status for event managers when registrationOpen but not published */}
@@ -302,7 +302,7 @@ export default function EventsPage() {
                         </svg>
                         ยังไม่ Published ให้สมาชิกทั่วไปสมัคร
                       </span>
-                    ) : event.totalAttendees >= event.maxCapacity ? (
+                    ) : (event.totalAttendees || 0) >= event.maxCapacity ? (
                       <span className="text-red-600 font-semibold flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -324,18 +324,18 @@ export default function EventsPage() {
                         ปิดรับสมัคร
                       </span>
                     )}
-                    <span className="text-xs text-gray-500">{event.totalAttendees} / {event.maxCapacity}</span>
+                    <span className="text-xs text-gray-500">{event.totalAttendees || 0} / {event.maxCapacity}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full ${
                         canManageEvents && event.registrationOpen && !event.isPublished
                           ? 'bg-orange-500'
-                          : event.totalAttendees >= event.maxCapacity
+                          : (event.totalAttendees || 0) >= event.maxCapacity
                           ? 'bg-red-500'
                           : 'bg-blue-500'
                       }`}
-                      style={{ width: `${Math.min((event.totalAttendees / event.maxCapacity) * 100, 100)}%` }}
+                      style={{ width: `${Math.min(((event.totalAttendees || 0) / event.maxCapacity) * 100, 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -449,8 +449,8 @@ export default function EventsPage() {
                       <p className="text-xs text-gray-500">ลงทะเบียนทั้งหมด</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-green-600">{event.agentRegistrations}</p>
-                      <p className="text-xs text-gray-500">สมาชิก Agent</p>
+                      <p className="text-2xl font-bold text-green-600">{event.totalAttendees || 0}</p>
+                      <p className="text-xs text-gray-500">ผู้เข้าร่วม (คน)</p>
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-purple-600">{event.confirmedCount}</p>
@@ -489,7 +489,7 @@ export default function EventsPage() {
               )}
 
               {/* Capacity progress bar and status */}
-              {event.maxCapacity !== undefined && event.maxCapacity > 0 && event.totalAttendees !== undefined && (
+              {event.maxCapacity !== undefined && event.maxCapacity > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between text-sm mb-2">
                     {/* Show unpublished status for event managers when registrationOpen but not published */}
@@ -500,7 +500,7 @@ export default function EventsPage() {
                         </svg>
                         ยังไม่ Published ให้สมาชิกทั่วไปสมัคร
                       </span>
-                    ) : event.totalAttendees >= event.maxCapacity ? (
+                    ) : (event.totalAttendees || 0) >= event.maxCapacity ? (
                       <span className="text-red-600 font-semibold flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -522,18 +522,18 @@ export default function EventsPage() {
                         ปิดรับสมัคร
                       </span>
                     )}
-                    <span className="text-xs text-gray-500">{event.totalAttendees} / {event.maxCapacity}</span>
+                    <span className="text-xs text-gray-500">{event.totalAttendees || 0} / {event.maxCapacity}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full ${
                         canManageEvents && event.registrationOpen && !event.isPublished
                           ? 'bg-orange-500'
-                          : event.totalAttendees >= event.maxCapacity
+                          : (event.totalAttendees || 0) >= event.maxCapacity
                           ? 'bg-red-500'
                           : 'bg-blue-500'
                       }`}
-                      style={{ width: `${Math.min((event.totalAttendees / event.maxCapacity) * 100, 100)}%` }}
+                      style={{ width: `${Math.min(((event.totalAttendees || 0) / event.maxCapacity) * 100, 100)}%` }}
                     ></div>
                   </div>
                 </div>

@@ -946,18 +946,19 @@ export default function EventDetailPage() {
                 onClick={handleExportExcel}
                 disabled={exportLoading || filteredAttendees.length === 0}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Export Excel"
               >
                 {exportLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    กำลัง Export...
+                    <span className="hidden sm:inline">กำลัง Export...</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Export Excel
+                    <span className="hidden sm:inline">Export Excel</span>
                   </>
                 )}
               </button>
@@ -965,18 +966,19 @@ export default function EventDetailPage() {
                 onClick={handleCopyList}
                 disabled={copyLoading || filteredAttendees.length === 0}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Copy รายชื่อ"
               >
                 {copyLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    กำลังคัดลอก...
+                    <span className="hidden sm:inline">กำลังคัดลอก...</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Copy รายชื่อ
+                    <span className="hidden sm:inline">Copy รายชื่อ</span>
                   </>
                 )}
               </button>
@@ -984,11 +986,12 @@ export default function EventDetailPage() {
                 <button
                   onClick={() => setShowRegisterModal(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                  title="ลงทะเบียนแทนสมาชิก"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  ลงทะเบียนแทนสมาชิก
+                  <span className="hidden sm:inline">ลงทะเบียนแทนสมาชิก</span>
                 </button>
               )}
             </div>

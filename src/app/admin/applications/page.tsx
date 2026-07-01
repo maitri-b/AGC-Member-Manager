@@ -85,7 +85,8 @@ export default function ApplicationsPage() {
     if (session) {
       fetchApplications();
     }
-  }, [session, filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id, filter]);
 
   const fetchApplications = async () => {
     try {

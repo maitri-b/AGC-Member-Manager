@@ -122,7 +122,8 @@ export default function MemberDetailPage() {
     if (memberId && status === 'authenticated' && session?.user) {
       fetchMember();
     }
-  }, [memberId, status, session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberId, status, session?.user?.id]);
 
   // Open edit modal with current member data
   const openEditModal = () => {

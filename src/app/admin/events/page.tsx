@@ -641,18 +641,27 @@ export default function AdminEventsPage() {
       const data = await response.json();
       const attendees = data.attendees || [];
 
-      // Create text list
-      const textList = attendees
+      // Calculate totals
+      const companyCount = attendees.length;
+      const totalPeople = attendees.reduce((sum: number, a: any) => sum + (a.registration?.attendeeCount || 1), 0);
+
+      // Format header
+      const header = `รายนามชื่อบริษัทที่เข้าร่วมกิจกรรม\n${event.eventName}\n${event.eventDate}\nจำนวนลงทะเบียน ${companyCount} บริษัท / ${totalPeople} คน\n\n`;
+
+      // Format attendee list with spacing between lines
+      const listText = attendees
         .map((a: any, index: number) => {
-          const companyName = a.registration?.companyName || 'ไม่ระบุ';
-          const contactName = a.registration?.contactName || 'ไม่ระบุ';
-          const phone = a.registration?.contactPhone || 'ไม่ระบุ';
-          const attendeeNames = a.registration?.attendeeNames || '';
-          return `${index + 1}. ${companyName}\n   ผู้ติดต่อ: ${contactName}\n   เบอร์โทร: ${phone}\n   รายชื่อผู้เข้าร่วม: ${attendeeNames}`;
+          const companyName = a.registration?.companyName || a.member?.companyNameTH || 'ไม่ระบุบริษัท';
+          const attendeeCount = a.registration?.attendeeCount || 1;
+          const contactName = a.registration?.contactName || a.member?.fullNameTH || a.lineProfile?.lineDisplayName || '';
+          const phone = a.registration?.contactPhone || '';
+
+          return `${index + 1}. ${companyName} (${attendeeCount} คน) ติดต่อ ${contactName}${phone ? ' โทร ' + phone : ''}`;
         })
         .join('\n\n');
 
-      const fullText = `รายชื่อผู้ลงทะเบียน: ${event.eventName}\n\n${textList}`;
+      // Combine header and list
+      const fullText = header + listText;
 
       await navigator.clipboard.writeText(fullText);
       setSuccess('คัดลอกรายชื่อเรียบร้อยแล้ว');

@@ -6,6 +6,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { updateEventRegistration, getEventRegistrations } from '@/lib/event-sheets';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { Event, AttendeeType, RoomType, calculateRegistrationFee } from '@/types/event';
+import { calculatePaymentSplit } from '@/lib/payment-deadlines';
 
 // PUT - Admin update registration
 export async function PUT(
@@ -167,9 +168,25 @@ export async function PUT(
       finalUpdateData.event_fee = calculatedEventFee;
       finalUpdateData.total_amount = newTotalAmount;
 
-      // Recalculate remaining amount if in deposit mode
-      if (currentRegistration.depositAmount && currentRegistration.depositAmount > 0) {
-        finalUpdateData.remaining_amount = newTotalAmount - currentRegistration.depositAmount;
+      // Recalculate deposit and remaining amounts if event uses deposit payment mode
+      if (eventData.paymentMode === 'deposit' && newTotalAmount > 0) {
+        // Get updated attendee count (use updated value if provided, otherwise use current)
+        const updatedAttendeeCount = updateData.attendee_count !== undefined
+          ? updateData.attendee_count
+          : currentRegistration.attendeeCount || 1;
+
+        // Recalculate deposit split based on new total amount
+        const split = calculatePaymentSplit(newTotalAmount, eventData as Event, updatedAttendeeCount);
+
+        // Only update deposit amounts if deposit hasn't been paid yet
+        if (!currentRegistration.depositPaid) {
+          finalUpdateData.deposit_amount = split.depositAmount;
+          finalUpdateData.remaining_amount = split.remainingAmount;
+        } else {
+          // If deposit already paid, keep the paid deposit amount and recalculate remaining
+          const paidDeposit = currentRegistration.depositAmount || 0;
+          finalUpdateData.remaining_amount = newTotalAmount - paidDeposit;
+        }
       }
     }
 

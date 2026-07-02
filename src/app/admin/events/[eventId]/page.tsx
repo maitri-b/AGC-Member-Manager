@@ -1283,8 +1283,15 @@ export default function EventDetailPage() {
                                 value={editFormData.attendeeCount === 0 ? '' : editFormData.attendeeCount}
                                 onChange={(e) => {
                                   const value = e.target.value;
-                                  const count = value === '' ? 0 : parseInt(value);
-                                  handleAttendeeCountChange(count || 1);
+                                  if (value === '') {
+                                    // Allow temporary empty state during typing
+                                    setEditFormData({ ...editFormData, attendeeCount: 0 });
+                                  } else {
+                                    const count = parseInt(value);
+                                    if (!isNaN(count) && count >= 1) {
+                                      handleAttendeeCountChange(count);
+                                    }
+                                  }
                                 }}
                                 onBlur={(e) => {
                                   if (e.target.value === '' || parseInt(e.target.value) === 0) {

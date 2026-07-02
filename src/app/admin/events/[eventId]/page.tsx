@@ -1280,8 +1280,17 @@ export default function EventDetailPage() {
                                 type="number"
                                 min="1"
                                 max="20"
-                                value={editFormData.attendeeCount}
-                                onChange={(e) => handleAttendeeCountChange(parseInt(e.target.value) || 1)}
+                                value={editFormData.attendeeCount === 0 ? '' : editFormData.attendeeCount}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const count = value === '' ? 0 : parseInt(value);
+                                  handleAttendeeCountChange(count || 1);
+                                }}
+                                onBlur={(e) => {
+                                  if (e.target.value === '' || parseInt(e.target.value) === 0) {
+                                    handleAttendeeCountChange(1);
+                                  }
+                                }}
                                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             </div>

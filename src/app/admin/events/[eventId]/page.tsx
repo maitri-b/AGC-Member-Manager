@@ -111,7 +111,7 @@ export default function EventDetailPage() {
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
+  const [filter, setFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
@@ -160,6 +160,17 @@ export default function EventDetailPage() {
     amount: 0,
   });
   const [addingCharge, setAddingCharge] = useState(false);
+
+  // Cancellation modal state
+  const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
+  const [cancellationFormData, setCancellationFormData] = useState<{
+    registrationId: string;
+    reason: string;
+  }>({
+    registrationId: '',
+    reason: '',
+  });
+  const [cancelling, setCancelling] = useState(false);
 
   // Toggle expand/collapse for registration details
   const toggleExpandRegistration = (registrationId: string) => {
@@ -526,15 +537,41 @@ export default function EventDetailPage() {
     setEditFormData({ ...editFormData, attendeeNames: newNames });
   };
 
-  const handleCancelRegistration = async (registrationId: string) => {
-    if (!confirm('ยืนยันการยกเลิกการลงทะเบียนนี้?')) return;
+  const handleOpenCancellationModal = (registrationId: string) => {
+    setCancellationFormData({
+      registrationId,
+      reason: '',
+    });
+    setCancellationModalOpen(true);
+  };
 
+  const handleCloseCancellationModal = () => {
+    setCancellationModalOpen(false);
+    setCancellationFormData({
+      registrationId: '',
+      reason: '',
+    });
+  };
+
+  const handleCancelRegistration = async () => {
+    if (!cancellationFormData.reason.trim()) {
+      setActionMessage({ type: 'error', text: 'กรุณาระบุสาเหตุการยกเลิก' });
+      return;
+    }
+
+    setCancelling(true);
     setActionMessage(null);
 
     try {
       const response = await fetch(
-        `/api/events/${eventId}/admin-update-registration?registrationId=${registrationId}`,
-        { method: 'DELETE' }
+        `/api/events/${eventId}/admin-update-registration?registrationId=${cancellationFormData.registrationId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cancellationReason: cancellationFormData.reason,
+          }),
+        }
       );
 
       const data = await response.json();
@@ -545,12 +582,15 @@ export default function EventDetailPage() {
 
       setActionMessage({ type: 'success', text: 'ยกเลิกการลงทะเบียนเรียบร้อยแล้ว' });
       setTimeout(() => setActionMessage(null), 3000);
+      handleCloseCancellationModal();
       fetchEventData(); // Refresh data
     } catch (err) {
       setActionMessage({
         type: 'error',
         text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
       });
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -719,6 +759,7 @@ export default function EventDetailPage() {
     // Filter by status
     if (filter === 'confirmed' && !attendee.isConfirmed) return false;
     if (filter === 'pending' && attendee.isConfirmed) return false;
+    if (filter === 'cancelled' && attendee.registration.status !== 'cancelled') return false;
 
     // Filter by search term
     if (searchTerm) {
@@ -930,6 +971,16 @@ export default function EventDetailPage() {
                 }`}
               >
                 รอดำเนินการ ({eventData.attendees.length - eventData.summary.confirmedCount})
+              </button>
+              <button
+                onClick={() => setFilter('cancelled')}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  filter === 'cancelled'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                ยกเลิก ({eventData.attendees.filter(a => a.registration.status === 'cancelled').length})
               </button>
             </div>
           </div>
@@ -1639,7 +1690,7 @@ export default function EventDetailPage() {
                                       {/* Show delete button if no remaining amount or remaining not yet paid */}
                                       {(!attendee.registration.remainingAmount || attendee.registration.remainingAmount === 0 || !attendee.registration.remainingSlipUrl) && (
                                         <button
-                                          onClick={() => handleCancelRegistration(attendee.registration.registrationId)}
+                                          onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                           className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                           title="ลบการลงทะเบียน"
                                         >
@@ -1656,7 +1707,7 @@ export default function EventDetailPage() {
                                         ✓ บันทึกการชำระเงิน
                                       </button>
                                       <button
-                                        onClick={() => handleCancelRegistration(attendee.registration.registrationId)}
+                                        onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                         className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                         title="ลบการลงทะเบียน"
                                       >
@@ -1689,7 +1740,7 @@ export default function EventDetailPage() {
                                           ชำระครบแล้ว
                                         </div>
                                         <button
-                                          onClick={() => handleCancelRegistration(attendee.registration.registrationId)}
+                                          onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                           className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                           title="ลบการลงทะเบียน"
                                         >
@@ -1705,7 +1756,7 @@ export default function EventDetailPage() {
                                           ✓ บันทึกการชำระเงิน
                                         </button>
                                         <button
-                                          onClick={() => handleCancelRegistration(attendee.registration.registrationId)}
+                                          onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                           className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                           title="ลบการลงทะเบียน"
                                         >
@@ -1725,7 +1776,7 @@ export default function EventDetailPage() {
                     {(!attendee.registration.totalAmount || attendee.registration.totalAmount === 0) && (
                       <div className="mt-3">
                         <button
-                          onClick={() => handleCancelRegistration(attendee.registration.registrationId)}
+                          onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                           className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
                           title="ลบการลงทะเบียน"
                         >
@@ -1962,6 +2013,59 @@ export default function EventDetailPage() {
                 className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation Modal */}
+      {cancellationModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">ยกเลิกการลงทะเบียน</h3>
+
+            <div className="space-y-4">
+              {/* Warning */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>คำเตือน:</strong> การยกเลิกการลงทะเบียนจะเปลี่ยนสถานะเป็น "ยกเลิก" และไม่สามารถกู้คืนได้
+                </p>
+              </div>
+
+              {/* Cancellation Reason */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  สาเหตุการยกเลิก <span className="text-red-600">*</span>
+                </label>
+                <textarea
+                  value={cancellationFormData.reason}
+                  onChange={(e) => setCancellationFormData({ ...cancellationFormData, reason: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="ระบุสาเหตุการยกเลิก เช่น ลูกค้าขอยกเลิก, ไม่สะดวกเข้าร่วม, ฯลฯ"
+                  rows={4}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  สาเหตุจะถูกบันทึกไว้เพื่อการอ้างอิงในอนาคต
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCancelRegistration}
+                disabled={cancelling || !cancellationFormData.reason.trim()}
+                className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cancelling ? 'กำลังยกเลิก...' : 'ยืนยันการยกเลิก'}
+              </button>
+              <button
+                onClick={handleCloseCancellationModal}
+                disabled={cancelling}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                ปิด
               </button>
             </div>
           </div>

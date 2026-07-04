@@ -80,6 +80,10 @@ export interface EventRegistration {
 
   // Special Charges (New - admin can add custom charges to specific registrations)
   specialCharges?: string;          // special_charges (JSON stringified SpecialCharge[])
+
+  // Cancellation Info (New - for tracking cancellation details)
+  cancellationReason?: string;      // cancellation_reason - Reason for cancellation
+  cancelledAt?: string;             // cancelled_at - ISO timestamp when cancelled
 }
 
 // Event metadata (for managing multiple events)
@@ -358,6 +362,9 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   roomAllocations: 'room_allocations',
   // Special charges (New)
   specialCharges: 'special_charges',
+  // Cancellation info (New)
+  cancellationReason: 'cancellation_reason',
+  cancelledAt: 'cancelled_at',
 };
 
 // Reverse mapping for sheet to registration conversion

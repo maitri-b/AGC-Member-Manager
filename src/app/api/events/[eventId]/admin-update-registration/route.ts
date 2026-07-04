@@ -7,6 +7,7 @@ import { updateEventRegistration, getEventRegistrations } from '@/lib/event-shee
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { Event, AttendeeType, RoomType, calculateRegistrationFee } from '@/types/event';
 import { calculatePaymentSplit } from '@/lib/payment-deadlines';
+import { logRegistrationUpdate, logRegistrationCancellation } from '@/lib/activity-log';
 
 // PUT - Admin update registration
 export async function PUT(
@@ -211,6 +212,23 @@ export async function PUT(
     // Update in Google Sheets
     await updateEventRegistration(eventData.sheetName, registrationId, finalUpdateData);
 
+    // Log the activity
+    try {
+      await logRegistrationUpdate({
+        eventId,
+        registrationId,
+        userId: session.user.id,
+        userName: session.user.name || 'Admin',
+        userRole: session.user.role || 'admin',
+        oldData: currentRegistration,
+        newData: finalUpdateData,
+        notes: 'Admin updated registration details',
+      });
+    } catch (logError) {
+      console.error('[Activity Log] Failed to log update:', logError);
+      // Don't fail the request if logging fails
+    }
+
     return NextResponse.json({
       success: true,
       message: 'อัพเดทข้อมูลเรียบร้อยแล้ว',
@@ -262,6 +280,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'กรุณาระบุ registrationId' }, { status: 400 });
     }
 
+    // Get cancellation reason from request body
+    const body = await request.json();
+    const { cancellationReason } = body;
+
+    if (!cancellationReason || !cancellationReason.trim()) {
+      return NextResponse.json({ error: 'กรุณาระบุสาเหตุการยกเลิก' }, { status: 400 });
+    }
+
     const db = adminDb();
 
     // Get event details
@@ -280,17 +306,35 @@ export async function DELETE(
     // Update status to 'cancelled' instead of deleting
     const updateData: Record<string, unknown> = {
       status: 'cancelled',
+      cancellation_reason: cancellationReason,
+      cancelled_at: new Date().toISOString(),
       last_update_info: JSON.stringify({
         cancelled: {
           by: 'admin',
           userId: session.user.id,
           userName: session.user.name,
           at: new Date().toISOString(),
+          reason: cancellationReason,
         },
       }),
     };
 
     await updateEventRegistration(eventData.sheetName, registrationId, updateData);
+
+    // Log the cancellation activity
+    try {
+      await logRegistrationCancellation({
+        eventId,
+        registrationId,
+        userId: session.user.id,
+        userName: session.user.name || 'Admin',
+        userRole: session.user.role || 'admin',
+        reason: cancellationReason,
+      });
+    } catch (logError) {
+      console.error('[Activity Log] Failed to log cancellation:', logError);
+      // Don't fail the request if logging fails
+    }
 
     return NextResponse.json({
       success: true,

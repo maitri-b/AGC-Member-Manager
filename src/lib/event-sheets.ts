@@ -685,12 +685,14 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
   const allRegistrations = await getEventRegistrations(event.sheetName);
 
   // Split registrations into active and cancelled
+  // Note: For active registrations, we only count 'agent' type
+  // For cancelled registrations, we include ALL types to show in admin panel
   const agentRegistrationsActive = allRegistrations.filter(r =>
     r.attendanceType?.toLowerCase() === 'agent' && !isRegistrationCancelled(r)
   );
 
   const agentRegistrationsCancelled = allRegistrations.filter(r =>
-    r.attendanceType?.toLowerCase() === 'agent' && isRegistrationCancelled(r)
+    isRegistrationCancelled(r) // Show ALL cancelled registrations regardless of attendance_type
   );
 
   const members = await getAllMembers();

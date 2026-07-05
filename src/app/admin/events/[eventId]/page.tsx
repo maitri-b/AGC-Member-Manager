@@ -759,7 +759,11 @@ export default function EventDetailPage() {
     // Filter by status
     if (filter === 'confirmed' && !attendee.isConfirmed) return false;
     if (filter === 'pending' && attendee.isConfirmed) return false;
-    if (filter === 'cancelled' && attendee.registration.status !== 'cancelled') return false;
+    if (filter === 'cancelled') {
+      const status = String(attendee.registration.status || '').toLowerCase();
+      const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
+      if (!isCancelled) return false;
+    }
 
     // Filter by search term
     if (searchTerm) {
@@ -980,7 +984,10 @@ export default function EventDetailPage() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                ยกเลิก ({eventData.attendees.filter(a => a.registration.status === 'cancelled').length})
+                ยกเลิก ({eventData.attendees.filter(a => {
+                  const status = String(a.registration.status || '').toLowerCase();
+                  return status === 'cancelled' || a.registration.status?.includes('ยกเลิก');
+                }).length})
               </button>
             </div>
           </div>

@@ -683,18 +683,23 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
   }
 
   const allRegistrations = await getEventRegistrations(event.sheetName);
-  // Only count registrations with attendanceType = 'agent' (exclude empty values and cancelled)
-  const agentRegistrationsRaw = allRegistrations.filter(r =>
+
+  // Split registrations into active and cancelled
+  const agentRegistrationsActive = allRegistrations.filter(r =>
     r.attendanceType?.toLowerCase() === 'agent' && !isRegistrationCancelled(r)
+  );
+
+  const agentRegistrationsCancelled = allRegistrations.filter(r =>
+    r.attendanceType?.toLowerCase() === 'agent' && isRegistrationCancelled(r)
   );
 
   const members = await getAllMembers();
 
-  // Deduplicate by license number or memberId - keep only the LATEST active registration per license/member
-  // This handles the case where someone registers, gets cancelled, then registers again
+  // Deduplicate ACTIVE registrations by license number or memberId
+  // Keep only the LATEST active registration per license/member
   const licenseMap = new Map<string, EventRegistration>();
 
-  for (const reg of agentRegistrationsRaw) {
+  for (const reg of agentRegistrationsActive) {
     const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber || '');
     const memberId = reg.memberId || '';
 
@@ -724,7 +729,7 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
     }
   }
 
-  // Build attendees list from active registrations only
+  // Build attendees list from active registrations
   const attendees: {
     registration: EventRegistration;
     member: {
@@ -758,6 +763,25 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
       confirmedCount++;
     }
     totalAttendees += reg.attendeeCount || 0;
+  }
+
+  // Add cancelled registrations to the attendees list
+  // Note: Cancelled registrations are NOT deduplicated or counted in totals
+  for (const reg of agentRegistrationsCancelled) {
+    const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber || '');
+    const member = members.find(m => {
+      const memberLicense = normalizeLicenseNumber(m.licenseNumber || '');
+      return memberLicense && memberLicense === normalizedLicense;
+    });
+
+    attendees.push({
+      registration: reg,
+      member: member ? {
+        memberId: member.memberId,
+        fullNameTH: member.fullNameTH,
+        companyNameTH: member.companyNameTH,
+      } : null,
+    });
   }
 
   // Filter allRegistrations to exclude cancelled for totalRegistrations count

@@ -13,6 +13,7 @@ const CONFIG = {
   // Event ID to Sheet Name mapping
   EVENT_SHEETS: {
     '10yearth-meeting-2026': '10 Yearth Meeting',
+    '🎉-งานแรลลี่-10th-anniversary-agents-club-2026': 'Rally2026',
     // เพิ่ม event อื่นๆ ที่นี่
   }
 };

@@ -80,6 +80,7 @@ interface UserRegistration {
   remainingAmount?: number;
   depositPaid?: boolean;
   depositPaidDate?: string;
+  remainingPaidDate?: string; // วันที่จ่ายยอดคงเหลือ
   depositSlipUrl?: string;
   remainingSlipUrl?: string;
   depositDeadline?: string;

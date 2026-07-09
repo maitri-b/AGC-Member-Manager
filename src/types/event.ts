@@ -42,6 +42,7 @@ export interface EventRegistration {
   remainingAmount: number;          // remaining_amount - Remaining balance
   depositPaid: boolean;             // deposit_paid - Has deposit been paid?
   depositPaidDate: string;          // deposit_paid_date - When deposit was paid (ISO timestamp)
+  remainingPaidDate: string;        // remaining_paid_date - When remaining was paid (ISO timestamp)
   depositSlipUrl: string;           // deposit_slip_url - Slip for deposit payment
   remainingSlipUrl: string;         // remaining_slip_url - Slip for remaining payment
   depositDeadline: string;          // deposit_deadline - ISO timestamp when deposit is due
@@ -338,6 +339,7 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   remainingAmount: 'remaining_amount',
   depositPaid: 'deposit_paid',
   depositPaidDate: 'deposit_paid_date',
+  remainingPaidDate: 'remaining_paid_date',
   depositSlipUrl: 'deposit_slip_url',
   remainingSlipUrl: 'remaining_slip_url',
   depositDeadline: 'deposit_deadline',

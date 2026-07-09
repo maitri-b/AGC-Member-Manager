@@ -175,6 +175,45 @@ export async function GET(
               console.error('Error parsing specialCharges:', e);
             }
 
+            // Recalculate totalAmount to ensure it includes all fees
+            // This handles cases where old data might not have room fees included
+            let recalculatedTotal = latestReg.totalAmount || 0;
+
+            // If we have attendee type selections, recalculate from scratch
+            if (attendeeTypeSelections.length > 0 && eventData.attendeeTypes) {
+              let eventFee = 0;
+              attendeeTypeSelections.forEach((sel: { typeId: string; quantity: number }) => {
+                const type = eventData.attendeeTypes.find((t: { typeId: string; price: number }) => t.typeId === sel.typeId);
+                if (type) {
+                  eventFee += type.price * sel.quantity;
+                }
+              });
+
+              // Add room fees
+              let roomFee = 0;
+              if (roomAllocations.length > 0 && eventData.roomTypes) {
+                roomAllocations.forEach((alloc: { roomTypeId: string; roomCount: number }) => {
+                  const roomType = eventData.roomTypes.find((rt: { typeId: string; price: number }) => rt.typeId === alloc.roomTypeId);
+                  if (roomType) {
+                    roomFee += roomType.price * alloc.roomCount;
+                  }
+                });
+              }
+
+              // Add special charges
+              let specialChargesFee = 0;
+              if (specialCharges.length > 0) {
+                specialChargesFee = specialCharges.reduce((sum: number, c: { amount: number }) => sum + c.amount, 0);
+              }
+
+              recalculatedTotal = eventFee + roomFee + specialChargesFee;
+
+              // If recalculated total is different, log it for debugging
+              if (recalculatedTotal !== latestReg.totalAmount) {
+                console.log(`[Fee Recalculation] Registration ${latestReg.registrationId}: ${latestReg.totalAmount} → ${recalculatedTotal} (eventFee: ${eventFee}, roomFee: ${roomFee}, specialCharges: ${specialChargesFee})`);
+              }
+            }
+
             userRegistration = {
               registrationId: latestReg.registrationId,
               status: latestReg.status,
@@ -182,7 +221,7 @@ export async function GET(
               attendeeNames: latestReg.attendeeNames,
               registrationDate: latestReg.registrationDate,
               // Deposit payment data (New)
-              totalAmount: latestReg.totalAmount,
+              totalAmount: recalculatedTotal, // Use recalculated total
               depositAmount: latestReg.depositAmount,
               remainingAmount: latestReg.remainingAmount,
               depositPaid: latestReg.depositPaid,

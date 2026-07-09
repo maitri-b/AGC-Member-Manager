@@ -63,9 +63,12 @@ function doGet(e) {
   template.registrationId = params.registrationId;
   template.eventId = params.eventId;
   template.paymentType = params.paymentType;
-  template.amount = params.paymentType === 'deposit'
-    ? registration.depositAmount
-    : registration.remainingAmount;
+
+  // Convert amounts to numbers
+  const depositAmt = Number(registration.depositAmount) || 0;
+  const remainingAmt = Number(registration.remainingAmount) || 0;
+
+  template.amount = params.paymentType === 'deposit' ? depositAmt : remainingAmt;
 
   return template.evaluate()
     .setTitle('อัพโหลดสลิปการชำระเงิน')
@@ -105,8 +108,7 @@ function processForm(formObject) {
     const newFileName = registrationId + '_' + paymentType + '_' + new Date().getTime() + '_' + fileName;
     const file = folder.createFile(blob.setName(newFileName));
 
-    // Make file publicly accessible
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    // Get shareable link (files in this folder inherit sharing settings)
     const fileUrl = file.getUrl();
 
     Logger.log('File uploaded: ' + fileUrl);

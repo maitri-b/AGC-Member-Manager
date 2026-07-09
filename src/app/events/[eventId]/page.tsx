@@ -9,6 +9,7 @@ import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeType
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
+import { GAS_UPLOAD_SLIP_URL } from '@/lib/constants';
 
 interface Event {
   eventId: string;
@@ -1383,10 +1384,47 @@ export default function EventDetailPage() {
                           )}
 
                           {event.paymentSlipSubmissionUrl ? (
-                            <a
-                              href={event.paymentSlipSubmissionUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => {
+                                if (!userRegistration) {
+                                  showToast('กรุณาลงทะเบียนก่อนอัพโหลดสลิป', 'error');
+                                  return;
+                                }
+
+                                // Determine payment type based on deposit status
+                                let paymentType: 'deposit' | 'remaining' = 'deposit';
+                                if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
+                                  paymentType = 'remaining';
+                                }
+
+                                // Build dynamic URL with parameters
+                                const url = new URL(event.paymentSlipSubmissionUrl);
+                                url.searchParams.append('registrationId', userRegistration.registrationId);
+                                url.searchParams.append('eventId', event.eventId);
+                                url.searchParams.append('lineUserId', session?.user?.id || '');
+                                url.searchParams.append('paymentType', paymentType);
+
+                                // Open in new window
+                                const popup = window.open(
+                                  url.toString(),
+                                  'uploadSlip',
+                                  'width=600,height=700,scrollbars=yes,resizable=yes'
+                                );
+
+                                if (!popup) {
+                                  showToast('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ (Popup)', 'error');
+                                  return;
+                                }
+
+                                // Auto-refresh when popup closes
+                                const checkClosed = setInterval(() => {
+                                  if (popup.closed) {
+                                    clearInterval(checkClosed);
+                                    console.log('Upload window closed, refreshing data...');
+                                    fetchEventDetail();
+                                  }
+                                }, 500);
+                              }}
                               className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
                             >
                               <span className="flex items-center justify-center gap-2">
@@ -1395,7 +1433,7 @@ export default function EventDetailPage() {
                                 </svg>
                                 {(event as any).paymentSlipButtonText || 'ส่งหลักฐานการชำระเงิน'}
                               </span>
-                            </a>
+                            </button>
                           ) : (
                             <div className="text-sm text-gray-600 bg-white rounded p-3 border border-gray-200">
                               <p>โปรดชำระเงินและส่งหลักฐานการชำระตามช่องทางที่ระบุไว้ในข้อมูลการชำระเงินด้านบน</p>

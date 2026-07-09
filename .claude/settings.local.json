@@ -36,7 +36,14 @@
       "Bash(del nul)",
       "Bash(npm install:*)",
       "Bash(Select-String \"page.tsx\")",
-      "Bash(Select-Object -First 10)"
+      "Bash(Select-Object -First 10)",
+      "Bash(timeout /t 10 /nobreak)",
+      "Bash(Select-String \"error|Error|warning|Warning|Failed|failed|✓ Compiled|Route \\(app\\)\")",
+      "Bash(node debug-sheets.js:*)",
+      "Bash(clasp login:*)",
+      "Bash(clasp clone:*)",
+      "Bash(clasp push:*)",
+      "Bash(clasp deploy:*)"
     ]
   }
 }

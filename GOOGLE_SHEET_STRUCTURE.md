@@ -71,6 +71,10 @@
 
 เมื่อสมาชิกอัพโหลดสลิปผ่าน GAS Web App:
 
+### Payment Type: `full` (ชำระเต็มจำนวน)
+- อัพเดทคอลัมน์ `slip_url` → URL ของไฟล์ที่อัพโหลด
+- อัพเดทคอลัมน์ `payment_status` → "รอตรวจสอบ"
+
 ### Payment Type: `deposit` (มัดจำ)
 - อัพเดทคอลัมน์ `deposit_slip_url` → URL ของไฟล์ที่อัพโหลด
 - อัพเดทคอลัมน์ `deposit_paid_date` → วันที่ปัจจุบัน (YYYY-MM-DD)

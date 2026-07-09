@@ -1432,10 +1432,19 @@ export default function EventDetailPage() {
                                   window.open(event.paymentSlipSubmissionUrl, '_blank');
                                 } else {
                                   // GAS Mode: Add parameters and open in popup
-                                  // Determine payment type based on deposit status
-                                  let paymentType: 'deposit' | 'remaining' = 'deposit';
-                                  if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
-                                    paymentType = 'remaining';
+                                  // Determine payment type based on event mode and deposit status
+                                  let paymentType: 'deposit' | 'remaining' | 'full' = 'full';
+
+                                  if (event.paymentMode === 'deposit') {
+                                    // Deposit mode: Check if deposit already paid
+                                    if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
+                                      paymentType = 'remaining';
+                                    } else {
+                                      paymentType = 'deposit';
+                                    }
+                                  } else {
+                                    // Full payment mode (or undefined = default to full)
+                                    paymentType = 'full';
                                   }
 
                                   // Build dynamic URL with parameters

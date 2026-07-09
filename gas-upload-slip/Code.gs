@@ -77,7 +77,7 @@ function doGet(e) {
     registrationId: e.parameter.registrationId,
     eventId: e.parameter.eventId,
     lineUserId: e.parameter.lineUserId,
-    paymentType: e.parameter.paymentType || 'deposit' // deposit หรือ remaining
+    paymentType: e.parameter.paymentType || 'full' // full, deposit, or remaining
   };
 
   Logger.log('doGet params: ' + JSON.stringify(params));
@@ -329,12 +329,25 @@ function updateRegistrationSlip(registrationId, eventId, paymentType, fileUrl) {
     const normalizedHeaders = headers.map(h => String(h).toLowerCase().trim());
 
     const regIdCol = normalizedHeaders.indexOf('registration_id');
-    const slipUrlCol = paymentType === 'deposit'
-      ? normalizedHeaders.indexOf('deposit_slip_url')
-      : normalizedHeaders.indexOf('remaining_slip_url');
-    const paidDateCol = paymentType === 'deposit'
-      ? normalizedHeaders.indexOf('deposit_paid_date')
-      : normalizedHeaders.indexOf('remaining_paid_date');
+
+    // Determine which column to update based on payment type
+    let slipUrlCol, paidDateCol, newStatus;
+
+    if (paymentType === 'deposit') {
+      slipUrlCol = normalizedHeaders.indexOf('deposit_slip_url');
+      paidDateCol = normalizedHeaders.indexOf('deposit_paid_date');
+      newStatus = 'รอตรวจสอบมัดจำ';
+    } else if (paymentType === 'remaining') {
+      slipUrlCol = normalizedHeaders.indexOf('remaining_slip_url');
+      paidDateCol = normalizedHeaders.indexOf('remaining_paid_date');
+      newStatus = 'รอตรวจสอบยอดคงเหลือ';
+    } else {
+      // Full payment (or legacy)
+      slipUrlCol = normalizedHeaders.indexOf('slip_url');
+      paidDateCol = -1; // No specific paid date column for full payment
+      newStatus = 'รอตรวจสอบ';
+    }
+
     const statusCol = normalizedHeaders.indexOf('payment_status');
 
     // Find row
@@ -348,7 +361,7 @@ function updateRegistrationSlip(registrationId, eventId, paymentType, fileUrl) {
           Logger.log('Updated slip URL at row ' + rowNum + ', col ' + (slipUrlCol + 1));
         }
 
-        // Update paid date
+        // Update paid date (if applicable)
         if (paidDateCol >= 0) {
           const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
           sheet.getRange(rowNum, paidDateCol + 1).setValue(today);
@@ -357,9 +370,6 @@ function updateRegistrationSlip(registrationId, eventId, paymentType, fileUrl) {
 
         // Update status
         if (statusCol >= 0) {
-          const newStatus = paymentType === 'deposit'
-            ? 'รอตรวจสอบมัดจำ'
-            : 'รอตรวจสอบยอดคงเหลือ';
           sheet.getRange(rowNum, statusCol + 1).setValue(newStatus);
           Logger.log('Updated status to: ' + newStatus);
         }

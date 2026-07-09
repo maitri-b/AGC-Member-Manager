@@ -4,7 +4,7 @@
 
 // Google Apps Script Web App URL for uploading payment slips
 export const GAS_UPLOAD_SLIP_URL = process.env.NEXT_PUBLIC_GAS_UPLOAD_SLIP_URL ||
-  'https://script.google.com/macros/s/AKfycby01CsVrFIfQzzJ8wWTgakXbxzdv1ZXDrgzFQyHiM1B2qCJGO6rD0_Bqtbx-HOu_VwiAw/exec';
+  'https://script.google.com/macros/s/AKfycbzXGqdMPjbeUcsG-bfuIxtKcF2PGErGgCQIAwu_hzHhBOoCcPxPsMQ1qEmmFX777mdUdg/exec';
 
 // Admin LINE contact
 export const ADMIN_LINE_URL = 'https://lin.ee/nzAjXXq';

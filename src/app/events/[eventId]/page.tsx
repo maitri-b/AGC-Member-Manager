@@ -1391,6 +1391,11 @@ export default function EventDetailPage() {
                                   return;
                                 }
 
+                                if (!event.paymentSlipSubmissionUrl) {
+                                  toast.error('ไม่พบ URL สำหรับอัพโหลดสลิป');
+                                  return;
+                                }
+
                                 // Determine payment type based on deposit status
                                 let paymentType: 'deposit' | 'remaining' = 'deposit';
                                 if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {

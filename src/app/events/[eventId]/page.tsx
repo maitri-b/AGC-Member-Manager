@@ -1292,70 +1292,75 @@ export default function EventDetailPage() {
                     </div>
                   )}
 
-                  {/* Payment Breakdown (NEW - for deposit mode) */}
-                  {event?.paymentMode === 'deposit' && userRegistration.totalAmount && userRegistration.totalAmount > 0 && (
+                  {/* Payment Breakdown (for both full and deposit mode) */}
+                  {userRegistration.totalAmount && userRegistration.totalAmount > 0 && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                       <h3 className="font-semibold text-blue-900 mb-4">รายละเอียดการชำระเงิน</h3>
 
-                      {/* Deposit Payment */}
-                      <div className="bg-white rounded-lg p-4 mb-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium">งวดที่ 1: มัดจำ</span>
-                          <span className="text-lg font-bold">{userRegistration.depositAmount?.toLocaleString() || 0} บาท</span>
-                        </div>
+                      {/* Deposit Mode - Show breakdown */}
+                      {event?.paymentMode === 'deposit' && (
+                        <>
+                          {/* Deposit Payment */}
+                          <div className="bg-white rounded-lg p-4 mb-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium">งวดที่ 1: มัดจำ</span>
+                              <span className="text-lg font-bold">{userRegistration.depositAmount?.toLocaleString() || 0} บาท</span>
+                            </div>
 
-                        {userRegistration.depositDeadline && !userRegistration.depositPaid && (
-                          <div className="text-sm text-gray-600 mb-2">
-                            ครบกำหนด: {formatDeadline(userRegistration.depositDeadline)}
-                            <br />
-                            <span className="text-orange-600 font-medium">
-                              {getTimeRemaining(userRegistration.depositDeadline)}
-                            </span>
-                          </div>
-                        )}
+                            {userRegistration.depositDeadline && !userRegistration.depositPaid && (
+                              <div className="text-sm text-gray-600 mb-2">
+                                ครบกำหนด: {formatDeadline(userRegistration.depositDeadline)}
+                                <br />
+                                <span className="text-orange-600 font-medium">
+                                  {getTimeRemaining(userRegistration.depositDeadline)}
+                                </span>
+                              </div>
+                            )}
 
-                        {userRegistration.depositPaid && (
-                          <span className="text-sm text-green-600 flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            ชำระแล้ว {userRegistration.depositPaidDate && `(${formatDeadline(userRegistration.depositPaidDate)})`}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Remaining Payment */}
-                      {userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && (
-                        <div className="bg-white rounded-lg p-4 mb-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">งวดที่ 2: ยอดคงเหลือ</span>
-                            <span className="text-lg font-bold text-orange-600">
-                              {userRegistration.remainingAmount.toLocaleString()} บาท
-                            </span>
-                          </div>
-
-                          {userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl && (
-                            <div className="text-sm text-gray-600 mb-2">
-                              ครบกำหนด: {formatDeadline(userRegistration.remainingDeadline)}
-                              <br />
-                              <span className="text-orange-600 font-medium">
-                                {getTimeRemaining(userRegistration.remainingDeadline)}
+                            {userRegistration.depositPaid && (
+                              <span className="text-sm text-green-600 flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                ชำระแล้ว {userRegistration.depositPaidDate && `(${formatDeadline(userRegistration.depositPaidDate)})`}
                               </span>
+                            )}
+                          </div>
+
+                          {/* Remaining Payment */}
+                          {userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && (
+                            <div className="bg-white rounded-lg p-4 mb-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium">งวดที่ 2: ยอดคงเหลือ</span>
+                                <span className="text-lg font-bold text-orange-600">
+                                  {userRegistration.remainingAmount.toLocaleString()} บาท
+                                </span>
+                              </div>
+
+                              {userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl && (
+                                <div className="text-sm text-gray-600 mb-2">
+                                  ครบกำหนด: {formatDeadline(userRegistration.remainingDeadline)}
+                                  <br />
+                                  <span className="text-orange-600 font-medium">
+                                    {getTimeRemaining(userRegistration.remainingDeadline)}
+                                  </span>
+                                </div>
+                              )}
+
+                              {userRegistration.remainingSlipUrl && (
+                                <span className="text-sm text-green-600 flex items-center gap-1">
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                  ชำระครบแล้ว
+                                </span>
+                              )}
                             </div>
                           )}
-
-                          {userRegistration.remainingSlipUrl && (
-                            <span className="text-sm text-green-600 flex items-center gap-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                              ชำระครบแล้ว
-                            </span>
-                          )}
-                        </div>
+                        </>
                       )}
 
-                      {/* Total Amount Summary Card - Moved to bottom */}
+                      {/* Total Amount Summary Card */}
                       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
                         <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
                         <div className="flex items-baseline justify-between">
@@ -1364,7 +1369,7 @@ export default function EventDetailPage() {
                         </div>
                       </div>
 
-                      {/* Single Payment Submission Button */}
+                      {/* Single Payment Submission Button - Works for both full and deposit mode */}
                       {/* Only show if event has payment and user hasn't paid yet */}
                       {(() => {
                         // Debug: Log visibility conditions

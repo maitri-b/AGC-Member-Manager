@@ -14,13 +14,17 @@ function isRegistrationCancelled(registration: EventRegistration): boolean {
   return statusLower === 'cancelled' || status.includes('ยกเลิก');
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Check if caller wants only published events (from query params)
+    const { searchParams } = new URL(request.url);
+    const onlyPublished = searchParams.get('published') === 'true';
 
     // Allow members to view events (for their own attendance)
     // Committee, admin, and event managers can see full details including unpublished events
@@ -38,10 +42,12 @@ export async function GET() {
       sheetsCache.set(cacheKey, events, CacheTTL.MEDIUM);
     }
 
-    // Filter events based on user role
-    // Admin/Committee: See all events (published and unpublished)
-    // Regular users: See only published events
-    const visibleEvents = isCommitteeOrAdmin ? events : events.filter(e => e.isPublished);
+    // Filter events based on user role and query params
+    // 1. If ?published=true is specified → always show only published events
+    // 2. If not specified → Admin/Committee see all, Regular users see only published
+    const visibleEvents = onlyPublished
+      ? events.filter(e => e.isPublished)
+      : (isCommitteeOrAdmin ? events : events.filter(e => e.isPublished));
 
     if (!isCommitteeOrAdmin) {
       // For regular members, return basic event info with registration status

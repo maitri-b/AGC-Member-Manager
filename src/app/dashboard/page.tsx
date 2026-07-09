@@ -112,7 +112,8 @@ function DashboardContent() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('/api/events');
+      // Fetch only published events for dashboard
+      const response = await fetch('/api/events?published=true');
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events || []);

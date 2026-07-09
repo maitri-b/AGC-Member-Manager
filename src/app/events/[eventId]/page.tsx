@@ -1365,7 +1365,8 @@ export default function EventDetailPage() {
                       </div>
 
                       {/* Single Payment Submission Button */}
-                      {event.paymentAccountNumber && (!userRegistration.depositPaid || (userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl)) ? (
+                      {/* Only show if event has payment and user hasn't paid yet */}
+                      {event.paymentAccountNumber && userRegistration.totalAmount > 0 && (!userRegistration.depositPaid || (userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl)) ? (
                         <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4">
                           {/* Show instruction text only when there's a payment slip URL */}
                           {event.paymentSlipSubmissionUrl && (
@@ -1396,39 +1397,48 @@ export default function EventDetailPage() {
                                   return;
                                 }
 
-                                // Determine payment type based on deposit status
-                                let paymentType: 'deposit' | 'remaining' = 'deposit';
-                                if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
-                                  paymentType = 'remaining';
-                                }
+                                // Check if using external link mode (Google Form / LINE / etc.)
+                                const useExternal = (event as any).useExternalPaymentLink === true;
 
-                                // Build dynamic URL with parameters
-                                const url = new URL(event.paymentSlipSubmissionUrl);
-                                url.searchParams.append('registrationId', userRegistration.registrationId);
-                                url.searchParams.append('eventId', event.eventId);
-                                url.searchParams.append('lineUserId', session?.user?.id || '');
-                                url.searchParams.append('paymentType', paymentType);
-
-                                // Open in new window
-                                const popup = window.open(
-                                  url.toString(),
-                                  'uploadSlip',
-                                  'width=600,height=700,scrollbars=yes,resizable=yes'
-                                );
-
-                                if (!popup) {
-                                  toast.error('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ (Popup)');
-                                  return;
-                                }
-
-                                // Auto-refresh when popup closes
-                                const checkClosed = setInterval(() => {
-                                  if (popup.closed) {
-                                    clearInterval(checkClosed);
-                                    console.log('Upload window closed, refreshing data...');
-                                    fetchEventDetail();
+                                if (useExternal) {
+                                  // External Link Mode: Open URL directly in new tab without parameters
+                                  window.open(event.paymentSlipSubmissionUrl, '_blank');
+                                } else {
+                                  // GAS Mode: Add parameters and open in popup
+                                  // Determine payment type based on deposit status
+                                  let paymentType: 'deposit' | 'remaining' = 'deposit';
+                                  if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
+                                    paymentType = 'remaining';
                                   }
-                                }, 500);
+
+                                  // Build dynamic URL with parameters
+                                  const url = new URL(event.paymentSlipSubmissionUrl);
+                                  url.searchParams.append('registrationId', userRegistration.registrationId);
+                                  url.searchParams.append('eventId', event.eventId);
+                                  url.searchParams.append('lineUserId', session?.user?.id || '');
+                                  url.searchParams.append('paymentType', paymentType);
+
+                                  // Open in popup window
+                                  const popup = window.open(
+                                    url.toString(),
+                                    'uploadSlip',
+                                    'width=600,height=700,scrollbars=yes,resizable=yes'
+                                  );
+
+                                  if (!popup) {
+                                    toast.error('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ (Popup)');
+                                    return;
+                                  }
+
+                                  // Auto-refresh when popup closes
+                                  const checkClosed = setInterval(() => {
+                                    if (popup.closed) {
+                                      clearInterval(checkClosed);
+                                      console.log('Upload window closed, refreshing data...');
+                                      fetchEventDetail();
+                                    }
+                                  }, 500);
+                                }
                               }}
                               className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
                             >

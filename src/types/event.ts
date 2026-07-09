@@ -118,6 +118,7 @@ export interface Event {
   paymentSlipSubmissionUrl?: string; // URL สำหรับส่งหลักฐานการชำระเงิน (Google Form / ฟอร์มอื่นๆ)
   paymentSlipButtonText?: string;   // ข้อความปุ่มส่งหลักฐานการชำระเงิน (Default: "ส่งหลักฐานการชำระเงิน")
   paymentInstructionText?: string;  // ข้อความคำแนะนำการชำระเงิน (แสดงก่อนปุ่ม)
+  useExternalPaymentLink?: boolean; // true = เปิด URL ตรงๆ (Google Form/LINE), false/undefined = ใช้ GAS upload slip พร้อม parameters (Default: false)
 
   // Deposit Payment Configuration (New)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')
@@ -186,6 +187,7 @@ export interface EventInput {
   paymentSlipSubmissionUrl?: string; // URL สำหรับส่งหลักฐานการชำระเงิน (Google Form / ฟอร์มอื่นๆ)
   paymentSlipButtonText?: string;   // ข้อความปุ่มส่งหลักฐานการชำระเงิน (Default: "ส่งหลักฐานการชำระเงิน")
   paymentInstructionText?: string;  // ข้อความคำแนะนำการชำระเงิน (แสดงก่อนปุ่ม)
+  useExternalPaymentLink?: boolean; // true = เปิด URL ตรงๆ (Google Form/LINE), false/undefined = ใช้ GAS upload slip พร้อม parameters (Default: false)
 
   // Deposit Payment Configuration (New)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')

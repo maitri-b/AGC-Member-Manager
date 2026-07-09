@@ -6,10 +6,9 @@
  */
 
 // ========== Configuration ==========
-// TODO: ใส่ค่าจริงจาก .env.local
 const CONFIG = {
-  SHEET_ID: 'YOUR_GOOGLE_SHEET_ID', // ใส่ GOOGLE_SHEET_ID จาก .env.local
-  DRIVE_FOLDER_ID: 'YOUR_DRIVE_FOLDER_ID', // สร้าง folder ใหม่ใน Google Drive สำหรับเก็บสลิป
+  SHEET_ID: '1pVx91b0tA6IHIfKTvGq6ywYYzkNe1HPkGh7rSiHlmb0',
+  DRIVE_FOLDER_ID: '17PF4Za5QPcxtZFUuHi2FgQOT7yFocu1i',
 
   // Event ID to Sheet Name mapping
   EVENT_SHEETS: {

@@ -7,6 +7,7 @@ import { getEventRegistrations } from '@/lib/event-sheets';
 import { EventRegistration, Event } from '@/types/event';
 import { determinePaymentStatus } from '@/lib/payment-status';
 import { sheetsCache, CacheKeys, CacheTTL } from '@/lib/cache/google-sheets-cache';
+import { hasPermission } from '@/lib/permissions';
 
 // Helper function to check if registration is cancelled
 function isRegistrationCancelled(registration: EventRegistration): boolean {
@@ -38,8 +39,12 @@ export async function GET(
 
     const eventData = eventDoc.data();
 
-    // Check if event is published - ALL users can only see published events
-    if (!eventData?.isPublished) {
+    // Check if event is published
+    // Admin/Committee can see unpublished events, regular users can only see published events
+    const isCommitteeOrAdmin = hasPermission(session.user.permissions || [], 'members:list') ||
+                               hasPermission(session.user.permissions || [], 'admin:access');
+
+    if (!eventData?.isPublished && !isCommitteeOrAdmin) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 

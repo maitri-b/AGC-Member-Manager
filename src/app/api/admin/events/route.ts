@@ -6,6 +6,45 @@ import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { Event, EventInput, DEFAULT_EVENTS } from '@/types/event';
 
+/**
+ * Sync event mapping to Google Apps Script
+ * This allows GAS to dynamically load event mappings without hardcoding
+ */
+async function syncEventToGAS(eventId: string, sheetName: string) {
+  try {
+    const gasUrl = process.env.NEXT_PUBLIC_GAS_UPLOAD_SLIP_URL;
+
+    if (!gasUrl) {
+      console.warn('GAS_UPLOAD_SLIP_URL not configured, skipping sync');
+      return { success: false, error: 'GAS URL not configured' };
+    }
+
+    const response = await fetch(gasUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'sync_event',
+        eventId,
+        sheetName,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GAS sync failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log(`✅ Synced event to GAS: ${eventId} -> ${sheetName}`, result);
+    return result;
+  } catch (error) {
+    console.error('Error syncing event to GAS:', error);
+    // Don't fail the main operation if sync fails
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 // GET - List all events
 export async function GET() {
   try {
@@ -202,6 +241,13 @@ export async function POST(request: NextRequest) {
 
     await db.collection('events').doc(eventId).set(newEvent);
 
+    // Sync event mapping to GAS (non-blocking)
+    if (newEvent.sheetName) {
+      syncEventToGAS(eventId, newEvent.sheetName).catch(err => {
+        console.error('GAS sync error (non-critical):', err);
+      });
+    }
+
     return NextResponse.json({ success: true, event: newEvent }, { status: 201 });
   } catch (error) {
     console.error('Error creating event:', error);
@@ -256,6 +302,13 @@ export async function PUT(request: NextRequest) {
     };
 
     await eventRef.update(updateData);
+
+    // Sync to GAS if sheetName was updated (non-blocking)
+    if (updates.sheetName) {
+      syncEventToGAS(eventId, updates.sheetName).catch(err => {
+        console.error('GAS sync error (non-critical):', err);
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

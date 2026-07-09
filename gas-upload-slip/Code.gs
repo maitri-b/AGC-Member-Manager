@@ -11,12 +11,61 @@ const CONFIG = {
   DRIVE_FOLDER_ID: '17PF4Za5QPcxtZFUuHi2FgQOT7yFocu1i',
 
   // Event ID to Sheet Name mapping
-  EVENT_SHEETS: {
-    '10yearth-meeting-2026': '10 Yearth Meeting',
-    '🎉-งานแรลลี่-10th-anniversary-agents-club-2026': 'Rally2026',
-    // เพิ่ม event อื่นๆ ที่นี่
+  // This is now dynamically loaded from Properties Service
+  get EVENT_SHEETS() {
+    return getEventMappings();
   }
 };
+
+/**
+ * ดึง Event Mappings จาก Properties Service
+ * ถ้ายังไม่มีข้อมูล ให้ใช้ค่า default
+ */
+function getEventMappings() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const mappingsJson = props.getProperty('EVENT_MAPPINGS');
+
+    if (mappingsJson) {
+      return JSON.parse(mappingsJson);
+    }
+
+    // Default mappings (fallback)
+    return {
+      '10yearth-meeting-2026': '10 Yearth Meeting',
+      '🎉-งานแรลลี่-10th-anniversary-agents-club-2026': 'Rally2026',
+    };
+  } catch (error) {
+    Logger.log('Error loading event mappings: ' + error.toString());
+    // Return default mappings on error
+    return {
+      '10yearth-meeting-2026': '10 Yearth Meeting',
+      '🎉-งานแรลลี่-10th-anniversary-agents-club-2026': 'Rally2026',
+    };
+  }
+}
+
+/**
+ * บันทึก Event Mapping ใหม่
+ */
+function saveEventMapping(eventId, sheetName) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const mappings = getEventMappings();
+
+    // Add or update mapping
+    mappings[eventId] = sheetName;
+
+    // Save back to Properties
+    props.setProperty('EVENT_MAPPINGS', JSON.stringify(mappings));
+
+    Logger.log('Saved event mapping: ' + eventId + ' -> ' + sheetName);
+    return { success: true };
+  } catch (error) {
+    Logger.log('Error saving event mapping: ' + error.toString());
+    return { success: false, error: error.message };
+  }
+}
 
 // ========== Main Handlers ==========
 
@@ -73,6 +122,60 @@ function doGet(e) {
   return template.evaluate()
     .setTitle('อัพโหลดสลิปการชำระเงิน')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * doPost - รับข้อมูลจาก Vercel เพื่อ sync event mappings
+ * หรือการดำเนินการอื่นๆ ที่ต้องการ POST
+ */
+function doPost(e) {
+  try {
+    const postData = JSON.parse(e.postData.contents);
+    const action = postData.action;
+
+    Logger.log('doPost action: ' + action);
+    Logger.log('doPost data: ' + JSON.stringify(postData));
+
+    // Action: Sync event mapping
+    if (action === 'sync_event') {
+      const eventId = postData.eventId;
+      const sheetName = postData.sheetName;
+
+      if (!eventId || !sheetName) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: 'Missing eventId or sheetName'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const result = saveEventMapping(eventId, sheetName);
+
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Action: Get all event mappings
+    if (action === 'get_mappings') {
+      const mappings = getEventMappings();
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        mappings: mappings
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Unknown action
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: 'Unknown action: ' + action
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    Logger.log('Error in doPost: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 /**

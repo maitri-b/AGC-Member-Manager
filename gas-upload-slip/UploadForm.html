@@ -163,15 +163,7 @@
         <p><strong>บริษัท:</strong> <?= registration.companyName ?></p>
         <p><strong>ยอดที่ต้องชำระ:</strong> <?= amount.toLocaleString() ?> บาท</p>
         <p><strong>ประเภท:</strong>
-          <?
-            if (paymentType === 'deposit') {
-              out.print('งวดที่ 1: ชำระมัดจำ');
-            } else if (paymentType === 'remaining') {
-              out.print('งวดที่ 2: ชำระยอดคงเหลือ');
-            } else {
-              out.print('ชำระเต็มจำนวน');
-            }
-          ?>
+          <?= paymentType === 'deposit' ? 'งวดที่ 1: ชำระมัดจำ' : (paymentType === 'remaining' ? 'งวดที่ 2: ชำระยอดคงเหลือ' : 'ชำระเต็มจำนวน') ?>
         </p>
       </div>
 

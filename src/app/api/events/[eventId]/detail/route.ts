@@ -111,15 +111,9 @@ export async function GET(
 
     if (eventData?.sheetName) {
       try {
-        // Try to get registrations from cache first
-        const regCacheKey = `event:${eventId}:registrations`;
-        const cachedRegistrations = sheetsCache.get<EventRegistration[]>(regCacheKey);
-        const registrations = cachedRegistrations || await getEventRegistrations(eventData.sheetName);
-
-        // Cache registrations for 2 minutes
-        if (!cachedRegistrations) {
-          sheetsCache.set(regCacheKey, registrations, CacheTTL.SHORT);
-        }
+        // Fetch registrations directly from Google Sheets without caching
+        // This ensures real-time data for registration changes
+        const registrations = await getEventRegistrations(eventData.sheetName);
 
         // Filter out cancelled registrations for summary
         const activeRegistrations = registrations.filter(r => !isRegistrationCancelled(r));

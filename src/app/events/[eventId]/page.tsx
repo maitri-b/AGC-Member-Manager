@@ -1387,7 +1387,7 @@ export default function EventDetailPage() {
                             <button
                               onClick={() => {
                                 if (!userRegistration) {
-                                  toast.show('กรุณาลงทะเบียนก่อนอัพโหลดสลิป', 'error');
+                                  toast.error('กรุณาลงทะเบียนก่อนอัพโหลดสลิป');
                                   return;
                                 }
 
@@ -1412,7 +1412,7 @@ export default function EventDetailPage() {
                                 );
 
                                 if (!popup) {
-                                  toast.show('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ (Popup)', 'error');
+                                  toast.error('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ (Popup)');
                                   return;
                                 }
 

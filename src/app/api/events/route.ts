@@ -38,9 +38,8 @@ export async function GET() {
       sheetsCache.set(cacheKey, events, CacheTTL.MEDIUM);
     }
 
-    // Filter to only published events for regular members
-    // Event managers (event-co, event-staff) can see unpublished events
-    const publishedEvents = (isCommitteeOrAdmin || canManageEvents) ? events : events.filter(e => e.isPublished);
+    // Filter to only published events for ALL users (including admin/committee/event-staff)
+    const publishedEvents = events.filter(e => e.isPublished);
 
     if (!isCommitteeOrAdmin) {
       // For regular members, return basic event info with registration status

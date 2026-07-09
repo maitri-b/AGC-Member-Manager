@@ -95,6 +95,7 @@ interface EventFormData {
   paymentSlipSubmissionUrl: string;
   paymentSlipButtonText: string;
   paymentInstructionText: string;
+  useExternalPaymentLink: boolean;
   // Deposit payment configuration (New)
   paymentMode: 'full' | 'deposit';
   depositAmount: number;
@@ -148,6 +149,7 @@ const initialFormData: EventFormData = {
   paymentSlipSubmissionUrl: '',
   paymentSlipButtonText: '',
   paymentInstructionText: '',
+  useExternalPaymentLink: false,
   // Deposit payment configuration (New)
   paymentMode: 'full',
   depositAmount: 0,
@@ -360,6 +362,7 @@ export default function AdminEventsPage() {
         paymentSlipSubmissionUrl: (event as any).paymentSlipSubmissionUrl ?? '',
         paymentSlipButtonText: (event as any).paymentSlipButtonText ?? '',
         paymentInstructionText: (event as any).paymentInstructionText ?? '',
+        useExternalPaymentLink: (event as any).useExternalPaymentLink ?? false,
         // Deposit payment configuration (New)
         paymentMode: event.paymentMode ?? 'full',
         depositAmount: event.depositAmount ?? 0,
@@ -1924,6 +1927,24 @@ export default function AdminEventsPage() {
                         />
                         <p className="text-xs text-gray-500 mt-1">
                           URL ของ Google Form หรือฟอร์มอื่นๆ ที่ให้สมาชิกส่งหลักฐานการชำระเงิน (ใช้ร่วมกันทั้งมัดจำ/ยอดคงเหลือ/ชำระเต็ม)
+                        </p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.useExternalPaymentLink}
+                            onChange={(e) => setFormData({ ...formData, useExternalPaymentLink: e.target.checked })}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm font-medium text-gray-700">
+                            ใช้ External Link Mode (เปิด URL ตรงๆ ในแท็บใหม่)
+                          </span>
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1 ml-6">
+                          ✅ เปิด: เหมาะสำหรับ Google Form หรือ LINE (เปิด URL ตรงๆ ไม่มี parameters)<br />
+                          ❌ ปิด: ใช้ GAS Upload Slip System (เปิด popup พร้อม parameters ของการลงทะเบียน)
                         </p>
                       </div>
 

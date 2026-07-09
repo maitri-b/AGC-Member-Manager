@@ -1366,7 +1366,28 @@ export default function EventDetailPage() {
 
                       {/* Single Payment Submission Button */}
                       {/* Only show if event has payment and user hasn't paid yet */}
-                      {event.paymentAccountNumber && userRegistration.totalAmount > 0 && (!userRegistration.depositPaid || (userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl)) ? (
+                      {(() => {
+                        // Debug: Log visibility conditions
+                        const hasPaymentAccount = !!event.paymentAccountNumber;
+                        const hasTotalAmount = userRegistration.totalAmount > 0;
+                        const notPaidDeposit = !userRegistration.depositPaid;
+                        const hasRemainingUnpaid = userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl;
+                        const shouldShow = hasPaymentAccount && hasTotalAmount && (notPaidDeposit || hasRemainingUnpaid);
+
+                        console.log('🔍 Payment Button Visibility Check:', {
+                          hasPaymentAccount,
+                          hasTotalAmount,
+                          totalAmount: userRegistration.totalAmount,
+                          notPaidDeposit,
+                          depositPaid: userRegistration.depositPaid,
+                          hasRemainingUnpaid,
+                          remainingAmount: userRegistration.remainingAmount,
+                          remainingSlipUrl: userRegistration.remainingSlipUrl,
+                          shouldShow,
+                        });
+
+                        return shouldShow;
+                      })() ? (
                         <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4">
                           {/* Show instruction text only when there's a payment slip URL */}
                           {event.paymentSlipSubmissionUrl && (

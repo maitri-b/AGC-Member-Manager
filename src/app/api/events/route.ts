@@ -38,13 +38,15 @@ export async function GET() {
       sheetsCache.set(cacheKey, events, CacheTTL.MEDIUM);
     }
 
-    // Filter to only published events for ALL users (including admin/committee/event-staff)
-    const publishedEvents = events.filter(e => e.isPublished);
+    // Filter events based on user role
+    // Admin/Committee: See all events (published and unpublished)
+    // Regular users: See only published events
+    const visibleEvents = isCommitteeOrAdmin ? events : events.filter(e => e.isPublished);
 
     if (!isCommitteeOrAdmin) {
       // For regular members, return basic event info with registration status
       const eventsWithRegistrationInfo = await Promise.all(
-        publishedEvents.map(async (e) => {
+        visibleEvents.map(async (e) => {
           let totalAttendees = 0;
           let userRegistered = false;
 
@@ -131,7 +133,7 @@ export async function GET() {
 
     // For committee/admin, include attendance summaries
     const eventsWithSummary = await Promise.all(
-      publishedEvents.map(async (event) => {
+      visibleEvents.map(async (event) => {
         // Try cache first for attendance summary
         const summaryCacheKey = CacheKeys.eventAttendees(event.eventId);
         const cachedSummary = sheetsCache.get<Awaited<ReturnType<typeof getEventAttendanceSummary>>>(summaryCacheKey);

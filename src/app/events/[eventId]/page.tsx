@@ -1447,6 +1447,13 @@ export default function EventDetailPage() {
                                     paymentType = 'full';
                                   }
 
+                                  console.log('💳 Payment Type Determination:', {
+                                    eventPaymentMode: event.paymentMode,
+                                    depositPaid: userRegistration.depositPaid,
+                                    remainingAmount: userRegistration.remainingAmount,
+                                    determinedPaymentType: paymentType,
+                                  });
+
                                   // Build dynamic URL with parameters
                                   const url = new URL(event.paymentSlipSubmissionUrl);
                                   url.searchParams.append('registrationId', userRegistration.registrationId);

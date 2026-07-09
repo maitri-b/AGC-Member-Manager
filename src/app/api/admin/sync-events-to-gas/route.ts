@@ -26,6 +26,8 @@ export async function POST() {
 
     const gasUrl = process.env.NEXT_PUBLIC_GAS_UPLOAD_SLIP_URL;
 
+    console.log('[Sync Events] GAS URL:', gasUrl);
+
     if (!gasUrl) {
       return NextResponse.json(
         { error: 'GAS_UPLOAD_SLIP_URL not configured' },
@@ -35,21 +37,26 @@ export async function POST() {
 
     const db = adminDb();
 
-    // Get all events that have sheetName
+    // Get all events (can't use != '' in Firestore, so get all and filter)
     const eventsSnapshot = await db
       .collection('events')
-      .where('sheetName', '!=', '')
       .get();
 
     const results = [];
     let successCount = 0;
     let failCount = 0;
 
-    // Sync each event
+    // Sync each event that has sheetName
     for (const doc of eventsSnapshot.docs) {
       const event = doc.data();
       const eventId = doc.id;
       const sheetName = event.sheetName;
+
+      // Skip events without sheetName
+      if (!sheetName || sheetName.trim() === '') {
+        console.log(`Skipping event ${eventId}: no sheetName`);
+        continue;
+      }
 
       try {
         const response = await fetch(gasUrl, {
@@ -114,6 +121,12 @@ export async function POST() {
       console.error('Error fetching current mappings:', error);
     }
 
+    console.log('[Sync Events] Complete:', {
+      total: eventsSnapshot.size,
+      succeeded: successCount,
+      failed: failCount,
+    });
+
     return NextResponse.json({
       success: true,
       summary: {
@@ -125,9 +138,12 @@ export async function POST() {
       currentMappings,
     });
   } catch (error) {
-    console.error('Error syncing events to GAS:', error);
+    console.error('[Sync Events] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to sync events' },
+      {
+        error: 'Failed to sync events',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

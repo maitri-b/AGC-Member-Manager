@@ -1,0 +1,314 @@
+/**
+ * ระบบอัพโหลดสลิปการชำระเงิน
+ * สำหรับ Agents Club Member Manager
+ *
+ * เชื่อมต่อกับ Vercel App เพื่อให้สมาชิกอัพโหลดสลิปการชำระเงินได้
+ */
+
+// ========== Configuration ==========
+// TODO: ใส่ค่าจริงจาก .env.local
+const CONFIG = {
+  SHEET_ID: 'YOUR_GOOGLE_SHEET_ID', // ใส่ GOOGLE_SHEET_ID จาก .env.local
+  DRIVE_FOLDER_ID: 'YOUR_DRIVE_FOLDER_ID', // สร้าง folder ใหม่ใน Google Drive สำหรับเก็บสลิป
+
+  // Event ID to Sheet Name mapping
+  EVENT_SHEETS: {
+    '10yearth-meeting-2026': '10 Yearth Meeting',
+    // เพิ่ม event อื่นๆ ที่นี่
+  }
+};
+
+// ========== Main Handlers ==========
+
+/**
+ * doGet - แสดงหน้า upload form
+ */
+function doGet(e) {
+  const params = {
+    registrationId: e.parameter.registrationId,
+    eventId: e.parameter.eventId,
+    lineUserId: e.parameter.lineUserId,
+    paymentType: e.parameter.paymentType || 'deposit' // deposit หรือ remaining
+  };
+
+  Logger.log('doGet params: ' + JSON.stringify(params));
+
+  // Validate required parameters
+  if (!params.registrationId || !params.eventId) {
+    return createErrorPage('ข้อมูลไม่ครบถ้วน', 'กรุณาเข้าผ่านระบบลงทะเบียนเท่านั้น');
+  }
+
+  // Find registration in Google Sheet
+  const registration = findRegistration(params.registrationId, params.eventId);
+
+  if (!registration) {
+    return createErrorPage(
+      'ไม่พบข้อมูลการลงทะเบียน',
+      'รหัสลงทะเบียน: ' + params.registrationId
+    );
+  }
+
+  // Verify ownership (security check)
+  if (params.lineUserId && registration.lineUserId &&
+      registration.lineUserId !== params.lineUserId) {
+    return createErrorPage(
+      'ไม่มีสิทธิ์เข้าถึง',
+      'รหัสลงทะเบียนนี้ไม่ใช่ของคุณ'
+    );
+  }
+
+  // Create upload form
+  const template = HtmlService.createTemplateFromFile('UploadForm');
+  template.registration = registration;
+  template.registrationId = params.registrationId;
+  template.eventId = params.eventId;
+  template.paymentType = params.paymentType;
+  template.amount = params.paymentType === 'deposit'
+    ? registration.depositAmount
+    : registration.remainingAmount;
+
+  return template.evaluate()
+    .setTitle('อัพโหลดสลิปการชำระเงิน')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * processForm - รับข้อมูลจากฟอร์มและดำเนินการ
+ * เรียกจาก google.script.run ใน HTML
+ */
+function processForm(formObject) {
+  try {
+    Logger.log('Processing form: ' + JSON.stringify(formObject));
+
+    const registrationId = formObject.registrationId;
+    const eventId = formObject.eventId;
+    const paymentType = formObject.paymentType;
+    const fileData = formObject.fileData;
+    const fileName = formObject.fileName;
+    const mimeType = formObject.mimeType;
+
+    if (!fileData) {
+      return {
+        success: false,
+        error: 'ไม่พบข้อมูลไฟล์'
+      };
+    }
+
+    // Decode base64 and upload to Drive
+    const blob = Utilities.newBlob(
+      Utilities.base64Decode(fileData),
+      mimeType,
+      fileName
+    );
+
+    const folder = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
+    const newFileName = registrationId + '_' + paymentType + '_' + new Date().getTime() + '_' + fileName;
+    const file = folder.createFile(blob.setName(newFileName));
+
+    // Make file publicly accessible
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    const fileUrl = file.getUrl();
+
+    Logger.log('File uploaded: ' + fileUrl);
+
+    // Update Google Sheet
+    const updateResult = updateRegistrationSlip(registrationId, eventId, paymentType, fileUrl);
+
+    if (updateResult.success) {
+      return {
+        success: true,
+        message: 'อัพโหลดสลิปเรียบร้อยแล้ว',
+        fileUrl: fileUrl
+      };
+    } else {
+      // Delete uploaded file if sheet update failed
+      file.setTrashed(true);
+      return {
+        success: false,
+        error: updateResult.error || 'ไม่สามารถบันทึกข้อมูลได้'
+      };
+    }
+
+  } catch (error) {
+    Logger.log('Error in processForm: ' + error.toString());
+    return {
+      success: false,
+      error: 'เกิดข้อผิดพลาด: ' + error.message
+    };
+  }
+}
+
+// ========== Helper Functions ==========
+
+/**
+ * หาข้อมูลการลงทะเบียนจาก Google Sheet
+ */
+function findRegistration(registrationId, eventId) {
+  try {
+    const sheetName = CONFIG.EVENT_SHEETS[eventId];
+
+    if (!sheetName) {
+      Logger.log('Unknown eventId: ' + eventId);
+      return null;
+    }
+
+    const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    const sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) {
+      Logger.log('Sheet not found: ' + sheetName);
+      return null;
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Find column indexes (normalize headers to lowercase)
+    const normalizedHeaders = headers.map(h => String(h).toLowerCase().trim());
+    const regIdCol = normalizedHeaders.indexOf('registration_id');
+    const companyCol = normalizedHeaders.indexOf('company_name');
+    const totalAmountCol = normalizedHeaders.indexOf('total_amount');
+    const depositAmountCol = normalizedHeaders.indexOf('deposit_amount');
+    const remainingAmountCol = normalizedHeaders.indexOf('remaining_amount');
+    const lineUserIdCol = normalizedHeaders.indexOf('line_userid');
+    const statusCol = normalizedHeaders.indexOf('status');
+
+    if (regIdCol === -1) {
+      Logger.log('registration_id column not found');
+      return null;
+    }
+
+    // Find registration row
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][regIdCol] === registrationId) {
+        return {
+          rowIndex: i + 1, // Sheet row number (1-indexed)
+          registrationId: data[i][regIdCol],
+          companyName: companyCol >= 0 ? data[i][companyCol] : '',
+          totalAmount: totalAmountCol >= 0 ? (data[i][totalAmountCol] || 0) : 0,
+          depositAmount: depositAmountCol >= 0 ? (data[i][depositAmountCol] || 0) : 0,
+          remainingAmount: remainingAmountCol >= 0 ? (data[i][remainingAmountCol] || 0) : 0,
+          lineUserId: lineUserIdCol >= 0 ? data[i][lineUserIdCol] : '',
+          status: statusCol >= 0 ? data[i][statusCol] : '',
+        };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    Logger.log('Error in findRegistration: ' + error.toString());
+    return null;
+  }
+}
+
+/**
+ * อัพเดทข้อมูลสลิปใน Google Sheet
+ */
+function updateRegistrationSlip(registrationId, eventId, paymentType, fileUrl) {
+  try {
+    const sheetName = CONFIG.EVENT_SHEETS[eventId];
+
+    if (!sheetName) {
+      return { success: false, error: 'ไม่พบข้อมูล Event' };
+    }
+
+    const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    const sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) {
+      return { success: false, error: 'ไม่พบ Sheet: ' + sheetName };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const normalizedHeaders = headers.map(h => String(h).toLowerCase().trim());
+
+    const regIdCol = normalizedHeaders.indexOf('registration_id');
+    const slipUrlCol = paymentType === 'deposit'
+      ? normalizedHeaders.indexOf('deposit_slip_url')
+      : normalizedHeaders.indexOf('remaining_slip_url');
+    const paidDateCol = paymentType === 'deposit'
+      ? normalizedHeaders.indexOf('deposit_paid_date')
+      : normalizedHeaders.indexOf('remaining_paid_date');
+    const statusCol = normalizedHeaders.indexOf('payment_status');
+
+    // Find row
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][regIdCol] === registrationId) {
+        const rowNum = i + 1;
+
+        // Update slip URL
+        if (slipUrlCol >= 0) {
+          sheet.getRange(rowNum, slipUrlCol + 1).setValue(fileUrl);
+          Logger.log('Updated slip URL at row ' + rowNum + ', col ' + (slipUrlCol + 1));
+        }
+
+        // Update paid date
+        if (paidDateCol >= 0) {
+          const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+          sheet.getRange(rowNum, paidDateCol + 1).setValue(today);
+          Logger.log('Updated paid date at row ' + rowNum + ', col ' + (paidDateCol + 1));
+        }
+
+        // Update status
+        if (statusCol >= 0) {
+          const newStatus = paymentType === 'deposit'
+            ? 'รอตรวจสอบมัดจำ'
+            : 'รอตรวจสอบยอดคงเหลือ';
+          sheet.getRange(rowNum, statusCol + 1).setValue(newStatus);
+          Logger.log('Updated status to: ' + newStatus);
+        }
+
+        return { success: true };
+      }
+    }
+
+    return { success: false, error: 'ไม่พบข้อมูลการลงทะเบียน' };
+
+  } catch (error) {
+    Logger.log('Error in updateRegistrationSlip: ' + error.toString());
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * สร้างหน้า Error
+ */
+function createErrorPage(title, message) {
+  return HtmlService.createHtmlOutput(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: 'Sarabun', -apple-system, sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          padding: 20px;
+          margin: 0;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .container {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+          padding: 40px;
+          text-align: center;
+          max-width: 400px;
+        }
+        h1 { color: #e53e3e; margin-bottom: 16px; }
+        p { color: #4a5568; line-height: 1.6; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>❌ ${title}</h1>
+        <p>${message}</p>
+      </div>
+    </body>
+    </html>
+  `).setTitle('Error');
+}

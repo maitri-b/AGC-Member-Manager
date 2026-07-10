@@ -100,6 +100,7 @@ export async function GET(request: Request) {
             pricingType: e.pricingType,
             baseFee: e.baseFee,
             additionalFeePerPerson: e.additionalFeePerPerson,
+            priceTiers: e.priceTiers,
             memberDiscount: e.memberDiscount,
             registrationOpen: e.registrationOpen,
             documentName: e.documentName,

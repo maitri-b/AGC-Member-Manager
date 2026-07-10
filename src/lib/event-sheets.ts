@@ -58,6 +58,7 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         pricingType: data.pricingType || 'fixed',
         baseFee: data.baseFee ?? 0,
         additionalFeePerPerson: data.additionalFeePerPerson ?? 0,
+        priceTiers: data.priceTiers || undefined,
         memberDiscount: data.memberDiscount ?? 0,
         registrationOpen: data.registrationOpen ?? false,
         documentName: data.documentName || '',

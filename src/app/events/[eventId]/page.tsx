@@ -937,7 +937,7 @@ export default function EventDetailPage() {
                           )}
 
                           {/* Grand total */}
-                          {userRegistration.totalAmount && (
+                          {userRegistration.totalAmount !== undefined && userRegistration.totalAmount > 0 && (
                             <div className="flex justify-between font-bold text-sm pt-2 border-t-2 border-green-400 text-green-900">
                               <span>ยอดรวมทั้งหมด:</span>
                               <span>{userRegistration.totalAmount.toLocaleString()} บาท</span>
@@ -1710,7 +1710,7 @@ export default function EventDetailPage() {
                                         })}
                                       </p>
                                     )}
-                                    {userRegistration.remainingAmount && (
+                                    {userRegistration.remainingAmount !== undefined && userRegistration.remainingAmount > 0 && (
                                       <p className="text-xs text-green-700 mt-1">
                                         จำนวนเงิน: {userRegistration.remainingAmount.toLocaleString()} บาท
                                       </p>

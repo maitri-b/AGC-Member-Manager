@@ -182,6 +182,7 @@ const REQUIRED_HEADERS = [
   'remaining_amount',
   'deposit_paid',
   'deposit_paid_date',
+  'remaining_paid_date',
   'deposit_slip_url',
   'remaining_slip_url',
   'deposit_deadline',

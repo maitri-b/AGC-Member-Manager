@@ -15,14 +15,40 @@ export function determinePaymentStatus(
   registration: EventRegistration,
   event: Event | EventInput
 ): string {
-  // Legacy mode: full payment or free event
-  if (event.paymentMode !== 'deposit' || registration.totalAmount === 0) {
-    // Use existing status logic
-    if (registration.totalAmount === 0) {
-      return 'ลงทะเบียนแล้ว';
+  // Priority 1: Use payment_status from Google Sheets if available (set by GAS)
+  // This reflects the actual slip upload and admin verification status
+  if (registration.paymentStatus && registration.paymentStatus !== '') {
+    const gasStatus = registration.paymentStatus;
+
+    // Map GAS statuses to display statuses
+    if (gasStatus === 'รอตรวจสอบ' || gasStatus === 'รอตรวจสอบมัดจำ' || gasStatus === 'รอตรวจสอบยอดคงเหลือ') {
+      return gasStatus; // Show "waiting for verification" status
+    }
+    if (gasStatus.includes('ยืนยัน') || gasStatus.includes('ชำระครบ')) {
+      return 'ชำระครบแล้ว';
+    }
+    if (gasStatus.includes('ปฏิเสธ')) {
+      return 'ปฏิเสธสลิป';
+    }
+    // Return as-is for other statuses
+    return gasStatus;
+  }
+
+  // Priority 2: Free event
+  if (registration.totalAmount === 0) {
+    return 'ลงทะเบียนแล้ว';
+  }
+
+  // Priority 3: Full payment mode (non-deposit)
+  if (event.paymentMode !== 'deposit') {
+    // Check if slip was uploaded (even if not verified yet)
+    const hasSlip = registration.depositSlipUrl || registration.remainingSlipUrl || (registration as any).slipUrl;
+
+    if (hasSlip) {
+      return 'รอตรวจสอบ'; // Slip uploaded, waiting for admin verification
     }
 
-    // Check if confirmed (existing logic)
+    // Check if confirmed by admin
     const status = registration.status || '';
     const statusLower = status.toLowerCase();
     const isConfirmed =
@@ -35,20 +61,25 @@ export function determinePaymentStatus(
     return isConfirmed ? 'ชำระครบแล้ว' : 'รอชำระเงิน';
   }
 
-  // New deposit mode
-  const { depositPaid, depositDeadline, remainingDeadline, totalAmount, remainingAmount } = registration;
+  // Priority 4: Deposit mode
+  const { depositPaid, depositDeadline, remainingDeadline, depositSlipUrl, remainingSlipUrl, remainingAmount } = registration;
 
   // Check if fully paid
   if (depositPaid && remainingAmount === 0) {
     return 'ชำระครบแล้ว';
   }
 
-  if (depositPaid && registration.remainingSlipUrl) {
-    return 'ชำระครบแล้ว';
+  if (depositPaid && remainingSlipUrl) {
+    return 'รอตรวจสอบยอดคงเหลือ';
   }
 
   // Check deposit status
   if (!depositPaid) {
+    // Check if slip uploaded but not verified
+    if (depositSlipUrl) {
+      return 'รอตรวจสอบมัดจำ';
+    }
+
     // Check if deposit deadline passed
     if (depositDeadline && isDeadlinePassed(depositDeadline)) {
       return 'พ้นกำหนด'; // Deposit overdue
@@ -70,18 +101,41 @@ export function determinePaymentStatus(
  * @returns Tailwind CSS class names for badge styling
  */
 export function getStatusBadgeClass(status: string): string {
+  // Success states
   if (status === 'ชำระครบแล้ว' || status.includes('ยืนยัน')) {
     return 'bg-green-100 text-green-800';
   }
+
+  // Pending verification states (purple/indigo - waiting for admin action)
+  if (status === 'รอตรวจสอบ' || status === 'รอตรวจสอบมัดจำ' || status === 'รอตรวจสอบยอดคงเหลือ') {
+    return 'bg-purple-100 text-purple-800';
+  }
+
+  // Rejected states
+  if (status.includes('ปฏิเสธ')) {
+    return 'bg-red-100 text-red-800';
+  }
+
+  // Overdue states
   if (status === 'พ้นกำหนด') {
     return 'bg-red-100 text-red-800';
   }
+
+  // Waiting for payment states (yellow - user action required)
   if (status === 'รอชำระมัดจำ' || status === 'รอชำระเงิน') {
     return 'bg-yellow-100 text-yellow-800';
   }
+
+  // Partial payment states (blue - deposit paid, waiting for remaining)
   if (status === 'รอชำระยอดที่เหลือ') {
     return 'bg-blue-100 text-blue-800';
   }
+
+  // Free or registered
+  if (status === 'ลงทะเบียนแล้ว') {
+    return 'bg-gray-100 text-gray-800';
+  }
+
   return 'bg-gray-100 text-gray-800';
 }
 

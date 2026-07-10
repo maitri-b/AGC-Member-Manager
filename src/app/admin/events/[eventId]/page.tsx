@@ -1321,6 +1321,104 @@ export default function EventDetailPage() {
                             <p className="text-xs text-gray-700 whitespace-pre-line">{attendee.registration.specialRequests}</p>
                           </div>
                         )}
+
+                        {/* Payment Information Display */}
+                        {attendee.registration.totalAmount > 0 && (
+                          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                            <p className="text-xs font-semibold text-green-900 mb-2">ข้อมูลการชำระเงิน:</p>
+                            <div className="space-y-2">
+                              {/* Total Amount */}
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-700">ยอดรวมทั้งหมด:</span>
+                                <span className="text-sm font-bold text-green-900">
+                                  {attendee.registration.totalAmount.toLocaleString()} บาท
+                                </span>
+                              </div>
+
+                              {/* Payment Status Badge */}
+                              {attendee.registration.paymentStatus && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-700">สถานะ:</span>
+                                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(attendee.registration.paymentStatus)}`}>
+                                    {attendee.registration.paymentStatus}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Deposit Payment Info */}
+                              {attendee.registration.depositAmount > 0 && (
+                                <>
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-700">มัดจำ:</span>
+                                    <span className="font-medium text-gray-900">
+                                      {attendee.registration.depositAmount.toLocaleString()} บาท
+                                      {attendee.registration.depositPaid && attendee.registration.depositPaidDate && (
+                                        <span className="text-green-600 ml-2">✓ ชำระแล้ว ({attendee.registration.depositPaidDate})</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                  {attendee.registration.depositSlipUrl && (
+                                    <div className="mt-1">
+                                      <a
+                                        href={attendee.registration.depositSlipUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        ดูสลิปมัดจำ
+                                      </a>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+
+                              {/* Remaining Payment Info */}
+                              {attendee.registration.remainingAmount > 0 && (
+                                <>
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-gray-700">ยอดคงเหลือ:</span>
+                                    <span className="font-medium text-gray-900">
+                                      {attendee.registration.remainingAmount.toLocaleString()} บาท
+                                      {attendee.registration.depositPaidDate && (
+                                        <span className="text-green-600 ml-2">✓ ชำระแล้ว ({attendee.registration.depositPaidDate})</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                  {attendee.registration.remainingSlipUrl && (
+                                    <div className="mt-1">
+                                      <a
+                                        href={attendee.registration.remainingSlipUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        ดูสลิปยอดคงเหลือ
+                                      </a>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+
+                              {/* Deadlines */}
+                              {attendee.registration.depositDeadline && (
+                                <div className="text-xs text-gray-600 pt-2 border-t border-green-200">
+                                  <span className="font-medium">กำหนดชำระมัดจำ:</span> {formatDeadline(attendee.registration.depositDeadline)}
+                                </div>
+                              )}
+                              {attendee.registration.remainingDeadline && (
+                                <div className="text-xs text-gray-600">
+                                  <span className="font-medium">กำหนดชำระยอดคงเหลือ:</span> {formatDeadline(attendee.registration.remainingDeadline)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </>
                     )}
 

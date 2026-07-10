@@ -1559,6 +1559,133 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Payment Slip Display */}
+                      {(userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl) && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-3">หลักฐานการชำระเงิน</h4>
+                          <div className="space-y-3">
+                            {/* Deposit Slip */}
+                            {userRegistration.depositSlipUrl && (
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                      <span className="text-sm font-semibold text-blue-900">
+                                        {event.paymentMode === 'deposit' ? 'สลิปมัดจำ' : 'สลิปชำระเงิน'}
+                                      </span>
+                                    </div>
+                                    {userRegistration.depositPaidDate && (
+                                      <p className="text-xs text-blue-700">
+                                        วันที่ส่ง: {new Date(userRegistration.depositPaidDate).toLocaleDateString('th-TH', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric'
+                                        })}
+                                      </p>
+                                    )}
+                                    {event.paymentMode === 'deposit' && userRegistration.depositAmount && (
+                                      <p className="text-xs text-blue-700 mt-1">
+                                        จำนวนเงิน: {userRegistration.depositAmount.toLocaleString()} บาท
+                                      </p>
+                                    )}
+                                  </div>
+                                  <a
+                                    href={userRegistration.depositSlipUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-shrink-0 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    ดูสลิป
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Remaining Slip */}
+                            {userRegistration.remainingSlipUrl && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                      <span className="text-sm font-semibold text-green-900">สลิปยอดคงเหลือ</span>
+                                    </div>
+                                    {userRegistration.remainingPaidDate && (
+                                      <p className="text-xs text-green-700">
+                                        วันที่ส่ง: {new Date(userRegistration.remainingPaidDate).toLocaleDateString('th-TH', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric'
+                                        })}
+                                      </p>
+                                    )}
+                                    {userRegistration.remainingAmount && (
+                                      <p className="text-xs text-green-700 mt-1">
+                                        จำนวนเงิน: {userRegistration.remainingAmount.toLocaleString()} บาท
+                                      </p>
+                                    )}
+                                  </div>
+                                  <a
+                                    href={userRegistration.remainingSlipUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-shrink-0 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    ดูสลิป
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Deadline Information */}
+                            {event.paymentMode === 'deposit' && (
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                <div className="flex items-start gap-2">
+                                  <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <div className="text-xs text-yellow-800 space-y-1">
+                                    {!userRegistration.depositPaid && userRegistration.depositDeadline && (
+                                      <p>
+                                        <span className="font-semibold">กำหนดชำระมัดจำ:</span>{' '}
+                                        {formatDeadline(userRegistration.depositDeadline)}
+                                        {(() => {
+                                          const remaining = getTimeRemaining(userRegistration.depositDeadline);
+                                          return remaining ? ` (${remaining})` : '';
+                                        })()}
+                                      </p>
+                                    )}
+                                    {userRegistration.depositPaid && !userRegistration.remainingSlipUrl && userRegistration.remainingDeadline && (
+                                      <p>
+                                        <span className="font-semibold">กำหนดชำระยอดคงเหลือ:</span>{' '}
+                                        {formatDeadline(userRegistration.remainingDeadline)}
+                                        {(() => {
+                                          const remaining = getTimeRemaining(userRegistration.remainingDeadline);
+                                          return remaining ? ` (${remaining})` : '';
+                                        })()}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

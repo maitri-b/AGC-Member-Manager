@@ -650,6 +650,7 @@ export default function EventDetailPage() {
           amount: paymentFormData.amount,
           slipUrl: paymentFormData.slipUrl,
           paidDate: paymentFormData.paidDate,
+          action: 'approve',
         }),
       });
 
@@ -660,6 +661,45 @@ export default function EventDetailPage() {
       }
 
       setActionMessage({ type: 'success', text: data.message || 'บันทึกการชำระเงินเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      handleClosePaymentModal();
+      fetchEventData(); // Refresh data
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
+    } finally {
+      setConfirmingPayment(false);
+    }
+  };
+
+  const handleRejectPayment = async () => {
+    if (!confirm('คุณต้องการปฏิเสธสลิปนี้ใช่หรือไม่? สลิปจะถูกลบออกและสมาชิกจะต้องส่งใหม่')) {
+      return;
+    }
+
+    setConfirmingPayment(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/update-payment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registrationId: paymentFormData.registrationId,
+          paymentType: paymentFormData.paymentType,
+          action: 'reject',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่สามารถปฏิเสธสลิปได้');
+      }
+
+      setActionMessage({ type: 'success', text: data.message || 'ปฏิเสธสลิปเรียบร้อยแล้ว' });
       setTimeout(() => setActionMessage(null), 3000);
       handleClosePaymentModal();
       fetchEventData(); // Refresh data
@@ -2024,14 +2064,23 @@ export default function EventDetailPage() {
               <button
                 onClick={handleConfirmPayment}
                 disabled={confirmingPayment || !paymentFormData.paidDate || paymentFormData.amount <= 0}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {confirmingPayment ? 'กำลังบันทึก...' : 'ยืนยันการชำระ'}
+                {confirmingPayment ? 'กำลังบันทึก...' : '✓ ยืนยันการชำระ'}
               </button>
+              {paymentFormData.slipUrl && (
+                <button
+                  onClick={handleRejectPayment}
+                  disabled={confirmingPayment}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {confirmingPayment ? 'กำลังบันทึก...' : '✗ ปฏิเสธสลิป'}
+                </button>
+              )}
               <button
                 onClick={handleClosePaymentModal}
                 disabled={confirmingPayment}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>

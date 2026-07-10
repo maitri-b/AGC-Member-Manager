@@ -66,6 +66,7 @@ export async function GET(
       pricingType: eventData?.pricingType || 'fixed',
       baseFee: eventData?.baseFee ?? 0,
       additionalFeePerPerson: eventData?.additionalFeePerPerson ?? 0,
+      priceTiers: eventData?.priceTiers || undefined,
       memberDiscount: eventData?.memberDiscount ?? 0,
       registrationOpen: eventData?.registrationOpen ?? false,
       documentName: eventData?.documentName || '',

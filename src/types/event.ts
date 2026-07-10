@@ -104,8 +104,9 @@ export interface Event {
   maxPerCompany: number;            // จำนวนที่อนุญาตต่อ 1 บริษัท (0 = ไม่จำกัด)
   registrationFee: number;          // ค่าสมัคร (0 = ฟรี) - DEPRECATED: use pricingType instead
   pricingType?: 'fixed' | 'tiered'; // ประเภทการคิดราคา ('fixed' = ราคาเดียว, 'tiered' = ราคาตามจำนวนคน)
-  baseFee?: number;                 // ราคาคนแรก (tiered pricing)
-  additionalFeePerPerson?: number;  // ราคาคนที่ 2+ (tiered pricing)
+  baseFee?: number;                 // ราคาคนแรก (tiered pricing) - DEPRECATED: use priceTiers instead
+  additionalFeePerPerson?: number;  // ราคาคนที่ 2+ (tiered pricing) - DEPRECATED: use priceTiers instead
+  priceTiers?: PriceTier[];         // Array of price tiers (flexible multi-tier pricing)
   memberDiscount?: number;          // ส่วนลดสำหรับสมาชิก (บาท)
   registrationOpen: boolean;        // เปิดรับสมัคร
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
@@ -173,8 +174,9 @@ export interface EventInput {
   maxPerCompany: number;            // จำนวนที่อนุญาตต่อ 1 บริษัท (0 = ไม่จำกัด)
   registrationFee: number;          // ค่าสมัคร (0 = ฟรี) - DEPRECATED: use pricingType instead
   pricingType?: 'fixed' | 'tiered'; // ประเภทการคิดราคา
-  baseFee?: number;                 // ราคาคนแรก (tiered pricing)
-  additionalFeePerPerson?: number;  // ราคาคนที่ 2+ (tiered pricing)
+  baseFee?: number;                 // ราคาคนแรก (tiered pricing) - DEPRECATED: use priceTiers instead
+  additionalFeePerPerson?: number;  // ราคาคนที่ 2+ (tiered pricing) - DEPRECATED: use priceTiers instead
+  priceTiers?: PriceTier[];         // Array of price tiers (flexible multi-tier pricing)
   memberDiscount?: number;          // ส่วนลดสำหรับสมาชิก (บาท)
   registrationOpen: boolean;        // เปิดรับสมัคร
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
@@ -271,6 +273,13 @@ export type AttendanceType =
   | 'land_operation' // Land Operation
   | 'guest'         // แขกรับเชิญ
   | string;
+
+// Price Tier (New - for flexible multi-tier pricing system)
+export interface PriceTier {
+  upToCount: number;             // จำนวนคนสูงสุดใน tier นี้ (e.g., 2 = applies to person 1-2)
+  price: number;                 // ราคา (บาท)
+  priceType: 'total' | 'per_person'; // 'total' = ราคารวม, 'per_person' = ราคาต่อคน
+}
 
 // Attendee Type Pricing (New - for events with different pricing per attendee category)
 export interface AttendeeType {
@@ -465,13 +474,79 @@ export function buddhistToGregorian(buddhistYear: number): number {
   return buddhistYear - 543;
 }
 
+// Helper to migrate legacy pricing to new tier system
+export function migrateLegacyPricing(event: Event | EventInput): PriceTier[] | undefined {
+  if (event.pricingType === 'tiered' && event.baseFee !== undefined && event.additionalFeePerPerson !== undefined) {
+    // Convert old baseFee/additionalFeePerPerson to new tier system
+    return [
+      {
+        upToCount: 1,
+        price: event.baseFee,
+        priceType: 'per_person'
+      },
+      {
+        upToCount: 999,
+        price: event.additionalFeePerPerson,
+        priceType: 'per_person'
+      }
+    ];
+  }
+  return undefined;
+}
+
 // Helper to calculate event registration fee based on pricing type
 export function calculateRegistrationFee(
   event: Event | EventInput,
   attendeeCount: number,
   isMember: boolean = true
 ): number {
-  // Use new pricing system if available
+  // Use new tier pricing system
+  if (event.pricingType === 'tiered' && event.priceTiers && event.priceTiers.length > 0) {
+    let totalFee = 0;
+    let remainingCount = attendeeCount;
+
+    // Sort tiers by upToCount ascending
+    const sortedTiers = [...event.priceTiers].sort((a, b) => a.upToCount - b.upToCount);
+
+    for (let i = 0; i < sortedTiers.length; i++) {
+      const tier = sortedTiers[i];
+      const prevTierMax = i > 0 ? sortedTiers[i - 1].upToCount : 0;
+      const tierCapacity = tier.upToCount - prevTierMax;
+
+      if (remainingCount <= 0) break;
+
+      if (tier.priceType === 'total') {
+        // Tier 1: Total price for up to N people
+        if (attendeeCount <= tier.upToCount) {
+          totalFee += tier.price;
+          remainingCount = 0;
+        } else if (i === 0) {
+          // Only apply total price once for first tier
+          totalFee += tier.price;
+          remainingCount -= tier.upToCount;
+        }
+      } else {
+        // Tier 2+: Price per person
+        const countInThisTier = Math.min(remainingCount, tierCapacity);
+        totalFee += countInThisTier * tier.price;
+        remainingCount -= countInThisTier;
+      }
+    }
+
+    // If there are still people beyond defined tiers, use last tier's price
+    if (remainingCount > 0 && sortedTiers.length > 0) {
+      const lastTier = sortedTiers[sortedTiers.length - 1];
+      if (lastTier.priceType === 'per_person') {
+        totalFee += remainingCount * lastTier.price;
+      }
+    }
+
+    // Apply member discount if applicable
+    const discount = isMember && event.memberDiscount ? event.memberDiscount : 0;
+    return Math.max(0, totalFee - discount);
+  }
+
+  // Legacy tiered pricing (baseFee + additionalFeePerPerson)
   if (event.pricingType === 'tiered' && event.baseFee !== undefined && event.additionalFeePerPerson !== undefined) {
     // Tiered pricing: first person at baseFee, additional persons at additionalFeePerPerson
     const baseAmount = event.baseFee;
@@ -489,6 +564,22 @@ export function calculateRegistrationFee(
 
 // Helper to get pricing summary for display
 export function getPricingSummary(event: Event | EventInput): string {
+  // New tier pricing system
+  if (event.pricingType === 'tiered' && event.priceTiers && event.priceTiers.length > 0) {
+    const firstTier = event.priceTiers[0];
+
+    if (firstTier.price === 0) {
+      return 'ฟรี';
+    }
+
+    if (firstTier.priceType === 'total') {
+      return `${firstTier.upToCount} คนแรก ${firstTier.price.toLocaleString()} บาท`;
+    } else {
+      return `เริ่มต้น ${firstTier.price.toLocaleString()} บาท/คน`;
+    }
+  }
+
+  // Legacy tiered pricing (baseFee + additionalFeePerPerson)
   if (event.pricingType === 'tiered' && event.baseFee !== undefined && event.additionalFeePerPerson !== undefined) {
     if (event.baseFee === 0 && event.additionalFeePerPerson === 0) {
       return 'ฟรี';

@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { AttendeeType, RoomType } from '@/types/event';
+import { AttendeeType, RoomType, PriceTier } from '@/types/event';
 
 interface Event {
   eventId: string;
@@ -25,6 +25,7 @@ interface Event {
   pricingType?: 'fixed' | 'tiered';
   baseFee?: number;
   additionalFeePerPerson?: number;
+  priceTiers?: PriceTier[];
   memberDiscount?: number;
   registrationOpen: boolean;
   documentName?: string;
@@ -235,6 +236,12 @@ export default function AdminEventsPage() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [formData, setFormData] = useState<EventFormData>(initialFormData);
 
+  // Price Tiers state (for new multi-tier pricing)
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([
+    { upToCount: 2, price: 0, priceType: 'total' },
+    { upToCount: 999, price: 0, priceType: 'per_person' }
+  ]);
+
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
@@ -385,9 +392,25 @@ export default function AdminEventsPage() {
         // Room allocation (New)
         roomTypes: (event as any).roomTypes ?? [],
       });
+
+      // Load price tiers if available, otherwise initialize defaults
+      if (event.priceTiers && event.priceTiers.length > 0) {
+        setPriceTiers(event.priceTiers);
+      } else {
+        // Initialize default tiers
+        setPriceTiers([
+          { upToCount: 2, price: 0, priceType: 'total' },
+          { upToCount: 999, price: 0, priceType: 'per_person' }
+        ]);
+      }
     } else {
       setEditingEvent(null);
       setFormData(initialFormData);
+      // Reset to default price tiers for new event
+      setPriceTiers([
+        { upToCount: 2, price: 0, priceType: 'total' },
+        { upToCount: 999, price: 0, priceType: 'per_person' }
+      ]);
     }
     setShowModal(true);
     setError(null);
@@ -415,6 +438,7 @@ export default function AdminEventsPage() {
           body: JSON.stringify({
             eventId: editingEvent.eventId,
             ...formData,
+            priceTiers: formData.pricingType === 'tiered' ? priceTiers : undefined,
           }),
         });
 
@@ -429,7 +453,10 @@ export default function AdminEventsPage() {
         const response = await fetch('/api/admin/events', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            ...formData,
+            priceTiers: formData.pricingType === 'tiered' ? priceTiers : undefined,
+          }),
         });
 
         if (!response.ok) {
@@ -954,7 +981,19 @@ export default function AdminEventsPage() {
                           return `฿${minPrice.toLocaleString()}-${maxPrice.toLocaleString()}`;
                         }
 
-                        // Tiered Pricing
+                        // New Tier Pricing
+                        if (event.pricingType === 'tiered' && event.priceTiers && event.priceTiers.length > 0) {
+                          const firstTier = event.priceTiers[0];
+                          if (firstTier.price === 0) {
+                            return 'ฟรี';
+                          }
+                          if (firstTier.priceType === 'total') {
+                            return `${firstTier.upToCount} คนแรก ฿${firstTier.price.toLocaleString()}`;
+                          }
+                          return `เริ่มต้น ฿${firstTier.price.toLocaleString()}`;
+                        }
+
+                        // Legacy Tiered Pricing (baseFee + additionalFeePerPerson)
                         if (event.pricingType === 'tiered' && (event.baseFee || event.additionalFeePerPerson)) {
                           if (event.baseFee === 0 && event.additionalFeePerPerson === 0) {
                             return 'ฟรี';
@@ -1325,37 +1364,116 @@ export default function AdminEventsPage() {
                     </div>
 
                     {!formData.useAttendeeTypePricing && formData.pricingType === 'tiered' ? (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            ราคาคนแรก (บาท)
-                          </label>
-                          <input
-                            type="number"
-                            value={formData.baseFee || ''}
-                            onChange={(e) => setFormData({ ...formData, baseFee: e.target.value === '' ? 0 : parseInt(e.target.value) })}
-                            placeholder="0 = ฟรี"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            min={0}
-                          />
-                          <p className="text-xs text-gray-500 mt-1">ราคาสำหรับคนแรก</p>
+                      <div className="md:col-span-2 space-y-4">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h4 className="font-medium text-gray-900 mb-3">
+                            การตั้งราคาแบบ Tier
+                          </h4>
+
+                          {/* Tier 1 */}
+                          <div className="space-y-3 mb-4 p-3 bg-white rounded border">
+                            <h5 className="font-medium text-sm text-gray-700">
+                              Tier 1: ราคารวม (สำหรับ N คนแรก)
+                            </h5>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-sm text-gray-600 mb-1">
+                                  จำนวนคนสูงสุด
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={priceTiers[0]?.upToCount || 1}
+                                  onChange={(e) => {
+                                    const newTiers = [...priceTiers];
+                                    newTiers[0] = { ...newTiers[0], upToCount: Number(e.target.value), priceType: 'total' };
+                                    setPriceTiers(newTiers);
+                                  }}
+                                  className="w-full px-3 py-2 border rounded"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  เช่น: 2 = ราคานี้ใช้กับ 1-2 คน
+                                </p>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm text-gray-600 mb-1">
+                                  ราคารวม (บาท)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={priceTiers[0]?.price || 0}
+                                  onChange={(e) => {
+                                    const newTiers = [...priceTiers];
+                                    newTiers[0] = { ...newTiers[0], price: Number(e.target.value), priceType: 'total' };
+                                    setPriceTiers(newTiers);
+                                  }}
+                                  className="w-full px-3 py-2 border rounded"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  ราคารวมสำหรับกลุ่มคนนี้
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Tier 2 */}
+                          <div className="space-y-3 p-3 bg-white rounded border">
+                            <h5 className="font-medium text-sm text-gray-700">
+                              Tier 2: ราคาต่อคน (สำหรับคนที่เกิน Tier 1)
+                            </h5>
+
+                            <div>
+                              <label className="block text-sm text-gray-600 mb-1">
+                                ราคาต่อคน (บาท)
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={priceTiers[1]?.price || 0}
+                                onChange={(e) => {
+                                  const newTiers = [...priceTiers];
+                                  newTiers[1] = {
+                                    ...newTiers[1],
+                                    price: Number(e.target.value),
+                                    upToCount: 999,
+                                    priceType: 'per_person'
+                                  };
+                                  setPriceTiers(newTiers);
+                                }}
+                                className="w-full px-3 py-2 border rounded"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                ราคาต่อคนสำหรับคนที่ {(priceTiers[0]?.upToCount || 1) + 1} เป็นต้นไป
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Pricing Preview */}
+                          <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                            <p className="text-sm font-medium text-blue-900 mb-2">
+                              ตัวอย่างการคำนวณ:
+                            </p>
+                            <ul className="text-sm text-blue-800 space-y-1">
+                              <li>1 คน = {priceTiers[0]?.price.toLocaleString()} บาท</li>
+                              <li>{priceTiers[0]?.upToCount} คน = {priceTiers[0]?.price.toLocaleString()} บาท</li>
+                              <li>
+                                {(priceTiers[0]?.upToCount || 0) + 1} คน = {
+                                  (priceTiers[0]?.price + priceTiers[1]?.price).toLocaleString()
+                                } บาท
+                              </li>
+                              <li>
+                                {(priceTiers[0]?.upToCount || 0) + 2} คน = {
+                                  (priceTiers[0]?.price + (priceTiers[1]?.price * 2)).toLocaleString()
+                                } บาท
+                              </li>
+                            </ul>
+                          </div>
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            ราคาคนที่ 2+ (บาท/คน)
-                          </label>
-                          <input
-                            type="number"
-                            value={formData.additionalFeePerPerson || ''}
-                            onChange={(e) => setFormData({ ...formData, additionalFeePerPerson: e.target.value === '' ? 0 : parseInt(e.target.value) })}
-                            placeholder="0 = ฟรี"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            min={0}
-                          />
-                          <p className="text-xs text-gray-500 mt-1">ราคาสำหรับคนที่ 2 เป็นต้นไป</p>
-                        </div>
-
+                        {/* Member Discount */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             ส่วนลดสมาชิก (บาท)
@@ -1370,7 +1488,7 @@ export default function AdminEventsPage() {
                           />
                           <p className="text-xs text-gray-500 mt-1">ส่วนลดจากราคารวม (บาท)</p>
                         </div>
-                      </>
+                      </div>
                     ) : !formData.useAttendeeTypePricing ? (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1623,7 +1741,7 @@ export default function AdminEventsPage() {
 
                 {/* Deposit Payment Configuration (NEW) */}
                 {((formData.pricingType === 'fixed' && formData.registrationFee > 0 && !formData.useAttendeeTypePricing) ||
-                  (formData.pricingType === 'tiered' && (formData.baseFee > 0 || formData.additionalFeePerPerson > 0) && !formData.useAttendeeTypePricing) ||
+                  (formData.pricingType === 'tiered' && ((formData.baseFee > 0 || formData.additionalFeePerPerson > 0) || (priceTiers[0]?.price > 0 || priceTiers[1]?.price > 0)) && !formData.useAttendeeTypePricing) ||
                   (formData.useAttendeeTypePricing && formData.attendeeTypes.length > 0)) && (
                   <div className="md:col-span-2 border-t pt-4 mt-4">
                     <h3 className="text-sm font-semibold text-gray-800 mb-3">
@@ -1839,7 +1957,7 @@ export default function AdminEventsPage() {
                 <div className="md:col-span-2 border-t pt-4 mt-2">
                   <h3 className="text-sm font-semibold text-gray-800 mb-3">ข้อมูลการชำระเงิน</h3>
                   {((formData.pricingType === 'fixed' && formData.registrationFee > 0 && !formData.useAttendeeTypePricing) ||
-                    (formData.pricingType === 'tiered' && (formData.baseFee > 0 || formData.additionalFeePerPerson > 0) && !formData.useAttendeeTypePricing) ||
+                    (formData.pricingType === 'tiered' && ((formData.baseFee > 0 || formData.additionalFeePerPerson > 0) || (priceTiers[0]?.price > 0 || priceTiers[1]?.price > 0)) && !formData.useAttendeeTypePricing) ||
                     (formData.useAttendeeTypePricing && formData.attendeeTypes.length > 0)) ? (
                     <>
                     <div className="text-xs text-blue-600 mb-3 p-2 bg-blue-50 rounded">

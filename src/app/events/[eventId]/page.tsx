@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Toast, useToast } from '@/components/Toast';
-import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation } from '@/types/event';
+import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier } from '@/types/event';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
@@ -29,6 +29,7 @@ interface Event {
   pricingType?: 'fixed' | 'tiered';
   baseFee?: number;
   additionalFeePerPerson?: number;
+  priceTiers?: PriceTier[];
   memberDiscount?: number;
   registrationOpen: boolean;
   documentName?: string;
@@ -752,21 +753,68 @@ export default function EventDetailPage() {
                           ) : event.pricingType === 'tiered' ? (
                             // Tiered Pricing Breakdown
                             <>
-                              <div className="flex justify-between">
-                                <span>ท่านแรก {event.baseFee?.toLocaleString()} บาท × 1 ท่าน</span>
-                                <span>{event.baseFee?.toLocaleString()} บาท</span>
-                              </div>
-                              {userRegistration.attendeeCount > 1 && (
-                                <div className="flex justify-between">
-                                  <span>ท่านที่เหลือ {event.additionalFeePerPerson?.toLocaleString()} บาท × {userRegistration.attendeeCount - 1} ท่าน</span>
-                                  <span>{((event.additionalFeePerPerson || 0) * (userRegistration.attendeeCount - 1)).toLocaleString()} บาท</span>
-                                </div>
-                              )}
-                              {event.memberDiscount && event.memberDiscount > 0 && (
-                                <div className="flex justify-between text-green-700">
-                                  <span>ส่วนลดสมาชิก</span>
-                                  <span>-{event.memberDiscount.toLocaleString()} บาท</span>
-                                </div>
+                              {event.priceTiers && event.priceTiers.length > 0 ? (
+                                // New multi-tier pricing display
+                                <>
+                                  {(() => {
+                                    const tier1 = event.priceTiers[0];
+                                    const tier2 = event.priceTiers[1];
+                                    const count = userRegistration.attendeeCount;
+
+                                    if (tier1.priceType === 'total' && count <= tier1.upToCount) {
+                                      // Within tier 1 range - show total price
+                                      return (
+                                        <div className="flex justify-between">
+                                          <span>{tier1.upToCount} คนแรก (รวม)</span>
+                                          <span>{tier1.price.toLocaleString()} บาท</span>
+                                        </div>
+                                      );
+                                    } else if (tier1.priceType === 'total') {
+                                      // Show tier 1 total + tier 2 per person
+                                      return (
+                                        <>
+                                          <div className="flex justify-between">
+                                            <span>{tier1.upToCount} คนแรก (รวม)</span>
+                                            <span>{tier1.price.toLocaleString()} บาท</span>
+                                          </div>
+                                          {count > tier1.upToCount && tier2 && (
+                                            <div className="flex justify-between">
+                                              <span>คนที่เหลือ {tier2.price.toLocaleString()} บาท × {count - tier1.upToCount} คน</span>
+                                              <span>{(tier2.price * (count - tier1.upToCount)).toLocaleString()} บาท</span>
+                                            </div>
+                                          )}
+                                        </>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                  {event.memberDiscount && event.memberDiscount > 0 && (
+                                    <div className="flex justify-between text-green-700">
+                                      <span>ส่วนลดสมาชิก</span>
+                                      <span>-{event.memberDiscount.toLocaleString()} บาท</span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                // Legacy tiered pricing (baseFee + additionalFeePerPerson)
+                                <>
+                                  <div className="flex justify-between">
+                                    <span>ท่านแรก {event.baseFee?.toLocaleString()} บาท × 1 ท่าน</span>
+                                    <span>{event.baseFee?.toLocaleString()} บาท</span>
+                                  </div>
+                                  {userRegistration.attendeeCount > 1 && (
+                                    <div className="flex justify-between">
+                                      <span>ท่านที่เหลือ {event.additionalFeePerPerson?.toLocaleString()} บาท × {userRegistration.attendeeCount - 1} ท่าน</span>
+                                      <span>{((event.additionalFeePerPerson || 0) * (userRegistration.attendeeCount - 1)).toLocaleString()} บาท</span>
+                                    </div>
+                                  )}
+                                  {event.memberDiscount && event.memberDiscount > 0 && (
+                                    <div className="flex justify-between text-green-700">
+                                      <span>ส่วนลดสมาชิก</span>
+                                      <span>-{event.memberDiscount.toLocaleString()} บาท</span>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </>
                           ) : (
@@ -1946,11 +1994,34 @@ export default function EventDetailPage() {
                           <p className="text-xs text-gray-500">
                             {event.pricingType === 'tiered' ? (
                               <>
-                                {attendeeCount === 1
-                                  ? `${event.baseFee?.toLocaleString()} บาท/คน`
-                                  : `${event.baseFee?.toLocaleString()} บาท (คนแรก) + ${event.additionalFeePerPerson?.toLocaleString()} บาท × ${attendeeCount - 1} คน`}
-                                {(event.memberDiscount ?? 0) > 0 && (
-                                  <span> - ส่วนลด {event.memberDiscount!.toLocaleString()} บาท</span>
+                                {event.priceTiers && event.priceTiers.length > 0 ? (
+                                  // New multi-tier pricing
+                                  <>
+                                    {(() => {
+                                      const tier1 = event.priceTiers[0];
+                                      const tier2 = event.priceTiers[1];
+
+                                      if (tier1.priceType === 'total' && attendeeCount <= tier1.upToCount) {
+                                        return `${tier1.upToCount} คนแรก ${tier1.price.toLocaleString()} บาท (รวม)`;
+                                      } else if (tier1.priceType === 'total') {
+                                        return `${tier1.price.toLocaleString()} บาท (${tier1.upToCount} คนแรก) + ${tier2?.price.toLocaleString()} บาท × ${attendeeCount - tier1.upToCount} คน`;
+                                      }
+                                      return null;
+                                    })()}
+                                    {(event.memberDiscount ?? 0) > 0 && (
+                                      <span> - ส่วนลด {event.memberDiscount!.toLocaleString()} บาท</span>
+                                    )}
+                                  </>
+                                ) : (
+                                  // Legacy tiered pricing
+                                  <>
+                                    {attendeeCount === 1
+                                      ? `${event.baseFee?.toLocaleString()} บาท/คน`
+                                      : `${event.baseFee?.toLocaleString()} บาท (คนแรก) + ${event.additionalFeePerPerson?.toLocaleString()} บาท × ${attendeeCount - 1} คน`}
+                                    {(event.memberDiscount ?? 0) > 0 && (
+                                      <span> - ส่วนลด {event.memberDiscount!.toLocaleString()} บาท</span>
+                                    )}
+                                  </>
                                 )}
                               </>
                             ) : (

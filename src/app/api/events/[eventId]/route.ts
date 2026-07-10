@@ -168,6 +168,12 @@ export async function GET(
         location: event.location,
         description: event.description,
         year: event.year,
+        // Event pricing configuration
+        pricingType: event.pricingType || 'fixed',
+        priceTiers: event.priceTiers || undefined,
+        baseFee: event.baseFee,
+        additionalFeePerPerson: event.additionalFeePerPerson,
+        memberDiscount: event.memberDiscount,
         // Event configuration for attendee types and room allocation
         useAttendeeTypePricing: event.useAttendeeTypePricing || false,
         attendeeTypes: event.attendeeTypes || [],

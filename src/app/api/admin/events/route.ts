@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { Event, EventInput, DEFAULT_EVENTS } from '@/types/event';
+import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
 
 /**
  * Sync event mapping to Google Apps Script
@@ -243,6 +244,9 @@ export async function POST(request: NextRequest) {
 
     await db.collection('events').doc(eventId).set(newEvent);
 
+    // Invalidate cache to ensure new event appears immediately
+    sheetsCache.invalidatePattern('events:');
+
     // Sync event mapping to GAS (non-blocking)
     if (newEvent.sheetName) {
       syncEventToGAS(eventId, newEvent.sheetName).catch(err => {
@@ -304,6 +308,9 @@ export async function PUT(request: NextRequest) {
     };
 
     await eventRef.update(updateData);
+
+    // Invalidate cache to ensure updated event data appears immediately
+    sheetsCache.invalidatePattern('events:');
 
     // Sync to GAS if sheetName was updated (non-blocking)
     if (updates.sheetName) {

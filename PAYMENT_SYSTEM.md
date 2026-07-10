@@ -14,6 +14,10 @@ The system supports **2 payment modes** configured per event:
 - User pays the full amount in one transaction
 - No deposit splitting
 - Single slip upload
+- **Optional Payment Deadline**: Admin can set deadline for full payment
+  - `paymentDeadlineType`: 'none' | 'fixed' | 'hours'
+  - `paymentDeadlineFixed`: Fixed date (YYYY-MM-DD)
+  - `paymentDeadlineHours`: Hours after registration
 
 ### 2. Deposit Payment Mode (`paymentMode: 'deposit'`)
 **จ่ายแบบแบ่งชำระ 2 ครั้ง**
@@ -186,16 +190,21 @@ The system supports **2 payment modes** configured per event:
 {
   paymentMode: 'full' | 'deposit',
 
+  // For full payment mode:
+  paymentDeadlineType?: 'none' | 'fixed' | 'hours',
+  paymentDeadlineFixed?: string,    // Fixed deadline (ISO DateTime)
+  paymentDeadlineHours?: number,    // Hours after registration
+
   // For deposit mode:
   depositAmount?: number,           // Fixed deposit amount
   depositPercentage?: number,       // Or percentage of total
   useDepositPercentage?: boolean,   // Which method to use
 
-  depositDeadlineType: 'none' | 'fixed' | 'hours',
+  depositDeadlineType?: 'none' | 'fixed' | 'hours',
   depositDeadlineFixed?: string,    // Fixed deadline (ISO DateTime)
   depositDeadlineHours?: number,    // Hours after registration
 
-  remainingDeadlineType: 'none' | 'fixed' | 'hours',
+  remainingDeadlineType?: 'none' | 'fixed' | 'hours',
   remainingDeadlineFixed?: string,
   remainingDeadlineHours?: number,
 }

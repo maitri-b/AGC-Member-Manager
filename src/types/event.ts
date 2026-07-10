@@ -122,19 +122,26 @@ export interface Event {
   paymentInstructionText?: string;  // ข้อความคำแนะนำการชำระเงิน (แสดงก่อนปุ่ม)
   useExternalPaymentLink?: boolean; // true = เปิด URL ตรงๆ (Google Form/LINE), false/undefined = ใช้ GAS upload slip พร้อม parameters (Default: false)
 
-  // Deposit Payment Configuration (New)
+  // Payment Configuration (New)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')
+
+  // Full Payment Deadline Configuration (for paymentMode = 'full')
+  paymentDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระเงิน (Full Payment Mode)
+  paymentDeadlineFixed?: string;    // วันที่ตายตัว (YYYY-MM-DD)
+  paymentDeadlineHours?: number;    // จำนวนชั่วโมงนับจากลงทะเบียน
+
+  // Deposit Payment Configuration (for paymentMode = 'deposit')
   depositAmount?: number;           // จำนวนเงินมัดจำคงที่ (บาท)
   depositPercentage?: number;       // เปอร์เซ็นต์มัดจำ (%)
   useDepositPercentage?: boolean;   // ใช้เปอร์เซ็นต์หรือจำนวนคงที่
 
   // Deposit Deadline Configuration
-  depositDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระมัดจำ
+  depositDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระมัดจำ (Deposit Mode only)
   depositDeadlineFixed?: string;    // วันที่ตายตัว (YYYY-MM-DD)
   depositDeadlineHours?: number;    // จำนวนชั่วโมงนับจากลงทะเบียน
 
   // Remaining Balance Deadline Configuration
-  remainingDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระยอดคงเหลือ
+  remainingDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระยอดคงเหลือ (Deposit Mode only)
   remainingDeadlineFixed?: string;  // วันที่ตายตัว (YYYY-MM-DD)
   remainingDeadlineHours?: number;  // จำนวนชั่วโมงนับจากชำระมัดจำ
 
@@ -192,19 +199,26 @@ export interface EventInput {
   paymentInstructionText?: string;  // ข้อความคำแนะนำการชำระเงิน (แสดงก่อนปุ่ม)
   useExternalPaymentLink?: boolean; // true = เปิด URL ตรงๆ (Google Form/LINE), false/undefined = ใช้ GAS upload slip พร้อม parameters (Default: false)
 
-  // Deposit Payment Configuration (New)
+  // Payment Configuration (New)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')
+
+  // Full Payment Deadline Configuration (for paymentMode = 'full')
+  paymentDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระเงิน (Full Payment Mode)
+  paymentDeadlineFixed?: string;    // วันที่ตายตัว (YYYY-MM-DD)
+  paymentDeadlineHours?: number;    // จำนวนชั่วโมงนับจากลงทะเบียน
+
+  // Deposit Payment Configuration (for paymentMode = 'deposit')
   depositAmount?: number;           // จำนวนเงินมัดจำคงที่ (บาท)
   depositPercentage?: number;       // เปอร์เซ็นต์มัดจำ (%)
   useDepositPercentage?: boolean;   // ใช้เปอร์เซ็นต์หรือจำนวนคงที่
 
   // Deposit Deadline Configuration
-  depositDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระมัดจำ
+  depositDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระมัดจำ (Deposit Mode only)
   depositDeadlineFixed?: string;    // วันที่ตายตัว (YYYY-MM-DD)
   depositDeadlineHours?: number;    // จำนวนชั่วโมงนับจากลงทะเบียน
 
   // Remaining Balance Deadline Configuration
-  remainingDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระยอดคงเหลือ
+  remainingDeadlineType?: 'none' | 'fixed' | 'hours'; // ประเภทกำหนดชำระยอดคงเหลือ (Deposit Mode only)
   remainingDeadlineFixed?: string;  // วันที่ตายตัว (YYYY-MM-DD)
   remainingDeadlineHours?: number;  // จำนวนชั่วโมงนับจากชำระมัดจำ
 

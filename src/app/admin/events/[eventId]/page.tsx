@@ -1809,7 +1809,7 @@ export default function EventDetailPage() {
                               <span className="font-semibold">฿{attendee.registration.totalAmount.toLocaleString()}</span>
                             </div>
 
-                            {/* Deposit Payment Section */}
+                            {/* Deposit Payment Section (Deposit Mode ONLY) */}
                             {attendee.registration.depositAmount > 0 && (
                               <>
                                 <div className="border-t pt-2">
@@ -1912,6 +1912,45 @@ export default function EventDetailPage() {
                                   </div>
                                 )}
                               </>
+                            )}
+
+                            {/* Full Payment Section (when depositAmount is 0 or undefined = Full Payment Mode) */}
+                            {(!attendee.registration.depositAmount || attendee.registration.depositAmount === 0) && (
+                              <div className="border-t pt-2">
+                                {attendee.registration.depositPaid ? (
+                                  <div className="mt-1">
+                                    <div className="flex items-center gap-2 text-green-600 mb-2">
+                                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                      </svg>
+                                      ชำระครบแล้ว {attendee.registration.depositPaidDate && `(${formatDeadline(attendee.registration.depositPaidDate)})`}
+                                    </div>
+                                    <button
+                                      onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                      className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                      title="ลบการลงทะเบียน"
+                                    >
+                                      🗑️ ลบการลงทะเบียน
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="mt-2 flex gap-2">
+                                    <button
+                                      onClick={() => handleOpenPaymentModal(attendee, 'full')}
+                                      className="flex-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                                    >
+                                      ✓ บันทึกการชำระเงิน
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                      className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                      title="ลบการลงทะเบียน"
+                                    >
+                                      🗑️ ลบ
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>

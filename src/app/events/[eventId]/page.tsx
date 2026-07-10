@@ -148,6 +148,11 @@ export default function EventDetailPage() {
   const [guestContactName, setGuestContactName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
 
+  // Lightbox state for payment slip images
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState('');
+  const [lightboxTitle, setLightboxTitle] = useState('');
+
   // Copy to clipboard helper
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -1641,7 +1646,7 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* Payment Slip Display */}
+                      {/* Payment Slip Display with Thumbnail */}
                       {(userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl) && (
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <h4 className="text-sm font-semibold text-gray-900 mb-3">หลักฐานการชำระเงิน</h4>
@@ -1649,8 +1654,30 @@ export default function EventDetailPage() {
                             {/* Deposit Slip */}
                             {userRegistration.depositSlipUrl && (
                               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="flex-1">
+                                <div className="flex items-start gap-3">
+                                  {/* Thumbnail */}
+                                  <button
+                                    onClick={() => {
+                                      setLightboxImage(userRegistration.depositSlipUrl || '');
+                                      setLightboxTitle(event.paymentMode === 'deposit' ? 'สลิปมัดจำ' : 'สลิปชำระเงิน');
+                                      setLightboxOpen(true);
+                                    }}
+                                    className="flex-shrink-0 group relative overflow-hidden rounded-lg border-2 border-blue-300 hover:border-blue-500 transition-all"
+                                  >
+                                    <img
+                                      src={userRegistration.depositSlipUrl}
+                                      alt="Payment slip thumbnail"
+                                      className="w-20 h-20 object-cover group-hover:scale-110 transition-transform"
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity flex items-center justify-center">
+                                      <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                      </svg>
+                                    </div>
+                                  </button>
+
+                                  {/* Slip Info */}
+                                  <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-2">
                                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1661,11 +1688,13 @@ export default function EventDetailPage() {
                                     </div>
                                     {userRegistration.depositPaidDate && (
                                       <p className="text-xs text-blue-700">
-                                        วันที่ส่ง: {new Date(userRegistration.depositPaidDate).toLocaleDateString('th-TH', {
+                                        อัปโหลดเมื่อ: {new Date(userRegistration.depositPaidDate).toLocaleString('th-TH', {
                                           year: 'numeric',
                                           month: 'long',
-                                          day: 'numeric'
-                                        })}
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })} น.
                                       </p>
                                     )}
                                     {event.paymentMode === 'deposit' && userRegistration.depositAmount && (
@@ -1673,28 +1702,41 @@ export default function EventDetailPage() {
                                         จำนวนเงิน: {userRegistration.depositAmount.toLocaleString()} บาท
                                       </p>
                                     )}
+                                    <p className="text-xs text-blue-600 mt-2">
+                                      💡 คลิกที่รูปเพื่อดูขนาดใหญ่
+                                    </p>
                                   </div>
-                                  <a
-                                    href={userRegistration.depositSlipUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-shrink-0 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                    ดูสลิป
-                                  </a>
                                 </div>
                               </div>
                             )}
 
                             {/* Remaining Slip */}
-                            {userRegistration.remainingSlipUrl && (
+                            {userRegistration.remainingSlipUrl && event.paymentMode === 'deposit' && (
                               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="flex-1">
+                                <div className="flex items-start gap-3">
+                                  {/* Thumbnail */}
+                                  <button
+                                    onClick={() => {
+                                      setLightboxImage(userRegistration.remainingSlipUrl || '');
+                                      setLightboxTitle('สลิปยอดคงเหลือ');
+                                      setLightboxOpen(true);
+                                    }}
+                                    className="flex-shrink-0 group relative overflow-hidden rounded-lg border-2 border-green-300 hover:border-green-500 transition-all"
+                                  >
+                                    <img
+                                      src={userRegistration.remainingSlipUrl}
+                                      alt="Remaining payment slip thumbnail"
+                                      className="w-20 h-20 object-cover group-hover:scale-110 transition-transform"
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity flex items-center justify-center">
+                                      <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                      </svg>
+                                    </div>
+                                  </button>
+
+                                  {/* Slip Info */}
+                                  <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-2">
                                       <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1703,11 +1745,13 @@ export default function EventDetailPage() {
                                     </div>
                                     {userRegistration.remainingPaidDate && (
                                       <p className="text-xs text-green-700">
-                                        วันที่ส่ง: {new Date(userRegistration.remainingPaidDate).toLocaleDateString('th-TH', {
+                                        อัปโหลดเมื่อ: {new Date(userRegistration.remainingPaidDate).toLocaleString('th-TH', {
                                           year: 'numeric',
                                           month: 'long',
-                                          day: 'numeric'
-                                        })}
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })} น.
                                       </p>
                                     )}
                                     {userRegistration.remainingAmount !== undefined && userRegistration.remainingAmount > 0 && (
@@ -1715,19 +1759,10 @@ export default function EventDetailPage() {
                                         จำนวนเงิน: {userRegistration.remainingAmount.toLocaleString()} บาท
                                       </p>
                                     )}
+                                    <p className="text-xs text-green-600 mt-2">
+                                      💡 คลิกที่รูปเพื่อดูขนาดใหญ่
+                                    </p>
                                   </div>
-                                  <a
-                                    href={userRegistration.remainingSlipUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-shrink-0 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                    ดูสลิป
-                                  </a>
                                 </div>
                               </div>
                             )}
@@ -2326,6 +2361,51 @@ export default function EventDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* Lightbox Modal for Payment Slip Images */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] w-full h-full flex flex-col">
+            {/* Close Button */}
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute top-4 right-4 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-2 transition-all"
+              aria-label="Close"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Title */}
+            {lightboxTitle && (
+              <div className="text-center mb-4">
+                <h3 className="text-xl font-semibold text-white">{lightboxTitle}</h3>
+              </div>
+            )}
+
+            {/* Image Container */}
+            <div
+              className="flex-1 flex items-center justify-center overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={lightboxImage}
+                alt={lightboxTitle || 'Payment slip'}
+                className="max-w-full max-h-full object-contain rounded-lg"
+              />
+            </div>
+
+            {/* Hint Text */}
+            <div className="text-center mt-4">
+              <p className="text-sm text-white text-opacity-70">คลิกที่พื้นหลังเพื่อปิด</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

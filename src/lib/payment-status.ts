@@ -29,8 +29,11 @@ export function determinePaymentStatus(
     const gasStatus = registration.paymentStatus;
 
     // Map GAS statuses to display statuses
-    if (gasStatus === 'รอตรวจสอบ' || gasStatus === 'รอตรวจสอบมัดจำ' || gasStatus === 'รอตรวจสอบยอดคงเหลือ') {
-      return gasStatus; // Show "waiting for verification" status
+    if (gasStatus === 'รอตรวจสอบ') {
+      return 'รอตรวจสอบสลิป'; // Show "waiting for slip verification" status
+    }
+    if (gasStatus === 'รอตรวจสอบมัดจำ' || gasStatus === 'รอตรวจสอบยอดคงเหลือ') {
+      return gasStatus; // Show specific deposit/remaining verification status
     }
     if (gasStatus.includes('ยืนยัน') || gasStatus.includes('ชำระครบ')) {
       return 'ชำระครบแล้ว';
@@ -121,7 +124,7 @@ export function getStatusBadgeClass(status: string): string {
   }
 
   // Pending verification states (purple/indigo - waiting for admin action)
-  if (status === 'รอตรวจสอบ' || status === 'รอตรวจสอบมัดจำ' || status === 'รอตรวจสอบยอดคงเหลือ') {
+  if (status === 'รอตรวจสอบสลิป' || status === 'รอตรวจสอบ' || status === 'รอตรวจสอบมัดจำ' || status === 'รอตรวจสอบยอดคงเหลือ') {
     return 'bg-purple-100 text-purple-800';
   }
 

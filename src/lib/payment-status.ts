@@ -1,5 +1,13 @@
-// Payment Status Determination and Display Functions
-// For Agents Club Deposit Payment System
+/**
+ * Payment Status Determination and Display Functions
+ * For Agents Club Payment System
+ *
+ * Supports 2 payment modes:
+ * 1. Full Payment Mode (paymentMode: 'full') - จ่ายครั้งเดียวเต็มจำนวน
+ * 2. Deposit Payment Mode (paymentMode: 'deposit') - จ่ายแบบแบ่งชำระ 2 ครั้ง
+ *
+ * See PAYMENT_SYSTEM.md for detailed documentation
+ */
 
 import { Event, EventInput, EventRegistration } from '@/types/event';
 import { isDeadlinePassed } from './payment-deadlines';

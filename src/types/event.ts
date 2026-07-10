@@ -344,16 +344,17 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   totalAmount: 'total_amount',
   slipUrl: 'slip_url',
   // Deposit payment fields (New)
-  depositAmount: 'deposit_amount',
-  remainingAmount: 'remaining_amount',
-  depositPaid: 'deposit_paid',
-  depositPaidDate: 'deposit_paid_date',
-  remainingPaidDate: 'remaining_paid_date',
-  depositSlipUrl: 'deposit_slip_url',
-  remainingSlipUrl: 'remaining_slip_url',
-  depositDeadline: 'deposit_deadline',
-  remainingDeadline: 'remaining_deadline',
-  paymentStatus: 'payment_status',
+  // See PAYMENT_SYSTEM.md for detailed payment flow documentation
+  depositAmount: 'deposit_amount',           // Column R: Amount for deposit payment (in deposit mode)
+  remainingAmount: 'remaining_amount',       // Column S: Amount for remaining payment (in deposit mode)
+  depositPaid: 'deposit_paid',               // Column T: Boolean - set by Admin when deposit is verified
+  depositPaidDate: 'deposit_paid_date',      // Column U: Date (YYYY-MM-DD) when deposit slip was uploaded by user (set by GAS)
+  remainingPaidDate: 'remaining_paid_date',  // Column V: Date (YYYY-MM-DD) when remaining slip was uploaded by user (set by GAS)
+  depositSlipUrl: 'deposit_slip_url',        // Column W: Google Drive URL for deposit payment slip
+  remainingSlipUrl: 'remaining_slip_url',    // Column X: Google Drive URL for remaining payment slip
+  depositDeadline: 'deposit_deadline',       // Column Y: ISO DateTime - deadline for deposit payment
+  remainingDeadline: 'remaining_deadline',   // Column Z: ISO DateTime - deadline for remaining payment
+  paymentStatus: 'payment_status',           // Column AA: Current payment status (see PAYMENT_SYSTEM.md for values)
   // End deposit payment fields
   status: 'status',
   verifiedBy: 'verified_by',

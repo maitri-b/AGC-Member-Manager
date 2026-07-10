@@ -38,6 +38,11 @@ interface Event {
   paymentTerms?: string;
   // Deposit payment configuration (New)
   paymentMode?: 'full' | 'deposit';
+  // Full payment deadline (for paymentMode = 'full')
+  paymentDeadlineType?: 'none' | 'fixed' | 'hours';
+  paymentDeadlineFixed?: string;
+  paymentDeadlineHours?: number;
+  // Deposit payment configuration (for paymentMode = 'deposit')
   depositAmount?: number;
   depositPercentage?: number;
   useDepositPercentage?: boolean;
@@ -99,6 +104,11 @@ interface EventFormData {
   useExternalPaymentLink: boolean;
   // Deposit payment configuration (New)
   paymentMode: 'full' | 'deposit';
+  // Full payment deadline (for paymentMode = 'full')
+  paymentDeadlineType: 'none' | 'fixed' | 'hours';
+  paymentDeadlineFixed: string;
+  paymentDeadlineHours: number;
+  // Deposit payment configuration (for paymentMode = 'deposit')
   depositAmount: number;
   depositPercentage: number;
   useDepositPercentage: boolean;
@@ -153,6 +163,11 @@ const initialFormData: EventFormData = {
   useExternalPaymentLink: false,
   // Deposit payment configuration (New)
   paymentMode: 'full',
+  // Full payment deadline (for paymentMode = 'full')
+  paymentDeadlineType: 'none',
+  paymentDeadlineFixed: '',
+  paymentDeadlineHours: 0,
+  // Deposit payment configuration (for paymentMode = 'deposit')
   depositAmount: 0,
   depositPercentage: 30,
   useDepositPercentage: false,
@@ -372,6 +387,11 @@ export default function AdminEventsPage() {
         useExternalPaymentLink: (event as any).useExternalPaymentLink ?? false,
         // Deposit payment configuration (New)
         paymentMode: event.paymentMode ?? 'full',
+        // Full payment deadline (for paymentMode = 'full')
+        paymentDeadlineType: (event as any).paymentDeadlineType ?? 'none',
+        paymentDeadlineFixed: (event as any).paymentDeadlineFixed ?? '',
+        paymentDeadlineHours: (event as any).paymentDeadlineHours ?? 0,
+        // Deposit payment configuration (for paymentMode = 'deposit')
         depositAmount: event.depositAmount ?? 0,
         depositPercentage: event.depositPercentage ?? 30,
         useDepositPercentage: event.useDepositPercentage ?? false,
@@ -1776,6 +1796,52 @@ export default function AdminEventsPage() {
                         </label>
                       </div>
                     </div>
+
+                    {/* Conditional: Show if FULL payment mode */}
+                    {formData.paymentMode === 'full' && (
+                      <>
+                        {/* Payment Deadline */}
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            กำหนดชำระเงิน (Payment Deadline)
+                          </label>
+                          <select
+                            value={formData.paymentDeadlineType || 'none'}
+                            onChange={(e) => setFormData({ ...formData, paymentDeadlineType: e.target.value as any })}
+                            className="w-full px-3 py-2 border rounded-md mb-2"
+                          >
+                            <option value="none">ไม่กำหนด - ไม่จำกัดเวลา</option>
+                            <option value="fixed">วันที่กำหนด - ระบุวันที่ชัดเจน</option>
+                            <option value="hours">ชั่วโมงจากลงทะเบียน - นับถอยหลัง</option>
+                          </select>
+
+                          {formData.paymentDeadlineType === 'fixed' && (
+                            <input
+                              type="date"
+                              value={formData.paymentDeadlineFixed || ''}
+                              onChange={(e) => setFormData({ ...formData, paymentDeadlineFixed: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-md"
+                            />
+                          )}
+
+                          {formData.paymentDeadlineType === 'hours' && (
+                            <div>
+                              <input
+                                type="number"
+                                value={formData.paymentDeadlineHours || ''}
+                                onChange={(e) => setFormData({ ...formData, paymentDeadlineHours: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                                className="w-full px-3 py-2 border rounded-md"
+                                placeholder="เช่น 72 (3 วัน)"
+                                min="1"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                จำนวนชั่วโมงนับจากเวลาที่ลงทะเบียน
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
 
                     {/* Conditional: Show if deposit mode */}
                     {formData.paymentMode === 'deposit' && (

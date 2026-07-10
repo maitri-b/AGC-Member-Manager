@@ -8,7 +8,7 @@ import { getMemberById } from '@/lib/google-sheets';
 import { getEventRegistrations, addEventRegistration } from '@/lib/event-sheets';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sendEventRegistrationConfirmationOnBehalf } from '@/lib/line-messaging';
-import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline } from '@/lib/payment-deadlines';
+import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline, calculateFullPaymentDeadline } from '@/lib/payment-deadlines';
 import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
 
 // Generate a unique 6-character registration ID
@@ -201,20 +201,22 @@ export async function POST(
       totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, !!targetMemberId);
     }
 
-    // Calculate payment breakdown if deposit mode
+    // Calculate payment breakdown and deadlines based on payment mode
     let depositAmount = 0;
     let remainingAmount = totalFee;
     let depositDeadline = '';
     let remainingDeadline = '';
     let paymentStatus = totalFee > 0 ? 'รอชำระเงิน' : 'ลงทะเบียนแล้ว';
 
+    const registrationDate = new Date().toISOString();
+
     if (eventData.paymentMode === 'deposit' && totalFee > 0) {
+      // Deposit Mode: Split payment into two installments
       const split = calculatePaymentSplit(totalFee, eventData as Event, attendeeCount);
       depositAmount = split.depositAmount;
       remainingAmount = split.remainingAmount;
 
       // Calculate deposit deadline
-      const registrationDate = new Date().toISOString();
       depositDeadline = calculateDepositDeadline(eventData as Event, registrationDate);
 
       // Calculate remaining deadline (if configured)
@@ -223,6 +225,10 @@ export async function POST(
       }
 
       paymentStatus = 'รอชำระมัดจำ';
+    } else if (totalFee > 0) {
+      // Full Payment Mode: Calculate payment deadline
+      depositDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
+      paymentStatus = 'รอชำระเงิน';
     }
 
     // Generate unique registration ID

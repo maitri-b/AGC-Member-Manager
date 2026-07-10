@@ -4,6 +4,35 @@
 import { Event, EventInput } from '@/types/event';
 
 /**
+ * Calculate full payment deadline based on event configuration (for paymentMode = 'full')
+ * @param event Event configuration
+ * @param registrationDate ISO timestamp of registration
+ * @returns ISO timestamp of deadline or empty string if no deadline
+ */
+export function calculateFullPaymentDeadline(
+  event: Event | EventInput,
+  registrationDate: string
+): string {
+  if (!event.paymentDeadlineType || event.paymentDeadlineType === 'none') {
+    return '';
+  }
+
+  if (event.paymentDeadlineType === 'fixed' && event.paymentDeadlineFixed) {
+    // Convert YYYY-MM-DD to midnight (00:00) in Bangkok timezone
+    const deadlineDate = new Date(event.paymentDeadlineFixed + 'T00:00:00+07:00');
+    return deadlineDate.toISOString();
+  }
+
+  if (event.paymentDeadlineType === 'hours' && event.paymentDeadlineHours) {
+    const regDate = new Date(registrationDate);
+    const deadlineDate = new Date(regDate.getTime() + event.paymentDeadlineHours * 60 * 60 * 1000);
+    return deadlineDate.toISOString();
+  }
+
+  return '';
+}
+
+/**
  * Calculate deposit deadline based on event configuration
  * @param event Event configuration
  * @param registrationDate ISO timestamp of registration

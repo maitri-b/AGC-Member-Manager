@@ -43,7 +43,8 @@
       "Bash(clasp login:*)",
       "Bash(clasp clone:*)",
       "Bash(clasp push:*)",
-      "Bash(clasp deploy:*)"
+      "Bash(clasp deploy:*)",
+      "Bash(Select-String -Pattern \"error TS\" -Context 0,2)"
     ]
   }
 }

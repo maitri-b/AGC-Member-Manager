@@ -43,6 +43,11 @@ interface Event {
   paymentSlipSubmissionUrl?: string;
   // Deposit payment configuration (New)
   paymentMode?: 'full' | 'deposit';
+  // Full payment deadline (for paymentMode = 'full')
+  paymentDeadlineType?: 'none' | 'fixed' | 'hours';
+  paymentDeadlineFixed?: string;
+  paymentDeadlineHours?: number;
+  // Deposit payment configuration (for paymentMode = 'deposit')
   depositAmount?: number;
   depositPercentage?: number;
   useDepositPercentage?: boolean;
@@ -1651,7 +1656,7 @@ export default function EventDetailPage() {
                               </div>
                             )}
 
-                            {/* Deadline Information */}
+                            {/* Deadline Information - Deposit Mode */}
                             {event.paymentMode === 'deposit' && (
                               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                                 <div className="flex items-start gap-2">
@@ -1679,6 +1684,27 @@ export default function EventDetailPage() {
                                         })()}
                                       </p>
                                     )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Deadline Information - Full Payment Mode */}
+                            {event.paymentMode === 'full' && userRegistration.depositDeadline && !userRegistration.depositPaid && (
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                <div className="flex items-start gap-2">
+                                  <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <div className="text-xs text-yellow-800 space-y-1">
+                                    <p>
+                                      <span className="font-semibold">กำหนดชำระเงิน:</span>{' '}
+                                      {formatDeadline(userRegistration.depositDeadline)}
+                                      {(() => {
+                                        const remaining = getTimeRemaining(userRegistration.depositDeadline);
+                                        return remaining ? ` (${remaining})` : '';
+                                      })()}
+                                    </p>
                                   </div>
                                 </div>
                               </div>

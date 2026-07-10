@@ -119,6 +119,11 @@ export async function GET() {
         paymentInstructionText: data.paymentInstructionText || '',
         // Deposit payment configuration (New)
         paymentMode: data.paymentMode || 'full',
+        // Full payment deadline (for paymentMode = 'full')
+        paymentDeadlineType: data.paymentDeadlineType || 'none',
+        paymentDeadlineFixed: data.paymentDeadlineFixed || '',
+        paymentDeadlineHours: data.paymentDeadlineHours ?? 0,
+        // Deposit payment configuration (for paymentMode = 'deposit')
         depositAmount: data.depositAmount ?? 0,
         depositPercentage: data.depositPercentage ?? 0,
         useDepositPercentage: data.useDepositPercentage ?? false,
@@ -218,6 +223,11 @@ export async function POST(request: NextRequest) {
       paymentInstructionText: body.paymentInstructionText || '',
       // Deposit payment configuration (New)
       paymentMode: body.paymentMode || 'full',
+      // Full payment deadline (for paymentMode = 'full')
+      paymentDeadlineType: body.paymentDeadlineType || 'none',
+      paymentDeadlineFixed: body.paymentDeadlineFixed || '',
+      paymentDeadlineHours: body.paymentDeadlineHours ?? 0,
+      // Deposit payment configuration (for paymentMode = 'deposit')
       depositAmount: body.depositAmount ?? 0,
       depositPercentage: body.depositPercentage ?? 0,
       useDepositPercentage: body.useDepositPercentage ?? false,

@@ -129,6 +129,10 @@ export default function EventDetailPage() {
   const [memberPhone, setMemberPhone] = useState('');
   const [memberStatus, setMemberStatus] = useState('');
   const [lineGroupStatus, setLineGroupStatus] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [lineDisplayName, setLineDisplayName] = useState('');
+  const [lineProfilePicture, setLineProfilePicture] = useState('');
   // Attendee type pricing state (New)
   const [attendeeTypeSelections, setAttendeeTypeSelections] = useState<AttendeeTypeSelection[]>([]);
   const [calculatedTotalFee, setCalculatedTotalFee] = useState(0);
@@ -189,6 +193,18 @@ export default function EventDetailPage() {
         }
         if (data.lineGroupStatus) {
           setLineGroupStatus(data.lineGroupStatus);
+        }
+        if (data.companyName) {
+          setCompanyName(data.companyName);
+        }
+        if (data.licenseNumber) {
+          setLicenseNumber(data.licenseNumber);
+        }
+        if (data.lineDisplayName) {
+          setLineDisplayName(data.lineDisplayName);
+        }
+        if (data.lineProfilePicture) {
+          setLineProfilePicture(data.lineProfilePicture);
         }
 
         // Load existing registration data if user has already registered
@@ -830,8 +846,16 @@ export default function EventDetailPage() {
                             </div>
                           )}
 
-                          {/* Event Fee Subtotal */}
+                          {/* Event Fee Subtotal - Only show if event has room allocations or special charges */}
                           {(() => {
+                            // Only show event fee subtotal if there are room fees or special charges
+                            const hasRoomFees = userRegistration.roomAllocations && userRegistration.roomAllocations.length > 0;
+                            const hasSpecialCharges = userRegistration.specialCharges && userRegistration.specialCharges.length > 0;
+
+                            if (!hasRoomFees && !hasSpecialCharges) {
+                              return null; // Don't show subtotal if there are no additional fees
+                            }
+
                             // Calculate event fee (total - special charges - room fees)
                             let eventFee = userRegistration.totalAmount || 0;
                             if (userRegistration.specialCharges && userRegistration.specialCharges.length > 0) {
@@ -844,6 +868,11 @@ export default function EventDetailPage() {
                               }, 0);
                               eventFee -= roomFee;
                             }
+
+                            if (eventFee === 0) {
+                              return null; // Don't show if event fee is 0
+                            }
+
                             return (
                               <div className="flex justify-between font-medium pt-1 border-t border-green-300">
                                 <span>รวมค่าลงทะเบียน:</span>
@@ -869,12 +898,17 @@ export default function EventDetailPage() {
                                 })}
                               </div>
 
-                              {/* Subtotal for rooms */}
+                              {/* Subtotal for rooms - Only show if total > 0 */}
                               {(() => {
                                 const roomTotal = userRegistration.roomAllocations.reduce((sum: number, alloc: RoomAllocation) => {
                                   const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
                                   return sum + (roomType?.price || 0) * alloc.roomCount;
                                 }, 0);
+
+                                if (roomTotal === 0) {
+                                  return null; // Don't show if room total is 0
+                                }
+
                                 return (
                                   <div className="flex justify-between font-medium pt-1 border-t border-green-300">
                                     <span>รวมค่าห้องพัก:</span>
@@ -955,7 +989,7 @@ export default function EventDetailPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-semibold text-blue-900">
-                          ข้อมูลผู้ติดต่อ
+                          ข้อมูลบริษัทและข้อมูลติดต่อของคุณ
                         </h4>
                         <Link
                           href="/profile"
@@ -965,14 +999,56 @@ export default function EventDetailPage() {
                         </Link>
                       </div>
                       <div className="space-y-2 text-sm">
+                        {companyName && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-gray-600 font-medium w-32 flex-shrink-0">ชื่อบริษัท:</span>
+                            <span className="text-gray-900">{companyName}</span>
+                          </div>
+                        )}
+                        {licenseNumber && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 font-medium w-32 flex-shrink-0">เลขที่ใบอนุญาต:</span>
+                            <span className="text-gray-900">{licenseNumber}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-600 font-medium w-20">ชื่อ:</span>
+                          <span className="text-gray-600 font-medium w-32 flex-shrink-0">ชื่อผู้ติดต่อ:</span>
                           <span className="text-gray-900">{memberName}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-600 font-medium w-20">เบอร์โทร:</span>
+                          <span className="text-gray-600 font-medium w-32 flex-shrink-0">เบอร์โทร:</span>
                           <span className="text-gray-900">{memberPhone}</span>
                         </div>
+                        {lineDisplayName && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-gray-600 font-medium w-32 flex-shrink-0">LINE Display Name:</span>
+                            <div className="flex items-center gap-2">
+                              {lineProfilePicture && (
+                                <img
+                                  src={lineProfilePicture}
+                                  alt="LINE Profile"
+                                  className="w-6 h-6 rounded-full"
+                                />
+                              )}
+                              <span className="text-gray-900">{lineDisplayName}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Attendee Count Section - Moved here */}
+                  {!isEditing && userRegistration && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          <span className="text-sm font-semibold text-green-900">จำนวนผู้เดินทาง:</span>
+                        </div>
+                        <span className="text-lg font-bold text-green-700">{userRegistration.attendeeCount} คน</span>
                       </div>
                     </div>
                   )}
@@ -1944,7 +2020,7 @@ export default function EventDetailPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-semibold text-blue-900">
-                          ข้อมูลผู้ติดต่อ
+                          ข้อมูลบริษัทและข้อมูลติดต่อของคุณ
                         </h4>
                         <Link
                           href="/profile"
@@ -1954,14 +2030,41 @@ export default function EventDetailPage() {
                         </Link>
                       </div>
                       <div className="space-y-2 text-sm">
+                        {companyName && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-gray-600 font-medium w-32 flex-shrink-0">ชื่อบริษัท:</span>
+                            <span className="text-gray-900">{companyName}</span>
+                          </div>
+                        )}
+                        {licenseNumber && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 font-medium w-32 flex-shrink-0">เลขที่ใบอนุญาต:</span>
+                            <span className="text-gray-900">{licenseNumber}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-600 font-medium w-20">ชื่อ:</span>
+                          <span className="text-gray-600 font-medium w-32 flex-shrink-0">ชื่อผู้ติดต่อ:</span>
                           <span className="text-gray-900">{memberName}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-600 font-medium w-20">เบอร์โทร:</span>
+                          <span className="text-gray-600 font-medium w-32 flex-shrink-0">เบอร์โทร:</span>
                           <span className="text-gray-900">{memberPhone}</span>
                         </div>
+                        {lineDisplayName && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-gray-600 font-medium w-32 flex-shrink-0">LINE Display Name:</span>
+                            <div className="flex items-center gap-2">
+                              {lineProfilePicture && (
+                                <img
+                                  src={lineProfilePicture}
+                                  alt="LINE Profile"
+                                  className="w-6 h-6 rounded-full"
+                                />
+                              )}
+                              <span className="text-gray-900">{lineDisplayName}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

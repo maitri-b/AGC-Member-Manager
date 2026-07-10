@@ -244,6 +244,11 @@ export async function GET(
     let memberPhone = '';
     let memberStatus = '';
     let lineGroupStatus = '';
+    let companyName = '';
+    let licenseNumber = '';
+    let lineDisplayName = '';
+    let lineProfilePicture = '';
+
     if (session.user.memberId) {
       try {
         const { getMemberById } = await import('@/lib/google-sheets');
@@ -253,10 +258,18 @@ export async function GET(
           memberPhone = member.mobile || member.phone || '';
           memberStatus = member.status || '';
           lineGroupStatus = member.lineGroupStatus || '';
+          companyName = member.companyNameTH || member.companyNameEN || '';
+          licenseNumber = member.licenseNumber || '';
         }
       } catch (err) {
         console.error('Error fetching member info:', err);
       }
+    }
+
+    // Get LINE profile info from session
+    if (session.user.id) {
+      lineDisplayName = (session.user as any).lineDisplayName || session.user.name || '';
+      lineProfilePicture = (session.user as any).lineProfilePicture || session.user.image || '';
     }
 
     return NextResponse.json({
@@ -267,6 +280,10 @@ export async function GET(
       memberPhone,
       memberStatus,
       lineGroupStatus,
+      companyName,
+      licenseNumber,
+      lineDisplayName,
+      lineProfilePicture,
     });
   } catch (error) {
     console.error('Error fetching event detail:', error);

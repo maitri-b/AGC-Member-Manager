@@ -253,8 +253,11 @@ export async function POST(
 
       paymentStatus = 'รอชำระมัดจำ';
     } else if (totalFee > 0) {
-      // Full Payment Mode: Calculate payment deadline
-      depositDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
+      // Full Payment Mode: Calculate payment deadline using remaining_deadline
+      // We use remaining_deadline (not deposit_deadline) to semantically differentiate:
+      // - Full Payment: deposit_amount = 0, remaining_deadline = payment deadline
+      // - Deposit Mode: deposit_amount > 0, deposit_deadline + remaining_deadline
+      remainingDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
       paymentStatus = 'รอชำระเงิน';
     }
 

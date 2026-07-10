@@ -46,8 +46,8 @@ The system supports **2 payment modes** configured per event:
 | **V** | `remaining_paid_date` | Date (YYYY-MM-DD) | **Date when remaining slip was uploaded** | Deposit mode |
 | **W** | `deposit_slip_url` | URL | **Deposit payment slip URL** | Deposit mode |
 | **X** | `remaining_slip_url` | URL | **Remaining payment slip URL** | Deposit mode |
-| **Y** | `deposit_deadline` | DateTime (ISO) | Deadline for deposit payment | Deposit mode |
-| **Z** | `remaining_deadline` | DateTime (ISO) | Deadline for remaining payment | Deposit mode |
+| **Y** | `deposit_deadline` | DateTime (ISO) | Deadline for deposit payment | **Deposit mode only** |
+| **Z** | `remaining_deadline` | DateTime (ISO) | Deadline for remaining payment (Deposit mode) OR Full payment deadline (Full mode) | **Both modes** |
 | **AA** | `payment_status` | String | **Current payment status** (see below) | All modes |
 | **AB** | `status` | String | Legacy registration status | All modes |
 
@@ -144,6 +144,10 @@ The system supports **2 payment modes** configured per event:
 - `total_amount` - Total to pay
 - `slip_url` - **Legacy column for full payment slip**
 - `deposit_slip_url` or `remaining_slip_url` - **Modern: Can use either for full payment slip**
+- `remaining_deadline` - **Payment deadline for Full Payment Mode**
+- `deposit_amount` - **Always 0** (to differentiate from Deposit Mode)
+- `remaining_amount` - **Always 0** (to differentiate from Deposit Mode)
+- `deposit_deadline` - **Always empty** (not used in Full Payment Mode)
 - `payment_status` - Current status
 
 ### Deposit Payment Mode Uses:
@@ -168,17 +172,27 @@ The system supports **2 payment modes** configured per event:
    - Set by Admin when verifying
    - Computed by Vercel if empty
 
-2. **Date fields use different formats:**
+2. **Column Usage by Payment Mode:**
+   - **Full Payment Mode** (identified by `deposit_amount = 0`):
+     - Uses `remaining_deadline` for payment deadline
+     - Does NOT use `deposit_deadline`, `deposit_amount`, `remaining_amount`
+     - Can use either `deposit_slip_url` or `remaining_slip_url` for slip upload
+   - **Deposit Mode** (identified by `deposit_amount > 0`):
+     - Uses `deposit_deadline` for deposit payment deadline
+     - Uses `remaining_deadline` for remaining payment deadline
+     - Uses `deposit_slip_url` and `remaining_slip_url` separately
+
+3. **Date fields use different formats:**
    - `deposit_paid_date`, `remaining_paid_date`: `YYYY-MM-DD` (set by GAS)
    - `deposit_deadline`, `remaining_deadline`: ISO DateTime string (set by Vercel)
    - `registration_date`, `verified_date`: `YYYY-MM-DD`
 
-3. **Legacy vs Modern:**
+4. **Legacy vs Modern:**
    - `slip_url` is legacy (old full payment system)
    - Modern system uses `deposit_slip_url` and `remaining_slip_url` for all payments
    - For full payment mode, can use either `deposit_slip_url` or `remaining_slip_url`
 
-4. **Boolean Fields:**
+5. **Boolean Fields:**
    - `deposit_paid`: Only set to TRUE by Admin verification
    - GAS does NOT set this field (only sets `payment_status`)
 

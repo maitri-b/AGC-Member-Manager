@@ -48,12 +48,18 @@ export function determinePaymentStatus(
   }
 
   // Priority 3: Full payment mode (non-deposit)
-  if (event.paymentMode !== 'deposit') {
+  // Full Payment Mode is identified by: depositAmount === 0
+  if (event.paymentMode !== 'deposit' || registration.depositAmount === 0) {
     // Check if slip was uploaded (even if not verified yet)
     const hasSlip = registration.depositSlipUrl || registration.remainingSlipUrl || (registration as any).slipUrl;
 
     if (hasSlip) {
       return 'รอตรวจสอบ'; // Slip uploaded, waiting for admin verification
+    }
+
+    // Check if payment deadline passed (Full Payment Mode uses remaining_deadline)
+    if (registration.remainingDeadline && isDeadlinePassed(registration.remainingDeadline)) {
+      return 'พ้นกำหนด'; // Payment overdue
     }
 
     // Check if confirmed by admin

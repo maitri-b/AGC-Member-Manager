@@ -267,12 +267,14 @@
       document.getElementById('loading').style.display = 'none';
 
       if (response.success) {
-        showMessage('success', '✅ ' + response.message);
+        showMessage('success', '✅ ' + response.message + '\n\n' +
+          'คุณสามารถปิดหน้าต่างนี้เพื่อกลับไปยังหน้าการลงทะเบียนได้เลย ' +
+          'ระบบจะอัปเดตข้อมูลการชำระเงินของคุณโดยอัตโนมัติ');
 
-        // Auto close after 3 seconds
+        // Auto close after 5 seconds (increased for longer message)
         setTimeout(function() {
           google.script.host.close();
-        }, 3000);
+        }, 5000);
       } else {
         showMessage('error', '❌ ' + response.error);
         document.getElementById('uploadForm').style.display = 'block';

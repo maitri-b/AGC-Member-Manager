@@ -1647,25 +1647,26 @@ export default function EventDetailPage() {
                       )}
 
                       {/* Payment Slip Display with Thumbnail */}
-                      {(userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl) && (
+                      {(userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl) && (
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <h4 className="text-sm font-semibold text-gray-900 mb-3">หลักฐานการชำระเงิน</h4>
                           <div className="space-y-3">
-                            {/* Deposit Slip */}
-                            {userRegistration.depositSlipUrl && (
+                            {/* Deposit Slip (for Deposit mode) OR Full Payment Slip (for Full mode) */}
+                            {(userRegistration.depositSlipUrl || (event.paymentMode !== 'deposit' && (userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl))) && (
                               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                 <div className="flex items-start gap-3">
                                   {/* Thumbnail */}
                                   <button
                                     onClick={() => {
-                                      setLightboxImage(userRegistration.depositSlipUrl || '');
+                                      const slipUrl = userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl || '';
+                                      setLightboxImage(slipUrl);
                                       setLightboxTitle(event.paymentMode === 'deposit' ? 'สลิปมัดจำ' : 'สลิปชำระเงิน');
                                       setLightboxOpen(true);
                                     }}
                                     className="flex-shrink-0 group relative overflow-hidden rounded-lg border-2 border-blue-300 hover:border-blue-500 transition-all"
                                   >
                                     <img
-                                      src={userRegistration.depositSlipUrl}
+                                      src={userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl}
                                       alt="Payment slip thumbnail"
                                       className="w-20 h-20 object-cover group-hover:scale-110 transition-transform"
                                     />
@@ -1686,17 +1687,26 @@ export default function EventDetailPage() {
                                         {event.paymentMode === 'deposit' ? 'สลิปมัดจำ' : 'สลิปชำระเงิน'}
                                       </span>
                                     </div>
-                                    {userRegistration.depositPaidDate && (
-                                      <p className="text-xs text-blue-700">
-                                        อัปโหลดเมื่อ: {new Date(userRegistration.depositPaidDate).toLocaleString('th-TH', {
-                                          year: 'numeric',
-                                          month: 'long',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })} น.
-                                      </p>
-                                    )}
+                                    {(() => {
+                                      const paidDate = event.paymentMode === 'deposit'
+                                        ? userRegistration.depositPaidDate
+                                        : userRegistration.remainingPaidDate;
+
+                                      if (paidDate) {
+                                        return (
+                                          <p className="text-xs text-blue-700">
+                                            อัปโหลดเมื่อ: {new Date(paidDate).toLocaleString('th-TH', {
+                                              year: 'numeric',
+                                              month: 'long',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })} น.
+                                          </p>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
                                     {event.paymentMode === 'deposit' && userRegistration.depositAmount && (
                                       <p className="text-xs text-blue-700 mt-1">
                                         จำนวนเงิน: {userRegistration.depositAmount.toLocaleString()} บาท

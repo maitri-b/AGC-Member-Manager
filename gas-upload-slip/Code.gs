@@ -211,8 +211,13 @@ function processForm(formObject) {
     const newFileName = registrationId + '_' + paymentType + '_' + new Date().getTime() + '_' + fileName;
     const file = folder.createFile(blob.setName(newFileName));
 
-    // Get shareable link (files in this folder inherit sharing settings)
-    const fileUrl = file.getUrl();
+    // Set sharing to "Anyone with the link can view"
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Get direct thumbnail URL for images (works better for displaying)
+    // Format: https://drive.google.com/thumbnail?id=FILE_ID&sz=w1000
+    const fileId = file.getId();
+    const fileUrl = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1000';
 
     Logger.log('File uploaded: ' + fileUrl);
 
@@ -342,9 +347,10 @@ function updateRegistrationSlip(registrationId, eventId, paymentType, fileUrl) {
       paidDateCol = normalizedHeaders.indexOf('remaining_paid_date');
       newStatus = 'รอตรวจสอบยอดคงเหลือ';
     } else {
-      // Full payment (or legacy)
-      slipUrlCol = normalizedHeaders.indexOf('slip_url');
-      paidDateCol = -1; // No specific paid date column for full payment
+      // Full payment mode - use remaining_slip_url and remaining_paid_date
+      // (Modern system uses deposit_slip_url/remaining_slip_url for all payment types)
+      slipUrlCol = normalizedHeaders.indexOf('remaining_slip_url');
+      paidDateCol = normalizedHeaders.indexOf('remaining_paid_date');
       newStatus = 'รอตรวจสอบ';
     }
 

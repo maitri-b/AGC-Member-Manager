@@ -1432,7 +1432,126 @@ export default function EventDetailPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                       <h3 className="font-semibold text-blue-900 mb-4">รายละเอียดการชำระเงิน</h3>
 
-                      {/* Deposit Mode - Show breakdown */}
+                      {/* 1. Total Amount Summary - Show First */}
+                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
+                        <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-3xl font-bold">{userRegistration.totalAmount.toLocaleString()} บาท</span>
+                          <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
+                        </div>
+                      </div>
+
+                      {/* 2. Payment Status - Large and Clear */}
+                      {userRegistration.paymentStatus && (
+                        <div className="bg-white rounded-lg p-4 mb-4 border-2 border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <span className="text-base font-semibold text-gray-700">สถานะการชำระเงิน</span>
+                            <span className={`px-4 py-2 rounded-lg text-base font-bold ${getStatusBadgeClass(userRegistration.paymentStatus)}`}>
+                              {userRegistration.paymentStatus}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 3. Payment Submission Section - Show Upload Button/Instructions */}
+                      {(() => {
+                        const hasPaymentAccount = !!event.paymentAccountNumber;
+                        const hasTotalAmount = userRegistration.totalAmount > 0;
+                        const notPaidDeposit = !userRegistration.depositPaid;
+                        const hasRemainingUnpaid = userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl;
+                        const shouldShow = hasPaymentAccount && hasTotalAmount && (notPaidDeposit || hasRemainingUnpaid);
+
+                        return shouldShow;
+                      })() ? (
+                        <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4 mb-4">
+                          {event.paymentSlipSubmissionUrl && (
+                            <>
+                              {(event as any).paymentInstructionText && (
+                                <p className="text-sm text-gray-700 mb-3">
+                                  {(event as any).paymentInstructionText}
+                                </p>
+                              )}
+                              {!(event as any).paymentInstructionText && (
+                                <p className="text-sm text-gray-700 mb-3">
+                                  <strong>📋 คำแนะนำ:</strong> กรุณาชำระเงินและส่งหลักฐานการชำระเงินผ่านปุ่มด้านล่าง
+                                </p>
+                              )}
+                            </>
+                          )}
+
+                          {event.paymentSlipSubmissionUrl ? (
+                            <button
+                              onClick={() => {
+                                if (!userRegistration) {
+                                  toast.error('กรุณาลงทะเบียนก่อนอัพโหลดสลิป');
+                                  return;
+                                }
+
+                                if (!event.paymentSlipSubmissionUrl) {
+                                  toast.error('ไม่พบ URL สำหรับอัพโหลดสลิป');
+                                  return;
+                                }
+
+                                const useExternal = (event as any).useExternalPaymentLink === true;
+
+                                if (useExternal) {
+                                  window.open(event.paymentSlipSubmissionUrl, '_blank');
+                                } else {
+                                  let paymentType: 'deposit' | 'remaining' | 'full' = 'full';
+
+                                  if (event.paymentMode === 'deposit') {
+                                    if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
+                                      paymentType = 'remaining';
+                                    } else {
+                                      paymentType = 'deposit';
+                                    }
+                                  } else {
+                                    paymentType = 'full';
+                                  }
+
+                                  const url = new URL(event.paymentSlipSubmissionUrl);
+                                  url.searchParams.append('registrationId', userRegistration.registrationId);
+                                  url.searchParams.append('eventId', event.eventId);
+                                  url.searchParams.append('lineUserId', session?.user?.id || '');
+                                  url.searchParams.append('paymentType', paymentType);
+
+                                  const popup = window.open(
+                                    url.toString(),
+                                    'uploadSlip',
+                                    'width=600,height=700,scrollbars=yes,resizable=yes'
+                                  );
+
+                                  if (!popup) {
+                                    toast.error('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ (Popup)');
+                                    return;
+                                  }
+
+                                  const checkClosed = setInterval(() => {
+                                    if (popup.closed) {
+                                      clearInterval(checkClosed);
+                                      fetchEventDetail();
+                                    }
+                                  }, 500);
+                                }
+                              }}
+                              className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                            >
+                              <span className="flex items-center justify-center gap-2">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                {(event as any).paymentSlipButtonText || 'ส่งหลักฐานการชำระเงิน'}
+                              </span>
+                            </button>
+                          ) : (
+                            <div className="text-sm text-gray-600 bg-white rounded p-3 border border-gray-200">
+                              <p>โปรดชำระเงินและส่งหลักฐานการชำระตามช่องทางที่ระบุไว้ในข้อมูลการชำระเงินด้านบน</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {/* 4. Deposit Mode - Show breakdown */}
                       {event?.paymentMode === 'deposit' && (
                         <>
                           {/* Deposit Payment */}
@@ -1495,158 +1614,7 @@ export default function EventDetailPage() {
                         </>
                       )}
 
-                      {/* Total Amount Summary Card */}
-                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
-                        <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-3xl font-bold">{userRegistration.totalAmount.toLocaleString()} บาท</span>
-                          <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
-                        </div>
-                      </div>
-
-                      {/* Single Payment Submission Button - Works for both full and deposit mode */}
-                      {/* Only show if event has payment and user hasn't paid yet */}
-                      {(() => {
-                        // Debug: Log visibility conditions
-                        const hasPaymentAccount = !!event.paymentAccountNumber;
-                        const hasTotalAmount = userRegistration.totalAmount > 0;
-                        const notPaidDeposit = !userRegistration.depositPaid;
-                        const hasRemainingUnpaid = userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl;
-                        const shouldShow = hasPaymentAccount && hasTotalAmount && (notPaidDeposit || hasRemainingUnpaid);
-
-                        console.log('🔍 Payment Button Visibility Check:', {
-                          hasPaymentAccount,
-                          hasTotalAmount,
-                          totalAmount: userRegistration.totalAmount,
-                          notPaidDeposit,
-                          depositPaid: userRegistration.depositPaid,
-                          hasRemainingUnpaid,
-                          remainingAmount: userRegistration.remainingAmount,
-                          remainingSlipUrl: userRegistration.remainingSlipUrl,
-                          shouldShow,
-                        });
-
-                        return shouldShow;
-                      })() ? (
-                        <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4">
-                          {/* Show instruction text only when there's a payment slip URL */}
-                          {event.paymentSlipSubmissionUrl && (
-                            <>
-                              {(event as any).paymentInstructionText && (
-                                <p className="text-sm text-gray-700 mb-3">
-                                  {(event as any).paymentInstructionText}
-                                </p>
-                              )}
-                              {!(event as any).paymentInstructionText && (
-                                <p className="text-sm text-gray-700 mb-3">
-                                  <strong>คำแนะนำ:</strong> คุณสามารถชำระเงินแบบเต็มจำนวนหรือแบบแบ่งงวดก็ได้ โปรดส่งหลักฐานการชำระเงินผ่านลิงก์ด้านล่าง
-                                </p>
-                              )}
-                            </>
-                          )}
-
-                          {event.paymentSlipSubmissionUrl ? (
-                            <button
-                              onClick={() => {
-                                if (!userRegistration) {
-                                  toast.error('กรุณาลงทะเบียนก่อนอัพโหลดสลิป');
-                                  return;
-                                }
-
-                                if (!event.paymentSlipSubmissionUrl) {
-                                  toast.error('ไม่พบ URL สำหรับอัพโหลดสลิป');
-                                  return;
-                                }
-
-                                // Check if using external link mode (Google Form / LINE / etc.)
-                                const useExternal = (event as any).useExternalPaymentLink === true;
-
-                                if (useExternal) {
-                                  // External Link Mode: Open URL directly in new tab without parameters
-                                  window.open(event.paymentSlipSubmissionUrl, '_blank');
-                                } else {
-                                  // GAS Mode: Add parameters and open in popup
-                                  // Determine payment type based on event mode and deposit status
-                                  let paymentType: 'deposit' | 'remaining' | 'full' = 'full';
-
-                                  if (event.paymentMode === 'deposit') {
-                                    // Deposit mode: Check if deposit already paid
-                                    if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
-                                      paymentType = 'remaining';
-                                    } else {
-                                      paymentType = 'deposit';
-                                    }
-                                  } else {
-                                    // Full payment mode (or undefined = default to full)
-                                    paymentType = 'full';
-                                  }
-
-                                  console.log('💳 Payment Type Determination:', {
-                                    eventPaymentMode: event.paymentMode,
-                                    depositPaid: userRegistration.depositPaid,
-                                    remainingAmount: userRegistration.remainingAmount,
-                                    determinedPaymentType: paymentType,
-                                  });
-
-                                  // Build dynamic URL with parameters
-                                  const url = new URL(event.paymentSlipSubmissionUrl);
-                                  url.searchParams.append('registrationId', userRegistration.registrationId);
-                                  url.searchParams.append('eventId', event.eventId);
-                                  url.searchParams.append('lineUserId', session?.user?.id || '');
-                                  url.searchParams.append('paymentType', paymentType);
-
-                                  // Open in popup window
-                                  const popup = window.open(
-                                    url.toString(),
-                                    'uploadSlip',
-                                    'width=600,height=700,scrollbars=yes,resizable=yes'
-                                  );
-
-                                  if (!popup) {
-                                    toast.error('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ (Popup)');
-                                    return;
-                                  }
-
-                                  // Auto-refresh when popup closes
-                                  const checkClosed = setInterval(() => {
-                                    if (popup.closed) {
-                                      clearInterval(checkClosed);
-                                      console.log('Upload window closed, refreshing data...');
-                                      fetchEventDetail();
-                                    }
-                                  }, 500);
-                                }
-                              }}
-                              className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-                            >
-                              <span className="flex items-center justify-center gap-2">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                </svg>
-                                {(event as any).paymentSlipButtonText || 'ส่งหลักฐานการชำระเงิน'}
-                              </span>
-                            </button>
-                          ) : (
-                            <div className="text-sm text-gray-600 bg-white rounded p-3 border border-gray-200">
-                              <p>โปรดชำระเงินและส่งหลักฐานการชำระตามช่องทางที่ระบุไว้ในข้อมูลการชำระเงินด้านบน</p>
-                            </div>
-                          )}
-                        </div>
-                      ) : null}
-
-                      {/* Payment Status Badge */}
-                      {userRegistration.paymentStatus && (
-                        <div className="mt-4 pt-4 border-t border-blue-200">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">สถานะการชำระเงิน:</span>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClass(userRegistration.paymentStatus)}`}>
-                              {userRegistration.paymentStatus}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Payment Slip Display with Thumbnail */}
+                      {/* 5. Payment Slip Display with Thumbnail */}
                       {(userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl) && (
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <h4 className="text-sm font-semibold text-gray-900 mb-3">หลักฐานการชำระเงิน</h4>

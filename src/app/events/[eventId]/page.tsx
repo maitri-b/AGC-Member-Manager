@@ -1482,15 +1482,24 @@ export default function EventDetailPage() {
                                       alt="Payment slip thumbnail"
                                       className="w-20 h-20 object-cover group-hover:scale-110 transition-transform"
                                       onError={(e) => {
-                                        // Fallback if image fails to load
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                        (e.target as HTMLImageElement).parentElement!.innerHTML = `
-                                          <div class="w-20 h-20 bg-gray-200 flex items-center justify-center">
-                                            <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                          </div>
-                                        `;
+                                        const img = e.target as HTMLImageElement;
+                                        const currentSrc = img.src;
+                                        console.error('Failed to load slip image:', currentSrc);
+                                        console.log('depositSlipUrl:', userRegistration.depositSlipUrl);
+                                        console.log('remainingSlipUrl:', userRegistration.remainingSlipUrl);
+                                        console.log('slipUrl:', (userRegistration as any).slipUrl);
+
+                                        // Fallback: show document icon
+                                        img.style.display = 'none';
+                                        if (img.parentElement) {
+                                          img.parentElement.innerHTML = `
+                                            <div class="w-20 h-20 bg-gray-200 flex items-center justify-center rounded-lg">
+                                              <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                              </svg>
+                                            </div>
+                                          `;
+                                        }
                                       }}
                                     />
                                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity flex items-center justify-center">
@@ -1508,25 +1517,38 @@ export default function EventDetailPage() {
                                       </span>
                                     </div>
                                     {(() => {
+                                      // For Full Payment: Use remainingPaidDate (set by GAS)
+                                      // For Deposit mode: Use depositPaidDate
                                       const paidDate = event.paymentMode === 'deposit'
                                         ? userRegistration.depositPaidDate
                                         : userRegistration.remainingPaidDate;
 
+                                      console.log('Payment Mode:', event.paymentMode);
+                                      console.log('Deposit Paid Date:', userRegistration.depositPaidDate);
+                                      console.log('Remaining Paid Date:', userRegistration.remainingPaidDate);
+                                      console.log('Using Paid Date:', paidDate);
+
                                       if (paidDate) {
-                                        return (
-                                          <p className="text-xs text-blue-700">
-                                            <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            อัปโหลดเมื่อ: {new Date(paidDate).toLocaleString('th-TH', {
-                                              year: 'numeric',
-                                              month: 'long',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            })} น.
-                                          </p>
-                                        );
+                                        try {
+                                          const dateObj = typeof paidDate === 'string' ? new Date(paidDate) : paidDate;
+                                          return (
+                                            <p className="text-xs text-blue-700">
+                                              <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                              </svg>
+                                              อัปโหลดเมื่อ: {dateObj.toLocaleString('th-TH', {
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })} น.
+                                            </p>
+                                          );
+                                        } catch (err) {
+                                          console.error('Error formatting date:', err, paidDate);
+                                          return null;
+                                        }
                                       }
                                       return null;
                                     })()}
@@ -1563,14 +1585,18 @@ export default function EventDetailPage() {
                                       alt="Remaining payment slip thumbnail"
                                       className="w-20 h-20 object-cover group-hover:scale-110 transition-transform"
                                       onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                        (e.target as HTMLImageElement).parentElement!.innerHTML = `
-                                          <div class="w-20 h-20 bg-gray-200 flex items-center justify-center">
-                                            <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                          </div>
-                                        `;
+                                        const img = e.target as HTMLImageElement;
+                                        console.error('Failed to load remaining slip image:', img.src);
+                                        img.style.display = 'none';
+                                        if (img.parentElement) {
+                                          img.parentElement.innerHTML = `
+                                            <div class="w-20 h-20 bg-gray-200 flex items-center justify-center rounded-lg">
+                                              <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                              </svg>
+                                            </div>
+                                          `;
+                                        }
                                       }}
                                     />
                                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity flex items-center justify-center">

@@ -252,7 +252,16 @@ export default function EventDetailPage() {
 
 ## Migration Notes
 
+### Production Migration Completed (2026-07-13)
+✅ Successfully migrated existing payment slips to paymentSlips collection:
+- **419 registrations** scanned
+- **1 registration** with existing slip URLs migrated
+- **2 payment slips** created from legacy fields
+- **0 errors** during migration
+
+### Backward Compatibility
 - Legacy slip URLs (`depositSlipUrl`, `remainingSlipUrl`) are still kept for backward compatibility
+- GAS webhook updates both paymentSlips collection AND legacy fields (in-place update)
 - Use PaymentDetailsModal for new slip management
 - Old payment confirmation modal still works but is deprecated
 - Gradually migrate to new system by using PaymentDetailsModal instead

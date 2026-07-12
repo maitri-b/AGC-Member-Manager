@@ -118,10 +118,13 @@ function doGet(e) {
   template.eventId = params.eventId;
   template.paymentType = params.paymentType;
 
-  const depositAmt = Number(registration.depositAmount) || 0;
-  const remainingAmt = Number(registration.remainingAmount) || 0;
+  // Prepare payment info for display
+  template.totalAmount = Number(registration.totalAmount) || 0;
+  template.depositAmount = Number(registration.depositAmount) || 0;
+  template.remainingAmount = Number(registration.remainingAmount) || 0;
 
-  template.amount = params.paymentType === 'deposit' ? depositAmt : remainingAmt;
+  // Check payment mode (deposit or full)
+  template.hasDepositMode = template.depositAmount > 0;
 
   return template.evaluate()
     .setTitle('อัพโหลดสลิปการชำระเงิน')
@@ -185,11 +188,13 @@ function processForm(formObject) {
       registrationId: formObject.registrationId,
       eventId: formObject.eventId,
       paymentType: formObject.paymentType,
+      amount: formObject.amount,
     }));
 
     const registrationId = formObject.registrationId;
     const eventId = formObject.eventId;
     const paymentType = formObject.paymentType;
+    const amount = formObject.amount; // New field from form
     const fileData = formObject.fileData;
     const fileName = formObject.fileName;
     const mimeType = formObject.mimeType;
@@ -220,7 +225,7 @@ function processForm(formObject) {
     Logger.log('File uploaded: ' + fileUrl);
 
     // 2. ✨ PRIMARY: Callback to Vercel API to update Firestore
-    const firestoreUpdateResult = updateFirestore(registrationId, eventId, paymentType, fileUrl);
+    const firestoreUpdateResult = updateFirestore(registrationId, eventId, paymentType, fileUrl, amount);
 
     if (!firestoreUpdateResult.success) {
       // If Firestore update failed, this is a critical error
@@ -443,7 +448,7 @@ function getRegistrationFromFirestore(registrationId, eventId) {
 /**
  * ✨ อัพเดทข้อมูลใน Firestore ผ่าน Vercel API
  */
-function updateFirestore(registrationId, eventId, paymentType, fileUrl) {
+function updateFirestore(registrationId, eventId, paymentType, fileUrl, amount) {
   try {
     Logger.log('[Firestore] Sending callback to Vercel API...');
 
@@ -452,6 +457,7 @@ function updateFirestore(registrationId, eventId, paymentType, fileUrl) {
       eventId: eventId,
       paymentType: paymentType,
       slipUrl: fileUrl,
+      amount: amount || null, // Send amount if provided
       uploadedAt: new Date().toISOString()
     };
 

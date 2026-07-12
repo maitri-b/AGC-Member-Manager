@@ -68,6 +68,19 @@
       font-weight: 600;
       font-size: 14px;
     }
+    select, input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    select:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
     .file-input-wrapper {
       position: relative;
       display: inline-block;
@@ -161,15 +174,44 @@
       <div class="info-box">
         <p><strong>รหัสลงทะเบียน:</strong> <?= registrationId ?></p>
         <p><strong>บริษัท:</strong> <?= registration.companyName ?></p>
-        <p><strong>ยอดที่ต้องชำระ:</strong> <?= amount.toLocaleString() ?> บาท</p>
-        <p><strong>ประเภท:</strong>
-          <?= paymentType === 'deposit' ? 'งวดที่ 1: ชำระมัดจำ' : (paymentType === 'remaining' ? 'งวดที่ 2: ชำระยอดคงเหลือ' : 'ชำระเต็มจำนวน') ?>
-        </p>
+        <p><strong>ยอดรวมทั้งหมด:</strong> <?= totalAmount.toLocaleString() ?> บาท</p>
+        <? if (hasDepositMode) { ?>
+          <p><strong>มัดจำ:</strong> <?= depositAmount.toLocaleString() ?> บาท</p>
+          <p><strong>ยอดคงเหลือ:</strong> <?= remainingAmount.toLocaleString() ?> บาท</p>
+        <? } ?>
       </div>
 
       <div id="messageBox" class="message"></div>
 
       <form id="uploadForm" onsubmit="return false;">
+        <div class="form-group">
+          <label for="paymentType">🏷️ ประเภทการชำระ</label>
+          <select id="paymentType" name="paymentType" required onchange="handlePaymentTypeChange()">
+            <option value="">-- เลือกประเภท --</option>
+            <? if (hasDepositMode) { ?>
+              <option value="deposit">งวดที่ 1: ชำระมัดจำ (<?= depositAmount.toLocaleString() ?> บาท)</option>
+              <option value="remaining">งวดที่ 2: ชำระยอดคงเหลือ (<?= remainingAmount.toLocaleString() ?> บาท)</option>
+            <? } else { ?>
+              <option value="full">ชำระเต็มจำนวน (<?= totalAmount.toLocaleString() ?> บาท)</option>
+            <? } ?>
+            <option value="additional">ชำระเพิ่มเติม (ระบุจำนวนเงิน)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="amountGroup" style="display: none;">
+          <label for="amount">💰 จำนวนเงิน (บาท)</label>
+          <input
+            type="number"
+            id="amount"
+            name="amount"
+            min="1"
+            step="0.01"
+            placeholder="กรอกจำนวนเงิน"
+          >
+          <p style="font-size: 12px; color: #718096; margin-top: 4px;">
+            สำหรับการชำระเพิ่มเติม เช่น ค่าใช้จ่ายพิเศษ หรือการเปลี่ยนแปลงจำนวนผู้เข้าร่วม
+          </p>
+        </div>
         <div class="form-group">
           <label for="slipFile">📎 เลือกไฟล์สลิป (JPG, PNG, PDF)</label>
           <input
@@ -196,6 +238,31 @@
   </div>
 
   <script>
+    const PAYMENT_AMOUNTS = {
+      deposit: <?= depositAmount ?>,
+      remaining: <?= remainingAmount ?>,
+      full: <?= totalAmount ?>
+    };
+
+    function handlePaymentTypeChange() {
+      const paymentType = document.getElementById('paymentType').value;
+      const amountGroup = document.getElementById('amountGroup');
+      const amountInput = document.getElementById('amount');
+
+      if (paymentType === 'additional') {
+        amountGroup.style.display = 'block';
+        amountInput.required = true;
+        amountInput.value = '';
+      } else {
+        amountGroup.style.display = 'none';
+        amountInput.required = false;
+        // Auto-fill amount based on payment type
+        if (PAYMENT_AMOUNTS[paymentType]) {
+          amountInput.value = PAYMENT_AMOUNTS[paymentType];
+        }
+      }
+    }
+
     function previewFile() {
       const file = document.getElementById('slipFile').files[0];
       const preview = document.getElementById('preview');
@@ -214,12 +281,28 @@
     }
 
     function handleSubmit() {
+      const paymentType = document.getElementById('paymentType').value;
       const fileInput = document.getElementById('slipFile');
       const file = fileInput.files[0];
+      const amountInput = document.getElementById('amount');
+
+      if (!paymentType) {
+        showMessage('error', 'กรุณาเลือกประเภทการชำระ');
+        return;
+      }
 
       if (!file) {
         showMessage('error', 'กรุณาเลือกไฟล์');
         return;
+      }
+
+      // Validate amount for additional payment type
+      if (paymentType === 'additional') {
+        const amount = parseFloat(amountInput.value);
+        if (!amount || amount <= 0) {
+          showMessage('error', 'กรุณากรอกจำนวนเงินที่ถูกต้อง');
+          return;
+        }
       }
 
       // Validate file size (max 5MB)
@@ -238,10 +321,19 @@
       reader.onload = function(e) {
         const base64Data = e.target.result.split(',')[1]; // Remove data:image/...;base64, prefix
 
+        // Get amount based on payment type
+        let amount = null;
+        if (paymentType === 'additional') {
+          amount = parseFloat(amountInput.value);
+        } else if (PAYMENT_AMOUNTS[paymentType]) {
+          amount = PAYMENT_AMOUNTS[paymentType];
+        }
+
         const formData = {
           registrationId: '<?= registrationId ?>',
           eventId: '<?= eventId ?>',
-          paymentType: '<?= paymentType ?>',
+          paymentType: paymentType,
+          amount: amount,
           fileData: base64Data,
           fileName: file.name,
           mimeType: file.type

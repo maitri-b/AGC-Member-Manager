@@ -3,6 +3,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
+import { createPaymentSlip } from '@/lib/payment-slips';
+import { getEventRegistrationByRegistrationId } from '@/lib/event-sheets';
+import { PaymentType } from '@/types/payment';
 
 // Verify GAS request using secret token
 function verifyGasToken(request: NextRequest): boolean {
@@ -37,15 +40,19 @@ export async function POST(request: NextRequest) {
     const {
       registrationId,
       eventId,
-      paymentType, // 'deposit' | 'remaining' | 'full'
+      paymentType, // 'deposit' | 'remaining' | 'full' | 'additional'
+      amount,
+      description,
       slipUrl,
       uploadedAt,
+      lineUserId,
     } = body;
 
     console.log(`[GAS Webhook] Received slip upload:`, {
       registrationId,
       eventId,
       paymentType,
+      amount,
       slipUrl: slipUrl?.substring(0, 50) + '...',
     });
 
@@ -57,17 +64,19 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // 4. Find registration in Firestore
-    const db = adminDb();
-    const registrationsRef = db.collection('eventRegistrations');
+    // Validate payment type
+    const validPaymentTypes: PaymentType[] = ['full', 'deposit', 'remaining', 'additional'];
+    if (!validPaymentTypes.includes(paymentType as PaymentType)) {
+      return NextResponse.json({
+        error: 'Invalid payment type',
+        validTypes: validPaymentTypes,
+      }, { status: 400 });
+    }
 
-    const snapshot = await registrationsRef
-      .where('eventId', '==', eventId)
-      .where('registrationId', '==', registrationId)
-      .limit(1)
-      .get();
+    // 4. Verify registration exists
+    const registration = await getEventRegistrationByRegistrationId(registrationId);
 
-    if (snapshot.empty) {
+    if (!registration) {
       console.error(`[GAS Webhook] Registration not found: ${registrationId}`);
       return NextResponse.json({
         error: 'Registration not found',
@@ -76,44 +85,53 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    const registrationDoc = snapshot.docs[0];
-    const registrationData = registrationDoc.data();
-
-    // 5. Prepare update data based on payment type
-    const updateData: Record<string, any> = {
-      updatedAt: new Date().toISOString(),
-    };
-
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-    if (paymentType === 'deposit') {
-      // Deposit payment
-      updateData.depositSlipUrl = slipUrl;
-      updateData.depositPaidDate = today;
-      updateData.depositPaid = false; // Will be verified by admin
-      updateData.paymentStatus = 'รอตรวจสอบมัดจำ';
-      updateData.status = 'รอตรวจสอบมัดจำ';
-    } else if (paymentType === 'remaining') {
-      // Remaining payment
-      updateData.remainingSlipUrl = slipUrl;
-      updateData.remainingPaidDate = today;
-      updateData.paymentStatus = 'รอตรวจสอบยอดคงเหลือ';
-      updateData.status = 'รอตรวจสอบยอดคงเหลือ';
-    } else {
-      // Full payment (paymentType === 'full')
-      // Use remaining_slip_url for full payment (modern approach)
-      updateData.remainingSlipUrl = slipUrl;
-      updateData.remainingPaidDate = today;
-      updateData.paymentStatus = 'รอตรวจสอบ';
-      updateData.status = 'รอตรวจสอบ';
+    // Verify eventId matches
+    if (registration.eventId !== eventId) {
+      console.error(`[GAS Webhook] Event ID mismatch: ${registration.eventId} vs ${eventId}`);
+      return NextResponse.json({
+        error: 'Event ID does not match registration',
+        registrationId,
+        eventId,
+      }, { status: 400 });
     }
 
-    // 6. Update Firestore
-    await registrationDoc.ref.update(updateData);
+    // 5. Determine payment amount if not provided
+    let paymentAmount = amount;
+    if (!paymentAmount || paymentAmount === 0) {
+      // Auto-calculate based on payment type
+      if (paymentType === 'deposit') {
+        paymentAmount = registration.depositAmount || 0;
+      } else if (paymentType === 'remaining') {
+        paymentAmount = registration.remainingAmount || 0;
+      } else if (paymentType === 'full') {
+        paymentAmount = registration.totalAmount || 0;
+      } else {
+        // For 'additional', amount must be provided
+        return NextResponse.json({
+          error: 'Amount is required for additional payment type',
+        }, { status: 400 });
+      }
+    }
 
-    console.log(`[GAS Webhook] Updated registration ${registrationId}:`, {
+    // 6. Create payment slip record
+    const slip = await createPaymentSlip({
+      registrationId,
+      eventId,
+      amount: Number(paymentAmount),
+      paymentType: paymentType as PaymentType,
+      description: description || getPaymentTypeDescription(paymentType as PaymentType),
+      slipUrl,
+      uploadedAt: uploadedAt || new Date().toISOString(),
+      uploadedBy: lineUserId || registration.lineUserId || registration.userId || 'gas-upload',
+      status: 'pending', // All uploads start as pending for admin review
+    });
+
+    console.log(`[GAS Webhook] Created payment slip:`, {
+      slipId: slip.slipId,
+      registrationId,
       paymentType,
-      status: updateData.paymentStatus,
+      amount: paymentAmount,
+      status: slip.status,
     });
 
     // 7. Invalidate caches
@@ -123,10 +141,12 @@ export async function POST(request: NextRequest) {
     // 8. Return success
     return NextResponse.json({
       success: true,
-      message: 'Slip uploaded successfully',
+      message: 'Payment slip uploaded successfully',
+      slipId: slip.slipId,
       registrationId,
       paymentType,
-      status: updateData.paymentStatus,
+      amount: paymentAmount,
+      status: slip.status,
     });
 
   } catch (error) {
@@ -136,6 +156,17 @@ export async function POST(request: NextRequest) {
       message: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 500 });
   }
+}
+
+// Helper function to get Thai description for payment type
+function getPaymentTypeDescription(paymentType: PaymentType): string {
+  const descriptions: Record<PaymentType, string> = {
+    full: 'ชำระเต็มจำนวน',
+    deposit: 'ชำระมัดจำ',
+    remaining: 'ชำระยอดคงเหลือ',
+    additional: 'ชำระเพิ่มเติม',
+  };
+  return descriptions[paymentType];
 }
 
 // GET - Health check

@@ -136,6 +136,7 @@ export async function GET(
           remainingAmount: Number(attendee.registration.remainingAmount) || 0,
           depositPaid: Boolean(attendee.registration.depositPaid),
           depositPaidDate: String(attendee.registration.depositPaidDate || ''),
+          // Legacy slip URLs - kept during migration, use GET /api/payments?registrationId=xxx for new data
           depositSlipUrl: String(attendee.registration.depositSlipUrl || ''),
           remainingSlipUrl: String(attendee.registration.remainingSlipUrl || ''),
           depositDeadline: String(attendee.registration.depositDeadline || ''),

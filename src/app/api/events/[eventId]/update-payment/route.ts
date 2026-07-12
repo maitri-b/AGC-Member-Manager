@@ -1,5 +1,12 @@
 // API Route for Updating Payment Status (Admin only)
 // For Agents Club Deposit Payment System
+//
+// ⚠️ DEPRECATED: This endpoint updates legacy slip URL fields in eventRegistrations.
+// For new implementations, use:
+// - PUT /api/payments/[slipId]/approve - Approve payment slip
+// - PUT /api/payments/[slipId]/reject - Reject payment slip
+//
+// This endpoint is kept for backward compatibility during migration.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';

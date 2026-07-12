@@ -8,6 +8,7 @@ import { EventRegistration, Event } from '@/types/event';
 import { determinePaymentStatus } from '@/lib/payment-status';
 import { sheetsCache, CacheKeys, CacheTTL } from '@/lib/cache/google-sheets-cache';
 import { hasPermission } from '@/lib/permissions';
+import { getPaymentSlipsByRegistration, getPaymentSummaryForRegistration } from '@/lib/payment-slips';
 
 // Helper function to check if registration is cancelled
 function isRegistrationCancelled(registration: EventRegistration): boolean {
@@ -209,6 +210,13 @@ export async function GET(
               }
             }
 
+            // Get payment slips for this registration
+            const paymentSlips = await getPaymentSlipsByRegistration(latestReg.registrationId);
+            const paymentSummary = await getPaymentSummaryForRegistration(
+              latestReg.registrationId,
+              recalculatedTotal
+            );
+
             userRegistration = {
               registrationId: latestReg.registrationId,
               status: latestReg.status,
@@ -221,6 +229,7 @@ export async function GET(
               remainingAmount: latestReg.remainingAmount,
               depositPaid: latestReg.depositPaid,
               depositPaidDate: latestReg.depositPaidDate,
+              // Legacy slip URLs - kept for backward compatibility during migration
               depositSlipUrl: latestReg.depositSlipUrl,
               remainingSlipUrl: latestReg.remainingSlipUrl,
               depositDeadline: latestReg.depositDeadline,
@@ -230,6 +239,9 @@ export async function GET(
               attendeeTypeSelections,
               roomAllocations,
               specialCharges,
+              // Payment slips from new collection (New)
+              paymentSlips,
+              paymentSummary,
             };
           }
         }

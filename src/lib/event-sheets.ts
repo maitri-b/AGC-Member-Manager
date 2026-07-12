@@ -651,7 +651,8 @@ export async function getRegistrationsByLicense(licenseNumber: string): Promise<
   const events = await getTrackedEventsFromFirestore();
 
   for (const event of events) {
-    const registrations = await getEventRegistrations(event.sheetName);
+    // ✅ Read from Firestore instead of Google Sheets
+    const registrations = await getEventRegistrationsByEventId(event.eventId);
     const matchingReg = registrations.find(r => {
       const regLicense = (r.licenseNumber || '').trim().replace(/\s+/g, '');
       return regLicense === normalizedLicense;
@@ -1108,8 +1109,9 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
       console.log(`buildAttendanceCache: Processing event ${event.eventId} (${event.eventName})`);
 
       try {
-        const registrations = await getEventRegistrations(event.sheetName);
-        console.log(`buildAttendanceCache: Found ${registrations.length} registrations for ${event.sheetName}`);
+        // ✅ Read from Firestore instead of Google Sheets
+        const registrations = await getEventRegistrationsByEventId(event.eventId);
+        console.log(`buildAttendanceCache: Found ${registrations.length} registrations for ${event.eventId}`);
 
         let confirmedInEvent = 0;
         for (const reg of registrations) {

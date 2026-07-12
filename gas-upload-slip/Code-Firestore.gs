@@ -17,8 +17,8 @@ const CONFIG = {
   DRIVE_FOLDER_ID: '17PF4Za5QPcxtZFUuHi2FgQOT7yFocu1i',
 
   // Vercel API Configuration
-  VERCEL_API_URL: 'https://your-app.vercel.app/api/webhooks/gas-slip-upload',
-  VERCEL_WEBHOOK_SECRET: 'YOUR_GAS_WEBHOOK_SECRET_HERE', // Replace with actual secret
+  VERCEL_API_URL: 'https://agc-member-manager.vercel.app/api/webhooks/gas-slip-upload',
+  VERCEL_WEBHOOK_SECRET: '0992680eb489d5003f1c9a65fcaf9fdd94da77f613acacbbee80e46415c176f6',
 
   // Event ID to Sheet Name mapping
   get EVENT_SHEETS() {
@@ -84,13 +84,17 @@ function doGet(e) {
     paymentType: e.parameter.paymentType || 'full'
   };
 
+  Logger.log('[DEBUG] Code-Firestore.gs v2.1 - Using Firestore API');
   Logger.log('doGet params: ' + JSON.stringify(params));
 
   if (!params.registrationId || !params.eventId) {
     return createErrorPage('ข้อมูลไม่ครบถ้วน', 'กรุณาเข้าผ่านระบบลงทะเบียนเท่านั้น');
   }
 
-  const registration = findRegistration(params.registrationId, params.eventId);
+  // Get registration data from Firestore (via Vercel API)
+  Logger.log('[DEBUG] Calling getRegistrationFromFirestore...');
+  const registration = getRegistrationFromFirestore(params.registrationId, params.eventId);
+  Logger.log('[DEBUG] Registration result: ' + (registration ? 'FOUND' : 'NOT FOUND'));
 
   if (!registration) {
     return createErrorPage(
@@ -99,6 +103,7 @@ function doGet(e) {
     );
   }
 
+  // Validate LINE User ID
   if (params.lineUserId && registration.lineUserId &&
       registration.lineUserId !== params.lineUserId) {
     return createErrorPage(
@@ -214,34 +219,34 @@ function processForm(formObject) {
 
     Logger.log('File uploaded: ' + fileUrl);
 
-    // 2. Update Google Sheets (backward compatibility)
+    // 2. ✨ PRIMARY: Callback to Vercel API to update Firestore
+    const firestoreUpdateResult = updateFirestore(registrationId, eventId, paymentType, fileUrl);
+
+    if (!firestoreUpdateResult.success) {
+      // If Firestore update failed, this is a critical error
+      Logger.log('Error: Firestore update failed: ' + firestoreUpdateResult.error);
+      return {
+        success: false,
+        error: 'ไม่สามารถบันทึกข้อมูลได้: ' + (firestoreUpdateResult.error || 'Unknown error')
+      };
+    }
+
+    // 3. OPTIONAL: Update Google Sheets (backward compatibility only)
+    // This is for old registrations that exist in Google Sheets
     const sheetUpdateResult = updateRegistrationSlip(registrationId, eventId, paymentType, fileUrl);
 
     if (!sheetUpdateResult.success) {
-      Logger.log('Warning: Failed to update Google Sheet: ' + sheetUpdateResult.error);
-      // Continue anyway - Firestore is the primary data source
-    }
-
-    // 3. ✨ Callback to Vercel API to update Firestore
-    const firestoreUpdateResult = updateFirestore(registrationId, eventId, paymentType, fileUrl);
-
-    if (firestoreUpdateResult.success) {
-      return {
-        success: true,
-        message: 'อัพโหลดสลิปเรียบร้อยแล้ว',
-        fileUrl: fileUrl
-      };
+      Logger.log('Info: Registration not found in Google Sheet (OK for new registrations): ' + sheetUpdateResult.error);
+      // This is OK - new registrations are in Firestore only
     } else {
-      // If Firestore update failed, log error but still return success
-      // (Sheet was already updated)
-      Logger.log('Warning: Firestore update failed: ' + firestoreUpdateResult.error);
-      return {
-        success: true,
-        message: 'อัพโหลดสลิปเรียบร้อยแล้ว (Firestore sync pending)',
-        fileUrl: fileUrl,
-        warning: 'Firestore update failed, will retry automatically'
-      };
+      Logger.log('Info: Successfully updated Google Sheet (backward compatibility)');
     }
+
+    return {
+      success: true,
+      message: 'อัพโหลดสลิปเรียบร้อยแล้ว',
+      fileUrl: fileUrl
+    };
 
   } catch (error) {
     Logger.log('Error in processForm: ' + error.toString());
@@ -384,6 +389,54 @@ function updateRegistrationSlip(registrationId, eventId, paymentType, fileUrl) {
   } catch (error) {
     Logger.log('Error in updateRegistrationSlip: ' + error.toString());
     return { success: false, error: error.message };
+  }
+}
+
+/**
+ * ✨ ดึงข้อมูล Registration จาก Firestore ผ่าน Vercel API
+ */
+function getRegistrationFromFirestore(registrationId, eventId) {
+  try {
+    Logger.log('[Firestore] Getting registration from Firestore...');
+
+    const url = CONFIG.VERCEL_API_URL.replace('/gas-slip-upload', '/gas-get-registration') +
+                '?registrationId=' + encodeURIComponent(registrationId) +
+                '&eventId=' + encodeURIComponent(eventId);
+
+    const options = {
+      method: 'get',
+      headers: {
+        'Authorization': 'Bearer ' + CONFIG.VERCEL_WEBHOOK_SECRET
+      },
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    Logger.log('[Firestore] Response code: ' + responseCode);
+
+    if (responseCode === 200) {
+      const result = JSON.parse(responseText);
+      if (result.success && result.registration) {
+        Logger.log('[Firestore] Found registration: ' + result.registration.companyName);
+        return result.registration;
+      } else {
+        Logger.log('[Firestore] Registration not found');
+        return null;
+      }
+    } else if (responseCode === 404) {
+      Logger.log('[Firestore] Registration not found (404)');
+      return null;
+    } else {
+      Logger.log('[Firestore] HTTP error: ' + responseCode);
+      return null;
+    }
+
+  } catch (error) {
+    Logger.log('[Firestore] Error calling Vercel API: ' + error.toString());
+    return null;
   }
 }
 

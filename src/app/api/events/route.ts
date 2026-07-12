@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
-import { getTrackedEvents, getEventAttendanceSummary, getEventRegistrations } from '@/lib/event-sheets';
+import { getTrackedEvents, getEventAttendanceSummary, getEventRegistrationsByEventId } from '@/lib/event-sheets';
 import { EventRegistration } from '@/types/event';
 import { sheetsCache, CacheKeys, CacheTTL } from '@/lib/cache/google-sheets-cache';
 
@@ -56,10 +56,10 @@ export async function GET(request: Request) {
           let totalAttendees = 0;
           let userRegistered = false;
 
-          if (e.sheetName) {
+          if (e.eventId) {
             try {
-              // Get registrations to check if user has registered
-              const registrations = await getEventRegistrations(e.sheetName);
+              // ✅ Get registrations from Firestore
+              const registrations = await getEventRegistrationsByEventId(e.eventId);
 
               // Filter out cancelled registrations
               const activeRegistrations = registrations.filter(r => !isRegistrationCancelled(r));
@@ -153,9 +153,10 @@ export async function GET(request: Request) {
 
         // Check if current user has registered (for admin/committee too)
         let userRegistered = false;
-        if (event.sheetName && (session.user.id || session.user.memberId)) {
+        if (event.eventId && (session.user.id || session.user.memberId)) {
           try {
-            const registrations = await getEventRegistrations(event.sheetName);
+            // ✅ Get registrations from Firestore
+            const registrations = await getEventRegistrationsByEventId(event.eventId);
             // Filter out cancelled registrations
             const activeRegistrations = registrations.filter(r => !isRegistrationCancelled(r));
             const userReg = activeRegistrations.find(r => {

@@ -1,6 +1,6 @@
 // Debug API to check event data
 import { NextResponse } from 'next/server';
-import { getEventRegistrations, getTrackedEventsFromFirestore } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, getTrackedEventsFromFirestore } from '@/lib/event-sheets';
 
 export async function GET() {
   try {
@@ -12,8 +12,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Event not found' });
     }
 
-    // Get all registrations
-    const allRegistrations = await getEventRegistrations(event.sheetName);
+    // ✅ Get all registrations from Firestore
+    const allRegistrations = await getEventRegistrationsByEventId(event.eventId);
 
     // Analyze status field
     const statusAnalysis = {

@@ -150,24 +150,24 @@ export async function POST(request: NextRequest) {
 
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-      // Update legacy slip URL fields based on payment type
+      // Update legacy slip URL fields and ONLY payment_status (not status)
       if (paymentType === 'deposit') {
         updateData.depositSlipUrl = slipUrl;
         updateData.depositPaidDate = today;
         updateData.paymentStatus = 'รอตรวจสอบมัดจำ';
-        updateData.status = 'รอตรวจสอบมัดจำ';
+        // Do NOT update 'status' - that's for registration confirmation by admin
       } else if (paymentType === 'remaining') {
         updateData.remainingSlipUrl = slipUrl;
         updateData.remainingPaidDate = today;
         updateData.paymentStatus = 'รอตรวจสอบยอดคงเหลือ';
-        updateData.status = 'รอตรวจสอบยอดคงเหลือ';
+        // Do NOT update 'status'
       } else if (paymentType === 'full') {
         updateData.depositSlipUrl = slipUrl;
         updateData.remainingSlipUrl = slipUrl;
         updateData.depositPaidDate = today;
         updateData.remainingPaidDate = today;
         updateData.paymentStatus = 'รอตรวจสอบ';
-        updateData.status = 'รอตรวจสอบ';
+        // Do NOT update 'status'
       }
       // Note: 'additional' type doesn't update legacy fields
 
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
       console.log(`[GAS Webhook] Updated eventRegistrations record:`, {
         registrationId,
         paymentType,
-        status: updateData.status,
+        paymentStatus: updateData.paymentStatus,
       });
     }
 

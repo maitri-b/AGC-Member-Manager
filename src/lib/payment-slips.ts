@@ -143,20 +143,20 @@ export async function approvePaymentSlip(
 
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    // Update payment status based on payment type
+    // Update ONLY payment_status (not status - that's for registration confirmation)
     if (slip.paymentType === 'deposit') {
       updateData.depositPaid = true;
       updateData.depositPaidDate = today;
       updateData.paymentStatus = 'ชำระมัดจำแล้ว';
-      updateData.status = 'ชำระมัดจำแล้ว';
+      // Do NOT update 'status' - that's for registration confirmation by admin
     } else if (slip.paymentType === 'remaining') {
       updateData.paymentStatus = 'ชำระยอดคงเหลือแล้ว';
-      updateData.status = 'ชำระยอดคงเหลือแล้ว';
+      // Do NOT update 'status'
     } else if (slip.paymentType === 'full') {
       updateData.depositPaid = true;
       updateData.depositPaidDate = today;
       updateData.paymentStatus = 'ชำระเต็มจำนวนแล้ว';
-      updateData.status = 'ชำระเต็มจำนวนแล้ว';
+      // Do NOT update 'status'
     }
     // For 'additional' type, don't update main payment status
 
@@ -164,7 +164,7 @@ export async function approvePaymentSlip(
 
     console.log(`[Approve Slip] Updated eventRegistrations for ${slip.registrationId}:`, {
       paymentType: slip.paymentType,
-      status: updateData.status,
+      paymentStatus: updateData.paymentStatus,
     });
   }
 }
@@ -215,18 +215,18 @@ export async function rejectPaymentSlip(
       updatedAt: reviewedAt,
     };
 
-    // Clear the slip URL and reset status based on payment type
+    // Clear the slip URL and reset ONLY payment_status
     if (slip.paymentType === 'deposit') {
       updateData.depositSlipUrl = '';
       updateData.depositPaidDate = null;
       updateData.depositPaid = false;
       updateData.paymentStatus = 'รอชำระมัดจำ';
-      updateData.status = 'รอชำระมัดจำ';
+      // Do NOT update 'status' - that's for registration confirmation by admin
     } else if (slip.paymentType === 'remaining') {
       updateData.remainingSlipUrl = '';
       updateData.remainingPaidDate = null;
       updateData.paymentStatus = 'รอชำระยอดคงเหลือ';
-      updateData.status = 'รอชำระยอดคงเหลือ';
+      // Do NOT update 'status'
     } else if (slip.paymentType === 'full') {
       updateData.depositSlipUrl = '';
       updateData.remainingSlipUrl = '';
@@ -234,7 +234,7 @@ export async function rejectPaymentSlip(
       updateData.remainingPaidDate = null;
       updateData.depositPaid = false;
       updateData.paymentStatus = 'รอชำระเงิน';
-      updateData.status = 'รอชำระเงิน';
+      // Do NOT update 'status'
     }
     // For 'additional' type, don't update main payment status
 
@@ -242,7 +242,7 @@ export async function rejectPaymentSlip(
 
     console.log(`[Reject Slip] Updated eventRegistrations for ${slip.registrationId}:`, {
       paymentType: slip.paymentType,
-      status: updateData.status,
+      paymentStatus: updateData.paymentStatus,
     });
   }
 }

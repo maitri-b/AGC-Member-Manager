@@ -48,7 +48,8 @@
       "Bash(node scripts/migrate-events-to-firestore.js:*)",
       "Bash(node scripts/backup-sheets.js:*)",
       "Bash(firebase deploy:*)",
-      "Bash(node check-registration-v2.js:*)"
+      "Bash(node check-registration-v2.js:*)",
+      "Bash(node check-missing-registration.js:*)"
     ]
   }
 }

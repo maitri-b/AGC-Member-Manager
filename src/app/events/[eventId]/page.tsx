@@ -1727,7 +1727,22 @@ export default function EventDetailPage() {
                         </div>
                       ) : null}
 
-                      {/* 4. Deposit Mode - Show breakdown */}
+                      {/* 4a. Full Payment Mode - Show deadline */}
+                      {event?.paymentMode !== 'deposit' && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl && (
+                        <div className="bg-white rounded-lg p-4 mb-3 border-2 border-orange-300">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-gray-700">กำหนดชำระเงิน</span>
+                            <span className="text-sm text-orange-600 font-bold">
+                              {formatDeadline(userRegistration.remainingDeadline)}
+                            </span>
+                          </div>
+                          <div className="text-sm text-orange-600 font-medium">
+                            {getTimeRemaining(userRegistration.remainingDeadline)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 4b. Deposit Mode - Show breakdown */}
                       {event?.paymentMode === 'deposit' && (
                         <>
                           {/* Deposit Payment */}

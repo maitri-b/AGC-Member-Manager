@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
       description: description || getPaymentTypeDescription(paymentType as PaymentType),
       slipUrl,
       uploadedAt: uploadedAt || new Date().toISOString(),
-      uploadedBy: lineUserId || registration.lineUserId || registration.userId || 'gas-upload',
+      uploadedBy: lineUserId || registration.lineUserId || 'gas-upload',
       status: 'pending', // All uploads start as pending for admin review
     });
 

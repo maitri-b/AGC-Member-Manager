@@ -134,11 +134,57 @@ export async function POST(request: NextRequest) {
       status: slip.status,
     });
 
-    // 7. Invalidate caches
+    // 7. Update eventRegistrations record (in-place update for legacy compatibility)
+    const db = adminDb();
+    const registrationsRef = db.collection('eventRegistrations');
+    const snapshot = await registrationsRef
+      .where('registrationId', '==', registrationId)
+      .limit(1)
+      .get();
+
+    if (!snapshot.empty) {
+      const registrationDoc = snapshot.docs[0];
+      const updateData: Record<string, any> = {
+        updatedAt: new Date().toISOString(),
+      };
+
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+      // Update legacy slip URL fields based on payment type
+      if (paymentType === 'deposit') {
+        updateData.depositSlipUrl = slipUrl;
+        updateData.depositPaidDate = today;
+        updateData.paymentStatus = 'รอตรวจสอบมัดจำ';
+        updateData.status = 'รอตรวจสอบมัดจำ';
+      } else if (paymentType === 'remaining') {
+        updateData.remainingSlipUrl = slipUrl;
+        updateData.remainingPaidDate = today;
+        updateData.paymentStatus = 'รอตรวจสอบยอดคงเหลือ';
+        updateData.status = 'รอตรวจสอบยอดคงเหลือ';
+      } else if (paymentType === 'full') {
+        updateData.depositSlipUrl = slipUrl;
+        updateData.remainingSlipUrl = slipUrl;
+        updateData.depositPaidDate = today;
+        updateData.remainingPaidDate = today;
+        updateData.paymentStatus = 'รอตรวจสอบ';
+        updateData.status = 'รอตรวจสอบ';
+      }
+      // Note: 'additional' type doesn't update legacy fields
+
+      await registrationDoc.ref.update(updateData);
+
+      console.log(`[GAS Webhook] Updated eventRegistrations record:`, {
+        registrationId,
+        paymentType,
+        status: updateData.status,
+      });
+    }
+
+    // 8. Invalidate caches
     sheetsCache.invalidate(CacheKeys.eventAttendees(eventId));
     sheetsCache.invalidate(`event:${eventId}:registrations`);
 
-    // 8. Return success
+    // 9. Return success
     return NextResponse.json({
       success: true,
       message: 'Payment slip uploaded successfully',

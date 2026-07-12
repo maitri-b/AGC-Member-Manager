@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { getMemberById } from '@/lib/google-sheets';
-import { getEventRegistrations, addEventRegistration } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, addEventRegistrationToFirestore } from '@/lib/event-sheets';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
 import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline, calculateFullPaymentDeadline } from '@/lib/payment-deadlines';
@@ -99,7 +99,7 @@ export async function POST(
     // Get existing registrations to check capacity and duplicates
     let existingRegistrations: EventRegistration[] = [];
     try {
-      existingRegistrations = await getEventRegistrations(eventData.sheetName);
+      existingRegistrations = await getEventRegistrationsByEventId(eventId);
     } catch (err) {
       console.error('Error fetching registrations:', err);
     }
@@ -261,65 +261,49 @@ export async function POST(
       paymentStatus = 'รอชำระเงิน';
     }
 
-    // Prepare registration data (matching sheet columns)
-    // Write to BOTH old and new column names for backward compatibility
+    // Prepare registration data for Firestore
     // Use guest info if staff without member, otherwise use member data
     const registrationData = {
-      registration_id: registrationId,
-      registration_date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }),
-      company_name: member ? (member.companyNameTH || member.companyNameEN || '') : (guestInfo?.companyName || ''),
-      license_number: member ? (member.licenseNumber || '') : (guestInfo?.licenseNumber || ''),
-      contact_name: member ? (member.fullNameTH || member.nickname || session.user.name || '') : (guestInfo?.contactName || session.user.name || ''),
-      contact_phone: member ? (member.mobile || member.phone || '') : (guestInfo?.phone || ''),
-      contact_email: member?.email || '',
-      // New format (lowercase)
-      line_userid: session.user.id || '',
-      memberid: session.user.memberId || '', // Will be empty for staff without member
-      // Old format (mixed case) - for backward compatibility
-      LINE_userID: session.user.id || '',
-      memberID: session.user.memberId || '', // Will be empty for staff without member
-      attendee_count: attendeeCount,
-      attendee_names: JSON.stringify(attendeeNames.length > 0 ? attendeeNames : [member ? (member.fullNameTH || member.nickname || '') : (guestInfo?.contactName || '')]),
-      shirt_count: 0,
-      shirt_sizes: '[]',
-      event_fee: totalFee,
-      shirt_fee: 0,
-      total_amount: totalFee,
-      slip_url: '',
-      // Deposit payment fields (New)
-      deposit_amount: depositAmount,
-      remaining_amount: remainingAmount,
-      deposit_paid: false,
-      deposit_paid_date: '',
-      deposit_slip_url: '',
-      remaining_slip_url: '',
-      deposit_deadline: depositDeadline,
-      remaining_deadline: remainingDeadline,
-      payment_status: paymentStatus,
-      // End deposit payment fields
-      // Attendee type pricing (New)
-      attendee_type_selections: JSON.stringify(attendeeTypeSelections),
-      // Room allocation (New)
-      room_allocations: JSON.stringify(roomAllocations),
-      status: paymentStatus, // Keep for backward compatibility
-      verified_by: '',
-      verified_date: '',
-      client_token: '',
-      code_parent: '',
-      table_code: '',
-      special_requests: specialRequests,
-      card_received: '',
-      admin_notes: '',
-      last_update_info: JSON.stringify({ registered: { by: 'system', at: new Date().toISOString() } }),
-      shirt_received: '',
-      table_number: '',
-      code_split: '',
-      checkin_sections: '',
-      attendance_type: 'agent',
+      registrationId: registrationId,
+      eventId: eventId,
+      userId: session.user.userId || '',
+      lineUserId: session.user.id || '',
+      memberId: session.user.memberId || '', // Will be empty for staff without member
+      companyName: member ? (member.companyNameTH || member.companyNameEN || '') : (guestInfo?.companyName || ''),
+      licenseNumber: member ? (member.licenseNumber || '') : (guestInfo?.licenseNumber || ''),
+      contactName: member ? (member.fullNameTH || member.nickname || session.user.name || '') : (guestInfo?.contactName || session.user.name || ''),
+      phone: member ? (member.mobile || member.phone || '') : (guestInfo?.phone || ''),
+      email: member?.email || '',
+      attendeeCount: attendeeCount,
+      attendeeNames: JSON.stringify(attendeeNames.length > 0 ? attendeeNames : [member ? (member.fullNameTH || member.nickname || '') : (guestInfo?.contactName || '')]),
+      shirtCount: 0,
+      shirtSizes: '[]',
+      eventFee: totalFee,
+      shirtFee: 0,
+      totalAmount: totalFee,
+      depositAmount: depositAmount,
+      remainingAmount: remainingAmount,
+      depositPaid: false,
+      depositPaidDate: '',
+      depositSlipUrl: '',
+      remainingSlipUrl: '',
+      depositDeadline: depositDeadline,
+      remainingDeadline: remainingDeadline,
+      paymentStatus: paymentStatus,
+      attendeeTypeSelections: JSON.stringify(attendeeTypeSelections),
+      roomAllocations: JSON.stringify(roomAllocations),
+      status: paymentStatus,
+      verifiedBy: '',
+      verifiedDate: '',
+      specialRequests: specialRequests,
+      adminNotes: '',
+      lastUpdateInfo: JSON.stringify({ registered: { by: 'system', at: new Date().toISOString() } }),
+      attendanceType: 'agent',
+      registeredAt: new Date().toISOString(),
     };
 
-    // Add to Google Sheet
-    await addEventRegistration(eventData.sheetName, registrationData);
+    // Add to Firestore
+    await addEventRegistrationToFirestore(eventId, registrationData);
 
     // ✅ Invalidate caches for this event (so next request gets fresh data)
     sheetsCache.invalidate(CacheKeys.eventAttendees(eventId));

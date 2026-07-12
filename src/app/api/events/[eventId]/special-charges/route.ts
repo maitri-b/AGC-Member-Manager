@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { getEventRegistrations, updateEventRegistration } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/event-sheets';
 import { SpecialCharge } from '@/types/event';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 
@@ -67,7 +67,7 @@ export async function POST(
     // Get existing registrations
     let existingRegistrations;
     try {
-      existingRegistrations = await getEventRegistrations(eventData.sheetName);
+      existingRegistrations = await getEventRegistrationsByEventId(eventId);
     } catch (err) {
       console.error('Error fetching registrations:', err);
       return NextResponse.json({ error: 'Failed to load registration data' }, { status: 500 });
@@ -135,7 +135,13 @@ export async function POST(
 
     // Update Google Sheets
     try {
-      await updateEventRegistration(eventData.sheetName, registrationId, updateData);
+      // Convert to Firestore format and update
+      const firestoreUpdateData: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(updateData)) {
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        firestoreUpdateData[camelKey] = value;
+      }
+      await updateEventRegistrationInFirestore(registrationId, firestoreUpdateData);
 
       console.log('[Special Charges] Charge added successfully');
 
@@ -218,7 +224,7 @@ export async function DELETE(
     // Get existing registrations
     let existingRegistrations;
     try {
-      existingRegistrations = await getEventRegistrations(eventData.sheetName);
+      existingRegistrations = await getEventRegistrationsByEventId(eventId);
     } catch (err) {
       console.error('Error fetching registrations:', err);
       return NextResponse.json({ error: 'Failed to load registration data' }, { status: 500 });
@@ -282,7 +288,13 @@ export async function DELETE(
 
     // Update Google Sheets
     try {
-      await updateEventRegistration(eventData.sheetName, registrationId, updateData);
+      // Convert to Firestore format and update
+      const firestoreUpdateData: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(updateData)) {
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        firestoreUpdateData[camelKey] = value;
+      }
+      await updateEventRegistrationInFirestore(registrationId, firestoreUpdateData);
 
       console.log('[Special Charges] Charge removed successfully');
 

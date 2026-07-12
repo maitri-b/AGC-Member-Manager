@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { getMemberById } from '@/lib/google-sheets';
-import { getEventRegistrations, addEventRegistration } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, addEventRegistrationToFirestore } from '@/lib/event-sheets';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sendEventRegistrationConfirmationOnBehalf } from '@/lib/line-messaging';
 import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline, calculateFullPaymentDeadline } from '@/lib/payment-deadlines';
@@ -113,7 +113,7 @@ export async function POST(
     // Get existing registrations to check capacity and duplicates
     let existingRegistrations: EventRegistration[] = [];
     try {
-      existingRegistrations = await getEventRegistrations(eventData.sheetName);
+      existingRegistrations = await getEventRegistrationsByEventId(eventId);
     } catch (err) {
       console.error('Error fetching registrations:', err);
     }
@@ -302,8 +302,47 @@ export async function POST(
       company_name: registrationData.company_name,
     });
 
-    // Add to Google Sheet
-    await addEventRegistration(eventData.sheetName, registrationData);
+    // Convert to Firestore format and add
+    const firestoreData = {
+      registrationId,
+      eventId,
+      userId: '', // Not applicable for admin-assisted
+      lineUserId: targetLineUserId || '',
+      memberId: targetMemberId || '',
+      companyName: registrationData.company_name,
+      licenseNumber: registrationData.license_number,
+      contactName: registrationData.contact_name,
+      phone: registrationData.contact_phone,
+      email: registrationData.contact_email,
+      attendeeCount: registrationData.attendee_count,
+      attendeeNames: registrationData.attendee_names,
+      shirtCount: 0,
+      shirtSizes: '[]',
+      eventFee: registrationData.event_fee,
+      shirtFee: registrationData.shirt_fee,
+      totalAmount: registrationData.total_amount,
+      depositAmount: registrationData.deposit_amount,
+      remainingAmount: registrationData.remaining_amount,
+      depositPaid: registrationData.deposit_paid,
+      depositPaidDate: registrationData.deposit_paid_date,
+      depositSlipUrl: registrationData.deposit_slip_url,
+      remainingSlipUrl: registrationData.remaining_slip_url,
+      depositDeadline: registrationData.deposit_deadline,
+      remainingDeadline: registrationData.remaining_deadline,
+      paymentStatus: registrationData.payment_status,
+      attendeeTypeSelections: registrationData.attendee_type_selections,
+      roomAllocations: registrationData.room_allocations,
+      status: registrationData.status,
+      verifiedBy: registrationData.verified_by,
+      verifiedDate: registrationData.verified_date,
+      specialRequests: registrationData.special_requests,
+      adminNotes: registrationData.admin_notes,
+      lastUpdateInfo: registrationData.last_update_info,
+      attendanceType: registrationData.attendance_type,
+      registeredAt: new Date().toISOString(),
+    };
+
+    await addEventRegistrationToFirestore(eventId, firestoreData);
 
     // Invalidate caches for this event
     sheetsCache.invalidate(CacheKeys.eventAttendees(eventId));

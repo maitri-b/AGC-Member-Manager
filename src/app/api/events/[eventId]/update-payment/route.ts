@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { getEventRegistrations, updateEventRegistration } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/event-sheets';
 import { Event } from '@/types/event';
 import { calculateRemainingDeadline } from '@/lib/payment-deadlines';
 import { determinePaymentStatus } from '@/lib/payment-status';
@@ -85,7 +85,7 @@ export async function PUT(
     // Get existing registrations
     let existingRegistrations;
     try {
-      existingRegistrations = await getEventRegistrations(eventData.sheetName);
+      existingRegistrations = await getEventRegistrationsByEventId(eventId);
     } catch (err) {
       console.error('Error fetching registrations:', err);
       return NextResponse.json({ error: 'Failed to load registration data' }, { status: 500 });
@@ -187,9 +187,15 @@ export async function PUT(
       updateData,
     });
 
-    // Update Google Sheets
+    // Update Firestore
     try {
-      await updateEventRegistration(eventData.sheetName, registrationId, updateData);
+      // Convert to Firestore format
+      const firestoreUpdateData: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(updateData)) {
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        firestoreUpdateData[camelKey] = value;
+      }
+      await updateEventRegistrationInFirestore(registrationId, firestoreUpdateData);
 
       console.log('[Update Payment] Payment updated successfully');
 

@@ -252,7 +252,80 @@ export async function ensureSheetHeaders(sheetName: string): Promise<{ success: 
   }
 }
 
-// Get all registrations from a specific event sheet
+// Get all registrations from Firestore by eventId
+async function getEventRegistrationsFromFirestore(eventId: string): Promise<EventRegistration[]> {
+  try {
+    const db = adminDb();
+    const snapshot = await db
+      .collection('eventRegistrations')
+      .where('eventId', '==', eventId)
+      .get();
+
+    if (snapshot.empty) {
+      console.log(`[getEventRegistrationsFromFirestore] No registrations found for event ${eventId}`);
+      return [];
+    }
+
+    const registrations = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        registrationId: data.registrationId || '',
+        eventId: data.eventId || '',
+        userId: data.userId || '',
+        lineUserId: data.lineUserId || '',
+        memberId: data.memberId || '',
+        companyName: data.companyName || '',
+        licenseNumber: data.licenseNumber || '',
+        contactName: data.contactName || '',
+        phone: data.phone || '',
+        email: data.email || '',
+        attendeeCount: data.attendeeCount || 0,
+        attendeeNames: data.attendeeNames || '',
+        shirtCount: data.shirtCount || 0,
+        shirtSizes: data.shirtSizes || '',
+        eventFee: data.eventFee || 0,
+        shirtFee: data.shirtFee || 0,
+        totalAmount: data.totalAmount || 0,
+        depositAmount: data.depositAmount || 0,
+        remainingAmount: data.remainingAmount || 0,
+        depositPaid: data.depositPaid || false,
+        depositPaidDate: data.depositPaidDate || '',
+        depositSlipUrl: data.depositSlipUrl || '',
+        depositDeadline: data.depositDeadline || '',
+        remainingSlipUrl: data.remainingSlipUrl || '',
+        remainingPaidDate: data.remainingPaidDate || '',
+        remainingDeadline: data.remainingDeadline || '',
+        paymentStatus: data.paymentStatus || 'pending',
+        status: data.status || 'pending',
+        registeredAt: data.registeredAt || '',
+        updatedAt: data.updatedAt || '',
+        notes: data.notes || '',
+        specialCharges: data.specialCharges || '',
+        attendeeType: data.attendeeType || '',
+        verifiedBy: data.verifiedBy || '',
+        verifiedDate: data.verifiedDate || '',
+        attendanceType: data.attendanceType || '',
+        specialRequests: data.specialRequests || '',
+        adminNotes: data.adminNotes || '',
+        lastUpdateInfo: data.lastUpdateInfo || '',
+        attendeeTypeSelections: data.attendeeTypeSelections || '',
+        roomAllocations: data.roomAllocations || '',
+        hasClubRep: data.hasClubRep || false,
+        shirtReceived: data.shirtReceived || false,
+        cardReceived: data.cardReceived || false,
+      } as EventRegistration;
+    });
+
+    console.log(`[getEventRegistrationsFromFirestore] Found ${registrations.length} registrations for event ${eventId}`);
+    return registrations;
+  } catch (error) {
+    console.error(`[getEventRegistrationsFromFirestore] Error fetching registrations for event ${eventId}:`, error);
+    return [];
+  }
+}
+
+// Get all registrations from a specific event sheet (DEPRECATED - use getEventRegistrationsByEventId)
+// This function is kept for backward compatibility with Google Sheets
 export async function getEventRegistrations(sheetName: string): Promise<EventRegistration[]> {
   const sheets = getGoogleSheetsClient();
 
@@ -304,7 +377,32 @@ export async function getEventRegistrations(sheetName: string): Promise<EventReg
   }
 }
 
-// Add a new registration to an event sheet
+// Add a new registration to Firestore
+export async function addEventRegistrationToFirestore(
+  eventId: string,
+  registrationData: Record<string, unknown>
+): Promise<boolean> {
+  try {
+    const db = adminDb();
+
+    // Add to Firestore with auto-generated document ID
+    const docRef = await db.collection('eventRegistrations').add({
+      ...registrationData,
+      eventId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    console.log(`[addEventRegistrationToFirestore] Added registration ${registrationData.registrationId} to Firestore with doc ID ${docRef.id}`);
+    return true;
+  } catch (error) {
+    console.error(`[addEventRegistrationToFirestore] Error adding registration:`, error);
+    throw error;
+  }
+}
+
+// Add a new registration to an event sheet (DEPRECATED - use addEventRegistrationToFirestore)
+// This function is kept for backward compatibility with Google Sheets
 export async function addEventRegistration(
   sheetName: string,
   registrationData: Record<string, unknown>
@@ -363,7 +461,42 @@ export async function addEventRegistration(
   }
 }
 
-// Update an existing registration in an event sheet
+// Update an existing registration in Firestore
+export async function updateEventRegistrationInFirestore(
+  registrationId: string,
+  updateData: Record<string, unknown>
+): Promise<boolean> {
+  try {
+    const db = adminDb();
+
+    // Find the document by registrationId
+    const snapshot = await db
+      .collection('eventRegistrations')
+      .where('registrationId', '==', registrationId)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      console.error(`[updateEventRegistrationInFirestore] Registration not found: ${registrationId}`);
+      return false;
+    }
+
+    const doc = snapshot.docs[0];
+    await doc.ref.update({
+      ...updateData,
+      updatedAt: new Date().toISOString(),
+    });
+
+    console.log(`[updateEventRegistrationInFirestore] Updated registration ${registrationId}`);
+    return true;
+  } catch (error) {
+    console.error(`[updateEventRegistrationInFirestore] Error updating registration:`, error);
+    throw error;
+  }
+}
+
+// Update an existing registration in an event sheet (DEPRECATED - use updateEventRegistrationInFirestore)
+// This function is kept for backward compatibility with Google Sheets
 export async function updateEventRegistration(
   sheetName: string,
   registrationId: string,
@@ -479,16 +612,9 @@ export async function updateEventRegistration(
   }
 }
 
-// Get registrations for an event by eventId
+// Get registrations for an event by eventId (reads from Firestore)
 export async function getEventRegistrationsByEventId(eventId: string): Promise<EventRegistration[]> {
-  const events = await getTrackedEventsFromFirestore();
-  const event = events.find(e => e.eventId === eventId);
-  if (!event) {
-    console.error(`Event not found: ${eventId}`);
-    return [];
-  }
-
-  return getEventRegistrations(event.sheetName);
+  return getEventRegistrationsFromFirestore(eventId);
 }
 
 // Get only "agent" type registrations (club members)

@@ -44,7 +44,9 @@
       "Bash(clasp clone:*)",
       "Bash(clasp push:*)",
       "Bash(clasp deploy:*)",
-      "Bash(Select-String -Pattern \"error TS\" -Context 0,2)"
+      "Bash(Select-String -Pattern \"error TS\" -Context 0,2)",
+      "Bash(node scripts/migrate-events-to-firestore.js:*)",
+      "Bash(node scripts/backup-sheets.js:*)"
     ]
   }
 }

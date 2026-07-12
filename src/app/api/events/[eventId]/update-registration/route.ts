@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { getEventRegistrations, updateEventRegistration } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/event-sheets';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
 
@@ -52,7 +52,7 @@ export async function PUT(
     // Get existing registrations
     let existingRegistrations: EventRegistration[] = [];
     try {
-      existingRegistrations = await getEventRegistrations(eventData.sheetName);
+      existingRegistrations = await getEventRegistrationsByEventId(eventId);
     } catch (err) {
       console.error('Error fetching registrations:', err);
       return NextResponse.json({ error: 'ไม่สามารถโหลดข้อมูลได้' }, { status: 500 });
@@ -262,7 +262,15 @@ export async function PUT(
       });
 
       try {
-        await updateEventRegistration(eventData.sheetName, userReg.registrationId, updateData);
+        // Convert update data to Firestore format (camelCase)
+        const firestoreUpdateData: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(updateData)) {
+          // Map snake_case keys to camelCase
+          const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+          firestoreUpdateData[camelKey] = value;
+        }
+
+        await updateEventRegistrationInFirestore(userReg.registrationId, firestoreUpdateData);
 
         // ✅ Invalidate caches for this event (so next request gets fresh data)
         sheetsCache.invalidate(CacheKeys.eventAttendees(eventId));

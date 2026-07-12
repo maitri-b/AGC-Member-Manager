@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { updateEventRegistration, getEventRegistrations } from '@/lib/event-sheets';
+import { updateEventRegistrationInFirestore, getEventRegistrationsByEventId } from '@/lib/event-sheets';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { Event, AttendeeType, RoomType, calculateRegistrationFee } from '@/types/event';
 import { calculatePaymentSplit } from '@/lib/payment-deadlines';
@@ -64,7 +64,7 @@ export async function PUT(
     }
 
     // Get current registration data to retrieve existing special charges
-    const registrations = await getEventRegistrations(eventData.sheetName);
+    const registrations = await getEventRegistrationsByEventId(eventId);
     const currentRegistration = registrations.find(r => r.registrationId === registrationId);
 
     if (!currentRegistration) {
@@ -209,8 +209,13 @@ export async function PUT(
       finalUpdateData,
     });
 
-    // Update in Google Sheets
-    await updateEventRegistration(eventData.sheetName, registrationId, finalUpdateData);
+    // Convert to Firestore format and update
+    const firestoreUpdateData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(finalUpdateData)) {
+      const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      firestoreUpdateData[camelKey] = value;
+    }
+    await updateEventRegistrationInFirestore(registrationId, firestoreUpdateData);
 
     // Log the activity
     try {
@@ -319,7 +324,13 @@ export async function DELETE(
       }),
     };
 
-    await updateEventRegistration(eventData.sheetName, registrationId, updateData);
+    // Convert to Firestore format and update
+    const firestoreCancelData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(updateData)) {
+      const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      firestoreCancelData[camelKey] = value;
+    }
+    await updateEventRegistrationInFirestore(registrationId, firestoreCancelData);
 
     // Log the cancellation activity
     try {

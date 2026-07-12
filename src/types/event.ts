@@ -340,6 +340,7 @@ export interface SpecialCharge {
 export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, string> = {
   registrationId: 'registration_id',
   registrationDate: 'registration_date',
+  eventId: 'event_id',
   companyName: 'company_name',
   licenseNumber: 'license_number',
   contactName: 'contact_name',

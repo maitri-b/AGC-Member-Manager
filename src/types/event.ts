@@ -6,6 +6,7 @@ export interface EventRegistration {
   // Registration Info
   registrationId: string;           // registration_id
   registrationDate: string;         // registration_date
+  eventId: string;                  // event_id (which event this registration is for)
 
   // Company Info
   companyName: string;              // company_name

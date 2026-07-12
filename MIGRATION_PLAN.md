@@ -234,25 +234,289 @@ Firestore
 
 ---
 
+## 🎓 Lessons Learned (บทเรียนที่ได้เรียนรู้)
+
+### 1. ⚠️ ต้องตรวจสอบทั้ง API Routes และ Library Functions
+
+**ปัญหา:** ตอนแรกคิดว่าแก้เสร็จหมดแล้ว เพราะตรวจแค่ API routes ว่าเรียก `updateEventRegistrationInFirestore()` แล้ว แต่จริงๆ Library Functions ภายในยังเรียก Google Sheets อยู่
+
+**ตัวอย่าง:**
+```
+❌ การตรวจสอบแบบผิด:
+API Route → เรียก getEventAttendanceSummary() ✅
+          → สรุป: เสร็จแล้ว!
+
+✅ การตรวจสอบที่ถูกต้อง:
+API Route → เรียก getEventAttendanceSummary()
+          → ไล่ดูข้างใน getEventAttendanceSummary()
+          → เจอว่ายังเรียก getEventRegistrations(sheetName) ← ยังใช้ Sheets!
+```
+
+**บทเรียน:** ต้องตรวจสอบ **ทุกชั้นของ function calls** ไม่ใช่แค่ชั้นบนสุด
+
+**ที่เจอในโปรเจคนี้:**
+- ✅ `getEventAttendanceSummary()` - line 819 (ยังใช้ Sheets)
+- ✅ `getRegistrationsByLicense()` - line 654 (ยังใช้ Sheets)
+- ✅ `buildAttendanceCache()` - line 1111 (ยังใช้ Sheets)
+- ✅ `/api/events/route.ts` - line 62, 158 (ยังใช้ Sheets)
+
+**Commits ที่แก้:**
+- d757332 - แก้ getEventAttendanceSummary()
+- 65bae2d - แก้ทั้ง 4 ที่ที่เหลือ
+
+---
+
+### 2. 🗂️ Legacy Data ต้องรองรับ Missing Fields
+
+**ปัญหา:** หลัง migrate แล้วข้อมูลเก่าไม่แสดงในหน้า admin event detail เพราะ Google Sheets เดิมไม่มี column `attendance_type`
+
+**สาเหตุ:**
+```typescript
+// Code filter แบบนี้จะไม่เจอข้อมูลเก่า
+const active = registrations.filter(r =>
+  r.attendanceType?.toLowerCase() === 'agent'  // ← undefined สำหรับข้อมูลเก่า
+);
+```
+
+**วิธีแก้:**
+```typescript
+// ต้องรองรับทั้ง 'agent' และ undefined (legacy)
+const active = registrations.filter(r =>
+  r.attendanceType?.toLowerCase() === 'agent' || !r.attendanceType
+);
+```
+
+**บทเรียน:** ข้อมูลที่ migrate มาจาก Google Sheets อาจไม่มี fields บางตัว ต้อง:
+1. ตรวจสอบว่า Google Sheets มี column อะไรบ้าง
+2. เพิ่ม default values สำหรับ missing fields
+3. รองรับทั้ง old และ new data format
+
+**Commit ที่แก้:** 018cde9
+
+---
+
+### 3. 🧪 ทดสอบด้วยข้อมูลจริง ไม่ใช่แค่ดู Code
+
+**ปัญหา:** คิดว่าเสร็จแล้วจากการดู code แต่พอ user ทดสอบถึงเจอปัญหา
+
+**วิธีแก้:**
+- ✅ ให้ user ทดสอบด้วยข้อมูลจริง
+- ✅ เช็คว่าข้อมูลเก่าแสดงครบหรือไม่
+- ✅ ทดสอบทั้ง happy path และ edge cases
+
+**บทเรียน:** อย่ารีบสรุปว่า "100% เสร็จแล้ว" ถ้ายังไม่ได้ทดสอบจริง
+
+---
+
+### 4. 📝 Migration Script ต้องรองรับ Column Name Variations
+
+**ปัญหาที่เคยเจอ:** Google Sheets ใช้ `snake_case` แต่บางที่เขียน `registration_id` บางที่เขียน `Registration_ID`
+
+**วิธีแก้:** Normalize column names to lowercase
+```javascript
+const normalizedHeader = header.trim().toLowerCase();
+const registrationKey = COLUMN_TO_REGISTRATION_MAP_NORMALIZED[normalizedHeader];
+```
+
+**บทเรียน:** Google Sheets ไม่มี schema enforcement ต้อง normalize ก่อนใช้
+
+---
+
+### 5. 🔄 Single Source of Truth คือสิ่งสำคัญที่สุด
+
+**ปัญหาเดิม:** มีข้อมูลกระจายอยู่หลายที่
+- Event registrations → Google Sheets (แต่ละ event แยก sheet)
+- Slip uploads → GAS เขียนกลับไป Sheets
+- Frontend อ่านจาก Sheets → slow, cache issues
+
+**หลัง Migration:**
+- ✅ Event registrations → Firestore (single collection)
+- ✅ Slip uploads → GAS callback Vercel API → Firestore
+- ✅ Frontend อ่านจาก Firestore → fast, real-time
+
+**ผลลัพธ์:**
+- Performance: 2-5s → 100-300ms
+- No more sync issues
+- Real-time updates
+
+**บทเรียน:** ถ้าข้อมูลกระจายหลายที่ จะมีปัญหา sync, performance, และ complexity
+
+---
+
+### 6. 🛠️ การออกแบบ Schema สำหรับข้อมูลที่มีจำนวนไม่จำกัด
+
+**ปัญหา:** การเก็บสลิปการชำระเงิน ถ้าใช้ fields (depositSlipUrl, remainingSlipUrl) จะจำกัดแค่ 2 ครั้ง
+
+**แนวทางที่ถูกต้อง:**
+```typescript
+// ❌ แบบจำกัด
+{
+  depositSlipUrl: "url1",
+  remainingSlipUrl: "url2",
+  // ถ้าชำระครั้งที่ 3 จะเพิ่มยังไง?
+}
+
+// ✅ แบบยืดหยุ่น (แนะนำ: Collection แยก)
+// Collection: paymentSlips
+{
+  slipId: "SLIP001",
+  registrationId: "ABC123",
+  amount: 3000,
+  paymentType: "deposit",
+  slipUrl: "url1",
+  uploadedAt: "2026-07-12T10:00:00Z",
+  status: "approved"
+}
+```
+
+**บทเรียน:** ถ้าข้อมูลอาจมีมากกว่า 1-2 รายการ ควรใช้:
+- Collection แยก (recommended for > 3 items, need querying)
+- หรือ Array field (ok for < 10 items, simple data)
+
+**แนะนำสำหรับ Phase 2:**
+- สร้าง `paymentSlips` collection แยก
+- เก็บ history การชำระเงินทั้งหมด
+- Query ได้ง่าย, scalable
+
+---
+
+### 7. 🔐 GAS Integration กับ Firestore
+
+**Architecture ที่ทำงาน:**
+```
+User Upload Slip (GAS Web App)
+  ↓
+Save to Google Drive
+  ↓
+Callback to Vercel API (POST webhook)
+  ↓
+Update Firestore
+  ↓
+Clear Cache
+  ↓
+Frontend แสดงผลทันที
+```
+
+**Key Points:**
+- ✅ ใช้ Webhook แทนการให้ GAS เขียน Firestore โดยตรง (security)
+- ✅ ใช้ Bearer token authentication
+- ✅ GAS เรียก GET API เพื่อดึงข้อมูลจาก Firestore
+- ✅ ไม่ต้องให้ GAS มี Firebase credentials
+
+**บทเรียน:** Webhook pattern ปลอดภัยและยืดหยุ่นกว่าให้ GAS access database โดยตรง
+
+---
+
+### 8. ⚡ Performance Optimization
+
+**Before Migration:**
+- Event detail page: 2-5 seconds
+- ต้อง read Google Sheets API
+- ต้อง parse CSV format
+- No caching (quota limits)
+
+**After Migration:**
+- Event detail page: 100-300ms
+- Direct Firestore queries
+- Structured data (no parsing)
+- Can cache safely
+
+**Firestore Indexes:**
+```json
+{
+  "eventId" + "registeredAt" (DESC),
+  "userId" + "registeredAt" (DESC),
+  "lineUserId" + "registeredAt" (DESC),
+  "eventId" + "paymentStatus"
+}
+```
+
+**บทเรียน:** Firestore indexes สำคัญมาก! ต้องสร้างก่อนใช้งาน compound queries
+
+---
+
+### 9. 🐛 Common Pitfalls ที่ต้องระวัง
+
+**Pitfall 1: ลืม invalidate cache**
+```typescript
+// ❌ แก้ Firestore แต่ไม่ clear cache
+await updateEventRegistrationInFirestore(id, data);
+// Cache ยังเป็นข้อมูลเก่า!
+
+// ✅ ต้อง clear cache
+await updateEventRegistrationInFirestore(id, data);
+sheetsCache.invalidate(CacheKeys.eventAttendees(eventId));
+```
+
+**Pitfall 2: Field name mismatch (snake_case vs camelCase)**
+```typescript
+// Google Sheets: deposit_paid_date
+// Firestore: depositPaidDate
+// ต้อง convert ทุกครั้ง!
+```
+
+**Pitfall 3: Date format inconsistency**
+```typescript
+// Google Sheets: "12/07/2026"
+// Firestore: "2026-07-12T10:00:00.000Z"
+// ต้อง normalize เป็น ISO 8601
+```
+
+---
+
+### 10. 📋 Checklist สำหรับ Migration Phase ต่อไป
+
+สำหรับ **Phase 2: Member Data Migration** ให้ใช้ checklist นี้:
+
+**ก่อน Migration:**
+- [ ] สำรวจว่า Google Sheets มี columns อะไรบ้าง
+- [ ] เช็คว่ามี legacy data / missing fields อะไร
+- [ ] วางแผน schema ใน Firestore
+- [ ] สร้าง migration script พร้อม dry-run
+- [ ] Backup ข้อมูลทั้งหมด
+
+**ระหว่าง Migration:**
+- [ ] Migrate ข้อมูลทีละ batch (ไม่ใช่ทั้งหมดพร้อมกัน)
+- [ ] Validate ข้อมูลหลัง migrate แต่ละ batch
+- [ ] เช็ค data integrity (count, sample records)
+
+**หลัง Migration:**
+- [ ] แก้ทั้ง API Routes และ Library Functions
+- [ ] รองรับ legacy data (missing fields)
+- [ ] ทดสอบด้วยข้อมูลจริง
+- [ ] Deploy Firestore indexes
+- [ ] Monitor production errors
+- [ ] ให้ user ทดสอบ end-to-end
+
+**สำคัญที่สุด:**
+- [ ] **ไล่ตรวจทุก function ที่อ่านข้อมูล** ไม่ใช่แค่ดู API routes
+- [ ] **ทดสอบกับข้อมูลเก่า** ไม่ใช่แค่ข้อมูลใหม่
+- [ ] **อย่ารีบสรุปว่าเสร็จ** จนกว่า user จะทดสอบแล้วยืนยัน
+
+---
+
 ## 🔗 References
 
 - **Firestore Collection:** `eventRegistrations`
-- **Member Sheet:** `AGC_Membership` (unchanged)
+- **Member Sheet:** `AGC_Membership` (unchanged - Phase 2)
 - **Event Sheets:** All `Event_*` sheets → Archive after migration
 - **Key Files:**
   - `src/lib/event-sheets.ts` - Main library functions
   - `src/app/api/events/[eventId]/detail/route.ts` - Event detail API
-  - `gas-upload-slip/Code.gs` - GAS upload script
+  - `gas-upload-slip/Code-Firestore.gs` - GAS with Firestore integration
 
 ---
 
-## 📞 Next Steps
+## 📞 Next Steps for Phase 2
 
-1. ✅ Create migration script (`scripts/migrate-events-to-firestore.js`)
-2. ✅ Test migration on sample data (dry-run: 417 registrations across 6 events)
-3. ⏳ Run full backup
-4. ⏳ Execute migration
-5. ⏳ Update code to use Firestore
+**Phase 2: Member Data Migration (AGC_Membership → Firestore)**
+
+1. ⏸️ Survey AGC_Membership columns
+2. ⏸️ Design members Firestore schema
+3. ⏸️ Consider creating `paymentSlips` collection (see Lessons Learned #6)
+4. ⏸️ Create migration script for members
+5. ⏸️ Test and validate
+6. ⏸️ Apply lessons learned from Phase 1
 
 ---
 

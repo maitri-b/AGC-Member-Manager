@@ -49,7 +49,9 @@
       "Bash(node scripts/backup-sheets.js:*)",
       "Bash(firebase deploy:*)",
       "Bash(node check-registration-v2.js:*)",
-      "Bash(node check-missing-registration.js:*)"
+      "Bash(node check-missing-registration.js:*)",
+      "Bash(node scripts/migrate-payment-slips.js:*)",
+      "Bash(timeout:*)"
     ]
   }
 }

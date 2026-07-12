@@ -3,7 +3,7 @@
 **Project:** Agents Club Member Manager
 **Phase:** Payment Slips Refactoring & Migration
 **Start Date:** 2026-07-12
-**Status:** 🟡 Planning
+**Status:** 🟢 In Progress - Backend Complete
 
 ---
 
@@ -339,7 +339,8 @@ function validatePaymentType(paymentMode, paymentType, depositPaid, remainingPai
 
 ## 🧪 Testing Checklist
 
-- [ ] Migrate script dry-run
+- [x] Migrate script dry-run
+- [ ] Run actual migration (production)
 - [ ] Validate all slip URLs migrated correctly
 - [ ] Test GAS form with all payment types
 - [ ] Test admin approval workflow
@@ -352,5 +353,97 @@ function validatePaymentType(paymentMode, paymentType, depositPaid, remainingPai
 
 ---
 
-**Last Updated:** 2026-07-12
-**Status:** Planning Phase
+## ✅ Implementation Progress
+
+### Phase 1: Foundation (COMPLETED)
+**Date:** 2026-07-12
+**Commit:** fbddbee
+
+- [x] Created PaymentSlip types ([src/types/payment.ts](src/types/payment.ts))
+  - PaymentSlip interface
+  - PaymentSummary interface
+  - Helper functions: `generateSlipId()`, `calculatePaymentSummary()`
+  - Thai labels for payment types
+
+- [x] Created migration script ([scripts/migrate-payment-slips.js](scripts/migrate-payment-slips.js))
+  - Supports `--dry-run` and `--event-id` flags
+  - Migrates 3 types of slip URLs
+  - Tested with dry-run: 1 registration ready to migrate
+
+### Phase 2: Backend API (COMPLETED)
+**Date:** 2026-07-12
+**Commit:** bc390ee
+
+- [x] Created Library Functions ([src/lib/payment-slips.ts](src/lib/payment-slips.ts))
+  - `getPaymentSlipsByRegistration()`
+  - `getPaymentSlipsByEvent()`
+  - `createPaymentSlip()`
+  - `approvePaymentSlip()`
+  - `rejectPaymentSlip()`
+  - `getPaymentSummaryForRegistration()`
+  - `getPendingPaymentSlips()`
+  - `batchApprovePaymentSlips()`
+  - `getEventPaymentStatistics()`
+
+- [x] Created API Routes
+  - `GET /api/payments` - Query slips by various filters
+  - `POST /api/payments/upload` - Upload new slip
+  - `GET /api/payments/[slipId]` - Get slip details
+  - `PUT /api/payments/[slipId]` - Update slip (admin)
+  - `PUT /api/payments/[slipId]/approve` - Approve slip
+  - `PUT /api/payments/[slipId]/reject` - Reject slip
+  - `GET /api/payments/summary` - Get payment summary
+
+### Phase 3: GAS Integration (COMPLETED)
+**Date:** 2026-07-12
+**Commit:** accd01c
+
+- [x] Updated GAS Webhook ([src/app/api/webhooks/gas-slip-upload/route.ts](src/app/api/webhooks/gas-slip-upload/route.ts))
+  - Creates PaymentSlip records instead of updating registration
+  - Auto-calculates amount based on payment type
+  - Validates payment type
+  - Returns slipId in response
+
+- [x] Enhanced GAS Upload Form ([gas-upload-slip/UploadForm.html](gas-upload-slip/UploadForm.html))
+  - Payment type dropdown selector
+  - Shows deposit/remaining options for deposit mode
+  - Shows full payment option for full payment mode
+  - Added "additional" payment option
+  - Amount input field (auto-filled or manual)
+  - Dynamic validation
+
+- [x] Updated GAS Code ([gas-upload-slip/Code-Firestore.gs](gas-upload-slip/Code-Firestore.gs))
+  - Passes payment amounts to form template
+  - Handles amount parameter in upload
+  - Enhanced logging
+
+### Phase 4: Existing API Routes (TODO)
+**Status:** Pending
+
+Files to update:
+- [ ] [src/app/api/events/[eventId]/route.ts](src/app/api/events/[eventId]/route.ts) - Include payment slips in event details
+- [ ] [src/app/api/events/[eventId]/update-payment/route.ts](src/app/api/events/[eventId]/update-payment/route.ts) - Review if still needed
+- [ ] Other routes that reference slip URLs
+
+### Phase 5: Admin UI (TODO)
+**Status:** Pending
+
+Components to update:
+- [ ] Event detail page - Show payment timeline
+- [ ] Payment slip review/approval UI
+- [ ] Payment summary dashboard
+- [ ] Registration detail - Show payment history
+
+### Phase 6: Migration & Cleanup (TODO)
+**Status:** Pending
+
+- [ ] Run production migration
+- [ ] Verify all data migrated
+- [ ] Remove old slip URL fields from EventRegistration interface
+- [ ] Update documentation
+- [ ] Deploy Firestore indexes
+
+---
+
+**Last Updated:** 2026-07-12 (after Phase 3 complete)
+**Status:** Backend Complete - UI Pending

@@ -1791,6 +1791,66 @@ export default function EventDetailPage() {
                       )}
                     </div>
                   )}
+
+                  {/* Payment Information - Show after registration for payment reference */}
+                  {userRegistration.totalAmount && userRegistration.totalAmount > 0 && (event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-4">บัญชีสำหรับชำระเงิน</h3>
+
+                      <div className="space-y-4">
+                        {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) && (
+                          <div className="space-y-1 text-sm text-blue-800">
+                            {event.paymentBankName && (
+                              <p>
+                                <span className="font-medium">ธนาคาร:</span> {event.paymentBankName}
+                              </p>
+                            )}
+                            {event.paymentAccountName && (
+                              <p>
+                                <span className="font-medium">ชื่อบัญชี:</span> {event.paymentAccountName}
+                              </p>
+                            )}
+                            {event.paymentAccountNumber && (
+                              <p className="flex items-center gap-2">
+                                <span>
+                                  <span className="font-medium">เลขที่บัญชี:</span> {event.paymentAccountNumber}
+                                </span>
+                                <button
+                                  onClick={() => copyToClipboard(event.paymentAccountNumber!, 'เลขที่บัญชี')}
+                                  className="p-1 text-blue-700 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+                                  title="คัดลอกเลขที่บัญชี"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                </button>
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {event.paymentQrCodeUrl && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-blue-900 mb-2">สแกน QR Code เพื่อชำระเงิน</h4>
+                            <img
+                              src={event.paymentQrCodeUrl}
+                              alt="QR Code สำหรับชำระเงิน"
+                              className="max-w-xs rounded-lg border-2 border-blue-300"
+                            />
+                          </div>
+                        )}
+
+                        {event.paymentTerms && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h4>
+                            <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
+                              {event.paymentTerms}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : !session?.user?.memberId && !['admin', 'committee', 'event-co', 'event-staff'].includes(session?.user?.role || '') ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

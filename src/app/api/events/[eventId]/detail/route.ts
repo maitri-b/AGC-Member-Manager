@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { getEventRegistrations } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId } from '@/lib/event-sheets';
 import { EventRegistration, Event } from '@/types/event';
 import { determinePaymentStatus } from '@/lib/payment-status';
 import { sheetsCache, CacheKeys, CacheTTL } from '@/lib/cache/google-sheets-cache';
@@ -112,9 +112,9 @@ export async function GET(
 
     if (eventData?.sheetName) {
       try {
-        // Fetch registrations directly from Google Sheets without caching
+        // Fetch registrations from Firestore
         // This ensures real-time data for registration changes
-        const registrations = await getEventRegistrations(eventData.sheetName);
+        const registrations = await getEventRegistrationsByEventId(eventId);
 
         // Filter out cancelled registrations for summary
         const activeRegistrations = registrations.filter(r => !isRegistrationCancelled(r));

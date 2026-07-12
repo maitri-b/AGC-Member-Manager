@@ -623,6 +623,28 @@ export async function getEventRegistrationsByEventId(eventId: string): Promise<E
   return getEventRegistrationsFromFirestore(eventId);
 }
 
+// Get single registration by registrationId
+export async function getEventRegistrationByRegistrationId(registrationId: string): Promise<EventRegistration | null> {
+  try {
+    const db = adminDb();
+    const snapshot = await db
+      .collection('eventRegistrations')
+      .where('registrationId', '==', registrationId)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const doc = snapshot.docs[0];
+    return doc.data() as EventRegistration;
+  } catch (error) {
+    console.error(`Error fetching registration ${registrationId}:`, error);
+    return null;
+  }
+}
+
 // Get only "agent" type registrations (club members)
 export async function getAgentRegistrations(eventId: string): Promise<EventRegistration[]> {
   const registrations = await getEventRegistrationsByEventId(eventId);

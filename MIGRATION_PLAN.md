@@ -62,7 +62,10 @@ Migrate event registration data from Google Sheets (separate sheets per event) t
   - [x] `src/app/api/events/[eventId]/update-payment/route.ts`
   - [x] `src/app/api/events/[eventId]/register-on-behalf/route.ts`
   - [x] `src/app/api/events/[eventId]/special-charges/route.ts`
-- [ ] 4.3 Update GAS to sync to Firestore after sheet updates
+- [x] 4.3 Fix TypeScript Build Errors
+  - [x] Fixed session.user.userId → session.user.id
+  - [x] Added all missing EventRegistration fields
+- [ ] 4.4 Update GAS to sync to Firestore after sheet updates
 
 ### **Step 5: Database Configuration** ✅ Completed
 - [x] 5.1 Create Firestore indexes
@@ -89,9 +92,9 @@ Migrate event registration data from Google Sheets (separate sheets per event) t
 - [ ] 7.6 Test admin reports
 - [ ] 7.7 Performance testing
 
-### **Step 8: Deployment** ⏸️ Not Started
+### **Step 8: Deployment** 🟡 In Progress
 - [ ] 8.1 Deploy Firestore indexes
-- [ ] 8.2 Deploy code changes
+- [x] 8.2 Deploy code changes (commit 7c107e5 - Build successful ✅)
 - [ ] 8.3 Monitor error logs
 - [ ] 8.4 Monitor Firestore metrics
 
@@ -218,7 +221,12 @@ Firestore
 - ✅ Created Firestore configuration files
   - firestore.indexes.json (6 indexes)
   - firestore.rules (Security rules)
-- 🟡 **Next:** Deploy indexes and test all features
+- ✅ Fixed TypeScript Build Errors
+  - Fixed session.user.userId → session.user.id in register route
+  - Added all missing EventRegistration fields in getEventRegistrationsFromFirestore()
+  - Build successful (commit 7c107e5)
+  - Deployed to Vercel
+- 🟡 **Next:** Deploy Firestore indexes and test all features
 
 ---
 

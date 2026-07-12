@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
 import RegisterOnBehalfModal from './RegisterOnBehalfModal';
+import PaymentDetailsModal from '@/components/admin/PaymentDetailsModal';
 
 interface Event {
   eventId: string;
@@ -163,6 +164,15 @@ export default function EventDetailPage() {
 
   // Cancellation modal state
   const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
+
+  // Payment details modal state
+  const [paymentDetailsModalOpen, setPaymentDetailsModalOpen] = useState(false);
+  const [selectedRegistrationForPayment, setSelectedRegistrationForPayment] = useState<{
+    registrationId: string;
+    totalAmount: number;
+    companyName: string;
+    contactName: string;
+  } | null>(null);
   const [cancellationFormData, setCancellationFormData] = useState<{
     registrationId: string;
     reason: string;
@@ -672,6 +682,27 @@ export default function EventDetailPage() {
     } finally {
       setConfirmingPayment(false);
     }
+  };
+
+  // Payment Details Modal handlers
+  const handleOpenPaymentDetailsModal = (attendee: Attendee) => {
+    setSelectedRegistrationForPayment({
+      registrationId: attendee.registration.registrationId,
+      totalAmount: attendee.registration.totalAmount,
+      companyName: attendee.registration.companyName,
+      contactName: attendee.registration.contactName,
+    });
+    setPaymentDetailsModalOpen(true);
+  };
+
+  const handleClosePaymentDetailsModal = () => {
+    setPaymentDetailsModalOpen(false);
+    setSelectedRegistrationForPayment(null);
+  };
+
+  const handlePaymentDetailsUpdate = () => {
+    // Refresh attendee list after approve/reject
+    fetchEventData();
   };
 
   const handleRejectPayment = async () => {
@@ -1365,7 +1396,16 @@ export default function EventDetailPage() {
                         {/* Payment Information Display */}
                         {attendee.registration.totalAmount > 0 && (
                           <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                            <p className="text-xs font-semibold text-green-900 mb-2">ข้อมูลการชำระเงิน:</p>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs font-semibold text-green-900">ข้อมูลการชำระเงิน:</p>
+                              <button
+                                onClick={() => handleOpenPaymentDetailsModal(attendee)}
+                                className="px-3 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition-colors"
+                                title="ดูประวัติการชำระเงินทั้งหมด"
+                              >
+                                📋 ดูประวัติ
+                              </button>
+                            </div>
                             <div className="space-y-2">
                               {/* Total Amount */}
                               <div className="flex justify-between items-center">
@@ -2293,6 +2333,18 @@ export default function EventDetailPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Payment Details Modal */}
+      {paymentDetailsModalOpen && selectedRegistrationForPayment && (
+        <PaymentDetailsModal
+          registrationId={selectedRegistrationForPayment.registrationId}
+          totalAmount={selectedRegistrationForPayment.totalAmount}
+          companyName={selectedRegistrationForPayment.companyName}
+          contactName={selectedRegistrationForPayment.contactName}
+          onClose={handleClosePaymentDetailsModal}
+          onUpdate={handlePaymentDetailsUpdate}
+        />
       )}
 
       {/* Register On Behalf Modal */}

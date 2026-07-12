@@ -109,6 +109,14 @@ export async function approvePaymentSlip(
   const db = adminDb();
   const reviewedAt = new Date().toISOString();
 
+  // 1. Get slip details first
+  const slipDoc = await db.collection('paymentSlips').doc(slipId).get();
+  if (!slipDoc.exists) {
+    throw new Error('Payment slip not found');
+  }
+  const slip = slipDoc.data() as PaymentSlip;
+
+  // 2. Update payment slip status
   await db
     .collection('paymentSlips')
     .doc(slipId)
@@ -119,6 +127,46 @@ export async function approvePaymentSlip(
       adminNotes: adminNotes || null,
       updatedAt: reviewedAt,
     });
+
+  // 3. Update eventRegistrations record to reflect payment approval
+  const registrationsRef = db.collection('eventRegistrations');
+  const snapshot = await registrationsRef
+    .where('registrationId', '==', slip.registrationId)
+    .limit(1)
+    .get();
+
+  if (!snapshot.empty) {
+    const registrationDoc = snapshot.docs[0];
+    const updateData: Record<string, any> = {
+      updatedAt: reviewedAt,
+    };
+
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Update payment status based on payment type
+    if (slip.paymentType === 'deposit') {
+      updateData.depositPaid = true;
+      updateData.depositPaidDate = today;
+      updateData.paymentStatus = 'ชำระมัดจำแล้ว';
+      updateData.status = 'ชำระมัดจำแล้ว';
+    } else if (slip.paymentType === 'remaining') {
+      updateData.paymentStatus = 'ชำระยอดคงเหลือแล้ว';
+      updateData.status = 'ชำระยอดคงเหลือแล้ว';
+    } else if (slip.paymentType === 'full') {
+      updateData.depositPaid = true;
+      updateData.depositPaidDate = today;
+      updateData.paymentStatus = 'ชำระเต็มจำนวนแล้ว';
+      updateData.status = 'ชำระเต็มจำนวนแล้ว';
+    }
+    // For 'additional' type, don't update main payment status
+
+    await registrationDoc.ref.update(updateData);
+
+    console.log(`[Approve Slip] Updated eventRegistrations for ${slip.registrationId}:`, {
+      paymentType: slip.paymentType,
+      status: updateData.status,
+    });
+  }
 }
 
 /**
@@ -133,6 +181,14 @@ export async function rejectPaymentSlip(
   const db = adminDb();
   const reviewedAt = new Date().toISOString();
 
+  // 1. Get slip details first
+  const slipDoc = await db.collection('paymentSlips').doc(slipId).get();
+  if (!slipDoc.exists) {
+    throw new Error('Payment slip not found');
+  }
+  const slip = slipDoc.data() as PaymentSlip;
+
+  // 2. Update payment slip status
   await db
     .collection('paymentSlips')
     .doc(slipId)
@@ -144,6 +200,51 @@ export async function rejectPaymentSlip(
       adminNotes: adminNotes || null,
       updatedAt: reviewedAt,
     });
+
+  // 3. Update eventRegistrations record to reflect rejection
+  // Reset to "pending review" status so user knows they need to upload again
+  const registrationsRef = db.collection('eventRegistrations');
+  const snapshot = await registrationsRef
+    .where('registrationId', '==', slip.registrationId)
+    .limit(1)
+    .get();
+
+  if (!snapshot.empty) {
+    const registrationDoc = snapshot.docs[0];
+    const updateData: Record<string, any> = {
+      updatedAt: reviewedAt,
+    };
+
+    // Clear the slip URL and reset status based on payment type
+    if (slip.paymentType === 'deposit') {
+      updateData.depositSlipUrl = '';
+      updateData.depositPaidDate = null;
+      updateData.depositPaid = false;
+      updateData.paymentStatus = 'รอชำระมัดจำ';
+      updateData.status = 'รอชำระมัดจำ';
+    } else if (slip.paymentType === 'remaining') {
+      updateData.remainingSlipUrl = '';
+      updateData.remainingPaidDate = null;
+      updateData.paymentStatus = 'รอชำระยอดคงเหลือ';
+      updateData.status = 'รอชำระยอดคงเหลือ';
+    } else if (slip.paymentType === 'full') {
+      updateData.depositSlipUrl = '';
+      updateData.remainingSlipUrl = '';
+      updateData.depositPaidDate = null;
+      updateData.remainingPaidDate = null;
+      updateData.depositPaid = false;
+      updateData.paymentStatus = 'รอชำระเงิน';
+      updateData.status = 'รอชำระเงิน';
+    }
+    // For 'additional' type, don't update main payment status
+
+    await registrationDoc.ref.update(updateData);
+
+    console.log(`[Reject Slip] Updated eventRegistrations for ${slip.registrationId}:`, {
+      paymentType: slip.paymentType,
+      status: updateData.status,
+    });
+  }
 }
 
 /**

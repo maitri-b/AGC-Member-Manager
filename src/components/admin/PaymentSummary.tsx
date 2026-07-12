@@ -130,7 +130,7 @@ export default function PaymentSummary({ summary, compact = false }: PaymentSumm
 
         <div className={`rounded-lg p-3 ${summary.balance > 0 ? 'bg-red-50' : 'bg-blue-50'}`}>
           <p className="text-xs text-gray-500 mb-1">
-            {summary.balance > 0 ? 'คงเหลือ' : summary.balance < 0 ? 'ชำระเกิน' : 'ชำระครบ'}
+            {summary.balance > 0 ? 'ยอดคงเหลือต้องชำระ' : summary.balance < 0 ? 'ชำระเกิน' : 'ชำระครบ'}
           </p>
           <p className={`text-lg font-bold ${summary.balance > 0 ? 'text-red-700' : summary.balance < 0 ? 'text-blue-700' : 'text-green-700'}`}>
             {formatCurrency(Math.abs(summary.balance))} ฿
@@ -170,7 +170,7 @@ export default function PaymentSummary({ summary, compact = false }: PaymentSumm
       {summary.balance > 0 && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-800">
-            <span className="font-semibold">⚠️ คงเหลือ:</span> ยังต้องชำระอีก {formatCurrency(summary.balance)} บาท
+            <span className="font-semibold">⚠️ ยอดคงเหลือต้องชำระ:</span> ยังต้องชำระอีก {formatCurrency(summary.balance)} บาท
           </p>
         </div>
       )}

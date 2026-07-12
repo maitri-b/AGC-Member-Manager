@@ -153,6 +153,9 @@ export default function EventDetailPage() {
   const [lightboxImage, setLightboxImage] = useState('');
   const [lightboxTitle, setLightboxTitle] = useState('');
 
+  // Registration form visibility state
+  const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+
   // Copy to clipboard helper
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -654,63 +657,29 @@ export default function EventDetailPage() {
               </div>
             )}
 
-            {/* Payment Information - Moved outside registration card */}
-            {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (
-              <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-sm font-semibold text-blue-900 mb-4">บัญชีสำหรับชำระเงิน</h3>
-
-                <div className="space-y-4">
-                  {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) && (
-                    <div className="space-y-1 text-sm text-blue-800">
-                      {event.paymentBankName && (
-                        <p>
-                          <span className="font-medium">ธนาคาร:</span> {event.paymentBankName}
-                        </p>
-                      )}
-                      {event.paymentAccountName && (
-                        <p>
-                          <span className="font-medium">ชื่อบัญชี:</span> {event.paymentAccountName}
-                        </p>
-                      )}
-                      {event.paymentAccountNumber && (
-                        <p className="flex items-center gap-2">
-                          <span>
-                            <span className="font-medium">เลขที่บัญชี:</span> {event.paymentAccountNumber}
-                          </span>
-                          <button
-                            onClick={() => copyToClipboard(event.paymentAccountNumber!, 'เลขที่บัญชี')}
-                            className="p-1 text-blue-700 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
-                            title="คัดลอกเลขที่บัญชี"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          </button>
-                        </p>
-                      )}
-                    </div>
+            {/* Registration Button - Show when not registered */}
+            {!userRegistration && !isFull && event.registrationOpen && (
+              <div className="mb-8">
+                <button
+                  onClick={() => setShowRegistrationForm(!showRegistrationForm)}
+                  className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-lg rounded-lg transition-all shadow-lg hover:shadow-xl"
+                >
+                  {showRegistrationForm ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                      ซ่อนแบบฟอร์มลงทะเบียน
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      ลงทะเบียนเข้าร่วมกิจกรรมนี้
+                    </span>
                   )}
-
-                  {event.paymentQrCodeUrl && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-blue-900 mb-2">สแกน QR Code เพื่อชำระเงิน</h4>
-                      <img
-                        src={event.paymentQrCodeUrl}
-                        alt="QR Code สำหรับชำระเงิน"
-                        className="max-w-xs rounded-lg border-2 border-blue-300"
-                      />
-                    </div>
-                  )}
-
-                  {event.paymentTerms && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h4>
-                      <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
-                        {event.paymentTerms}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </button>
               </div>
             )}
 
@@ -1872,7 +1841,7 @@ export default function EventDetailPage() {
                     </p>
                   )}
                 </div>
-              ) : (
+              ) : showRegistrationForm ? (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900">ลงทะเบียนเข้าร่วมกิจกรรม</h3>
 
@@ -1938,6 +1907,60 @@ export default function EventDetailPage() {
                       <p className="text-xs text-purple-600 mt-3">
                         * กรุณากรอกข้อมูลให้ครบถ้วน ข้อมูลนี้จะใช้ในการติดต่อกลับและออกใบเสร็จ
                       </p>
+                    </div>
+                  )}
+
+                  {/* Contact Information Card - Moved before Attendee Count/Type */}
+                  {memberName && memberPhone && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-blue-900">
+                          ข้อมูลบริษัทและข้อมูลติดต่อของคุณ
+                        </h4>
+                        <Link
+                          href="/profile"
+                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                        >
+                          แก้ไขข้อมูลติดต่อ
+                        </Link>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        {companyName && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-gray-600 font-medium w-32 flex-shrink-0">ชื่อบริษัท:</span>
+                            <span className="text-gray-900">{companyName}</span>
+                          </div>
+                        )}
+                        {licenseNumber && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 font-medium w-32 flex-shrink-0">เลขที่ใบอนุญาต:</span>
+                            <span className="text-gray-900">{licenseNumber}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium w-32 flex-shrink-0">ชื่อผู้ติดต่อ:</span>
+                          <span className="text-gray-900">{memberName}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 font-medium w-32 flex-shrink-0">เบอร์โทร:</span>
+                          <span className="text-gray-900">{memberPhone}</span>
+                        </div>
+                        {lineDisplayName && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-gray-600 font-medium w-32 flex-shrink-0">LINE Display Name:</span>
+                            <div className="flex items-center gap-2">
+                              {lineProfilePicture && (
+                                <img
+                                  src={lineProfilePicture}
+                                  alt="LINE Profile"
+                                  className="w-6 h-6 rounded-full"
+                                />
+                              )}
+                              <span className="text-gray-900">{lineDisplayName}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -2047,8 +2070,8 @@ export default function EventDetailPage() {
                     </div>
                   )}
 
-                  {/* Contact Information Card */}
-                  {memberName && memberPhone && (
+                  {/* Remove duplicate Contact Information Card that was here */}
+                  {false && memberName && memberPhone && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-semibold text-blue-900">
@@ -2326,6 +2349,66 @@ export default function EventDetailPage() {
                     </div>
                   )}
 
+                  {/* Payment Information - Moved inside registration form */}
+                  {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-4">บัญชีสำหรับชำระเงิน</h3>
+
+                      <div className="space-y-4">
+                        {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) && (
+                          <div className="space-y-1 text-sm text-blue-800">
+                            {event.paymentBankName && (
+                              <p>
+                                <span className="font-medium">ธนาคาร:</span> {event.paymentBankName}
+                              </p>
+                            )}
+                            {event.paymentAccountName && (
+                              <p>
+                                <span className="font-medium">ชื่อบัญชี:</span> {event.paymentAccountName}
+                              </p>
+                            )}
+                            {event.paymentAccountNumber && (
+                              <p className="flex items-center gap-2">
+                                <span>
+                                  <span className="font-medium">เลขที่บัญชี:</span> {event.paymentAccountNumber}
+                                </span>
+                                <button
+                                  onClick={() => copyToClipboard(event.paymentAccountNumber!, 'เลขที่บัญชี')}
+                                  className="p-1 text-blue-700 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+                                  title="คัดลอกเลขที่บัญชี"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                </button>
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {event.paymentQrCodeUrl && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-blue-900 mb-2">สแกน QR Code เพื่อชำระเงิน</h4>
+                            <img
+                              src={event.paymentQrCodeUrl}
+                              alt="QR Code สำหรับชำระเงิน"
+                              className="max-w-xs rounded-lg border-2 border-blue-300"
+                            />
+                          </div>
+                        )}
+
+                        {event.paymentTerms && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h4>
+                            <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
+                              {event.paymentTerms}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Submit Button */}
                   <button
                     onClick={handleRegister}
@@ -2353,7 +2436,7 @@ export default function EventDetailPage() {
                     )}
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

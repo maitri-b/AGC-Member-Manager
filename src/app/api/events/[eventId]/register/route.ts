@@ -266,7 +266,7 @@ export async function POST(
     const registrationData = {
       registrationId: registrationId,
       eventId: eventId,
-      userId: session.user.userId || '',
+      userId: session.user.id || '',
       lineUserId: session.user.id || '',
       memberId: session.user.memberId || '', // Will be empty for staff without member
       companyName: member ? (member.companyNameTH || member.companyNameEN || '') : (guestInfo?.companyName || ''),

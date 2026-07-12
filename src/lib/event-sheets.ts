@@ -816,7 +816,8 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
     };
   }
 
-  const allRegistrations = await getEventRegistrations(event.sheetName);
+  // ✅ Read from Firestore instead of Google Sheets
+  const allRegistrations = await getEventRegistrationsByEventId(eventId);
 
   // Split registrations into active and cancelled
   // Note: For active registrations, we only count 'agent' type

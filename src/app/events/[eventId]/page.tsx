@@ -814,10 +814,10 @@ export default function EventDetailPage() {
                                     }
                                     return null;
                                   })()}
-                                  {event.memberDiscount && event.memberDiscount > 0 && (
+                                  {(event.memberDiscount ?? 0) > 0 && (
                                     <div className="flex justify-between text-green-700">
                                       <span>ส่วนลดสมาชิก</span>
-                                      <span>-{event.memberDiscount.toLocaleString()} บาท</span>
+                                      <span>-{event.memberDiscount!.toLocaleString()} บาท</span>
                                     </div>
                                   )}
                                 </>
@@ -834,10 +834,10 @@ export default function EventDetailPage() {
                                       <span>{(event.additionalFeePerPerson * (userRegistration.attendeeCount - 1)).toLocaleString()} บาท</span>
                                     </div>
                                   )}
-                                  {event.memberDiscount && event.memberDiscount > 0 && (
+                                  {(event.memberDiscount ?? 0) > 0 && (
                                     <div className="flex justify-between text-green-700">
                                       <span>ส่วนลดสมาชิก</span>
-                                      <span>-{event.memberDiscount.toLocaleString()} บาท</span>
+                                      <span>-{event.memberDiscount!.toLocaleString()} บาท</span>
                                     </div>
                                   )}
                                 </>
@@ -950,15 +950,6 @@ export default function EventDetailPage() {
                           )}
                         </div>
                       </div>
-
-                      {event?.maxPerCompany !== undefined && (
-                        <p className="text-xs text-green-600 mt-2">
-                          {event.maxPerCompany > 0
-                            ? `* จำกัด ${event.maxPerCompany} คนต่อ 1 บริษัท`
-                            : '* ไม่จำกัดจำนวนต่อบริษัท'
-                          }
-                        </p>
-                      )}
 
                       {/* Admin Contact Message */}
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
@@ -2382,6 +2373,15 @@ export default function EventDetailPage() {
                           <option key={num} value={num}>{num} คน</option>
                         ))}
                       </select>
+                      {event.maxPerCompany > 0 ? (
+                        <p className="text-xs text-gray-500 mt-1">
+                          * จำกัด {event.maxPerCompany} คนต่อ 1 บริษัท
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-500 mt-1">
+                          * ไม่จำกัดจำนวนต่อบริษัท
+                        </p>
+                      )}
                     </div>
                   )}
 

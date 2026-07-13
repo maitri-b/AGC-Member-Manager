@@ -22,6 +22,7 @@ interface Event {
   registrationOpen: boolean;
   isPublished: boolean;
   maxCapacity: number;
+  maxPerCompany?: number;
   // Attendee type pricing
   useAttendeeTypePricing?: boolean;
   attendeeTypes?: Array<{
@@ -1531,31 +1532,26 @@ export default function EventDetailPage() {
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">
                                 จำนวนผู้เข้าร่วม
+                                {eventData?.event?.maxPerCompany && eventData.event.maxPerCompany > 0 && (
+                                  <span className="text-xs text-gray-500 ml-2">
+                                    (สูงสุด {eventData.event.maxPerCompany} คน)
+                                  </span>
+                                )}
                               </label>
-                              <input
-                                type="number"
-                                min="1"
-                                max="20"
-                                value={editFormData.attendeeCount === 0 ? '' : editFormData.attendeeCount}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  if (value === '') {
-                                    // Allow temporary empty state during typing
-                                    setEditFormData({ ...editFormData, attendeeCount: 0 });
-                                  } else {
-                                    const count = parseInt(value);
-                                    if (!isNaN(count) && count >= 1) {
-                                      handleAttendeeCountChange(count);
-                                    }
-                                  }
-                                }}
-                                onBlur={(e) => {
-                                  if (e.target.value === '' || parseInt(e.target.value) === 0) {
-                                    handleAttendeeCountChange(1);
-                                  }
-                                }}
+                              <select
+                                value={editFormData.attendeeCount}
+                                onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
                                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
+                                required
+                              >
+                                <option value="0" disabled>โปรดระบุจำนวนผู้เข้าร่วม</option>
+                                {Array.from(
+                                  { length: eventData?.event?.maxPerCompany && eventData.event.maxPerCompany > 0 ? eventData.event.maxPerCompany : 20 },
+                                  (_, i) => i + 1
+                                ).map(num => (
+                                  <option key={num} value={num}>{num} คน</option>
+                                ))}
+                              </select>
                             </div>
                           ) : (
                             <div>

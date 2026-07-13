@@ -119,7 +119,7 @@ export default function EventDetailPage() {
   const [userRegistration, setUserRegistration] = useState<UserRegistration | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
-  const [attendeeCount, setAttendeeCount] = useState(1);
+  const [attendeeCount, setAttendeeCount] = useState(0);
   const [attendeeNames, setAttendeeNames] = useState<string[]>(['']);
   const [specialRequests, setSpecialRequests] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -316,6 +316,12 @@ export default function EventDetailPage() {
     // Double-check if user already registered (prevent race condition)
     if (userRegistration) {
       toast.error('คุณลงทะเบียนกิจกรรมนี้แล้ว');
+      return;
+    }
+
+    // Validate attendee count
+    if (attendeeCount === 0) {
+      toast.error('กรุณาระบุจำนวนผู้เข้าร่วม');
       return;
     }
 
@@ -2370,7 +2376,9 @@ export default function EventDetailPage() {
                         value={attendeeCount}
                         onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
                       >
+                        <option value="0" disabled>โปรดระบุจำนวนผู้เข้าร่วม</option>
                         {Array.from(
                           { length: event.maxPerCompany > 0 ? event.maxPerCompany : 10 },
                           (_, i) => i + 1
@@ -2463,7 +2471,7 @@ export default function EventDetailPage() {
                               type="text"
                               value={attendeeNames[index] || ''}
                               onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
-                              placeholder={index === 0 ? 'ชื่อของคุณ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                              placeholder={`ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
                               required={isRequired}
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />

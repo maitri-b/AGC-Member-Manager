@@ -62,8 +62,8 @@ export default function RegisterOnBehalfModal({
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Registration form state
-  const [attendeeCount, setAttendeeCount] = useState(1);
-  const [attendeeNames, setAttendeeNames] = useState<string[]>(['']);
+  const [attendeeCount, setAttendeeCount] = useState(0);
+  const [attendeeNames, setAttendeeNames] = useState<string[]>([]);
   const [attendeeTypeSelections, setAttendeeTypeSelections] = useState<Array<{ typeId: string; quantity: number }>>([]);
   const [roomAllocations, setRoomAllocations] = useState<Array<{ roomTypeId: string; roomCount: number }>>([]);
   const [specialRequests, setSpecialRequests] = useState('');
@@ -115,10 +115,7 @@ export default function RegisterOnBehalfModal({
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
     setStep(2);
-    // Pre-fill first attendee name
-    if (requireAttendeeNames) {
-      setAttendeeNames([user.displayName, ...Array(attendeeCount - 1).fill('')]);
-    }
+    // Don't auto-fill attendee names - admin will fill them manually
   };
 
   const handleAttendeeCountChange = (newCount: number) => {
@@ -139,6 +136,12 @@ export default function RegisterOnBehalfModal({
 
   const handleSubmit = async () => {
     if (!selectedUser) return;
+
+    // Validate attendee count
+    if (attendeeCount === 0) {
+      toast.error('กรุณาระบุจำนวนผู้เข้าร่วม');
+      return;
+    }
 
     // No validation required for attendee names - admin can submit without filling all names
 
@@ -180,8 +183,8 @@ export default function RegisterOnBehalfModal({
     setSearchQuery('');
     setUsers([]);
     setSelectedUser(null);
-    setAttendeeCount(1);
-    setAttendeeNames(['']);
+    setAttendeeCount(0);
+    setAttendeeNames([]);
     setAttendeeTypeSelections([]);
     setRoomAllocations([]);
     setSpecialRequests('');
@@ -326,7 +329,9 @@ export default function RegisterOnBehalfModal({
                       value={attendeeCount}
                       onChange={(e) => handleAttendeeCountChange(Number(e.target.value))}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
                     >
+                      <option value="0" disabled>โปรดระบุจำนวนผู้เข้าร่วม</option>
                       {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
                         <option key={num} value={num}>{num} คน</option>
                       ))}
@@ -402,7 +407,7 @@ export default function RegisterOnBehalfModal({
                           type="text"
                           value={name}
                           onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
-                          placeholder={index === 0 ? 'ชื่อผู้ติดต่อ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                          placeholder={`ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       ))}

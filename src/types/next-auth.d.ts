@@ -47,7 +47,7 @@ declare module 'next-auth/jwt' {
   }
 }
 
-export type UserRole = 'admin' | 'committee' | 'event-co' | 'event-staff' | 'member' | 'guest';
+export type UserRole = 'admin' | 'committee' | 'event-co' | 'event-staff' | 'member' | 'guest' | 'visitor';
 
 export interface Permission {
   name: string;
@@ -104,4 +104,5 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     // Members can only view their own profile via /profile page
   ],
   guest: [],
+  visitor: [], // Visitors have no permissions - can only view public content
 };

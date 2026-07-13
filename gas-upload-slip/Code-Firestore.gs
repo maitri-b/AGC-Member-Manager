@@ -128,7 +128,9 @@ function doGet(e) {
 
   return template.evaluate()
     .setTitle('อัพโหลดสลิปการชำระเงิน')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .setSandboxMode(HtmlService.SandboxMode.IFRAME)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
 }
 
 /**
@@ -502,6 +504,21 @@ function updateFirestore(registrationId, eventId, paymentType, fileUrl, amount) 
  * สร้างหน้า Error
  */
 function createErrorPage(title, message) {
+  const userAgent = typeof e !== 'undefined' && e.parameter ? e.parameter.userAgent || 'N/A' : 'N/A';
+  const debugInfo = `
+    <div style="margin-top: 20px; padding: 16px; background: #f5f5f5; border-radius: 4px; text-align: left; font-size: 12px;">
+      <strong>Debug Info:</strong><br>
+      User-Agent: ${userAgent}<br>
+      Time: ${new Date().toISOString()}<br>
+      <br>
+      <strong>Common Solutions:</strong><br>
+      1. ลองเปิดในโหมด Incognito/Private<br>
+      2. ตรวจสอบว่า cookies ไม่ถูกบล็อก<br>
+      3. ลองใช้ LINE LIFF แทน<br>
+      4. ลองเปิดบนคอมพิวเตอร์<br>
+    </div>
+  `;
+
   return HtmlService.createHtmlOutput(`
     <!DOCTYPE html>
     <html>
@@ -510,6 +527,11 @@ function createErrorPage(title, message) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Error</title>
       <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           display: flex;
@@ -517,32 +539,48 @@ function createErrorPage(title, message) {
           align-items: center;
           min-height: 100vh;
           margin: 0;
-          background: #f5f5f5;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          padding: 16px;
         }
         .error-container {
           background: white;
-          padding: 2rem;
-          border-radius: 8px;
+          padding: 24px;
+          border-radius: 12px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.1);
           text-align: center;
-          max-width: 400px;
+          max-width: 500px;
+          width: 100%;
         }
         h1 {
           color: #d32f2f;
           margin-bottom: 1rem;
+          font-size: 20px;
         }
         p {
           color: #666;
           margin-bottom: 1.5rem;
+          font-size: 14px;
         }
         .close-btn {
           background: #2196F3;
           color: white;
           border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 4px;
+          padding: 12px 24px;
+          border-radius: 8px;
           cursor: pointer;
-          font-size: 1rem;
+          font-size: 14px;
+          width: 100%;
+        }
+        @media (max-width: 640px) {
+          body {
+            padding: 12px;
+          }
+          .error-container {
+            padding: 20px 16px;
+          }
+          h1 {
+            font-size: 18px;
+          }
         }
       </style>
     </head>
@@ -550,9 +588,21 @@ function createErrorPage(title, message) {
       <div class="error-container">
         <h1>❌ ${title}</h1>
         <p>${message}</p>
-        <button class="close-btn" onclick="window.close()">ปิดหน้าต่าง</button>
+        ${debugInfo}
+        <button class="close-btn" onclick="handleClose()">ปิดหน้าต่าง</button>
       </div>
+      <script>
+        function handleClose() {
+          if (window.opener) {
+            window.close();
+          } else {
+            window.history.back();
+          }
+        }
+      </script>
     </body>
     </html>
-  `).setTitle('Error');
+  `).setTitle('Error')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .setSandboxMode(HtmlService.SandboxMode.IFRAME);
 }

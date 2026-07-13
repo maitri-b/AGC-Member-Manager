@@ -245,6 +245,7 @@ export default function AdminEventsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'created' | 'eventDate'>('created'); // Sort by created (default) or event date
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -836,6 +837,37 @@ export default function AdminEventsPage() {
           </div>
         )}
 
+        {/* Sort Controls */}
+        {events.length > 0 && (
+          <div className="mb-4 flex items-center justify-end gap-2">
+            <span className="text-sm text-gray-600">เรียงตาม:</span>
+            <div className="inline-flex rounded-md shadow-sm" role="group">
+              <button
+                type="button"
+                onClick={() => setSortBy('created')}
+                className={`px-4 py-2 text-sm font-medium border ${
+                  sortBy === 'created'
+                    ? 'bg-blue-600 text-white border-blue-600 z-10'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                } rounded-l-lg`}
+              >
+                วันที่แจ้งประกาศ
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortBy('eventDate')}
+                className={`px-4 py-2 text-sm font-medium border-t border-b border-r ${
+                  sortBy === 'eventDate'
+                    ? 'bg-blue-600 text-white border-blue-600 z-10'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                } rounded-r-lg`}
+              >
+                วันที่จัดกิจกรรม
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Events Grid - Mobile Friendly */}
         {events.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">
@@ -843,7 +875,17 @@ export default function AdminEventsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {events.map((event) => (
+            {[...events].sort((a, b) => {
+              if (sortBy === 'created') {
+                const dateA = new Date(a.createdAt).getTime();
+                const dateB = new Date(b.createdAt).getTime();
+                return dateB - dateA; // Newest first
+              } else {
+                const dateA = new Date(a.eventDate).getTime();
+                const dateB = new Date(b.eventDate).getTime();
+                return dateB - dateA; // Most recent event first
+              }
+            }).map((event) => (
               <div key={event.eventId} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-visible">
                 {/* Card Content */}
                 <div className="p-4">

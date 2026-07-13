@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       paymentType,
       description,
       slipUrl,
+      uploadedAt, // Accept uploadedAt from GAS
       paymentMethod,
       bankName,
       transferDate,
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
       paymentType,
       description: description || undefined,
       slipUrl,
-      uploadedAt: new Date().toISOString(),
+      uploadedAt: uploadedAt || new Date().toISOString(), // Use GAS uploadedAt if provided
       uploadedBy: session.user.lineUserId || session.user.id || 'unknown',
       status: 'pending', // All new uploads start as pending
       paymentMethod: paymentMethod || undefined,

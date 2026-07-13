@@ -27,6 +27,7 @@ interface Event {
   pricingType?: 'fixed' | 'tiered'; // NEW: Pricing type
   useAttendeeTypePricing?: boolean; // NEW: Attendee type pricing flag
   mainImageUrl?: string; // Cover image URL
+  createdAt?: string; // Event creation timestamp (for sorting)
 }
 
 interface EventAttendee {
@@ -59,6 +60,7 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLinked, setFilterLinked] = useState<'all' | 'linked' | 'unlinked'>('all');
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'created' | 'eventDate'>('created'); // Sort by created (default) or event date
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -139,9 +141,26 @@ export default function EventsPage() {
   const canManageEvents = isCommittee ||
                           session?.user?.permissions?.includes('events:manage-assigned');
 
-  // Separate events into active and completed
-  const activeEvents = events.filter(e => e.registrationOpen || e.isActive);
-  const completedEvents = events.filter(e => !e.registrationOpen && !e.isActive);
+  // Sort events based on selected sort option
+  const sortEvents = (eventList: Event[]) => {
+    return [...eventList].sort((a, b) => {
+      if (sortBy === 'created') {
+        // Sort by createdAt descending (newest first)
+        const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+        const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+        return dateB - dateA;
+      } else {
+        // Sort by eventDate descending (most recent event first)
+        const dateA = new Date(a.eventDate).getTime();
+        const dateB = new Date(b.eventDate).getTime();
+        return dateB - dateA;
+      }
+    });
+  };
+
+  // Separate events into active and completed, then sort each
+  const activeEvents = sortEvents(events.filter(e => e.registrationOpen || e.isActive));
+  const completedEvents = sortEvents(events.filter(e => !e.registrationOpen && !e.isActive));
 
   if (status === 'loading' || loading) {
     return (
@@ -170,6 +189,35 @@ export default function EventsPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        {/* Sort Controls */}
+        <div className="mb-6 flex items-center justify-end gap-2">
+          <span className="text-sm text-gray-600">เรียงตาม:</span>
+          <div className="inline-flex rounded-md shadow-sm" role="group">
+            <button
+              type="button"
+              onClick={() => setSortBy('created')}
+              className={`px-4 py-2 text-sm font-medium border ${
+                sortBy === 'created'
+                  ? 'bg-blue-600 text-white border-blue-600 z-10'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              } rounded-l-lg`}
+            >
+              วันที่แจ้งประกาศ
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortBy('eventDate')}
+              className={`px-4 py-2 text-sm font-medium border-t border-b border-r ${
+                sortBy === 'eventDate'
+                  ? 'bg-blue-600 text-white border-blue-600 z-10'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              } rounded-r-lg`}
+            >
+              วันที่จัดกิจกรรม
+            </button>
+          </div>
+        </div>
+
         {/* Active Events Section */}
         {activeEvents.length > 0 && (
           <>

@@ -147,18 +147,61 @@ export async function approvePaymentSlip(
     if (slip.paymentType === 'deposit') {
       updateData.depositPaid = true;
       updateData.depositPaidDate = today;
+      updateData.depositSlipUrl = slip.slipUrl; // Store slip URL
       updateData.paymentStatus = 'ชำระมัดจำแล้ว';
       // Do NOT update 'status' - that's for registration confirmation by admin
     } else if (slip.paymentType === 'remaining') {
+      updateData.remainingPaidDate = today; // Set paid date for remaining payment
+      updateData.remainingSlipUrl = slip.slipUrl; // Store slip URL
       updateData.paymentStatus = 'ชำระยอดคงเหลือแล้ว';
       // Do NOT update 'status'
     } else if (slip.paymentType === 'full') {
       updateData.depositPaid = true;
       updateData.depositPaidDate = today;
+      updateData.remainingPaidDate = today; // Full payment also counts as remaining paid
+      updateData.remainingSlipUrl = slip.slipUrl; // Store slip URL for full payment
       updateData.paymentStatus = 'ชำระเต็มจำนวนแล้ว';
       // Do NOT update 'status'
+    } else if (slip.paymentType === 'additional') {
+      // Sync additional payment to eventRegistrations.additionalPayments
+      const currentData = registrationDoc.data();
+      let additionalPayments: any[] = [];
+
+      try {
+        additionalPayments = currentData.additionalPayments
+          ? JSON.parse(currentData.additionalPayments)
+          : [];
+      } catch (err) {
+        console.error('Error parsing additional payments:', err);
+        additionalPayments = [];
+      }
+
+      // Update or add this payment
+      const existingIndex = additionalPayments.findIndex(
+        (p: any) => p.paymentId === slip.slipId
+      );
+
+      const paymentEntry = {
+        paymentId: slip.slipId,
+        amount: slip.amount,
+        reason: slip.description || 'ชำระเงินเพิ่มเติม',
+        slipUrl: slip.slipUrl,
+        uploadedAt: slip.uploadedAt,
+        approvedAt: reviewedAt,
+        approvedBy: reviewerId,
+        status: 'อนุมัติแล้ว',
+      };
+
+      if (existingIndex !== -1) {
+        additionalPayments[existingIndex] = paymentEntry;
+      } else {
+        additionalPayments.push(paymentEntry);
+      }
+
+      updateData.additionalPayments = JSON.stringify(additionalPayments);
+
+      // Don't update main payment status for additional payments
     }
-    // For 'additional' type, don't update main payment status
 
     await registrationDoc.ref.update(updateData);
 
@@ -235,8 +278,47 @@ export async function rejectPaymentSlip(
       updateData.depositPaid = false;
       updateData.paymentStatus = 'รอชำระเงิน';
       // Do NOT update 'status'
+    } else if (slip.paymentType === 'additional') {
+      // Sync rejection to eventRegistrations.additionalPayments
+      const currentData = registrationDoc.data();
+      let additionalPayments: any[] = [];
+
+      try {
+        additionalPayments = currentData.additionalPayments
+          ? JSON.parse(currentData.additionalPayments)
+          : [];
+      } catch (err) {
+        console.error('Error parsing additional payments:', err);
+        additionalPayments = [];
+      }
+
+      // Update or add this payment with rejected status
+      const existingIndex = additionalPayments.findIndex(
+        (p: any) => p.paymentId === slip.slipId
+      );
+
+      const paymentEntry = {
+        paymentId: slip.slipId,
+        amount: slip.amount,
+        reason: slip.description || 'ชำระเงินเพิ่มเติม',
+        slipUrl: slip.slipUrl,
+        uploadedAt: slip.uploadedAt,
+        rejectedAt: reviewedAt,
+        rejectedBy: reviewerId,
+        rejectionReason: rejectionReason,
+        status: 'ปฏิเสธ',
+      };
+
+      if (existingIndex !== -1) {
+        additionalPayments[existingIndex] = paymentEntry;
+      } else {
+        additionalPayments.push(paymentEntry);
+      }
+
+      updateData.additionalPayments = JSON.stringify(additionalPayments);
+
+      // Don't update main payment status for additional payments
     }
-    // For 'additional' type, don't update main payment status
 
     await registrationDoc.ref.update(updateData);
 

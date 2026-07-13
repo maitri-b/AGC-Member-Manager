@@ -748,8 +748,8 @@ export default function EventDetailPage() {
                       </div>
 
                       <div className="text-sm text-green-700 space-y-1">
-                        {userRegistration.status && (
-                          <p>สถานะ: <span className="font-medium">{userRegistration.status}</span></p>
+                        {userRegistration.paymentStatus && (
+                          <p>สถานะ: <span className="font-medium">{userRegistration.paymentStatus}</span></p>
                         )}
                         <p>จำนวนผู้เข้าร่วม: <span className="font-medium">{userRegistration.attendeeCount} คน</span></p>
                       </div>
@@ -1465,56 +1465,49 @@ export default function EventDetailPage() {
                             {/* Deposit Slip (for Deposit mode) OR Full Payment Slip (for Full mode) */}
                             {(userRegistration.depositSlipUrl || (event.paymentMode !== 'deposit' && (userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl))) && (
                               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <div className="flex items-start gap-3">
-                                  {/* Thumbnail */}
-                                  <button
-                                    onClick={() => {
-                                      const slipUrl = userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl || '';
-                                      setLightboxImage(slipUrl);
-                                      setLightboxTitle(event.paymentMode === 'deposit' ? 'สลิปมัดจำ' : 'สลิปชำระเงิน');
-                                      setLightboxOpen(true);
-                                    }}
-                                    className="flex-shrink-0 group relative overflow-hidden rounded-lg border-2 border-blue-300 hover:border-blue-500 transition-all shadow-sm"
-                                  >
-                                    <img
-                                      src={userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl}
-                                      alt="Payment slip thumbnail"
-                                      className="w-20 h-20 object-cover group-hover:scale-110 transition-transform"
-                                      onError={(e) => {
-                                        const img = e.target as HTMLImageElement;
-                                        const currentSrc = img.src;
-                                        console.error('Failed to load slip image:', currentSrc);
-                                        console.log('depositSlipUrl:', userRegistration.depositSlipUrl);
-                                        console.log('remainingSlipUrl:', userRegistration.remainingSlipUrl);
-                                        console.log('slipUrl:', (userRegistration as any).slipUrl);
-
-                                        // Fallback: show document icon
-                                        img.style.display = 'none';
-                                        if (img.parentElement) {
-                                          img.parentElement.innerHTML = `
-                                            <div class="w-20 h-20 bg-gray-200 flex items-center justify-center rounded-lg">
-                                              <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                              </svg>
-                                            </div>
-                                          `;
-                                        }
-                                      }}
-                                    />
-                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity flex items-center justify-center">
-                                      <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                      </svg>
-                                    </div>
-                                  </button>
+                                <div className="flex items-start gap-2">
+                                  {/* File Icon */}
+                                  <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
 
                                   {/* Slip Info */}
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-sm font-semibold text-blue-900">
-                                        {event.paymentMode === 'deposit' ? 'สลิปมัดจำ' : 'สลิปชำระเงิน'}
-                                      </span>
-                                    </div>
+                                    {(() => {
+                                      const slipUrl = userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl || '';
+                                      const fileName = slipUrl.split('/').pop() || slipUrl.split('%2F').pop() || 'payment-slip';
+                                      const decodedFileName = decodeURIComponent(fileName);
+                                      const paymentType = event.paymentMode === 'deposit' ? 'มัดจำ' : 'ชำระเต็มจำนวน';
+                                      const amount = event.paymentMode === 'deposit'
+                                        ? userRegistration.depositAmount
+                                        : userRegistration.totalAmount;
+
+                                      return (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setLightboxImage(slipUrl);
+                                              setLightboxTitle(event.paymentMode === 'deposit' ? 'สลิปมัดจำ' : 'สลิปชำระเงิน');
+                                              setLightboxOpen(true);
+                                            }}
+                                            className="text-left hover:underline text-blue-700 font-medium text-sm break-all"
+                                          >
+                                            {decodedFileName}
+                                          </button>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                              {paymentType}
+                                            </span>
+                                            {amount && (
+                                              <span className="text-xs font-semibold text-blue-900">
+                                                {amount.toLocaleString()} บาท
+                                              </span>
+                                            )}
+                                          </div>
+                                        </>
+                                      );
+                                    })()}
+
                                     {(() => {
                                       // For Full Payment: Use remainingPaidDate (set by GAS)
                                       // For Deposit mode: Use depositPaidDate
@@ -1522,16 +1515,11 @@ export default function EventDetailPage() {
                                         ? userRegistration.depositPaidDate
                                         : userRegistration.remainingPaidDate;
 
-                                      console.log('Payment Mode:', event.paymentMode);
-                                      console.log('Deposit Paid Date:', userRegistration.depositPaidDate);
-                                      console.log('Remaining Paid Date:', userRegistration.remainingPaidDate);
-                                      console.log('Using Paid Date:', paidDate);
-
                                       if (paidDate) {
                                         try {
                                           const dateObj = typeof paidDate === 'string' ? new Date(paidDate) : paidDate;
                                           return (
-                                            <p className="text-xs text-blue-700">
+                                            <p className="text-xs text-blue-700 mt-1">
                                               <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                               </svg>
@@ -1551,16 +1539,6 @@ export default function EventDetailPage() {
                                       }
                                       return null;
                                     })()}
-                                    {event.paymentMode === 'deposit' && userRegistration.depositAmount && (
-                                      <p className="text-xs text-blue-700 mt-1">
-                                        จำนวนเงิน: {userRegistration.depositAmount.toLocaleString()} บาท
-                                      </p>
-                                    )}
-                                    {event.paymentMode !== 'deposit' && userRegistration.totalAmount && (
-                                      <p className="text-xs text-blue-700 mt-1">
-                                        จำนวนเงิน: {userRegistration.totalAmount.toLocaleString()} บาท
-                                      </p>
-                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1569,49 +1547,47 @@ export default function EventDetailPage() {
                             {/* Remaining Slip (for Deposit mode only - when deposit is paid) */}
                             {event.paymentMode === 'deposit' && userRegistration.depositPaid && userRegistration.remainingSlipUrl && (
                               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div className="flex items-start gap-3">
-                                  {/* Thumbnail */}
-                                  <button
-                                    onClick={() => {
-                                      setLightboxImage(userRegistration.remainingSlipUrl || '');
-                                      setLightboxTitle('สลิปยอดคงเหลือ');
-                                      setLightboxOpen(true);
-                                    }}
-                                    className="flex-shrink-0 group relative overflow-hidden rounded-lg border-2 border-green-300 hover:border-green-500 transition-all shadow-sm"
-                                  >
-                                    <img
-                                      src={userRegistration.remainingSlipUrl}
-                                      alt="Remaining payment slip thumbnail"
-                                      className="w-20 h-20 object-cover group-hover:scale-110 transition-transform"
-                                      onError={(e) => {
-                                        const img = e.target as HTMLImageElement;
-                                        console.error('Failed to load remaining slip image:', img.src);
-                                        img.style.display = 'none';
-                                        if (img.parentElement) {
-                                          img.parentElement.innerHTML = `
-                                            <div class="w-20 h-20 bg-gray-200 flex items-center justify-center rounded-lg">
-                                              <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                              </svg>
-                                            </div>
-                                          `;
-                                        }
-                                      }}
-                                    />
-                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity flex items-center justify-center">
-                                      <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                      </svg>
-                                    </div>
-                                  </button>
+                                <div className="flex items-start gap-2">
+                                  {/* File Icon */}
+                                  <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
 
                                   {/* Slip Info */}
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-sm font-semibold text-green-900">สลิปยอดคงเหลือ</span>
-                                    </div>
+                                    {(() => {
+                                      const slipUrl = userRegistration.remainingSlipUrl || '';
+                                      const fileName = slipUrl.split('/').pop() || slipUrl.split('%2F').pop() || 'remaining-payment-slip';
+                                      const decodedFileName = decodeURIComponent(fileName);
+
+                                      return (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setLightboxImage(slipUrl);
+                                              setLightboxTitle('สลิปยอดคงเหลือ');
+                                              setLightboxOpen(true);
+                                            }}
+                                            className="text-left hover:underline text-green-700 font-medium text-sm break-all"
+                                          >
+                                            {decodedFileName}
+                                          </button>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                              ยอดคงเหลือ
+                                            </span>
+                                            {userRegistration.remainingAmount && (
+                                              <span className="text-xs font-semibold text-green-900">
+                                                {userRegistration.remainingAmount.toLocaleString()} บาท
+                                              </span>
+                                            )}
+                                          </div>
+                                        </>
+                                      );
+                                    })()}
+
                                     {userRegistration.remainingPaidDate && (
-                                      <p className="text-xs text-green-700">
+                                      <p className="text-xs text-green-700 mt-1">
                                         <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
@@ -1622,11 +1598,6 @@ export default function EventDetailPage() {
                                           hour: '2-digit',
                                           minute: '2-digit'
                                         })} น.
-                                      </p>
-                                    )}
-                                    {userRegistration.remainingAmount && (
-                                      <p className="text-xs text-green-700 mt-1">
-                                        จำนวนเงิน: {userRegistration.remainingAmount.toLocaleString()} บาท
                                       </p>
                                     )}
                                   </div>
@@ -1802,31 +1773,33 @@ export default function EventDetailPage() {
                       {event?.paymentMode === 'deposit' && (
                         <>
                           {/* Deposit Payment */}
-                          <div className="bg-white rounded-lg p-4 mb-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium">งวดที่ 1: มัดจำ</span>
-                              <span className="text-lg font-bold">{userRegistration.depositAmount?.toLocaleString() || 0} บาท</span>
-                            </div>
-
-                            {userRegistration.depositDeadline && !userRegistration.depositPaid && (
-                              <div className="text-sm text-gray-600 mb-2">
-                                ครบกำหนด: {formatDeadline(userRegistration.depositDeadline)}
-                                <br />
-                                <span className="text-orange-600 font-medium">
-                                  {getTimeRemaining(userRegistration.depositDeadline)}
-                                </span>
+                          {userRegistration.depositAmount && userRegistration.depositAmount > 0 && (
+                            <div className="bg-white rounded-lg p-4 mb-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium">งวดที่ 1: มัดจำ</span>
+                                <span className="text-lg font-bold">{userRegistration.depositAmount.toLocaleString()} บาท</span>
                               </div>
-                            )}
 
-                            {userRegistration.depositPaid && (
-                              <span className="text-sm text-green-600 flex items-center gap-1">
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                ชำระแล้ว {userRegistration.depositPaidDate && `(${formatDeadline(userRegistration.depositPaidDate)})`}
-                              </span>
-                            )}
-                          </div>
+                              {userRegistration.depositDeadline && !userRegistration.depositPaid && (
+                                <div className="text-sm text-gray-600 mb-2">
+                                  ครบกำหนด: {formatDeadline(userRegistration.depositDeadline)}
+                                  <br />
+                                  <span className="text-orange-600 font-medium">
+                                    {getTimeRemaining(userRegistration.depositDeadline)}
+                                  </span>
+                                </div>
+                              )}
+
+                              {userRegistration.depositPaid && (
+                                <span className="text-sm text-green-600 flex items-center gap-1">
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                  ชำระแล้ว {userRegistration.depositPaidDate && `(${formatDeadline(userRegistration.depositPaidDate)})`}
+                                </span>
+                              )}
+                            </div>
+                          )}
 
                           {/* Remaining Payment */}
                           {userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && (
@@ -2583,7 +2556,7 @@ export default function EventDetailPage() {
             {/* Close Button */}
             <button
               onClick={() => setLightboxOpen(false)}
-              className="absolute top-4 right-4 z-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-2 transition-all"
+              className="absolute top-4 right-4 z-10 bg-white hover:bg-gray-100 text-black rounded-full p-2 transition-all shadow-lg"
               aria-label="Close"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -380,24 +380,25 @@
       document.getElementById('loading').style.display = 'none';
 
       if (response.success) {
-        showMessage('success', '✅ ' + response.message);
-
-        // Show close button
-        const closeButton = document.createElement('button');
-        closeButton.textContent = 'ปิดหน้าต่าง';
-        closeButton.style.marginTop = '16px';
-        closeButton.onclick = function() {
-          window.close();
-        };
-
-        // Insert button after message
+        // Show success message with instruction
         const messageBox = document.getElementById('messageBox');
-        messageBox.parentNode.insertBefore(closeButton, messageBox.nextSibling);
-
-        // Auto-close after 2 seconds
-        setTimeout(function() {
-          window.close();
-        }, 2000);
+        messageBox.className = 'message success';
+        messageBox.innerHTML = `
+          <div style="text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">
+              อัพโหลดสลิปสำเร็จ!
+            </div>
+            <div style="font-size: 14px; color: #2d5016; line-height: 1.6;">
+              ${response.message}
+            </div>
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #9ae6b4; font-size: 13px; color: #22543d;">
+              <strong>คุณสามารถปิดหน้าต่างนี้แล้ว</strong><br>
+              กลับไปที่หน้าลงทะเบียนเพื่อดูสถานะการชำระเงิน
+            </div>
+          </div>
+        `;
+        messageBox.style.display = 'block';
       } else {
         showMessage('error', '❌ ' + response.error);
         document.getElementById('uploadForm').style.display = 'block';

@@ -168,8 +168,41 @@ export async function POST(request: NextRequest) {
         updateData.remainingPaidDate = today;
         updateData.paymentStatus = 'รอตรวจสอบ';
         // Do NOT update 'status'
+      } else if (paymentType === 'additional') {
+        // Handle additional payment tracking
+        const currentData = registrationDoc.data();
+        let additionalPayments: any[] = [];
+
+        // Parse existing additional payments
+        if (currentData.additionalPayments) {
+          try {
+            additionalPayments = JSON.parse(currentData.additionalPayments);
+            if (!Array.isArray(additionalPayments)) {
+              additionalPayments = [];
+            }
+          } catch (error) {
+            console.error('[GAS Webhook] Error parsing additionalPayments:', error);
+            additionalPayments = [];
+          }
+        }
+
+        // Create new additional payment record
+        const newPayment = {
+          paymentId: slip.slipId,
+          amount: Number(paymentAmount),
+          reason: description || `การชำระเงินเพิ่มเติม`,
+          slipUrl: slipUrl,
+          uploadedAt: uploadedAt || new Date().toISOString(),
+          status: 'รอตรวจสอบ' as const,
+        };
+
+        additionalPayments.push(newPayment);
+
+        // Save back to Firestore
+        updateData.additionalPayments = JSON.stringify(additionalPayments);
+        updateData.paymentStatus = 'รอตรวจสอบเงินเพิ่มเติม';
+        // Do NOT update 'status'
       }
-      // Note: 'additional' type doesn't update legacy fields
 
       await registrationDoc.ref.update(updateData);
 

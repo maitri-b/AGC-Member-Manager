@@ -92,6 +92,9 @@ interface UserRegistration {
   depositDeadline?: string;
   remainingDeadline?: string;
   paymentStatus?: string;
+  // Payment tracking (for additional payments after amount adjustments)
+  paidAmount?: number;
+  additionalPayments?: string; // JSON stringified AdditionalPayment[]
   // Attendee type selections, room allocations, and special charges (New)
   attendeeTypeSelections?: AttendeeTypeSelection[];
   roomAllocations?: RoomAllocation[];
@@ -1604,26 +1607,233 @@ export default function EventDetailPage() {
                                 </div>
                               </div>
                             )}
+
+                            {/* Additional Payments (for amount adjustments) */}
+                            {(() => {
+                              const additionalPayments = userRegistration.additionalPayments
+                                ? (() => {
+                                    try {
+                                      const parsed = JSON.parse(userRegistration.additionalPayments);
+                                      return Array.isArray(parsed) ? parsed : [];
+                                    } catch {
+                                      return [];
+                                    }
+                                  })()
+                                : [];
+
+                              if (additionalPayments.length === 0) return null;
+
+                              return additionalPayments.map((payment: any, index: number) => (
+                                <div key={payment.paymentId || index} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                  <div className="flex items-start gap-2">
+                                    {/* File Icon */}
+                                    <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+
+                                    {/* Slip Info */}
+                                    <div className="flex-1 min-w-0">
+                                      {payment.slipUrl ? (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setLightboxImage(payment.slipUrl);
+                                              setLightboxTitle('สลิปเพิ่มเติม');
+                                              setLightboxOpen(true);
+                                            }}
+                                            className="text-left hover:underline text-orange-700 font-medium text-sm break-all"
+                                          >
+                                            {(() => {
+                                              const fileName = payment.slipUrl.split('/').pop() || payment.slipUrl.split('%2F').pop() || 'additional-payment-slip';
+                                              return decodeURIComponent(fileName);
+                                            })()}
+                                          </button>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                              ชำระเพิ่มเติม
+                                            </span>
+                                            {payment.amount && (
+                                              <span className="text-xs font-semibold text-orange-900">
+                                                {payment.amount.toLocaleString()} บาท
+                                              </span>
+                                            )}
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                              payment.status === 'อนุมัติแล้ว' ? 'bg-green-100 text-green-800' :
+                                              payment.status === 'รอตรวจสอบ' ? 'bg-purple-100 text-purple-800' :
+                                              payment.status === 'ปฏิเสธ' ? 'bg-red-100 text-red-800' :
+                                              'bg-yellow-100 text-yellow-800'
+                                            }`}>
+                                              {payment.status}
+                                            </span>
+                                          </div>
+                                          {payment.reason && (
+                                            <p className="text-xs text-orange-700 mt-1">
+                                              {payment.reason}
+                                            </p>
+                                          )}
+                                          {payment.uploadedAt && (
+                                            <p className="text-xs text-orange-700 mt-1">
+                                              <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                              </svg>
+                                              อัปโหลดเมื่อ: {new Date(payment.uploadedAt).toLocaleString('th-TH', {
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })} น.
+                                            </p>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <div>
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                              ชำระเพิ่มเติม
+                                            </span>
+                                            {payment.amount && (
+                                              <span className="text-xs font-semibold text-orange-900">
+                                                {payment.amount.toLocaleString()} บาท
+                                              </span>
+                                            )}
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                              {payment.status}
+                                            </span>
+                                          </div>
+                                          {payment.reason && (
+                                            <p className="text-xs text-orange-700 mt-1">
+                                              {payment.reason}
+                                            </p>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ));
+                            })()}
                           </div>
                         </div>
                       )}
+
+                      {/* 2.6. Additional Payment Required Notice */}
+                      {(() => {
+                        // Calculate if additional payment is required
+                        const totalAmount = userRegistration.totalAmount || 0;
+                        const paidAmount = userRegistration.paidAmount || 0;
+                        const additionalPayments = userRegistration.additionalPayments
+                          ? (() => {
+                              try {
+                                const parsed = JSON.parse(userRegistration.additionalPayments);
+                                return Array.isArray(parsed) ? parsed : [];
+                              } catch {
+                                return [];
+                              }
+                            })()
+                          : [];
+
+                        // Sum approved additional payments
+                        const approvedAdditional = additionalPayments
+                          .filter((p: any) => p.status === 'อนุมัติแล้ว')
+                          .reduce((sum: number, p: any) => sum + p.amount, 0);
+
+                        const additionalRequired = Math.max(0, totalAmount - (paidAmount + approvedAdditional));
+
+                        // Check if there's a pending additional payment
+                        const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
+
+                        if (additionalRequired === 0 && !hasPendingAdditional) return null;
+
+                        return (
+                          <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-4">
+                            <div className="flex items-start gap-3">
+                              <svg className="w-6 h-6 text-orange-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              <div className="flex-1">
+                                {hasPendingAdditional ? (
+                                  <>
+                                    <h4 className="font-semibold text-orange-900 mb-1">🔍 กำลังตรวจสอบสลิปเงินเพิ่มเติม</h4>
+                                    <p className="text-sm text-orange-800">
+                                      ระบบได้รับสลิปการชำระเงินเพิ่มเติมของคุณแล้ว กรุณารอการตรวจสอบจากทีมงาน
+                                    </p>
+                                  </>
+                                ) : additionalRequired > 0 ? (
+                                  <>
+                                    <h4 className="font-semibold text-orange-900 mb-2">⚠️ ต้องชำระเงินเพิ่มเติม</h4>
+                                    <div className="space-y-1 text-sm text-orange-800">
+                                      <div className="flex justify-between">
+                                        <span>ยอดทั้งหมด:</span>
+                                        <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>ชำระแล้ว:</span>
+                                        <span className="font-semibold">{(paidAmount + approvedAdditional).toLocaleString()} บาท</span>
+                                      </div>
+                                      <div className="flex justify-between border-t border-orange-300 pt-1 mt-1">
+                                        <span className="font-bold">ต้องชำระเพิ่ม:</span>
+                                        <span className="font-bold text-lg text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-orange-700 mt-2">
+                                      กรุณาชำระเงินเพิ่มเติมและส่งสลิปผ่านปุ่มด้านล่าง
+                                    </p>
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* 3. Payment Submission Section - Show Upload Button/Instructions */}
                       {(() => {
                         const hasPaymentAccount = !!event.paymentAccountNumber;
                         const hasTotalAmount = userRegistration.totalAmount > 0;
 
-                        // Full Payment Mode: Hide button if slip is uploaded
+                        // Calculate if fully paid (including additional payments)
+                        const totalAmount = userRegistration.totalAmount || 0;
+                        const paidAmount = userRegistration.paidAmount || 0;
+                        const additionalPayments = userRegistration.additionalPayments
+                          ? (() => {
+                              try {
+                                const parsed = JSON.parse(userRegistration.additionalPayments);
+                                return Array.isArray(parsed) ? parsed : [];
+                              } catch {
+                                return [];
+                              }
+                            })()
+                          : [];
+
+                        // Sum approved additional payments
+                        const approvedAdditional = additionalPayments
+                          .filter((p: any) => p.status === 'อนุมัติแล้ว')
+                          .reduce((sum: number, p: any) => sum + p.amount, 0);
+
+                        const additionalRequired = Math.max(0, totalAmount - (paidAmount + approvedAdditional));
+
+                        // Check if there's a pending additional payment
+                        const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
+
+                        // Hide button if fully paid (no additional payment required and no pending additional payment)
+                        if (additionalRequired === 0 && !hasPendingAdditional && paidAmount > 0) {
+                          return false;
+                        }
+
+                        // Full Payment Mode: Hide button if slip is uploaded (unless additional payment is required)
                         if (event.paymentMode !== 'deposit') {
                           const hasFullPaymentSlip = !!(userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl);
-                          if (hasFullPaymentSlip) return false; // Hide button when slip uploaded
+                          // Show button if additional payment is required, even if initial slip was uploaded
+                          if (hasFullPaymentSlip && additionalRequired === 0 && !hasPendingAdditional) return false;
                           return hasPaymentAccount && hasTotalAmount;
                         }
 
-                        // Deposit Mode: Show button if deposit not paid OR remaining not paid
+                        // Deposit Mode: Show button if deposit not paid OR remaining not paid OR additional payment required
                         const notPaidDeposit = !userRegistration.depositPaid && !userRegistration.depositSlipUrl;
                         const hasRemainingUnpaid = userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl;
-                        const shouldShow = hasPaymentAccount && hasTotalAmount && (notPaidDeposit || hasRemainingUnpaid);
+                        const needsAdditional = additionalRequired > 0 && !hasPendingAdditional;
+                        const shouldShow = hasPaymentAccount && hasTotalAmount && (notPaidDeposit || hasRemainingUnpaid || needsAdditional);
 
                         return shouldShow;
                       })() ? (

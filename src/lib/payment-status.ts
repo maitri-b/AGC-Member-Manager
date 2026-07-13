@@ -9,7 +9,7 @@
  * See PAYMENT_SYSTEM.md for detailed documentation
  */
 
-import { Event, EventInput, EventRegistration } from '@/types/event';
+import { Event, EventInput, EventRegistration, AdditionalPayment } from '@/types/event';
 import { isDeadlinePassed } from './payment-deadlines';
 
 /**
@@ -176,4 +176,59 @@ export function needsPaymentAction(
   const hoursRemaining = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
 
   return hoursRemaining < hoursThreshold && hoursRemaining > 0;
+}
+
+/**
+ * Parse additional payments from JSON string
+ * @param additionalPaymentsJson JSON stringified AdditionalPayment[]
+ * @returns Parsed AdditionalPayment array or empty array if invalid
+ */
+export function parseAdditionalPayments(additionalPaymentsJson?: string): AdditionalPayment[] {
+  if (!additionalPaymentsJson) return [];
+
+  try {
+    const parsed = JSON.parse(additionalPaymentsJson);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('Error parsing additional payments:', error);
+    return [];
+  }
+}
+
+/**
+ * Calculate additional payment required based on current total vs paid amount
+ * @param totalAmount Current total amount (may have been adjusted by admin)
+ * @param paidAmount Total amount paid so far (deposit + remaining + approved additional)
+ * @param additionalPayments Array of additional payments
+ * @returns Amount still required to be paid (0 if fully paid)
+ */
+export function calculateAdditionalPaymentRequired(
+  totalAmount: number,
+  paidAmount: number = 0,
+  additionalPayments: AdditionalPayment[] = []
+): number {
+  // Sum all approved additional payments
+  const approvedAdditional = additionalPayments
+    .filter(p => p.status === 'อนุมัติแล้ว')
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  // Calculate unpaid amount
+  const unpaid = totalAmount - (paidAmount + approvedAdditional);
+
+  return Math.max(0, unpaid);
+}
+
+/**
+ * Check if registration is fully paid (including any additional payments)
+ * @param totalAmount Current total amount
+ * @param paidAmount Total amount paid so far
+ * @param additionalPayments Array of additional payments
+ * @returns true if fully paid
+ */
+export function isFullyPaid(
+  totalAmount: number,
+  paidAmount: number = 0,
+  additionalPayments: AdditionalPayment[] = []
+): boolean {
+  return calculateAdditionalPaymentRequired(totalAmount, paidAmount, additionalPayments) === 0;
 }

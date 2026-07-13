@@ -86,6 +86,10 @@ export interface EventRegistration {
   // Cancellation Info (New - for tracking cancellation details)
   cancellationReason?: string;      // cancellation_reason - Reason for cancellation
   cancelledAt?: string;             // cancelled_at - ISO timestamp when cancelled
+
+  // Payment Tracking (New - for tracking total paid amount and additional payments)
+  paidAmount?: number;              // paid_amount - Total amount paid so far (deposit + remaining + additional)
+  additionalPayments?: string;      // additional_payments - JSON stringified AdditionalPayment[]
 }
 
 // Event metadata (for managing multiple events)
@@ -274,12 +278,28 @@ export type EventRegistrationStatus =
 
 // Payment Status types (New - for deposit payment system)
 export type PaymentStatus =
+  // Deposit mode statuses
   | 'รอชำระมัดจำ'           // Waiting for deposit payment
-  | 'รอชำระยอดที่เหลือ'     // Deposit paid, waiting for remaining balance
-  | 'ชำระครบแล้ว'           // Fully paid
+  | 'รอตรวจสอบมัดจำ'        // Deposit slip uploaded, pending review
+  | 'ชำระมัดจำแล้ว'         // Deposit approved
+  | 'รอชำระยอดคงเหลือ'      // Deposit paid, waiting for remaining balance
+  | 'รอตรวจสอบยอดคงเหลือ'   // Remaining slip uploaded, pending review
+  | 'ชำระยอดคงเหลือแล้ว'    // Remaining approved (fully paid for deposit mode)
+
+  // Full payment mode statuses
+  | 'รอชำระเงิน'            // Waiting for payment (full payment mode)
+  | 'รอตรวจสอบ'             // Slip uploaded, pending review
+  | 'ชำระเต็มจำนวนแล้ว'     // Fully paid (full payment mode)
+
+  // Additional payment statuses (for amount adjustments)
+  | 'รอชำระเงินเพิ่มเติม'    // Awaiting additional payment (after amount increase)
+  | 'รอตรวจสอบเงินเพิ่มเติม' // Additional payment slip uploaded, pending review
+  | 'ชำระครบถ้วนแล้ว'       // Fully paid including additional payments
+
+  // Other statuses
   | 'พ้นกำหนด'              // Overdue (deadline passed)
-  | 'ลงทะเบียนแล้ว'         // Legacy: registered (for free events or full payment mode)
-  | 'รอชำระเงิน'            // Legacy: waiting payment (full payment mode)
+  | 'ปฏิเสธสลิป'            // Slip rejected
+  | 'ลงทะเบียนแล้ว'         // Legacy: registered (for free events)
   | string;
 
 export type AttendanceType =
@@ -334,6 +354,21 @@ export interface SpecialCharge {
   amount: number;                // Charge amount
   addedBy: string;               // Admin user ID who added this charge
   addedAt: string;               // ISO timestamp when added
+}
+
+// Additional Payment (New - for tracking additional payments when amount changes)
+export interface AdditionalPayment {
+  paymentId: string;             // Unique ID for this payment
+  amount: number;                // Amount for this additional payment
+  reason: string;                // Reason (e.g., "เพิ่มจำนวนผู้เข้าร่วมจาก 2 เป็น 3 คน")
+  slipUrl?: string;              // URL of payment slip
+  uploadedAt?: string;           // ISO timestamp when slip was uploaded
+  approvedAt?: string;           // ISO timestamp when payment was approved
+  approvedBy?: string;           // Admin user ID who approved
+  rejectedAt?: string;           // ISO timestamp when payment was rejected
+  rejectedBy?: string;           // Admin user ID who rejected
+  rejectionReason?: string;      // Reason for rejection
+  status: 'รอชำระ' | 'รอตรวจสอบ' | 'อนุมัติแล้ว' | 'ปฏิเสธ'; // Payment status
 }
 
 // Google Sheet column mapping for Event Registration
@@ -395,6 +430,9 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   // Cancellation info (New)
   cancellationReason: 'cancellation_reason',
   cancelledAt: 'cancelled_at',
+  // Payment tracking (New - for additional payments)
+  paidAmount: 'paid_amount',
+  additionalPayments: 'additional_payments',
 };
 
 // Reverse mapping for sheet to registration conversion

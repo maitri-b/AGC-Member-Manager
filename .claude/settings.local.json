@@ -51,7 +51,8 @@
       "Bash(node check-registration-v2.js:*)",
       "Bash(node check-missing-registration.js:*)",
       "Bash(node scripts/migrate-payment-slips.js:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(node scripts/sync-slip-urls-from-sheets.js:*)"
     ]
   }
 }

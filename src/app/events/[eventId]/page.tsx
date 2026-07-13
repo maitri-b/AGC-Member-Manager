@@ -842,13 +842,13 @@ export default function EventDetailPage() {
                                 </>
                               )}
                             </>
-                          ) : (
-                            // Fixed Pricing Breakdown
+                          ) : event.registrationFee && event.registrationFee > 0 ? (
+                            // Fixed Pricing Breakdown - Only show if registrationFee exists and > 0
                             <div className="flex justify-between">
-                              <span>ท่านละ {event.registrationFee?.toLocaleString()} บาท × {userRegistration.attendeeCount} ท่าน</span>
-                              <span>{((event.registrationFee || 0) * userRegistration.attendeeCount).toLocaleString()} บาท</span>
+                              <span>ท่านละ {event.registrationFee.toLocaleString()} บาท × {userRegistration.attendeeCount} ท่าน</span>
+                              <span>{(event.registrationFee * userRegistration.attendeeCount).toLocaleString()} บาท</span>
                             </div>
-                          )}
+                          ) : null}
 
                           {/* Event Fee Subtotal - Only show if event has room allocations or special charges */}
                           {(() => {

@@ -56,6 +56,7 @@ export function hasMinimumRole(
     'event-staff': 2.5,
     member: 2,
     guest: 1,
+    visitor: 0, // Lowest level - cannot register for events
   };
   return roleHierarchy[userRole] >= roleHierarchy[minimumRole];
 }

@@ -821,15 +821,13 @@ export default function EventDetailPage() {
                                     </div>
                                   )}
                                 </>
-                              ) : (
-                                // Legacy tiered pricing (baseFee + additionalFeePerPerson)
+                              ) : event.baseFee !== undefined && event.baseFee > 0 ? (
+                                // Legacy tiered pricing (baseFee + additionalFeePerPerson) - Only show if baseFee > 0
                                 <>
-                                  {event.baseFee && event.baseFee > 0 && (
-                                    <div className="flex justify-between">
-                                      <span>ท่านแรก {event.baseFee.toLocaleString()} บาท × 1 ท่าน</span>
-                                      <span>{event.baseFee.toLocaleString()} บาท</span>
-                                    </div>
-                                  )}
+                                  <div className="flex justify-between">
+                                    <span>ท่านแรก {event.baseFee.toLocaleString()} บาท × 1 ท่าน</span>
+                                    <span>{event.baseFee.toLocaleString()} บาท</span>
+                                  </div>
                                   {userRegistration.attendeeCount > 1 && event.additionalFeePerPerson && event.additionalFeePerPerson > 0 && (
                                     <div className="flex justify-between">
                                       <span>ท่านที่เหลือ {event.additionalFeePerPerson.toLocaleString()} บาท × {userRegistration.attendeeCount - 1} ท่าน</span>
@@ -843,7 +841,7 @@ export default function EventDetailPage() {
                                     </div>
                                   )}
                                 </>
-                              )}
+                              ) : null}
                             </>
                           ) : event.registrationFee && event.registrationFee > 0 ? (
                             // Fixed Pricing Breakdown - Only show if registrationFee exists and > 0

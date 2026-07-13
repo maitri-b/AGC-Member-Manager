@@ -606,3 +606,47 @@ function createErrorPage(title, message) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .setSandboxMode(HtmlService.SandboxMode.IFRAME);
 }
+
+/**
+ * Force Authorization - บังคับให้ขอ permission ทุก scope
+ * เรียกใช้ครั้งเดียวหลัง deploy เพื่อขอสิทธิ์เข้าถึง
+ *
+ * วิธีใช้:
+ * 1. เปิด Apps Script Editor
+ * 2. เลือก function "forceAuthorize" จาก dropdown
+ * 3. กด Run
+ * 4. อนุญาตสิทธิ์ทั้งหมดที่ขอ
+ * 5. Deploy version ใหม่
+ */
+function forceAuthorize() {
+  try {
+    Logger.log('Starting authorization process...');
+
+    // Force Spreadsheet permission
+    const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    Logger.log('✓ Spreadsheet access granted');
+
+    // Force Drive permission
+    const folder = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
+    Logger.log('✓ Drive access granted: ' + folder.getName());
+
+    // Force external request permission (URL Fetch)
+    const testUrl = 'https://www.google.com';
+    UrlFetchApp.fetch(testUrl, { muteHttpExceptions: true });
+    Logger.log('✓ External request access granted');
+
+    Logger.log('✅ Authorization complete! All permissions granted.');
+    Logger.log('You can now deploy a new version.');
+
+    return {
+      success: true,
+      message: 'All permissions granted successfully'
+    };
+  } catch (error) {
+    Logger.log('❌ Authorization failed: ' + error.toString());
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}

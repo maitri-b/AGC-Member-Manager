@@ -140,12 +140,16 @@ export default function EventDetailPage() {
     amount: number;
     slipUrl: string;
     paidDate: string;
+    slipFile?: File | null;
+    uploadingFile?: boolean;
   }>({
     registrationId: '',
     paymentType: 'deposit',
     amount: 0,
     slipUrl: '',
     paidDate: new Date().toISOString().split('T')[0],
+    slipFile: null,
+    uploadingFile: false,
   });
   const [confirmingPayment, setConfirmingPayment] = useState(false);
 
@@ -633,6 +637,8 @@ export default function EventDetailPage() {
       amount: 0,
       slipUrl: '',
       paidDate: new Date().toISOString().split('T')[0],
+      slipFile: null,
+      uploadingFile: false,
     });
   };
 
@@ -651,6 +657,49 @@ export default function EventDetailPage() {
     setActionMessage(null);
 
     try {
+      let slipUrl = paymentFormData.slipUrl;
+
+      // If user uploaded a file, upload it first
+      if (paymentFormData.slipFile) {
+        setPaymentFormData({ ...paymentFormData, uploadingFile: true });
+
+        // Convert file to base64
+        const fileBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = (reader.result as string).split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(paymentFormData.slipFile!);
+        });
+
+        // Upload via admin API
+        const uploadResponse = await fetch('/api/admin/payments/upload-for-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            registrationId: paymentFormData.registrationId,
+            eventId: eventId,
+            amount: paymentFormData.amount,
+            paymentType: paymentFormData.paymentType,
+            fileData: fileBase64,
+            fileName: paymentFormData.slipFile.name,
+            mimeType: paymentFormData.slipFile.type,
+            description: `อัพโหลดโดย Admin`,
+          }),
+        });
+
+        const uploadData = await uploadResponse.json();
+
+        if (!uploadResponse.ok) {
+          throw new Error(uploadData.error || 'ไม่สามารถอัพโหลดไฟล์ได้');
+        }
+
+        slipUrl = uploadData.slipUrl;
+        setPaymentFormData({ ...paymentFormData, uploadingFile: false, slipUrl });
+      }
+
       const response = await fetch(`/api/events/${eventId}/update-payment`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -658,7 +707,7 @@ export default function EventDetailPage() {
           registrationId: paymentFormData.registrationId,
           paymentType: paymentFormData.paymentType,
           amount: paymentFormData.amount,
-          slipUrl: paymentFormData.slipUrl,
+          slipUrl: slipUrl,
           paidDate: paymentFormData.paidDate,
           action: 'approve',
         }),
@@ -681,6 +730,7 @@ export default function EventDetailPage() {
       });
     } finally {
       setConfirmingPayment(false);
+      setPaymentFormData({ ...paymentFormData, uploadingFile: false });
     }
   };
 
@@ -2082,21 +2132,99 @@ export default function EventDetailPage() {
                 </p>
               </div>
 
-              {/* Slip URL */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  URL สลิปการโอนเงิน (ถ้ามี)
+              {/* Slip Upload Options */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  📎 สลิปการโอนเงิน
                 </label>
-                <input
-                  type="text"
-                  value={paymentFormData.slipUrl}
-                  onChange={(e) => setPaymentFormData({ ...paymentFormData, slipUrl: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  อัพโหลดสลิปไปยัง Cloud Storage แล้วใส่ URL ที่นี่
-                </p>
+
+                {/* File Upload Option */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                  <label className="cursor-pointer block">
+                    <div className="flex flex-col items-center">
+                      {paymentFormData.slipFile ? (
+                        <>
+                          <div className="text-green-600 mb-2">
+                            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <p className="text-sm font-medium text-gray-700">{paymentFormData.slipFile.name}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {(paymentFormData.slipFile.size / 1024).toFixed(2)} KB
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPaymentFormData({ ...paymentFormData, slipFile: null });
+                            }}
+                            className="mt-2 text-xs text-red-600 hover:text-red-800"
+                          >
+                            ลบไฟล์
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-gray-400 mb-2">
+                            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                          </div>
+                          <p className="text-sm font-medium text-gray-700">คลิกเพื่ออัพโหลดไฟล์</p>
+                          <p className="text-xs text-gray-500 mt-1">JPG, PNG, PDF (สูงสุด 5MB)</p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 5 * 1024 * 1024) {
+                            setActionMessage({ type: 'error', text: 'ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 5MB)' });
+                            return;
+                          }
+                          setPaymentFormData({ ...paymentFormData, slipFile: file, slipUrl: '' });
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* OR Divider */}
+                <div className="flex items-center">
+                  <div className="flex-1 border-t border-gray-300"></div>
+                  <span className="px-3 text-xs text-gray-500">หรือ</span>
+                  <div className="flex-1 border-t border-gray-300"></div>
+                </div>
+
+                {/* URL Input Option */}
+                <div>
+                  <input
+                    type="text"
+                    value={paymentFormData.slipUrl}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, slipUrl: e.target.value, slipFile: null })}
+                    placeholder="ใส่ URL สลิปที่อัพโหลดไว้แล้ว (https://...)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={!!paymentFormData.slipFile}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    สำหรับสลิปที่อัพโหลดไปยัง Cloud Storage แล้ว
+                  </p>
+                </div>
+
+                {paymentFormData.uploadingFile && (
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3 flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-sm text-blue-800">กำลังอัพโหลดไฟล์...</span>
+                  </div>
+                )}
               </div>
 
               {/* Note */}

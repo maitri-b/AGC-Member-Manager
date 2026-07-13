@@ -176,20 +176,6 @@ export default function EventDetailPage() {
     if (eventId) {
       fetchEventDetail();
     }
-
-    // Check if returning from slip upload on mobile
-    const returnUrl = sessionStorage.getItem('returnUrl');
-    if (returnUrl && returnUrl.includes(eventId)) {
-      sessionStorage.removeItem('returnUrl');
-      // Show success message
-      toast.success('กลับมาจากการอัพโหลดสลิป กรุณารอสักครู่...');
-      // Refresh data after a delay
-      setTimeout(() => {
-        if (eventId) {
-          fetchEventDetail();
-        }
-      }, 1000);
-    }
   }, [eventId]);
 
   const fetchEventDetail = async () => {
@@ -1722,12 +1708,31 @@ export default function EventDetailPage() {
                                   url.searchParams.append('lineUserId', session?.user?.id || '');
                                   url.searchParams.append('paymentType', paymentType);
 
-                                  // Store current page URL for return navigation
-                                  sessionStorage.setItem('returnUrl', window.location.href);
+                                  // Open in popup window
+                                  const popupWidth = Math.min(600, window.innerWidth - 40);
+                                  const popupHeight = Math.min(800, window.innerHeight - 40);
+                                  const left = (window.innerWidth - popupWidth) / 2;
+                                  const top = (window.innerHeight - popupHeight) / 2;
 
-                                  // Open in same window/tab for better GAS authentication compatibility
-                                  // Works on both mobile and desktop browsers
-                                  window.location.href = url.toString();
+                                  const popup = window.open(
+                                    url.toString(),
+                                    'slipUpload',
+                                    `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
+                                  );
+
+                                  if (!popup) {
+                                    toast.error('กรุณาอนุญาตให้เปิด popup window');
+                                  } else {
+                                    // Refresh data when popup closes
+                                    const checkClosed = setInterval(() => {
+                                      if (popup.closed) {
+                                        clearInterval(checkClosed);
+                                        setTimeout(() => {
+                                          fetchEventDetail();
+                                        }, 1000);
+                                      }
+                                    }, 500);
+                                  }
                                 }
                               }}
                               className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"

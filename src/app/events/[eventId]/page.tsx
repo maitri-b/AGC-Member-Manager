@@ -2427,21 +2427,21 @@ export default function EventDetailPage() {
                                       <span> - ส่วนลด {event.memberDiscount!.toLocaleString()} บาท</span>
                                     )}
                                   </>
-                                ) : (
-                                  // Legacy tiered pricing
+                                ) : event.baseFee !== undefined && event.baseFee > 0 ? (
+                                  // Legacy tiered pricing - Only show if baseFee > 0
                                   <>
                                     {attendeeCount === 1
-                                      ? `${event.baseFee?.toLocaleString()} บาท/คน`
-                                      : `${event.baseFee?.toLocaleString()} บาท (คนแรก) + ${event.additionalFeePerPerson?.toLocaleString()} บาท × ${attendeeCount - 1} คน`}
+                                      ? `${event.baseFee.toLocaleString()} บาท/คน`
+                                      : `${event.baseFee.toLocaleString()} บาท (คนแรก)${event.additionalFeePerPerson && event.additionalFeePerPerson > 0 ? ` + ${event.additionalFeePerPerson.toLocaleString()} บาท × ${attendeeCount - 1} คน` : ''}`}
                                     {(event.memberDiscount ?? 0) > 0 && (
                                       <span> - ส่วนลด {event.memberDiscount!.toLocaleString()} บาท</span>
                                     )}
                                   </>
-                                )}
+                                ) : null}
                               </>
-                            ) : (
+                            ) : event.registrationFee && event.registrationFee > 0 ? (
                               `${attendeeCount} คน × ${event.registrationFee.toLocaleString()} บาท/คน`
-                            )}
+                            ) : null}
                           </p>
                         </div>
                         <div className="text-right">

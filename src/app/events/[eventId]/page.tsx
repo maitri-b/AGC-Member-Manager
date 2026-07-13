@@ -1735,7 +1735,12 @@ export default function EventDetailPage() {
                         // Check if there's a pending additional payment
                         const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
 
-                        if (additionalRequired === 0 && !hasPendingAdditional) return null;
+                        // Check if this is truly an "additional" payment (not first payment)
+                        // Only show additional payment notice if user has already paid something
+                        const isAdditionalPayment = paidAmount > 0 || approvedAdditional > 0;
+
+                        // Only show this section for actual additional payments, not initial payments
+                        if (!isAdditionalPayment || (additionalRequired === 0 && !hasPendingAdditional)) return null;
 
                         return (
                           <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-4">

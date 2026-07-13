@@ -74,6 +74,22 @@ interface EventSummary {
   totalAttendees: number;
 }
 
+interface PaymentSlip {
+  slipId: string;
+  registrationId: string;
+  eventId: string;
+  amount: number;
+  paymentType: 'deposit' | 'remaining' | 'full' | 'additional';
+  description: string;
+  slipUrl: string;
+  uploadedAt: string;
+  uploadedBy: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedAt?: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
+}
+
 interface UserRegistration {
   registrationId: string;
   status: string;
@@ -117,6 +133,7 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [summary, setSummary] = useState<EventSummary | null>(null);
   const [userRegistration, setUserRegistration] = useState<UserRegistration | null>(null);
+  const [paymentSlips, setPaymentSlips] = useState<PaymentSlip[]>([]);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [attendeeCount, setAttendeeCount] = useState(0);
@@ -181,6 +198,74 @@ export default function EventDetailPage() {
     }
   }, [eventId]);
 
+  const fetchPaymentSlips = async (registrationId: string) => {
+    try {
+      const response = await fetch(`/api/payments/slips?registrationId=${registrationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentSlips(data.slips || []);
+      }
+    } catch (error) {
+      console.error('Error fetching payment slips:', error);
+    }
+  };
+
+  // Helper function to get payment status description
+  const getPaymentStatusDescription = (status: string): string => {
+    const descriptions: Record<string, string> = {
+      'รอชำระเงิน': 'โปรดชำระเงินตามยอดที่ระบุ และอัปโหลดสลิปเพื่อยืนยันการชำระ',
+      'รอตรวจสอบ': 'ระบบได้รับสลิปของคุณแล้ว ทีมงานกำลังตรวจสอบและจะอนุมัติภายใน 1-2 วันทำการ',
+      'รอตรวจสอบมัดจำ': 'ระบบได้รับสลิปมัดจำของคุณแล้ว ทีมงานกำลังตรวจสอบและจะอนุมัติภายใน 1-2 วันทำการ',
+      'รอตรวจสอบยอดคงเหลือ': 'ระบบได้รับสลิปยอดคงเหลือของคุณแล้ว ทีมงานกำลังตรวจสอบและจะอนุมัติภายใน 1-2 วันทำการ',
+      'รอตรวจสอบเงินเพิ่มเติม': 'ระบบได้รับสลิปการชำระเพิ่มเติมของคุณแล้ว ทีมงานกำลังตรวจสอบและจะอนุมัติภายใน 1-2 วันทำการ',
+      'ชำระครบแล้ว': 'คุณได้ชำระเงินครบถ้วนแล้ว โปรดแสดงหลักฐานการลงทะเบียนหรือแจ้งรหัสการลงทะเบียนเมื่อเข้าร่วมกิจกรรม',
+      'ชำระเต็มจำนวนแล้ว': 'คุณได้ชำระเงินครบถ้วนแล้ว โปรดแสดงหลักฐานการลงทะเบียนหรือแจ้งรหัสการลงทะเบียนเมื่อเข้าร่วมกิจกรรม',
+      'ชำระมัดจำแล้ว': 'คุณได้ชำระมัดจำเรียบร้อยแล้ว โปรดชำระยอดคงเหลือภายในวันและเวลาที่กำหนด',
+      'ชำระยอดคงเหลือแล้ว': 'คุณได้ชำระเงินครบถ้วนแล้ว โปรดแสดงหลักฐานการลงทะเบียนหรือแจ้งรหัสการลงทะเบียนเมื่อเข้าร่วมกิจกรรม',
+      'รอชำระยอดคงเหลือ': 'คุณได้ชำระมัดจำแล้ว โปรดชำระยอดคงเหลือภายในวันและเวลาที่กำหนด',
+      'รอชำระมัดจำ': 'โปรดชำระเงินมัดจำตามยอดที่ระบุ และอัปโหลดสลิปเพื่อยืนยันการชำระ',
+      'พ้นกำหนด': 'การชำระเงินเกินกำหนด โปรดติดต่อเจ้าหน้าที่เพื่อขอความช่วยเหลือ',
+      'ปฏิเสธสลิป': 'สลิปของคุณถูกปฏิเสธ โปรดตรวจสอบเหตุผลและอัปโหลดสลิปใหม่',
+      'ลงทะเบียนแล้ว': 'คุณได้ลงทะเบียนเรียบร้อยแล้ว (กิจกรรมไม่มีค่าใช้จ่าย)',
+    };
+    return descriptions[status] || 'กรุณาติดต่อเจ้าหน้าที่หากมีข้อสงสัย';
+  };
+
+  // Helper function to get Thai payment type name
+  const getPaymentTypeName = (type: string): string => {
+    const names: Record<string, string> = {
+      'full': 'ชำระเต็มจำนวน',
+      'deposit': 'มัดจำ',
+      'remaining': 'ยอดคงเหลือ',
+      'additional': 'ชำระเพิ่มเติม',
+    };
+    return names[type] || type;
+  };
+
+  // Helper function to get slip status badge class
+  const getSlipStatusBadgeClass = (status: string): string => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Helper function to get slip status text
+  const getSlipStatusText = (status: string): string => {
+    const texts: Record<string, string> = {
+      'approved': 'อนุมัติแล้ว',
+      'pending': 'รอตรวจสอบ',
+      'rejected': 'ปฏิเสธ',
+    };
+    return texts[status] || status;
+  };
+
   const fetchEventDetail = async () => {
     try {
       const response = await fetch(`/api/events/${eventId}/detail`);
@@ -191,6 +276,11 @@ export default function EventDetailPage() {
         setEvent(data.event);
         setSummary(data.summary);
         setUserRegistration(data.userRegistration);
+
+        // Fetch payment slips if user has registered
+        if (data.userRegistration?.registrationId) {
+          fetchPaymentSlips(data.userRegistration.registrationId);
+        }
 
         // Store member contact info and status
         if (data.memberName) {
@@ -1444,24 +1534,84 @@ export default function EventDetailPage() {
                       {/* 2. Payment Status - Large and Clear */}
                       {userRegistration.paymentStatus && (
                         <div className="bg-white rounded-lg p-4 mb-4 border-2 border-gray-200">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between mb-3">
                             <span className="text-base font-semibold text-gray-700">สถานะการชำระเงิน</span>
                             <span className={`px-4 py-2 rounded-lg text-base font-bold ${getStatusBadgeClass(userRegistration.paymentStatus)}`}>
                               {userRegistration.paymentStatus}
                             </span>
                           </div>
+                          {/* Payment Status Description */}
+                          <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <svg className="w-4 h-4 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {getPaymentStatusDescription(userRegistration.paymentStatus)}
+                          </div>
                         </div>
                       )}
 
-                      {/* 2.5. Payment Slip Display - Show uploaded slips */}
-                      {(userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl) && (
+                      {/* 2.5. Payment Slips Table - Show all payment slips */}
+                      {paymentSlips.length > 0 && (
                         <div className="bg-white rounded-lg p-4 mb-4 border border-gray-200">
                           <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                             <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            หลักฐานการชำระเงิน
+                            ประวัติการชำระเงิน
                           </h4>
+
+                          {/* Payment Slips Table */}
+                          <div className="overflow-x-auto -mx-4 sm:mx-0">
+                            <table className="w-full text-sm">
+                              <thead className="bg-gray-50 border-y border-gray-200">
+                                <tr>
+                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">วันที่ชำระ</th>
+                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">ประเภท</th>
+                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">ยอดเงิน</th>
+                                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">สถานะ</th>
+                                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">ดูสลิป</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200">
+                                {paymentSlips.map((slip) => (
+                                  <tr key={slip.slipId} className="hover:bg-gray-50">
+                                    <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">
+                                      {new Date(slip.uploadedAt).toLocaleDateString('th-TH', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                      })}
+                                    </td>
+                                    <td className="px-3 py-3">
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                        {getPaymentTypeName(slip.paymentType)}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-3 text-right text-xs font-semibold text-gray-900 whitespace-nowrap">
+                                      {slip.amount.toLocaleString()} บาท
+                                    </td>
+                                    <td className="px-3 py-3 text-center">
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>
+                                        {getSlipStatusText(slip.status)}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-3 text-center">
+                                      <button
+                                        onClick={() => {
+                                          setLightboxImage(slip.slipUrl);
+                                          setLightboxTitle(`สลิป${getPaymentTypeName(slip.paymentType)}`);
+                                          setLightboxOpen(true);
+                                        }}
+                                        className="text-blue-600 hover:text-blue-800 hover:underline text-xs font-medium"
+                                      >
+                                        ดูสลิป
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                           <div className="space-y-3">
                             {/* Deposit Slip (for Deposit mode) OR Full Payment Slip (for Full mode) */}
                             {(userRegistration.depositSlipUrl || (event.paymentMode !== 'deposit' && (userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl))) && (

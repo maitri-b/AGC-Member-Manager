@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
 
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-      // Update legacy slip URL fields and ONLY payment_status (not status)
+      // Update slip URL fields and ONLY payment_status (not status)
       if (paymentType === 'deposit') {
         updateData.depositSlipUrl = slipUrl;
         updateData.depositPaidDate = today;
@@ -162,11 +162,14 @@ export async function POST(request: NextRequest) {
         updateData.paymentStatus = 'รอตรวจสอบยอดคงเหลือ';
         // Do NOT update 'status'
       } else if (paymentType === 'full') {
+        // ✅ Use Full Payment Fields for Full Payment Mode
+        updateData.fullPaymentSlipUrl = slipUrl;
+        updateData.fullPaymentPaidDate = today;
+        updateData.paymentStatus = 'รอตรวจสอบ';
+
+        // ✅ Keep legacy fields for backward compatibility (but don't set paidDate for old fields)
         updateData.depositSlipUrl = slipUrl;
         updateData.remainingSlipUrl = slipUrl;
-        updateData.depositPaidDate = today;
-        updateData.remainingPaidDate = today;
-        updateData.paymentStatus = 'รอตรวจสอบ';
         // Do NOT update 'status'
       } else if (paymentType === 'additional') {
         // Handle additional payment tracking

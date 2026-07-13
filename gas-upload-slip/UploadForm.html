@@ -359,14 +359,38 @@
       document.getElementById('loading').style.display = 'none';
 
       if (response.success) {
-        showMessage('success', '✅ ' + response.message + '\n\n' +
-          'คุณสามารถปิดหน้าต่างนี้เพื่อกลับไปยังหน้าการลงทะเบียนได้เลย ' +
-          'ระบบจะอัปเดตข้อมูลการชำระเงินของคุณโดยอัตโนมัติ');
+        showMessage('success', '✅ ' + response.message);
 
-        // Auto close after 5 seconds (increased for longer message)
+        // Show back button
+        const backButton = document.createElement('button');
+        backButton.textContent = '← กลับไปหน้าลงทะเบียน';
+        backButton.style.marginTop = '16px';
+        backButton.onclick = function() {
+          // Get return URL from sessionStorage or construct it
+          const returnUrl = sessionStorage.getItem('returnUrl') || window.opener?.location.href || '/events/<?= eventId ?>';
+
+          // If opened in popup (window.opener exists), close it
+          if (window.opener) {
+            window.close();
+          } else {
+            // If opened in same window, navigate back
+            window.location.href = returnUrl;
+          }
+        };
+
+        // Insert button after message
+        const messageBox = document.getElementById('messageBox');
+        messageBox.parentNode.insertBefore(backButton, messageBox.nextSibling);
+
+        // Also auto-redirect after 3 seconds
         setTimeout(function() {
-          google.script.host.close();
-        }, 5000);
+          const returnUrl = sessionStorage.getItem('returnUrl') || window.opener?.location.href || '/events/<?= eventId ?>';
+          if (window.opener) {
+            window.close();
+          } else {
+            window.location.href = returnUrl;
+          }
+        }, 3000);
       } else {
         showMessage('error', '❌ ' + response.error);
         document.getElementById('uploadForm').style.display = 'block';

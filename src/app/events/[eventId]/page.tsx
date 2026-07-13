@@ -176,6 +176,20 @@ export default function EventDetailPage() {
     if (eventId) {
       fetchEventDetail();
     }
+
+    // Check if returning from slip upload on mobile
+    const returnUrl = sessionStorage.getItem('returnUrl');
+    if (returnUrl && returnUrl.includes(eventId)) {
+      sessionStorage.removeItem('returnUrl');
+      // Show success message
+      toast.success('กลับมาจากการอัพโหลดสลิป กรุณารอสักครู่...');
+      // Refresh data after a delay
+      setTimeout(() => {
+        if (eventId) {
+          fetchEventDetail();
+        }
+      }, 1000);
+    }
   }, [eventId]);
 
   const fetchEventDetail = async () => {
@@ -1678,23 +1692,12 @@ export default function EventDetailPage() {
                                   url.searchParams.append('lineUserId', session?.user?.id || '');
                                   url.searchParams.append('paymentType', paymentType);
 
-                                  const popup = window.open(
-                                    url.toString(),
-                                    'uploadSlip',
-                                    'width=600,height=700,scrollbars=yes,resizable=yes'
-                                  );
+                                  // Store current page URL for return navigation
+                                  sessionStorage.setItem('returnUrl', window.location.href);
 
-                                  if (!popup) {
-                                    toast.error('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ (Popup)');
-                                    return;
-                                  }
-
-                                  const checkClosed = setInterval(() => {
-                                    if (popup.closed) {
-                                      clearInterval(checkClosed);
-                                      fetchEventDetail();
-                                    }
-                                  }, 500);
+                                  // Open in same window/tab for better GAS authentication compatibility
+                                  // Works on both mobile and desktop browsers
+                                  window.location.href = url.toString();
                                 }
                               }}
                               className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"

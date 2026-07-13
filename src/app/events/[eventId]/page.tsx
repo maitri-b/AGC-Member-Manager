@@ -951,9 +951,12 @@ export default function EventDetailPage() {
                         </div>
                       </div>
 
-                      {event?.maxPerCompany && event.maxPerCompany > 0 && (
+                      {event?.maxPerCompany !== undefined && (
                         <p className="text-xs text-green-600 mt-2">
-                          * จำกัด {event.maxPerCompany} คนต่อ 1 บริษัท
+                          {event.maxPerCompany > 0
+                            ? `* จำกัด ${event.maxPerCompany} คนต่อ 1 บริษัท`
+                            : '* ไม่จำกัดจำนวนต่อบริษัท'
+                          }
                         </p>
                       )}
 

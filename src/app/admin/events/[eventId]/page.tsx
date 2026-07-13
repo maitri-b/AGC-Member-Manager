@@ -114,6 +114,7 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled'>('all');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
@@ -878,13 +879,29 @@ export default function EventDetailPage() {
   };
 
   const filteredAttendees = eventData?.attendees.filter(attendee => {
-    // Filter by status
-    if (filter === 'confirmed' && !attendee.isConfirmed) return false;
-    if (filter === 'pending' && attendee.isConfirmed) return false;
-    if (filter === 'cancelled') {
-      const status = String(attendee.registration.status || '').toLowerCase();
-      const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
+    // Check if registration is cancelled
+    const status = String(attendee.registration.status || '').toLowerCase();
+    const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
+
+    // Filter by registration status
+    if (filter === 'confirmed') {
+      // Exclude cancelled registrations from confirmed filter
+      if (isCancelled || !attendee.isConfirmed) return false;
+    } else if (filter === 'pending') {
+      // Exclude cancelled registrations from pending filter
+      if (isCancelled || attendee.isConfirmed) return false;
+    } else if (filter === 'cancelled') {
+      // Only show cancelled registrations
       if (!isCancelled) return false;
+    } else if (filter === 'all') {
+      // 'all' filter should exclude cancelled by default
+      // (if you want to show cancelled in 'all', remove this condition)
+      // For now, keeping cancelled separate
+    }
+
+    // Filter by payment status
+    if (paymentFilter !== 'all') {
+      if (attendee.registration.paymentStatus !== paymentFilter) return false;
     }
 
     // Filter by search term
@@ -1057,8 +1074,9 @@ export default function EventDetailPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col gap-4">
+            {/* Search Input */}
+            <div className="w-full">
               <input
                 type="text"
                 placeholder="ค้นหาชื่อ, บริษัท, เลขใบอนุญาต, รหัสสมาชิก..."
@@ -1067,50 +1085,99 @@ export default function EventDetailPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  filter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                ทั้งหมด ({eventData.attendees.length})
-              </button>
-              <button
-                onClick={() => setFilter('confirmed')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  filter === 'confirmed'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                ยืนยันแล้ว ({eventData.summary.confirmedCount})
-              </button>
-              <button
-                onClick={() => setFilter('pending')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  filter === 'pending'
-                    ? 'bg-orange-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                รอดำเนินการ ({eventData.attendees.length - eventData.summary.confirmedCount})
-              </button>
-              <button
-                onClick={() => setFilter('cancelled')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  filter === 'cancelled'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                ยกเลิก ({eventData.attendees.filter(a => {
-                  const status = String(a.registration.status || '').toLowerCase();
-                  return status === 'cancelled' || a.registration.status?.includes('ยกเลิก');
-                }).length})
-              </button>
+
+            {/* Registration Status Filter */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">สถานะการลงทะเบียน</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    filter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  ทั้งหมด ({eventData.attendees.length})
+                </button>
+                <button
+                  onClick={() => setFilter('confirmed')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    filter === 'confirmed'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  ยืนยันแล้ว ({eventData.summary.confirmedCount})
+                </button>
+                <button
+                  onClick={() => setFilter('pending')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    filter === 'pending'
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  รอดำเนินการ ({eventData.attendees.length - eventData.summary.confirmedCount})
+                </button>
+                <button
+                  onClick={() => setFilter('cancelled')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    filter === 'cancelled'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  ยกเลิก ({eventData.attendees.filter(a => {
+                    const status = String(a.registration.status || '').toLowerCase();
+                    return status === 'cancelled' || a.registration.status?.includes('ยกเลิก');
+                  }).length})
+                </button>
+              </div>
+            </div>
+
+            {/* Payment Status Filter */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">สถานะการชำระเงิน</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setPaymentFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    paymentFilter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  ทั้งหมด
+                </button>
+                {(() => {
+                  // Get unique payment statuses from attendees
+                  const paymentStatuses = Array.from(
+                    new Set(
+                      eventData.attendees
+                        .map(a => a.registration.paymentStatus)
+                        .filter(Boolean)
+                    )
+                  ).sort();
+
+                  return paymentStatuses.map(status => {
+                    const count = eventData.attendees.filter(a => a.registration.paymentStatus === status).length;
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => setPaymentFilter(status)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          paymentFilter === status
+                            ? getStatusBadgeClass(status).replace('bg-', 'bg-opacity-100 bg-').replace('text-', 'text-white border-2 border-')
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {status} ({count})
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
             </div>
           </div>
         </div>
@@ -1287,6 +1354,13 @@ export default function EventDetailPage() {
                         }`}>
                           {attendee.isConfirmed ? 'ยืนยันเข้าร่วม' : 'รอดำเนินการ'}
                         </span>
+
+                        {/* Payment Status badge */}
+                        {attendee.registration.paymentStatus && (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeClass(attendee.registration.paymentStatus)}`}>
+                            {attendee.registration.paymentStatus}
+                          </span>
+                        )}
                       </div>
 
                       {/* Company info */}

@@ -142,9 +142,6 @@ export async function GET(
               return dateB > dateA ? 1 : -1; // descending order
             })[0];
 
-            // Calculate current payment status
-            const currentStatus = determinePaymentStatus(latestReg, eventData as Event);
-
             // Parse attendee type selections, room allocations, and special charges from JSON strings
             let attendeeTypeSelections = [];
             let roomAllocations = [];
@@ -234,7 +231,9 @@ export async function GET(
               remainingSlipUrl: latestReg.remainingSlipUrl,
               depositDeadline: latestReg.depositDeadline,
               remainingDeadline: latestReg.remainingDeadline,
-              paymentStatus: currentStatus,
+              // Use actual paymentStatus from Firestore (updated by GAS webhook and approve/reject)
+              // NOT determinePaymentStatus() which is legacy logic
+              paymentStatus: latestReg.paymentStatus || 'รอชำระเงิน',
               // Attendee type selections, room allocations, and special charges (New)
               attendeeTypeSelections,
               roomAllocations,

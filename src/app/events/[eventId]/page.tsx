@@ -82,7 +82,8 @@ interface PaymentSlip {
   paymentType: 'deposit' | 'remaining' | 'full' | 'additional';
   description: string;
   slipUrl: string;
-  uploadedAt: string;
+  uploadedAt?: string;
+  createdAt?: string; // Alternative timestamp field
   uploadedBy: string;
   status: 'pending' | 'approved' | 'rejected';
   reviewedAt?: string;
@@ -200,13 +201,20 @@ export default function EventDetailPage() {
 
   const fetchPaymentSlips = async (registrationId: string) => {
     try {
+      console.log('[Payment Slips] Fetching slips for registrationId:', registrationId);
       const response = await fetch(`/api/payments/slips?registrationId=${registrationId}`);
+      console.log('[Payment Slips] Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('[Payment Slips] Received data:', data);
+        console.log('[Payment Slips] Number of slips:', data.slips?.length || 0);
         setPaymentSlips(data.slips || []);
+      } else {
+        console.error('[Payment Slips] Failed to fetch:', response.statusText);
       }
     } catch (error) {
-      console.error('Error fetching payment slips:', error);
+      console.error('[Payment Slips] Error fetching payment slips:', error);
     }
   };
 
@@ -1576,7 +1584,7 @@ export default function EventDetailPage() {
                                 {paymentSlips.map((slip) => (
                                   <tr key={slip.slipId} className="hover:bg-gray-50">
                                     <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">
-                                      {new Date(slip.uploadedAt).toLocaleDateString('th-TH', {
+                                      {new Date(slip.uploadedAt || slip.createdAt || new Date()).toLocaleDateString('th-TH', {
                                         year: 'numeric',
                                         month: 'short',
                                         day: 'numeric',

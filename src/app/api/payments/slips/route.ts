@@ -26,16 +26,23 @@ export async function GET(request: NextRequest) {
     const db = adminDb();
 
     // Get all payment slips for this registration
+    // Fetch with where clause only, then sort in JavaScript to avoid composite index requirement
     const slipsSnapshot = await db
       .collection('paymentSlips')
       .where('registrationId', '==', registrationId)
-      .orderBy('uploadedAt', 'desc')
       .get();
 
-    const slips = slipsSnapshot.docs.map(doc => ({
+    let slips = slipsSnapshot.docs.map(doc => ({
       slipId: doc.id,
       ...doc.data(),
     }));
+
+    // Sort by uploadedAt or createdAt in JavaScript
+    slips.sort((a: any, b: any) => {
+      const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
+      const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
+      return dateB - dateA; // descending
+    });
 
     return NextResponse.json({
       success: true,

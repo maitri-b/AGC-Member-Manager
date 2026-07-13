@@ -137,6 +137,7 @@ export async function approvePaymentSlip(
 
   if (!snapshot.empty) {
     const registrationDoc = snapshot.docs[0];
+    const registrationData = registrationDoc.data();
     const updateData: Record<string, any> = {
       updatedAt: reviewedAt,
     };
@@ -148,19 +149,49 @@ export async function approvePaymentSlip(
       updateData.depositPaid = true;
       updateData.depositPaidDate = today;
       updateData.depositSlipUrl = slip.slipUrl; // Store slip URL
+      updateData.paidAmount = slip.amount; // Track total paid amount
       updateData.paymentStatus = 'ชำระมัดจำแล้ว';
+
+      // Calculate remaining deadline (if event uses deposit mode)
+      // Import getEventById from event-sheets.ts
+      const { getEventById } = await import('./event-sheets');
+      const event = await getEventById(slip.eventId);
+
+      if (event && event.paymentMode === 'deposit') {
+        // Calculate remaining deadline based on event configuration
+        if (event.remainingDeadlineType === 'fixed' && event.remainingDeadlineFixed) {
+          updateData.remainingDeadline = event.remainingDeadlineFixed;
+        } else if (event.remainingDeadlineType === 'hours' && event.remainingDeadlineHours) {
+          const deadlineDate = new Date();
+          deadlineDate.setHours(deadlineDate.getHours() + event.remainingDeadlineHours);
+          updateData.remainingDeadline = deadlineDate.toISOString();
+        }
+      }
       // Do NOT update 'status' - that's for registration confirmation by admin
     } else if (slip.paymentType === 'remaining') {
+      updateData.remainingPaid = true;
       updateData.remainingPaidDate = today; // Set paid date for remaining payment
       updateData.remainingSlipUrl = slip.slipUrl; // Store slip URL
+
+      // Update total paid amount (add remaining to existing deposit)
+      const currentPaid = registrationData.paidAmount || 0;
+      updateData.paidAmount = currentPaid + slip.amount;
+
       updateData.paymentStatus = 'ชำระยอดคงเหลือแล้ว';
       // Do NOT update 'status'
     } else if (slip.paymentType === 'full') {
+      // ✅ Use Full Payment Fields
+      updateData.fullPaymentPaid = true;
+      updateData.fullPaymentPaidDate = today;
+      updateData.fullPaymentSlipUrl = slip.slipUrl;
+      updateData.paidAmount = slip.amount;
+      updateData.paymentStatus = 'ชำระเต็มจำนวนแล้ว';
+
+      // ✅ Set deposit/remaining fields for backward compatibility
       updateData.depositPaid = true;
       updateData.depositPaidDate = today;
-      updateData.remainingPaidDate = today; // Full payment also counts as remaining paid
-      updateData.remainingSlipUrl = slip.slipUrl; // Store slip URL for full payment
-      updateData.paymentStatus = 'ชำระเต็มจำนวนแล้ว';
+      updateData.remainingPaid = true;
+      updateData.remainingPaidDate = today;
       // Do NOT update 'status'
     } else if (slip.paymentType === 'additional') {
       // Sync additional payment to eventRegistrations.additionalPayments
@@ -254,6 +285,7 @@ export async function rejectPaymentSlip(
 
   if (!snapshot.empty) {
     const registrationDoc = snapshot.docs[0];
+    const registrationData = registrationDoc.data();
     const updateData: Record<string, any> = {
       updatedAt: reviewedAt,
     };
@@ -263,20 +295,42 @@ export async function rejectPaymentSlip(
       updateData.depositSlipUrl = '';
       updateData.depositPaidDate = null;
       updateData.depositPaid = false;
+
+      // Reset paid amount
+      const currentPaid = registrationData.paidAmount || 0;
+      updateData.paidAmount = Math.max(0, currentPaid - slip.amount);
+
       updateData.paymentStatus = 'รอชำระมัดจำ';
+
+      // Clear remaining deadline (will need to be recalculated on next deposit approval)
+      updateData.remainingDeadline = null;
       // Do NOT update 'status' - that's for registration confirmation by admin
     } else if (slip.paymentType === 'remaining') {
       updateData.remainingSlipUrl = '';
       updateData.remainingPaidDate = null;
+      updateData.remainingPaid = false;
+
+      // Reset paid amount
+      const currentPaid = registrationData.paidAmount || 0;
+      updateData.paidAmount = Math.max(0, currentPaid - slip.amount);
+
       updateData.paymentStatus = 'รอชำระยอดคงเหลือ';
       // Do NOT update 'status'
     } else if (slip.paymentType === 'full') {
+      // ✅ Clear Full Payment Fields
+      updateData.fullPaymentSlipUrl = '';
+      updateData.fullPaymentPaidDate = null;
+      updateData.fullPaymentPaid = false;
+      updateData.paidAmount = 0;
+      updateData.paymentStatus = 'รอชำระเงิน';
+
+      // ✅ Clear backward compatibility fields
       updateData.depositSlipUrl = '';
       updateData.remainingSlipUrl = '';
       updateData.depositPaidDate = null;
       updateData.remainingPaidDate = null;
       updateData.depositPaid = false;
-      updateData.paymentStatus = 'รอชำระเงิน';
+      updateData.remainingPaid = false;
       // Do NOT update 'status'
     } else if (slip.paymentType === 'additional') {
       // Sync rejection to eventRegistrations.additionalPayments

@@ -266,6 +266,83 @@ export default function EventDetailPage() {
 - Old payment confirmation modal still works but is deprecated
 - Gradually migrate to new system by using PaymentDetailsModal instead
 
+## Admin Payment Management Features
+
+### PAYMENT_ADJUSTMENT_FLOW Progress
+
+#### ✅ Task #1: Admin Approve/Reject Additional Payment (Completed)
+- Admin สามารถอนุมัติ/ปฏิเสธสลิป additional payment ได้
+- ระบบจะอัพเดท `eventRegistrations.additionalPayments` อัตโนมัติ
+- Sync ข้อมูลระหว่าง `paymentSlips` collection และ `eventRegistrations`
+- เก็บประวัติสลิปที่อนุมัติและปฏิเสธ
+
+#### ✅ Task #2: Admin Upload Slip on Behalf of User (Completed - 2026-07-13)
+Admin สามารถอัพโหลดสลิปแทนผู้ใช้ได้ผ่าน Payment Confirmation Modal
+
+**Features:**
+- **API Endpoint**: `/api/admin/payments/upload-for-user`
+  - รับไฟล์แบบ base64
+  - อัพโหลดไปที่ Firebase Storage: `payment-slips/{eventId}/{registrationId}/{timestamp}.ext`
+  - สร้าง paymentSlip record พร้อมสถานะ "pending"
+  - บันทึก admin action log ใน Firestore
+  - ตรวจสอบสิทธิ์ admin เท่านั้น
+
+- **Enhanced UI**:
+  - พื้นที่อัพโหลดไฟล์แบบ drag-and-drop style
+  - แสดงตัวอย่างไฟล์ที่เลือก (ชื่อไฟล์, ขนาด)
+  - ปุ่มลบไฟล์
+  - รองรับไฟล์: JPG, PNG, PDF (สูงสุด 5MB)
+  - ตัวเลือกกรอก URL โดยตรง (สำหรับไฟล์ที่อัพโหลดไว้แล้ว)
+  - แสดงสถานะการอัพโหลดแบบ real-time
+
+- **วิธีใช้**:
+  1. Admin เปิด Payment Confirmation Modal
+  2. เลือกวิธีใดวิธีหนึ่ง:
+     - คลิกพื้นที่อัพโหลด → เลือกไฟล์ → ดูตัวอย่าง
+     - พิมพ์ URL ของสลิปที่อัพโหลดไว้แล้ว
+  3. กด "✓ ยืนยันการชำระ"
+  4. ระบบจะอัพโหลดไฟล์อัตโนมัติก่อนบันทึกการชำระเงิน
+
+- **Security & Audit**:
+  - ตรวจสอบ admin role (return 403 if not admin)
+  - File metadata ระบุข้อมูล admin
+  - Log การกระทำใน `adminLogs` collection:
+    ```typescript
+    {
+      action: 'upload_payment_slip_for_user',
+      adminId: string,
+      adminEmail: string,
+      registrationId: string,
+      eventId: string,
+      slipId: string,
+      paymentType: PaymentType,
+      amount: number,
+      timestamp: ISO string
+    }
+    ```
+
+**Files Modified:**
+- `src/app/api/admin/payments/upload-for-user/route.ts` (new)
+- `src/app/admin/events/[eventId]/page.tsx` (enhanced payment modal)
+
+#### ⏳ Task #3: Admin Cancel Approved Slips (Pending)
+Admin สามารถยกเลิกสลิปที่อนุมัติแล้วได้ (กรณีคืนเงิน)
+
+**Planned Features:**
+- ยกเลิกสลิปที่อนุมัติไปแล้ว
+- ระบุเหตุผลการคืนเงิน
+- Revert การอัพเดทใน eventRegistrations
+- บันทึก audit log
+
+#### ⏳ Task #4: Admin Force Status Override (Pending)
+Admin สามารถเปลี่ยนสถานะการชำระเงินได้โดยไม่ต้องมีสลิป
+
+**Planned Features:**
+- เปลี่ยนสถานะเป็น "ชำระครบ" โดยไม่ต้องมีสลิป
+- ระบุเหตุผล (เช่น "ชำระด้วยเงินสด", "ยกเว้นค่าธรรมเนียม")
+- บันทึก audit log พร้อมเหตุผล
+- UI สำหรับ override status
+
 ## Future Enhancements
 
 - [ ] Bulk approve/reject

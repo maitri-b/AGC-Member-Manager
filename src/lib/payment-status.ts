@@ -51,31 +51,29 @@ export function determinePaymentStatus(
   }
 
   // Priority 3: Full payment mode (non-deposit)
-  // Full Payment Mode is identified by: depositAmount === 0
-  if (event.paymentMode !== 'deposit' || registration.depositAmount === 0) {
-    // Check if slip was uploaded (even if not verified yet)
-    const hasSlip = registration.depositSlipUrl || registration.remainingSlipUrl || (registration as any).slipUrl;
+  // Full Payment Mode is identified by: paymentMode === 'full' OR depositAmount === 0
+  if (event.paymentMode === 'full' || registration.depositAmount === 0) {
+    // ✅ Use Full Payment Fields (with backward compatibility)
+    const fullPaymentPaid = registration.fullPaymentPaid ?? registration.depositPaid;
+    const fullPaymentSlipUrl = registration.fullPaymentSlipUrl || registration.remainingSlipUrl || registration.depositSlipUrl || (registration as any).slipUrl;
+    const fullPaymentDeadline = registration.fullPaymentDeadline || registration.remainingDeadline;
 
-    if (hasSlip) {
+    // Check if payment already approved
+    if (fullPaymentPaid) {
+      return 'ชำระครบแล้ว';
+    }
+
+    // Check if slip was uploaded (even if not verified yet)
+    if (fullPaymentSlipUrl) {
       return 'รอตรวจสอบ'; // Slip uploaded, waiting for admin verification
     }
 
-    // Check if payment deadline passed (Full Payment Mode uses remaining_deadline)
-    if (registration.remainingDeadline && isDeadlinePassed(registration.remainingDeadline)) {
+    // Check if payment deadline passed
+    if (fullPaymentDeadline && isDeadlinePassed(fullPaymentDeadline)) {
       return 'พ้นกำหนด'; // Payment overdue
     }
 
-    // Check if confirmed by admin
-    const status = registration.status || '';
-    const statusLower = status.toLowerCase();
-    const isConfirmed =
-      statusLower === 'confirmed' ||
-      statusLower === 'attended' ||
-      status.includes('ยืนยัน') ||
-      status.includes('ตรวจสอบแล้ว') ||
-      status.includes('ชำระครบแล้ว');
-
-    return isConfirmed ? 'ชำระครบแล้ว' : 'รอชำระเงิน';
+    return 'รอชำระเงิน';
   }
 
   // Priority 4: Deposit mode

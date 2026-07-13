@@ -233,6 +233,7 @@ export async function POST(
     let remainingAmount = totalFee;
     let depositDeadline = '';
     let remainingDeadline = '';
+    let fullPaymentDeadline = '';
     let paymentStatus = totalFee > 0 ? 'รอชำระเงิน' : 'ลงทะเบียนแล้ว';
 
     const registrationDate = new Date().toISOString();
@@ -253,11 +254,12 @@ export async function POST(
 
       paymentStatus = 'รอชำระมัดจำ';
     } else if (totalFee > 0) {
-      // Full Payment Mode: Calculate payment deadline using remaining_deadline
-      // We use remaining_deadline (not deposit_deadline) to semantically differentiate:
-      // - Full Payment: deposit_amount = 0, remaining_deadline = payment deadline
-      // - Deposit Mode: deposit_amount > 0, deposit_deadline + remaining_deadline
-      remainingDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
+      // ✅ Full Payment Mode: Use dedicated fullPaymentDeadline field
+      fullPaymentDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
+
+      // ✅ For backward compatibility, also set remainingDeadline (for legacy code)
+      remainingDeadline = fullPaymentDeadline;
+
       paymentStatus = 'รอชำระเงิน';
     }
 
@@ -289,6 +291,7 @@ export async function POST(
       remainingSlipUrl: '',
       depositDeadline: depositDeadline,
       remainingDeadline: remainingDeadline,
+      fullPaymentDeadline: fullPaymentDeadline,
       paymentStatus: paymentStatus,
       attendeeTypeSelections: JSON.stringify(attendeeTypeSelections),
       roomAllocations: JSON.stringify(roomAllocations),

@@ -38,16 +38,25 @@ export interface EventRegistration {
   totalAmount: number;              // total_amount
   slipUrl: string;                  // slip_url (for full payment or legacy)
 
-  // Deposit Payment (New - for 2-stage payment)
+  // Full Payment Mode Fields (New - for paymentMode = 'full')
+  fullPaymentDeadline?: string;     // full_payment_deadline - ISO timestamp when full payment is due
+  fullPaymentPaid?: boolean;        // full_payment_paid - Has full payment been paid?
+  fullPaymentPaidDate?: string;     // full_payment_paid_date - When full payment was paid (ISO timestamp)
+  fullPaymentSlipUrl?: string;      // full_payment_slip_url - Slip for full payment
+
+  // Deposit Payment Mode Fields (for paymentMode = 'deposit')
   depositAmount: number;            // deposit_amount - Deposit for this registration
   remainingAmount: number;          // remaining_amount - Remaining balance
   depositPaid: boolean;             // deposit_paid - Has deposit been paid?
   depositPaidDate: string;          // deposit_paid_date - When deposit was paid (ISO timestamp)
+  remainingPaid?: boolean;          // remaining_paid - Has remaining been paid?
   remainingPaidDate: string;        // remaining_paid_date - When remaining was paid (ISO timestamp)
   depositSlipUrl: string;           // deposit_slip_url - Slip for deposit payment
   remainingSlipUrl: string;         // remaining_slip_url - Slip for remaining payment
   depositDeadline: string;          // deposit_deadline - ISO timestamp when deposit is due
   remainingDeadline: string;        // remaining_deadline - ISO timestamp when remaining is due
+
+  // Payment Status
   paymentStatus: string;            // payment_status - Current computed payment status
 
   // Verification
@@ -433,6 +442,12 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   // Payment tracking (New - for additional payments)
   paidAmount: 'paid_amount',
   additionalPayments: 'additional_payments',
+  // Full Payment Mode Fields (New)
+  fullPaymentDeadline: 'full_payment_deadline',
+  fullPaymentPaid: 'full_payment_paid',
+  fullPaymentPaidDate: 'full_payment_paid_date',
+  fullPaymentSlipUrl: 'full_payment_slip_url',
+  remainingPaid: 'remaining_paid',
 };
 
 // Reverse mapping for sheet to registration conversion

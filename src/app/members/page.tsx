@@ -93,6 +93,150 @@ function formatThaiDateForMessage(dateStr: string | undefined): string {
   }
 }
 
+// Change Status Modal Component
+function ChangeStatusModal({
+  member,
+  onClose,
+  onSuccess,
+}: {
+  member: MemberWithProfile;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [selectedStatus, setSelectedStatus] = useState(member.status || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const statusOptions = [
+    { value: 'ปกติ', label: 'ปกติ', color: 'bg-green-100 text-green-800' },
+    { value: 'ไม่ปกติ', label: 'ไม่ปกติ', color: 'bg-gray-100 text-gray-800' },
+    { value: 'หมดอายุ', label: 'หมดอายุ', color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'ถูกเพิกถอน', label: 'ถูกเพิกถอน', color: 'bg-red-100 text-red-800' },
+    { value: 'ระงับ', label: 'ระงับ', color: 'bg-orange-100 text-orange-800' },
+  ];
+
+  const handleSave = async () => {
+    if (!selectedStatus) {
+      setError('กรุณาเลือกสถานะ');
+      return;
+    }
+
+    if (selectedStatus === member.status) {
+      onClose();
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/members/${member.memberId}/update-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: selectedStatus }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update status');
+      }
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      console.error('Error updating status:', err);
+      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการอัปเดตสถานะ');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">เปลี่ยนสถานะสมาชิก</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-6 py-4">
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-1">สมาชิก</p>
+            <p className="font-medium">{member.fullNameTH || member.nickname || '-'}</p>
+            <p className="text-sm text-gray-500">{member.companyNameTH || member.companyNameEN || '-'}</p>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              เลือกสถานะใหม่
+            </label>
+            <div className="space-y-2">
+              {statusOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSelectedStatus(option.value)}
+                  className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
+                    selectedStatus === option.value
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{option.label}</span>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${option.color}`}>
+                      {option.label}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+          >
+            ยกเลิก
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !selectedStatus}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          >
+            {saving ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                กำลังบันทึก...
+              </>
+            ) : (
+              'บันทึก'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Notification Modal Component
 function NotificationModal({
   member,
@@ -844,6 +988,9 @@ export default function MembersPage() {
   // Contact Modal state
   const [contactMember, setContactMember] = useState<MemberWithProfile | null>(null);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
+
+  // Change Status Modal state
+  const [changeStatusMember, setChangeStatusMember] = useState<MemberWithProfile | null>(null);
 
   // Action menu state
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -1720,6 +1867,47 @@ export default function MembersPage() {
                               </button>
                             )}
 
+                            {/* Dropdown menu - Only for Admin and Committee */}
+                            {(session?.user?.role === 'admin' || session?.user?.role === 'committee') && (
+                              <div className="relative">
+                                <button
+                                  onClick={() => setOpenMenuId(openMenuId === member.memberId ? null : member.memberId)}
+                                  className="text-gray-600 hover:text-gray-800 p-1"
+                                  title="จัดการ"
+                                >
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                  </svg>
+                                </button>
+
+                                {openMenuId === member.memberId && (
+                                  <>
+                                    {/* Backdrop */}
+                                    <div
+                                      className="fixed inset-0 z-10"
+                                      onClick={() => setOpenMenuId(null)}
+                                    />
+
+                                    {/* Dropdown menu */}
+                                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-20 border border-gray-200">
+                                      <button
+                                        onClick={() => {
+                                          setChangeStatusMember(member);
+                                          setOpenMenuId(null);
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        เปลี่ยนสถานะ
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
+
                           </div>
                         </td>
                       </tr>
@@ -1882,6 +2070,47 @@ export default function MembersPage() {
                             </svg>
                           </button>
                         )}
+
+                        {/* Dropdown menu - Only for Admin and Committee */}
+                        {(session?.user?.role === 'admin' || session?.user?.role === 'committee') && (
+                          <div className="relative">
+                            <button
+                              onClick={() => setOpenMenuId(openMenuId === member.memberId ? null : member.memberId)}
+                              className="text-gray-600 hover:text-gray-800 p-1.5"
+                              title="จัดการ"
+                            >
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                              </svg>
+                            </button>
+
+                            {openMenuId === member.memberId && (
+                              <>
+                                {/* Backdrop */}
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  onClick={() => setOpenMenuId(null)}
+                                />
+
+                                {/* Dropdown menu */}
+                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-20 border border-gray-200">
+                                  <button
+                                    onClick={() => {
+                                      setChangeStatusMember(member);
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    เปลี่ยนสถานะ
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1911,6 +2140,18 @@ export default function MembersPage() {
           onSuccess={() => {
             toast.success('บันทึกเรียบร้อยแล้ว');
             fetchAllMembers(); // Refresh members in case LINE status changed
+          }}
+        />
+      )}
+
+      {/* Change Status Modal */}
+      {changeStatusMember && (
+        <ChangeStatusModal
+          member={changeStatusMember}
+          onClose={() => setChangeStatusMember(null)}
+          onSuccess={() => {
+            toast.success('เปลี่ยนสถานะเรียบร้อยแล้ว');
+            fetchAllMembers(); // Refresh members list
           }}
         />
       )}

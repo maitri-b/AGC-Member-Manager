@@ -1116,11 +1116,6 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
     let totalConfirmed = 0;
 
     for (const event of events) {
-      if (!event.sheetName) {
-        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - no sheetName`);
-        continue;
-      }
-
       // Skip events that don't count towards attendance
       if (!event.countsAttendance) {
         console.log(`buildAttendanceCache: Skipping event ${event.eventId} - countsAttendance is false`);
@@ -1216,6 +1211,33 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
   } catch (error) {
     console.error('Error building attendance cache:', error);
     return { success: false, memberCount: 0, eventCount: 0, confirmedCount: 0 };
+  }
+}
+
+/**
+ * Invalidate attendance cache
+ * Call this when registration status changes (confirm/cancel)
+ */
+export async function invalidateAttendanceCache(): Promise<void> {
+  try {
+    const db = adminDb();
+    await db.collection(ATTENDANCE_CACHE_COLLECTION).doc(ATTENDANCE_CACHE_DOC_ID).delete();
+    console.log('Attendance cache invalidated');
+  } catch (error) {
+    console.error('Error invalidating attendance cache:', error);
+  }
+}
+
+/**
+ * Auto-rebuild attendance cache if needed
+ * Call this after invalidation to rebuild in background
+ */
+export async function autoRebuildAttendanceCache(): Promise<void> {
+  try {
+    console.log('Auto-rebuilding attendance cache...');
+    await buildAttendanceCache();
+  } catch (error) {
+    console.error('Error auto-rebuilding attendance cache:', error);
   }
 }
 

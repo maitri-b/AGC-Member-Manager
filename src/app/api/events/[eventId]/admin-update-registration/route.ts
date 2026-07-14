@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { updateEventRegistrationInFirestore, getEventRegistrationsByEventId } from '@/lib/event-sheets';
+import { updateEventRegistrationInFirestore, getEventRegistrationsByEventId, autoRebuildAttendanceCache } from '@/lib/event-sheets';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { Event, AttendeeType, RoomType, calculateRegistrationFee } from '@/types/event';
 import { calculatePaymentSplit } from '@/lib/payment-deadlines';
@@ -234,6 +234,22 @@ export async function PUT(
       // Don't fail the request if logging fails
     }
 
+    // Auto-rebuild attendance cache if status changed to confirmed/attended
+    if (finalUpdateData.status) {
+      const newStatus = String(finalUpdateData.status).toLowerCase();
+      const oldStatus = String(currentRegistration.status || '').toLowerCase();
+
+      if (newStatus !== oldStatus &&
+          (newStatus === 'confirmed' || newStatus === 'attended' ||
+           String(finalUpdateData.status).includes('ยืนยัน') ||
+           String(finalUpdateData.status).includes('ตรวจสอบแล้ว'))) {
+        // Rebuild cache in background (don't await to avoid blocking response)
+        autoRebuildAttendanceCache().catch(err =>
+          console.error('[Attendance Cache] Auto-rebuild failed:', err)
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'อัพเดทข้อมูลเรียบร้อยแล้ว',
@@ -346,6 +362,12 @@ export async function DELETE(
       console.error('[Activity Log] Failed to log cancellation:', logError);
       // Don't fail the request if logging fails
     }
+
+    // Auto-rebuild attendance cache after cancellation
+    // (cancellation affects attendance count)
+    autoRebuildAttendanceCache().catch(err =>
+      console.error('[Attendance Cache] Auto-rebuild after cancellation failed:', err)
+    );
 
     return NextResponse.json({
       success: true,

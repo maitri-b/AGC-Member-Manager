@@ -2606,7 +2606,8 @@ export default function EventDetailPage() {
                   {/* Total Amount */}
                   {calculateRegistrationFee(event, attendeeCount, true) > 0 && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex justify-between items-center">
+                      {/* Registration Fee */}
+                      <div className="flex justify-between items-center mb-3">
                         <div>
                           <p className="text-sm text-gray-600">ค่าสมัคร</p>
                           <p className="text-xs text-gray-500">
@@ -2648,8 +2649,41 @@ export default function EventDetailPage() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-blue-600">
+                          <p className="text-lg font-semibold text-gray-700">
                             {calculateRegistrationFee(event, attendeeCount, true).toLocaleString()} บาท
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Room Fee (if applicable) */}
+                      {calculatedRoomFee > 0 && (
+                        <div className="flex justify-between items-center mb-3 pt-3 border-t border-blue-200">
+                          <div>
+                            <p className="text-sm text-gray-600">ค่าห้องพัก</p>
+                            <p className="text-xs text-gray-500">
+                              {roomAllocations.map((alloc) => {
+                                const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+                                if (!roomType) return null;
+                                return `${roomType.typeName} ${alloc.roomCount} ห้อง`;
+                              }).filter(Boolean).join(', ')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-semibold text-gray-700">
+                              {calculatedRoomFee.toLocaleString()} บาท
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Total */}
+                      <div className="flex justify-between items-center pt-3 border-t-2 border-blue-300">
+                        <div>
+                          <p className="text-base font-semibold text-gray-800">ยอดรวมทั้งหมด</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-blue-600">
+                            {(calculateRegistrationFee(event, attendeeCount, true) + calculatedRoomFee).toLocaleString()} บาท
                           </p>
                         </div>
                       </div>

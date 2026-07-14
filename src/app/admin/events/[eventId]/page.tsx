@@ -1145,11 +1145,19 @@ export default function EventDetailPage() {
             // Determine payment mode from event configuration
             const isFullPaymentMode = eventData.event.paymentMode === 'full';
 
+            console.log('=== PAYMENT SUMMARY DEBUG ===');
+            console.log('Event paymentMode:', eventData.event.paymentMode);
+            console.log('isFullPaymentMode:', isFullPaymentMode);
+            console.log('Total attendees:', eventData.attendees.length);
+
             eventData.attendees.forEach(attendee => {
               const reg = attendee.registration;
               const totalAmount = reg.totalAmount || 0;
               const depositAmount = reg.depositAmount || 0;
               const remainingAmount = reg.remainingAmount || 0;
+
+              console.log('--- Registration:', reg.registrationId);
+              console.log('  totalAmount:', totalAmount, 'depositAmount:', depositAmount);
 
               if (isFullPaymentMode) {
                 // Full Payment Mode
@@ -1158,28 +1166,40 @@ export default function EventDetailPage() {
                 const isPaid = (reg as any).fullPaymentPaid === true;
                 const hasSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
 
+                console.log('  FULL MODE - fullPaymentPaid:', (reg as any).fullPaymentPaid, 'fullPaymentSlipUrl:', (reg as any).fullPaymentSlipUrl ? 'YES' : 'NO');
+
                 if (isPaid) {
                   totalApproved += totalAmount;
+                  console.log('  -> APPROVED +', totalAmount);
                 } else if (hasSlip) {
                   totalPending += totalAmount;
+                  console.log('  -> PENDING +', totalAmount);
                 }
               } else {
                 // Deposit + Remaining Mode
+                console.log('  DEPOSIT MODE - depositPaid:', reg.depositPaid, 'depositSlipUrl:', reg.depositSlipUrl ? 'YES' : 'NO');
+
                 // Deposit payment
                 if (reg.depositPaid === true) {
                   totalApproved += depositAmount;
+                  console.log('  -> DEPOSIT APPROVED +', depositAmount);
                 } else if (reg.depositSlipUrl && reg.depositSlipUrl.trim() !== '') {
                   totalPending += depositAmount;
+                  console.log('  -> DEPOSIT PENDING +', depositAmount);
                 }
 
                 // Remaining payment
                 if ((reg as any).remainingPaid === true) {
                   totalApproved += remainingAmount;
+                  console.log('  -> REMAINING APPROVED +', remainingAmount);
                 } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
                   totalPending += remainingAmount;
+                  console.log('  -> REMAINING PENDING +', remainingAmount);
                 }
               }
             });
+
+            console.log('=== TOTALS: Pending=' + totalPending + ', Approved=' + totalApproved + ' ===');
 
             return (
               <>

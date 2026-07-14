@@ -298,6 +298,11 @@ async function getEventRegistrationsFromFirestore(eventId: string): Promise<Even
         remainingPaidDate: data.remainingPaidDate || '',
         depositSlipUrl: data.depositSlipUrl || '',
         remainingSlipUrl: data.remainingSlipUrl || '',
+        // Full payment fields
+        fullPaymentSlipUrl: data.fullPaymentSlipUrl || '',
+        fullPaymentPaid: data.fullPaymentPaid || false,
+        fullPaymentPaidDate: data.fullPaymentPaidDate || '',
+        remainingPaid: data.remainingPaid || false,
         depositDeadline: data.depositDeadline || '',
         remainingDeadline: data.remainingDeadline || '',
         paymentStatus: data.paymentStatus || 'pending',

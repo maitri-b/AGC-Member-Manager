@@ -136,9 +136,17 @@ export async function GET(
           remainingAmount: Number(attendee.registration.remainingAmount) || 0,
           depositPaid: Boolean(attendee.registration.depositPaid),
           depositPaidDate: String(attendee.registration.depositPaidDate || ''),
-          // Legacy slip URLs - kept during migration, use GET /api/payments?registrationId=xxx for new data
+          // Payment slip URLs
           depositSlipUrl: String(attendee.registration.depositSlipUrl || ''),
           remainingSlipUrl: String(attendee.registration.remainingSlipUrl || ''),
+          // Full payment fields
+          fullPaymentSlipUrl: String(attendee.registration.fullPaymentSlipUrl || ''),
+          fullPaymentPaid: Boolean(attendee.registration.fullPaymentPaid),
+          fullPaymentPaidDate: String(attendee.registration.fullPaymentPaidDate || ''),
+          // Remaining payment paid status
+          remainingPaid: Boolean(attendee.registration.remainingPaid),
+          remainingPaidDate: String(attendee.registration.remainingPaidDate || ''),
+          // Payment deadlines
           depositDeadline: String(attendee.registration.depositDeadline || ''),
           remainingDeadline: String(attendee.registration.remainingDeadline || ''),
           paymentStatus: String(attendee.registration.paymentStatus || status),

@@ -1,4 +1,4 @@
-// API Route: PUT /api/members/[memberId]/update-status - Update member status
+// API Route: PUT /api/members/[id]/update-status - Update member status
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
@@ -7,7 +7,7 @@ import { adminDb } from '@/lib/firebase-admin';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ memberId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -24,7 +24,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { memberId } = await params;
+    const { id: memberId } = await params;
     const body = await request.json();
     const { status } = body;
 

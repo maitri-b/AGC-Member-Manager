@@ -93,7 +93,37 @@ export async function createPaymentSlip(
     createdAt,
   };
 
+  // 1. Create the payment slip document
   await db.collection('paymentSlips').doc(slipId).set(newSlip);
+
+  // 2. Update the registration record to store slip URL (for pending status tracking)
+  const registrationsRef = db.collection('eventRegistrations');
+  const snapshot = await registrationsRef
+    .where('registrationId', '==', slip.registrationId)
+    .limit(1)
+    .get();
+
+  if (!snapshot.empty) {
+    const registrationDoc = snapshot.docs[0];
+    const updateData: Record<string, any> = {
+      updatedAt: createdAt,
+    };
+
+    // Update slip URL based on payment type
+    if (slip.paymentType === 'deposit') {
+      updateData.depositSlipUrl = slip.slipUrl;
+      updateData.paymentStatus = 'รอตรวจสอบมัดจำ';
+    } else if (slip.paymentType === 'remaining') {
+      updateData.remainingSlipUrl = slip.slipUrl;
+      updateData.paymentStatus = 'รอตรวจสอบยอดคงเหลือ';
+    } else if (slip.paymentType === 'full') {
+      updateData.fullPaymentSlipUrl = slip.slipUrl;
+      updateData.paymentStatus = 'รอตรวจสอบ';
+    }
+    // Note: 'additional' type doesn't need to update main slip URLs
+
+    await registrationDoc.ref.update(updateData);
+  }
 
   return newSlip;
 }

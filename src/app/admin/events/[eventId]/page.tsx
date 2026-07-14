@@ -1131,7 +1131,9 @@ export default function EventDetailPage() {
           </div>
           {/* Payment Summary Cards */}
           {(() => {
-            // Calculate payment totals from attendees
+            // Calculate payment totals from registration status
+            // Note: This counts based on ACTUAL payment status in the database
+            // which is updated when payment slips are approved
             let totalPending = 0;
             let totalApproved = 0;
 
@@ -1141,38 +1143,37 @@ export default function EventDetailPage() {
               const depositAmount = reg.depositAmount || 0;
               const remainingAmount = reg.remainingAmount || 0;
 
-              // Determine payment mode
-              // If depositAmount is 0, it's full payment mode
+              // Determine payment mode - if depositAmount is 0, it's full payment mode
               const isFullPaymentMode = depositAmount === 0;
-
-              // Calculate approved amount based on what has been marked as paid
-              let approvedAmount = 0;
-              let pendingAmount = 0;
 
               if (isFullPaymentMode) {
                 // Full Payment Mode
-                if ((reg as any).fullPaymentPaid === true) {
-                  approvedAmount = totalAmount;
-                } else if ((reg as any).fullPaymentSlipUrl) {
-                  pendingAmount = totalAmount;
+                // Check if payment has been approved (fullPaymentPaid = true)
+                // OR if slip exists but not approved yet (pending)
+                const isPaid = (reg as any).fullPaymentPaid === true;
+                const hasSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
+
+                if (isPaid) {
+                  totalApproved += totalAmount;
+                } else if (hasSlip) {
+                  totalPending += totalAmount;
                 }
               } else {
                 // Deposit + Remaining Mode
+                // Deposit payment
                 if (reg.depositPaid === true) {
-                  approvedAmount += depositAmount;
-                } else if (reg.depositSlipUrl) {
-                  pendingAmount += depositAmount;
+                  totalApproved += depositAmount;
+                } else if (reg.depositSlipUrl && reg.depositSlipUrl.trim() !== '') {
+                  totalPending += depositAmount;
                 }
 
+                // Remaining payment
                 if ((reg as any).remainingPaid === true) {
-                  approvedAmount += remainingAmount;
-                } else if (reg.remainingSlipUrl) {
-                  pendingAmount += remainingAmount;
+                  totalApproved += remainingAmount;
+                } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
+                  totalPending += remainingAmount;
                 }
               }
-
-              totalApproved += approvedAmount;
-              totalPending += pendingAmount;
             });
 
             return (
@@ -1386,7 +1387,7 @@ export default function EventDetailPage() {
                   key={attendee.registration.registrationId || index}
                   className={`p-4 transition-all duration-200 ${
                     isExpanded
-                      ? 'bg-purple-50 hover:bg-purple-100 border-l-4 border-purple-400 shadow-sm'
+                      ? 'bg-gray-100 hover:bg-gray-150 border-l-4 border-gray-400 shadow-sm'
                       : 'hover:bg-gray-50 border-l-4 border-transparent'
                   }`}
                 >

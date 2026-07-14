@@ -55,7 +55,8 @@
       "Bash(node scripts/sync-slip-urls-from-sheets.js:*)",
       "Bash(node sync-application-to-sheet.js:*)",
       "Bash(Select-String \"events.*page.tsx\")",
-      "Bash(Select-String \"error TS\" -Context 0,2)"
+      "Bash(Select-String \"error TS\" -Context 0,2)",
+      "Bash(npx tsc --noEmit)"
     ]
   }
 }

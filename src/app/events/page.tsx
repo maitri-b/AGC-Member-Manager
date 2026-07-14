@@ -100,6 +100,24 @@ export default function EventsPage() {
     }
   };
 
+  const formatEventDate = (dateString: string): string => {
+    if (!dateString) return 'ไม่ระบุวันที่';
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return dateString;
+      }
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   const fetchEventAttendees = async (eventId: string) => {
     setLoadingAttendees(true);
     try {
@@ -151,8 +169,14 @@ export default function EventsPage() {
         return dateB - dateA;
       } else {
         // Sort by eventDate descending (most recent event first)
-        const dateA = new Date(a.eventDate).getTime();
-        const dateB = new Date(b.eventDate).getTime();
+        const dateA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
+        const dateB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
+
+        // Handle invalid dates - push them to the end
+        if (isNaN(dateA) && isNaN(dateB)) return 0;
+        if (isNaN(dateA)) return 1;
+        if (isNaN(dateB)) return -1;
+
         return dateB - dateA;
       }
     });
@@ -276,7 +300,7 @@ export default function EventsPage() {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  ปี พ.ศ. {event.year}
+                  {formatEventDate(event.eventDate)}
                 </div>
 
                 {event.location && (
@@ -474,7 +498,7 @@ export default function EventsPage() {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  ปี พ.ศ. {event.year}
+                  {formatEventDate(event.eventDate)}
                 </div>
 
                 {event.location && (

@@ -1258,6 +1258,36 @@ export default function EventDetailPage() {
                       )}
                     </div>
 
+                    {/* Room Allocation Display */}
+                    {event.roomTypes && event.roomTypes.length > 0 && roomAllocations && roomAllocations.length > 0 && (
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ประเภทการเข้าพัก
+                        </label>
+                        <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <div className="space-y-2">
+                            {roomAllocations.map((alloc) => {
+                              const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+                              if (!roomType) return null;
+                              return (
+                                <div key={alloc.roomTypeId} className="flex justify-between items-start text-sm">
+                                  <div className="flex-1">
+                                    <span className="font-medium text-gray-900">{roomType.typeName}</span>
+                                    {roomType.note && (
+                                      <p className="text-xs text-gray-500 mt-0.5">{roomType.note}</p>
+                                    )}
+                                  </div>
+                                  <span className="text-gray-700 ml-4">
+                                    {alloc.roomCount} {alloc.roomCount === 1 ? 'ห้อง' : 'ห้อง'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Edit Action Buttons */}
                     {isEditingNames && (
                       <div className="flex gap-2 mt-3">

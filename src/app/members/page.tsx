@@ -93,7 +93,150 @@ function formatThaiDateForMessage(dateStr: string | undefined): string {
   }
 }
 
-// Change Status Modal Component
+// Change LINE Group Status Modal Component
+function ChangeLineGroupStatusModal({
+  member,
+  onClose,
+  onSuccess,
+}: {
+  member: MemberWithProfile;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [selectedStatus, setSelectedStatus] = useState(member.lineGroupStatus || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const lineGroupStatusOptions = [
+    { value: 'ปกติ', label: 'ปกติ', color: 'bg-green-100 text-green-800' },
+    { value: 'รอนำเข้ากลุ่ม', label: 'รอนำเข้ากลุ่ม', color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'ออกจากกลุ่มแล้ว', label: 'ออกจากกลุ่มแล้ว', color: 'bg-red-100 text-red-800' },
+    { value: 'รอผลการติดต่อ', label: 'รอผลการติดต่อ', color: 'bg-orange-100 text-orange-800' },
+  ];
+
+  const handleSave = async () => {
+    if (!selectedStatus) {
+      setError('กรุณาเลือกสถานะไลน์กลุ่ม');
+      return;
+    }
+
+    if (selectedStatus === member.lineGroupStatus) {
+      onClose();
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/members/${member.memberId}/update-line-group-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lineGroupStatus: selectedStatus }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update LINE group status');
+      }
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      console.error('Error updating LINE group status:', err);
+      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการอัปเดตสถานะไลน์กลุ่ม');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">เปลี่ยนสถานะไลน์กลุ่ม</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-6 py-4">
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 mb-1">สมาชิก</p>
+            <p className="font-medium">{member.fullNameTH || member.nickname || '-'}</p>
+            <p className="text-sm text-gray-500">{member.companyNameTH || member.companyNameEN || '-'}</p>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              เลือกสถานะไลน์กลุ่มใหม่
+            </label>
+            <div className="space-y-2">
+              {lineGroupStatusOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSelectedStatus(option.value)}
+                  className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
+                    selectedStatus === option.value
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{option.label}</span>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${option.color}`}>
+                      {option.label}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+          >
+            ยกเลิก
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !selectedStatus}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          >
+            {saving ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                กำลังบันทึก...
+              </>
+            ) : (
+              'บันทึก'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Change License Status Modal Component
 function ChangeStatusModal({
   member,
   onClose,
@@ -155,7 +298,7 @@ function ChangeStatusModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">เปลี่ยนสถานะสมาชิก</h3>
+          <h3 className="text-lg font-semibold text-gray-900">เปลี่ยนสถานะใบอนุญาต</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -991,6 +1134,7 @@ export default function MembersPage() {
 
   // Change Status Modal state
   const [changeStatusMember, setChangeStatusMember] = useState<MemberWithProfile | null>(null);
+  const [changeLineGroupStatusMember, setChangeLineGroupStatusMember] = useState<MemberWithProfile | null>(null);
 
   // Action menu state
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -1003,6 +1147,9 @@ export default function MembersPage() {
   // Attendance status state
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+
+  // Pending contacts map - tracks members with pending contact requests
+  const [pendingContactsMap, setPendingContactsMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -1019,8 +1166,9 @@ export default function MembersPage() {
     if (status === 'authenticated' && session?.user && hasPermission(session.user.permissions || [], 'members:list')) {
       fetchAllMembers();
       fetchStaff();
-      // Fetch attendance in the background - don't block page load
+      // Fetch attendance and pending contacts in the background - don't block page load
       fetchAttendanceStatus();
+      fetchPendingContacts();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]); // Only run when authentication status changes, not on every session update
@@ -1068,6 +1216,29 @@ export default function MembersPage() {
       console.error('Error fetching attendance:', err);
     } finally {
       setLoadingAttendance(false);
+    }
+  };
+
+  // Fetch pending contacts count for all members
+  const fetchPendingContacts = async () => {
+    try {
+      const response = await fetch('/api/admin/contacts?status=pending');
+      if (response.ok) {
+        const data = await response.json();
+        const contacts: ContactRequest[] = data.contacts || [];
+
+        // Count pending contacts per member
+        const pendingMap: Record<string, number> = {};
+        contacts.forEach(contact => {
+          if (contact.status === 'pending') {
+            pendingMap[contact.memberId] = (pendingMap[contact.memberId] || 0) + 1;
+          }
+        });
+
+        setPendingContactsMap(pendingMap);
+      }
+    } catch (err) {
+      console.error('Error fetching pending contacts:', err);
     }
   };
 
@@ -1133,7 +1304,9 @@ export default function MembersPage() {
           member.companyNameTH?.toLowerCase().includes(searchLower) ||
           member.mobile?.includes(search) ||
           member.phone?.includes(search) ||
-          member.licenseNumber?.toLowerCase().includes(searchLower);
+          member.licenseNumber?.toLowerCase().includes(searchLower) ||
+          member.lineId?.toLowerCase().includes(searchLower) ||
+          member.lineProfile?.lineDisplayName?.toLowerCase().includes(searchLower);
         if (!searchMatch) return false;
       }
 
@@ -1817,7 +1990,7 @@ export default function MembersPage() {
                                     ? 'text-green-600'
                                     : 'text-gray-600 hover:text-gray-800'
                                 }`}
-                                title="Copy LINE ID"
+                                title={`Copy LINE ID: ${member.lineId}`}
                               >
                                 {copiedLineId === member.memberId ? (
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1846,12 +2019,15 @@ export default function MembersPage() {
                             {/* Contact member button */}
                             <button
                               onClick={() => setContactMember(member)}
-                              className="text-purple-600 hover:text-purple-800 p-1"
+                              className="text-purple-600 hover:text-purple-800 p-1 relative"
                               title="ติดต่อสมาชิก"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                               </svg>
+                              {pendingContactsMap[member.memberId] > 0 && (
+                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                              )}
                             </button>
 
                             {/* Notification button for non-normal status */}
@@ -1889,18 +2065,30 @@ export default function MembersPage() {
                                     />
 
                                     {/* Dropdown menu */}
-                                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-20 border border-gray-200">
+                                    <div className="absolute right-0 mt-1 w-56 bg-white rounded-md shadow-lg z-20 border border-gray-200">
+                                      <button
+                                        onClick={() => {
+                                          setChangeLineGroupStatusMember(member);
+                                          setOpenMenuId(null);
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                      >
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                          <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                                        </svg>
+                                        เปลี่ยนสถานะไลน์กลุ่ม
+                                      </button>
                                       <button
                                         onClick={() => {
                                           setChangeStatusMember(member);
                                           setOpenMenuId(null);
                                         }}
-                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 border-t border-gray-100"
                                       >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
-                                        เปลี่ยนสถานะ
+                                        เปลี่ยนสถานะใบอนุญาต
                                       </button>
                                     </div>
                                   </>
@@ -2021,7 +2209,7 @@ export default function MembersPage() {
                           <button
                             onClick={() => handleCopyLineId(member.lineId, member.memberId)}
                             className={`p-1.5 ${copiedLineId === member.memberId ? 'text-green-600' : 'text-gray-600 hover:text-gray-800'}`}
-                            title="Copy LINE ID"
+                            title={`Copy LINE ID: ${member.lineId}`}
                           >
                             {copiedLineId === member.memberId ? (
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2050,12 +2238,15 @@ export default function MembersPage() {
                         {/* Contact */}
                         <button
                           onClick={() => setContactMember(member)}
-                          className="text-purple-600 hover:text-purple-800 p-1.5"
+                          className="text-purple-600 hover:text-purple-800 p-1.5 relative"
                           title="ติดต่อสมาชิก"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
+                          {pendingContactsMap[member.memberId] > 0 && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                          )}
                         </button>
 
                         {/* Notify */}
@@ -2093,18 +2284,30 @@ export default function MembersPage() {
                                 />
 
                                 {/* Dropdown menu */}
-                                <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-20 border border-gray-200">
+                                <div className="absolute right-0 mt-1 w-56 bg-white rounded-md shadow-lg z-20 border border-gray-200">
+                                  <button
+                                    onClick={() => {
+                                      setChangeLineGroupStatusMember(member);
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                                    </svg>
+                                    เปลี่ยนสถานะไลน์กลุ่ม
+                                  </button>
                                   <button
                                     onClick={() => {
                                       setChangeStatusMember(member);
                                       setOpenMenuId(null);
                                     }}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 border-t border-gray-100"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
-                                    เปลี่ยนสถานะ
+                                    เปลี่ยนสถานะใบอนุญาต
                                   </button>
                                 </div>
                               </>
@@ -2140,17 +2343,30 @@ export default function MembersPage() {
           onSuccess={() => {
             toast.success('บันทึกเรียบร้อยแล้ว');
             fetchAllMembers(); // Refresh members in case LINE status changed
+            fetchPendingContacts(); // Refresh pending contacts badge
           }}
         />
       )}
 
-      {/* Change Status Modal */}
+      {/* Change LINE Group Status Modal */}
+      {changeLineGroupStatusMember && (
+        <ChangeLineGroupStatusModal
+          member={changeLineGroupStatusMember}
+          onClose={() => setChangeLineGroupStatusMember(null)}
+          onSuccess={() => {
+            toast.success('เปลี่ยนสถานะไลน์กลุ่มเรียบร้อยแล้ว');
+            fetchAllMembers(); // Refresh members list
+          }}
+        />
+      )}
+
+      {/* Change License Status Modal */}
       {changeStatusMember && (
         <ChangeStatusModal
           member={changeStatusMember}
           onClose={() => setChangeStatusMember(null)}
           onSuccess={() => {
-            toast.success('เปลี่ยนสถานะเรียบร้อยแล้ว');
+            toast.success('เปลี่ยนสถานะใบอนุญาตเรียบร้อยแล้ว');
             fetchAllMembers(); // Refresh members list
           }}
         />

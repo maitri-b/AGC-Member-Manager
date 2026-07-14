@@ -146,7 +146,6 @@ export default function EventDetailPage() {
   const [isEditingNames, setIsEditingNames] = useState(false);
   const [tempAttendeeNames, setTempAttendeeNames] = useState<string[]>([]);
   // Special requests edit state (New)
-  const [isEditingSpecialRequests, setIsEditingSpecialRequests] = useState(false);
   const [tempSpecialRequests, setTempSpecialRequests] = useState('');
   const [specialRequestsLastUpdated, setSpecialRequestsLastUpdated] = useState<string | null>(null);
   // Member contact info state (New)
@@ -1176,14 +1175,15 @@ export default function EventDetailPage() {
                       <h4 className="text-sm font-semibold text-gray-900">
                         รายชื่อผู้เข้าร่วมกิจกรรม
                       </h4>
-                      {(event.allowMemberEdit ?? true) && !isEditingNames && (
+                      {!isEditingNames && (
                         <button
                           onClick={() => {
                             setIsEditingNames(true);
                             setTempAttendeeNames([...attendeeNames]);
+                            setTempSpecialRequests(specialRequests || '');
                           }}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="แก้ไขรายชื่อ"
+                          title={(event.allowMemberEdit ?? true) ? "แก้ไขรายชื่อและความต้องการพิเศษ" : "แก้ไขความต้องการพิเศษ"}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1225,6 +1225,39 @@ export default function EventDetailPage() {
                       })}
                     </div>
 
+                    {/* Special Requests - Editable (Moved here) */}
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ความต้องการพิเศษ (ถ้ามี)
+                      </label>
+                      {isEditingNames ? (
+                        <textarea
+                          value={tempSpecialRequests}
+                          onChange={(e) => setTempSpecialRequests(e.target.value)}
+                          placeholder="เช่น ต้องการอาหารเจ, แพ้อาหารทะเล, ต้องการห้องชั้นล่าง, ผู้สูงอายุ/ผู้พิการ"
+                          rows={3}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      ) : (
+                        <>
+                          <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 whitespace-pre-wrap min-h-[60px]">
+                            {specialRequests || <span className="text-gray-400 italic">ไม่มีความต้องการพิเศษ</span>}
+                          </div>
+                          {specialRequestsLastUpdated && (
+                            <p className="text-[10px] text-gray-400 mt-1">
+                              อัปเดตล่าสุด: {new Date(specialRequestsLastUpdated).toLocaleString('th-TH', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+
                     {/* Edit Action Buttons */}
                     {isEditingNames && (
                       <div className="flex gap-2 mt-3">
@@ -1247,7 +1280,7 @@ export default function EventDetailPage() {
                                 body: JSON.stringify({
                                   attendeeCount,
                                   attendeeNames: tempAttendeeNames,
-                                  specialRequests,
+                                  specialRequests: tempSpecialRequests,
                                   attendeeTypeSelections,
                                   roomAllocations,
                                   requestNameChange: false,
@@ -1260,8 +1293,10 @@ export default function EventDetailPage() {
                                 throw new Error(data.error || 'ไม่สามารถบันทึกได้');
                               }
 
-                              toast.success('บันทึกรายชื่อเรียบร้อยแล้ว');
+                              toast.success('บันทึกข้อมูลเรียบร้อยแล้ว');
                               setAttendeeNames(tempAttendeeNames);
+                              setSpecialRequests(tempSpecialRequests);
+                              setSpecialRequestsLastUpdated(new Date().toISOString());
                               setIsEditingNames(false);
                               fetchEventDetail();
                             } catch (err) {
@@ -1279,6 +1314,7 @@ export default function EventDetailPage() {
                           onClick={() => {
                             setIsEditingNames(false);
                             setTempAttendeeNames([]);
+                            setTempSpecialRequests('');
                           }}
                           disabled={updating}
                           className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
@@ -1406,103 +1442,6 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* Special Requests - Editable */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            ความต้องการพิเศษ
-                          </label>
-                          {!isEditingSpecialRequests && (
-                            <button
-                              onClick={() => {
-                                setIsEditingSpecialRequests(true);
-                                setTempSpecialRequests(specialRequests || '');
-                              }}
-                              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                              แก้ไข
-                            </button>
-                          )}
-                        </div>
-
-                        {isEditingSpecialRequests ? (
-                          <div className="space-y-3">
-                            <textarea
-                              value={tempSpecialRequests}
-                              onChange={(e) => setTempSpecialRequests(e.target.value)}
-                              placeholder="เช่น ต้องการอาหารเจ, แพ้อาหารทะเล, ต้องการห้องชั้นล่าง, ผู้สูงอายุ/ผู้พิการ"
-                              rows={4}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const response = await fetch(`/api/events/${eventId}/registrations/${userRegistration?.registrationId}`, {
-                                      method: 'PUT',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        attendeeCount,
-                                        attendeeNames,
-                                        specialRequests: tempSpecialRequests,
-                                        attendeeTypeSelections,
-                                        roomAllocations,
-                                        requestNameChange: false,
-                                      }),
-                                    });
-
-                                    if (response.ok) {
-                                      setSpecialRequests(tempSpecialRequests);
-                                      setSpecialRequestsLastUpdated(new Date().toISOString());
-                                      setIsEditingSpecialRequests(false);
-                                      toast.success('บันทึกความต้องการพิเศษแล้ว');
-                                      fetchEventDetail(); // Refresh data
-                                    } else {
-                                      const error = await response.json();
-                                      toast.error(error.error || 'ไม่สามารถบันทึกได้');
-                                    }
-                                  } catch (error) {
-                                    console.error('Error updating special requests:', error);
-                                    toast.error('เกิดข้อผิดพลาดในการบันทึก');
-                                  }
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                              >
-                                บันทึก
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setIsEditingSpecialRequests(false);
-                                  setTempSpecialRequests('');
-                                }}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
-                              >
-                                ยกเลิก
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 whitespace-pre-wrap min-h-[60px]">
-                              {specialRequests || <span className="text-gray-400 italic">ไม่มีความต้องการพิเศษ</span>}
-                            </div>
-                            {specialRequestsLastUpdated && (
-                              <p className="text-[10px] text-gray-400 mt-1">
-                                อัปเดตล่าสุด: {new Date(specialRequestsLastUpdated).toLocaleString('th-TH', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </div>
 
                       {/* Total Amount Summary */}
                       {userRegistration.totalAmount && userRegistration.totalAmount > 0 && (

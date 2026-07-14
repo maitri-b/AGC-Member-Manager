@@ -27,9 +27,6 @@ interface RegistrationCardProps {
   getStatusBadgeClass: (status: string) => string;
 }
 
-function RegistrationCard({ reg, formatEventDate, getPaymentStatusBadgeClass, getStatusBadgeClass }: RegistrationCardProps) {
-  return (
-
 export default function MyRegistrationsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

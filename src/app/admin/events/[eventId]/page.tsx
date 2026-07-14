@@ -1151,9 +1151,9 @@ export default function EventDetailPage() {
 
               if (isFullPaymentMode) {
                 // Full Payment Mode
-                if (reg.fullPaymentPaid === true) {
+                if ((reg as any).fullPaymentPaid === true) {
                   approvedAmount = totalAmount;
-                } else if (reg.fullPaymentSlipUrl) {
+                } else if ((reg as any).fullPaymentSlipUrl) {
                   pendingAmount = totalAmount;
                 }
               } else {
@@ -1164,7 +1164,7 @@ export default function EventDetailPage() {
                   pendingAmount += depositAmount;
                 }
 
-                if (reg.remainingPaid === true) {
+                if ((reg as any).remainingPaid === true) {
                   approvedAmount += remainingAmount;
                 } else if (reg.remainingSlipUrl) {
                   pendingAmount += remainingAmount;

@@ -247,6 +247,7 @@ export async function PUT(
     // Check if special requests changed
     if (specialRequests !== undefined) {
       updateData.special_requests = specialRequests;
+      updateData.special_requests_updated_at = new Date().toISOString();
     }
 
     if (Object.keys(updateData).length > 0) {

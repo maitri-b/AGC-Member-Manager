@@ -2185,8 +2185,8 @@ export default function EventDetailPage() {
                               </>
                             )}
 
-                            {/* Full Payment Section (when depositAmount is 0 or undefined = Full Payment Mode) */}
-                            {(!attendee.registration.depositAmount || attendee.registration.depositAmount === 0) && (
+                            {/* Full Payment Section (when event uses Full Payment Mode) */}
+                            {eventData.event.paymentMode === 'full' && (
                               <div className="border-t pt-2">
                                 {attendee.registration.depositPaid ? (
                                   <div className="mt-1">

@@ -51,9 +51,9 @@ export function determinePaymentStatus(
   }
 
   // Priority 3: Full payment mode (non-deposit)
-  // Full Payment Mode is identified by: paymentMode === 'full' OR depositAmount === 0
-  if (event.paymentMode === 'full' || registration.depositAmount === 0) {
-    // ✅ Use Full Payment Fields (with backward compatibility)
+  // Full Payment Mode is identified ONLY by event.paymentMode === 'full'
+  if (event.paymentMode === 'full') {
+    // ✅ Use Full Payment Fields (with backward compatibility for old data)
     const fullPaymentPaid = registration.fullPaymentPaid ?? registration.depositPaid;
     const fullPaymentSlipUrl = registration.fullPaymentSlipUrl || registration.remainingSlipUrl || registration.depositSlipUrl || (registration as any).slipUrl;
     const fullPaymentDeadline = registration.fullPaymentDeadline || registration.remainingDeadline;

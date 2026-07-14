@@ -46,18 +46,24 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const memberId = searchParams.get('memberId');
-    const status = searchParams.get('status'); // 'pending' | 'completed' | 'all'
-
-    if (!memberId) {
-      return NextResponse.json({ error: 'memberId is required' }, { status: 400 });
-    }
+    const statusFilter = searchParams.get('status'); // 'pending' | 'completed' | 'all'
 
     const db = adminDb();
-    // Query without orderBy to avoid needing composite index
-    // We'll sort in memory instead
-    const snapshot = await db.collection('contactRequests')
-      .where('memberId', '==', memberId)
-      .get();
+
+    // If memberId is provided, query for specific member
+    // Otherwise, get all contact requests (for badge counts)
+    let query = db.collection('contactRequests');
+
+    if (memberId) {
+      query = query.where('memberId', '==', memberId) as any;
+    }
+
+    // If status filter is provided, apply it
+    if (statusFilter && statusFilter !== 'all') {
+      query = query.where('status', '==', statusFilter) as any;
+    }
+
+    const snapshot = await query.get();
 
     const requests: ContactRequest[] = [];
     snapshot.forEach(doc => {
@@ -95,13 +101,21 @@ export async function GET(request: NextRequest) {
       return dateB.getTime() - dateA.getTime();
     });
 
-    // Filter by status
-    const pending = requests.filter(r => r.status === 'pending');
-    const completed = requests.filter(r => r.status === 'completed');
+    // If querying for a specific member, return separated by status
+    if (memberId) {
+      const pending = requests.filter(r => r.status === 'pending');
+      const completed = requests.filter(r => r.status === 'completed');
 
+      return NextResponse.json({
+        pending,
+        completed,
+        total: requests.length,
+      });
+    }
+
+    // If querying all contacts (for badge counts), return as contacts array
     return NextResponse.json({
-      pending,
-      completed,
+      contacts: requests,
       total: requests.length,
     });
   } catch (error) {

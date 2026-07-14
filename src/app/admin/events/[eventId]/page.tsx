@@ -247,8 +247,28 @@ export default function EventDetailPage() {
       const roomTypes = eventData.event.roomTypes || [];
       const sortedRoomTypes = [...roomTypes].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-      // Prepare data for export with new column structure
-      const exportData = filteredAttendees.map((attendee, index) => {
+      // Prepare data for export - separate row per attendee
+      const exportData: Record<string, any>[] = [];
+
+      filteredAttendees.forEach((attendee) => {
+        // Parse attendee names
+        let attendeeNamesList: string[] = [];
+        try {
+          const names = JSON.parse(attendee.registration.attendeeNames || '[]');
+          attendeeNamesList = Array.isArray(names) ? names : [];
+        } catch {
+          // If parse fails, try to use as plain string
+          if (attendee.registration.attendeeNames) {
+            attendeeNamesList = [attendee.registration.attendeeNames];
+          }
+        }
+
+        // If no names, create empty slots based on attendeeCount
+        const attendeeCount = attendee.registration.attendeeCount || 1;
+        if (attendeeNamesList.length === 0) {
+          attendeeNamesList = Array(attendeeCount).fill('');
+        }
+
         // Parse room allocations
         let roomAllocationMap: Record<string, number> = {};
         try {
@@ -273,40 +293,83 @@ export default function EventDetailPage() {
           // Ignore parse errors
         }
 
-        // Base columns
-        const row: Record<string, any> = {
+        // Calculate approved payment amount
+        const reg = attendee.registration;
+        const totalAmount = reg.totalAmount || 0;
+        const paymentStatus = reg.paymentStatus || '';
+        const depositPaid = reg.depositPaid || false;
+        const isFullyPaid = depositPaid && (reg.remainingAmount === 0 || paymentStatus.includes('ชำระครบ'));
+        const approvedAmount = (isFullyPaid || paymentStatus.includes('ชำระครบ') || paymentStatus.includes('อนุมัติ')) ? totalAmount : 0;
+
+        // Base data (will be merged for all rows of this registration)
+        const baseData: Record<string, any> = {
           'รหัสลงทะเบียน': attendee.registration.registrationId,
           'ชื่อบริษัท': attendee.registration.companyName || attendee.member?.companyNameTH || '',
           'ผู้ติดต่อ': attendee.registration.contactName || attendee.member?.fullNameTH || attendee.lineProfile?.lineDisplayName || '',
           'เบอร์โทร': attendee.registration.contactPhone || '',
           'ชื่อไลน์': attendee.lineProfile?.lineDisplayName || '',
-          'จำนวนผู้เข้าร่วม': attendee.registration.attendeeCount || 1,
-          'รายชื่อผู้เข้าร่วม': (() => {
-            try {
-              const names = JSON.parse(attendee.registration.attendeeNames || '[]');
-              return Array.isArray(names) ? names.join(', ') : attendee.registration.attendeeNames;
-            } catch {
-              return attendee.registration.attendeeNames || '';
-            }
-          })(),
+          'จำนวนผู้เข้าร่วม': attendeeCount,
         };
 
-        // Add room allocation columns dynamically
+        // Add room allocation columns
         sortedRoomTypes.forEach((roomType) => {
-          const columnName = roomType.typeName;
-          row[columnName] = roomAllocationMap[roomType.typeId] || 0;
+          baseData[roomType.typeName] = roomAllocationMap[roomType.typeId] || 0;
         });
 
-        // Add remaining columns
-        row['สถานะ'] = attendee.registration.status || '';
-        row['ความต้องการพิเศษ'] = attendee.registration.specialRequests || '';
-        row['ค่าใช้จ่ายเสริม'] = totalSpecialCharges;
+        // Add other merged data
+        baseData['สถานะ'] = attendee.registration.status || '';
+        baseData['สถานะการชำระ'] = paymentStatus;
+        baseData['ยอดรวม'] = totalAmount;
+        baseData['ยอดอนุมัติแล้ว'] = approvedAmount;
+        baseData['ความต้องการพิเศษ'] = attendee.registration.specialRequests || '';
+        baseData['ค่าใช้จ่ายเสริม'] = totalSpecialCharges;
 
-        return row;
+        // Create one row per attendee
+        attendeeNamesList.forEach((name, idx) => {
+          exportData.push({
+            ...baseData,
+            'ลำดับผู้เข้าร่วม': idx + 1,
+            'ชื่อผู้เข้าร่วม': name || '',
+          });
+        });
       });
 
-      // Create workbook
+      // Create workbook with merged cells
       const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Apply merges for repeated data
+      const merges: XLSX.Range[] = [];
+      let currentRow = 1; // Start after header
+
+      filteredAttendees.forEach((attendee) => {
+        let attendeeNamesList: string[] = [];
+        try {
+          const names = JSON.parse(attendee.registration.attendeeNames || '[]');
+          attendeeNamesList = Array.isArray(names) ? names : [];
+        } catch {
+          if (attendee.registration.attendeeNames) {
+            attendeeNamesList = [attendee.registration.attendeeNames];
+          }
+        }
+
+        const attendeeCount = attendee.registration.attendeeCount || 1;
+        const rowCount = attendeeNamesList.length || attendeeCount;
+
+        if (rowCount > 1) {
+          // Merge columns A to M (all except attendee order and name)
+          for (let col = 0; col < 14; col++) {
+            merges.push({
+              s: { r: currentRow, c: col },
+              e: { r: currentRow + rowCount - 1, c: col },
+            });
+          }
+        }
+
+        currentRow += rowCount;
+      });
+
+      ws['!merges'] = merges;
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Attendees');
 
@@ -1037,38 +1100,79 @@ export default function EventDetailPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:px-8">
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <p className="text-3xl font-bold text-blue-600">{eventData.summary.agentRegistrations}</p>
-            <p className="text-sm text-gray-500">บริษัทลงทะเบียน</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center">
+            <p className="text-xl sm:text-3xl font-bold text-blue-600">{eventData.summary.agentRegistrations}</p>
+            <p className="text-[10px] sm:text-sm text-gray-500">บริษัทลงทะเบียน</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <p className="text-3xl font-bold text-indigo-600">{eventData.summary.totalAttendees || 0}</p>
-            <p className="text-sm text-gray-500">จำนวนผู้เข้าร่วม</p>
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center">
+            <p className="text-xl sm:text-3xl font-bold text-indigo-600">{eventData.summary.totalAttendees || 0}</p>
+            <p className="text-[10px] sm:text-sm text-gray-500">จำนวนผู้เข้าร่วม</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center border-2 border-purple-200">
-            <p className="text-3xl font-bold text-purple-600">{eventData.summary.clubMemberCount || 0}</p>
-            <p className="text-sm text-gray-500">สมาชิกชมรม</p>
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-purple-200">
+            <p className="text-xl sm:text-3xl font-bold text-purple-600">{eventData.summary.clubMemberCount || 0}</p>
+            <p className="text-[10px] sm:text-sm text-gray-500">สมาชิกชมรม</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center border-2 border-green-200">
-            <p className="text-3xl font-bold text-green-600">{eventData.summary.verifiedMemberCount}</p>
-            <p className="text-sm text-gray-500">ยืนยันตัวตนแล้ว</p>
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-green-200">
+            <p className="text-xl sm:text-3xl font-bold text-green-600">{eventData.summary.verifiedMemberCount}</p>
+            <p className="text-[10px] sm:text-sm text-gray-500">ยืนยันตัวตนแล้ว</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <p className="text-3xl font-bold text-teal-600">{eventData.summary.confirmedCount}</p>
-            <p className="text-sm text-gray-500">บริษัทยืนยันแล้ว</p>
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center">
+            <p className="text-xl sm:text-3xl font-bold text-teal-600">{eventData.summary.confirmedCount}</p>
+            <p className="text-[10px] sm:text-sm text-gray-500">บริษัทยืนยันแล้ว</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <p className="text-3xl font-bold text-orange-600">
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center">
+            <p className="text-xl sm:text-3xl font-bold text-orange-600">
               {eventData.summary.agentRegistrations - eventData.summary.confirmedCount}
             </p>
-            <p className="text-sm text-gray-500">รอดำเนินการ</p>
+            <p className="text-[10px] sm:text-sm text-gray-500">รอดำเนินการ</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center bg-gray-50">
-            <p className="text-2xl font-bold text-gray-500">{eventData.summary.totalRegistrations}</p>
-            <p className="text-xs text-gray-400">รายการทั้งหมด</p>
+          {/* Payment Summary Cards */}
+          {(() => {
+            // Calculate payment totals from attendees
+            let totalPending = 0;
+            let totalApproved = 0;
+
+            eventData.attendees.forEach(attendee => {
+              const reg = attendee.registration;
+              const totalAmount = reg.totalAmount || 0;
+
+              // Check payment status
+              const paymentStatus = reg.paymentStatus || '';
+              const depositPaid = reg.depositPaid || false;
+
+              // For deposit mode, check if fully paid
+              const isFullyPaid = depositPaid && (reg.remainingAmount === 0 || paymentStatus.includes('ชำระครบ'));
+
+              if (isFullyPaid || paymentStatus.includes('ชำระครบ') || paymentStatus.includes('อนุมัติ')) {
+                totalApproved += totalAmount;
+              } else if (paymentStatus.includes('รอตรวจสอบ') || reg.depositSlipUrl || reg.remainingSlipUrl) {
+                totalPending += totalAmount;
+              }
+            });
+
+            return (
+              <>
+                <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-yellow-200">
+                  <p className="text-lg sm:text-2xl font-bold text-yellow-600">
+                    {totalPending.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-gray-500">รอตรวจสอบ (บาท)</p>
+                </div>
+                <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-emerald-200">
+                  <p className="text-lg sm:text-2xl font-bold text-emerald-600">
+                    {totalApproved.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-gray-500">ยืนยันแล้ว (บาท)</p>
+                </div>
+              </>
+            );
+          })()}
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center bg-gray-50">
+            <p className="text-lg sm:text-2xl font-bold text-gray-500">{eventData.summary.totalRegistrations}</p>
+            <p className="text-[10px] sm:text-xs text-gray-400">รายการทั้งหมด</p>
           </div>
         </div>
 
@@ -1528,7 +1632,7 @@ export default function EventDetailPage() {
                                 className="px-3 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition-colors"
                                 title="ดูประวัติการชำระเงินทั้งหมด"
                               >
-                                📋 ดูประวัติ
+                                📋 ดูประวัติการชำระเงิน
                               </button>
                             </div>
                             <div className="space-y-2">

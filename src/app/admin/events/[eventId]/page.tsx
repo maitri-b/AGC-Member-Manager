@@ -298,13 +298,32 @@ export default function EventDetailPage() {
           // Ignore parse errors
         }
 
-        // Calculate approved payment amount
+        // Calculate approved payment amount based on payment mode
         const reg = attendee.registration;
         const totalAmount = reg.totalAmount || 0;
+        const depositAmount = reg.depositAmount || 0;
+        const remainingAmount = reg.remainingAmount || 0;
+
+        // Determine if this event uses Full Payment mode
+        const isFullPaymentMode = eventData.event.paymentMode === 'full';
+
+        let approvedAmount = 0;
+        if (isFullPaymentMode) {
+          // Full Payment Mode - check fullPaymentPaid
+          if ((reg as any).fullPaymentPaid === true) {
+            approvedAmount = totalAmount;
+          }
+        } else {
+          // Deposit Mode - sum approved deposit and remaining
+          if (reg.depositPaid === true) {
+            approvedAmount += depositAmount;
+          }
+          if ((reg as any).remainingPaid === true) {
+            approvedAmount += remainingAmount;
+          }
+        }
+
         const paymentStatus = reg.paymentStatus || '';
-        const depositPaid = reg.depositPaid || false;
-        const isFullyPaid = depositPaid && (reg.remainingAmount === 0 || paymentStatus.includes('ชำระครบ'));
-        const approvedAmount = (isFullyPaid || paymentStatus.includes('ชำระครบ') || paymentStatus.includes('อนุมัติ')) ? totalAmount : 0;
 
         // Base data (will be merged for all rows of this registration)
         const baseData: Record<string, any> = {
@@ -316,10 +335,10 @@ export default function EventDetailPage() {
           'จำนวนผู้เข้าร่วม': attendeeCount,
         };
 
-        // Add room allocation columns
+        // Add room allocation columns - show only numbers for easier calculation
         sortedRoomTypes.forEach((roomType) => {
           const count = roomAllocationMap[roomType.typeId] || 0;
-          baseData[`ห้องพัก: ${roomType.typeName}`] = count > 0 ? `${count} ห้อง` : '';
+          baseData[`ห้องพัก: ${roomType.typeName}`] = count || 0;
         });
 
         // Calculate total room fee
@@ -347,6 +366,85 @@ export default function EventDetailPage() {
           });
         });
       });
+
+      // Calculate summary totals
+      const summaryTotals: Record<string, any> = {
+        'รหัสลงทะเบียน': 'สรุปรวม',
+        'ชื่อบริษัท': '',
+        'ผู้ติดต่อ': '',
+        'เบอร์โทร': '',
+        'ชื่อไลน์': '',
+        'จำนวนผู้เข้าร่วม': 0,
+      };
+
+      // Calculate room totals
+      const roomTotals: Record<string, number> = {};
+      sortedRoomTypes.forEach((roomType) => {
+        roomTotals[roomType.typeId] = 0;
+      });
+
+      // Sum up totals from filteredAttendees (not from exportData to avoid counting duplicates)
+      let totalAttendees = 0;
+      let totalAmount = 0;
+      let totalApprovedAmount = 0;
+
+      filteredAttendees.forEach((attendee) => {
+        const reg = attendee.registration;
+        totalAttendees += reg.attendeeCount || 0;
+        totalAmount += reg.totalAmount || 0;
+
+        // Calculate approved amount using same logic as above
+        const isFullPaymentMode = eventData.event.paymentMode === 'full';
+        let approvedAmount = 0;
+        if (isFullPaymentMode) {
+          if ((reg as any).fullPaymentPaid === true) {
+            approvedAmount = reg.totalAmount || 0;
+          }
+        } else {
+          if (reg.depositPaid === true) {
+            approvedAmount += reg.depositAmount || 0;
+          }
+          if ((reg as any).remainingPaid === true) {
+            approvedAmount += reg.remainingAmount || 0;
+          }
+        }
+        totalApprovedAmount += approvedAmount;
+
+        // Sum room allocations
+        try {
+          const roomAllocations = JSON.parse(reg.roomAllocations || '[]');
+          if (Array.isArray(roomAllocations)) {
+            roomAllocations.forEach((alloc: { roomTypeId: string; roomCount: number }) => {
+              if (roomTotals[alloc.roomTypeId] !== undefined) {
+                roomTotals[alloc.roomTypeId] += alloc.roomCount || 0;
+              }
+            });
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      });
+
+      summaryTotals['จำนวนผู้เข้าร่วม'] = totalAttendees;
+
+      // Add room totals to summary
+      sortedRoomTypes.forEach((roomType) => {
+        summaryTotals[`ห้องพัก: ${roomType.typeName}`] = roomTotals[roomType.typeId] || 0;
+      });
+
+      // Add other summary fields
+      summaryTotals['ค่าห้องพักรวม'] = '';
+      summaryTotals['สถานะ'] = '';
+      summaryTotals['สถานะการชำระ'] = '';
+      summaryTotals['ยอดรวม'] = totalAmount;
+      summaryTotals['ยอดอนุมัติแล้ว'] = totalApprovedAmount;
+      summaryTotals['ความต้องการพิเศษ'] = '';
+      summaryTotals['ค่าใช้จ่ายเสริม'] = '';
+      summaryTotals['ลำดับผู้เข้าร่วม'] = '';
+      summaryTotals['ชื่อผู้เข้าร่วม'] = '';
+
+      // Add summary row to export data
+      exportData.push(summaryTotals);
 
       // Create workbook with merged cells
       const ws = XLSX.utils.json_to_sheet(exportData);

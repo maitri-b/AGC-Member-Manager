@@ -1138,19 +1138,40 @@ export default function EventDetailPage() {
             eventData.attendees.forEach(attendee => {
               const reg = attendee.registration;
               const totalAmount = reg.totalAmount || 0;
+              const depositAmount = reg.depositAmount || 0;
+              const remainingAmount = reg.remainingAmount || 0;
 
-              // Check payment status
-              const paymentStatus = reg.paymentStatus || '';
-              const depositPaid = reg.depositPaid || false;
+              // Determine payment mode
+              const isFullPaymentMode = depositAmount === 0 || reg.paymentMode === 'full';
 
-              // For deposit mode, check if fully paid
-              const isFullyPaid = depositPaid && (reg.remainingAmount === 0 || paymentStatus.includes('ชำระครบ'));
+              // Calculate approved amount based on what has been marked as paid
+              let approvedAmount = 0;
+              let pendingAmount = 0;
 
-              if (isFullyPaid || paymentStatus.includes('ชำระครบ') || paymentStatus.includes('อนุมัติ')) {
-                totalApproved += totalAmount;
-              } else if (paymentStatus.includes('รอตรวจสอบ') || reg.depositSlipUrl || reg.remainingSlipUrl) {
-                totalPending += totalAmount;
+              if (isFullPaymentMode) {
+                // Full Payment Mode
+                if (reg.fullPaymentPaid === true) {
+                  approvedAmount = totalAmount;
+                } else if (reg.fullPaymentSlipUrl) {
+                  pendingAmount = totalAmount;
+                }
+              } else {
+                // Deposit + Remaining Mode
+                if (reg.depositPaid === true) {
+                  approvedAmount += depositAmount;
+                } else if (reg.depositSlipUrl) {
+                  pendingAmount += depositAmount;
+                }
+
+                if (reg.remainingPaid === true) {
+                  approvedAmount += remainingAmount;
+                } else if (reg.remainingSlipUrl) {
+                  pendingAmount += remainingAmount;
+                }
               }
+
+              totalApproved += approvedAmount;
+              totalPending += pendingAmount;
             });
 
             return (
@@ -1357,8 +1378,17 @@ export default function EventDetailPage() {
               {filteredAttendees.map((attendee, index) => {
                 const isEditing = editingRegistration === attendee.registration.registrationId;
 
+                const isExpanded = expandedRegistrations.has(attendee.registration.registrationId);
+
                 return (
-                <div key={attendee.registration.registrationId || index} className="p-4 hover:bg-gray-50">
+                <div
+                  key={attendee.registration.registrationId || index}
+                  className={`p-4 transition-all duration-200 ${
+                    isExpanded
+                      ? 'bg-purple-50 hover:bg-purple-100 border-l-4 border-purple-400 shadow-sm'
+                      : 'hover:bg-gray-50 border-l-4 border-transparent'
+                  }`}
+                >
                   {/* Header Section with LINE Profile - Horizontal Layout */}
                   <div className="flex items-start gap-4 mb-3">
                     {/* LINE Profile Picture */}
@@ -1535,7 +1565,7 @@ export default function EventDetailPage() {
 
                   {/* Full-Width Cards Section - Below Header (Expandable) */}
                   {expandedRegistrations.has(attendee.registration.registrationId) && (
-                    <div className="space-y-3 mt-3 pt-3 border-t border-gray-200">
+                    <div className="space-y-3 mt-3 pt-3 border-t-2 border-purple-300">
                       {/* View-Only Cards - Hide when editing */}
                       {!isEditing && (
                         <>

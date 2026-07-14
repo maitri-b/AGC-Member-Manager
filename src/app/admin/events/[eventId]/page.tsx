@@ -1107,32 +1107,35 @@ export default function EventDetailPage() {
 
       <main className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-6 lg:px-8">
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center">
-            <p className="text-xl sm:text-3xl font-bold text-blue-600">{eventData.summary.agentRegistrations}</p>
-            <p className="text-[10px] sm:text-sm text-gray-500">บริษัทลงทะเบียน</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          {/* Registration Status - Paired */}
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-orange-200">
+            <p className="text-xl sm:text-3xl font-bold text-orange-600">
+              {eventData.summary.agentRegistrations - eventData.summary.confirmedCount}/{eventData.summary.agentRegistrations}
+            </p>
+            <p className="text-[10px] sm:text-sm text-gray-500">รอดำเนินการ/บริษัทลงทะเบียน</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center">
+
+          {/* Confirmed Companies - Paired */}
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-teal-200">
+            <p className="text-xl sm:text-3xl font-bold text-teal-600">
+              {eventData.summary.confirmedCount}/{eventData.summary.agentRegistrations}
+            </p>
+            <p className="text-[10px] sm:text-sm text-gray-500">บริษัทยืนยันแล้ว/บริษัทลงทะเบียน</p>
+          </div>
+
+          {/* Total Attendees */}
+          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-indigo-200">
             <p className="text-xl sm:text-3xl font-bold text-indigo-600">{eventData.summary.totalAttendees || 0}</p>
             <p className="text-[10px] sm:text-sm text-gray-500">จำนวนผู้เข้าร่วม</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-purple-200">
-            <p className="text-xl sm:text-3xl font-bold text-purple-600">{eventData.summary.clubMemberCount || 0}</p>
-            <p className="text-[10px] sm:text-sm text-gray-500">สมาชิกชมรม</p>
-          </div>
+
+          {/* Club Members - Paired */}
           <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-green-200">
-            <p className="text-xl sm:text-3xl font-bold text-green-600">{eventData.summary.verifiedMemberCount}</p>
-            <p className="text-[10px] sm:text-sm text-gray-500">ยืนยันตัวตนแล้ว</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center">
-            <p className="text-xl sm:text-3xl font-bold text-teal-600">{eventData.summary.confirmedCount}</p>
-            <p className="text-[10px] sm:text-sm text-gray-500">บริษัทยืนยันแล้ว</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center">
-            <p className="text-xl sm:text-3xl font-bold text-orange-600">
-              {eventData.summary.agentRegistrations - eventData.summary.confirmedCount}
+            <p className="text-xl sm:text-3xl font-bold text-green-600">
+              {eventData.summary.verifiedMemberCount}/{eventData.summary.clubMemberCount || 0}
             </p>
-            <p className="text-[10px] sm:text-sm text-gray-500">รอดำเนินการ</p>
+            <p className="text-[10px] sm:text-sm text-gray-500">ยืนยันตัวตนแล้ว/สมาชิกชมรม</p>
           </div>
           {/* Payment Summary Cards */}
           {(() => {
@@ -1145,19 +1148,11 @@ export default function EventDetailPage() {
             // Determine payment mode from event configuration
             const isFullPaymentMode = eventData.event.paymentMode === 'full';
 
-            console.log('=== PAYMENT SUMMARY DEBUG ===');
-            console.log('Event paymentMode:', eventData.event.paymentMode);
-            console.log('isFullPaymentMode:', isFullPaymentMode);
-            console.log('Total attendees:', eventData.attendees.length);
-
             eventData.attendees.forEach(attendee => {
               const reg = attendee.registration;
               const totalAmount = reg.totalAmount || 0;
               const depositAmount = reg.depositAmount || 0;
               const remainingAmount = reg.remainingAmount || 0;
-
-              console.log('--- Registration:', reg.registrationId);
-              console.log('  totalAmount:', totalAmount, 'depositAmount:', depositAmount);
 
               if (isFullPaymentMode) {
                 // Full Payment Mode
@@ -1166,40 +1161,28 @@ export default function EventDetailPage() {
                 const isPaid = (reg as any).fullPaymentPaid === true;
                 const hasSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
 
-                console.log('  FULL MODE - fullPaymentPaid:', (reg as any).fullPaymentPaid, 'fullPaymentSlipUrl:', (reg as any).fullPaymentSlipUrl ? 'YES' : 'NO');
-
                 if (isPaid) {
                   totalApproved += totalAmount;
-                  console.log('  -> APPROVED +', totalAmount);
                 } else if (hasSlip) {
                   totalPending += totalAmount;
-                  console.log('  -> PENDING +', totalAmount);
                 }
               } else {
                 // Deposit + Remaining Mode
-                console.log('  DEPOSIT MODE - depositPaid:', reg.depositPaid, 'depositSlipUrl:', reg.depositSlipUrl ? 'YES' : 'NO');
-
                 // Deposit payment
                 if (reg.depositPaid === true) {
                   totalApproved += depositAmount;
-                  console.log('  -> DEPOSIT APPROVED +', depositAmount);
                 } else if (reg.depositSlipUrl && reg.depositSlipUrl.trim() !== '') {
                   totalPending += depositAmount;
-                  console.log('  -> DEPOSIT PENDING +', depositAmount);
                 }
 
                 // Remaining payment
                 if ((reg as any).remainingPaid === true) {
                   totalApproved += remainingAmount;
-                  console.log('  -> REMAINING APPROVED +', remainingAmount);
                 } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
                   totalPending += remainingAmount;
-                  console.log('  -> REMAINING PENDING +', remainingAmount);
                 }
               }
             });
-
-            console.log('=== TOTALS: Pending=' + totalPending + ', Approved=' + totalApproved + ' ===');
 
             return (
               <>
@@ -1218,10 +1201,6 @@ export default function EventDetailPage() {
               </>
             );
           })()}
-          <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center bg-gray-50">
-            <p className="text-lg sm:text-2xl font-bold text-gray-500">{eventData.summary.totalRegistrations}</p>
-            <p className="text-[10px] sm:text-xs text-gray-400">รายการทั้งหมด</p>
-          </div>
         </div>
 
         {/* Filters */}

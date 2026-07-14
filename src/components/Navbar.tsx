@@ -135,6 +135,12 @@ export default function Navbar() {
             >
               กิจกรรม
             </Link>
+            <Link
+              href="/my-registrations"
+              className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              ประวัติการจอง
+            </Link>
             {canManageEvents && (
               <Link
                 href="/admin/events"
@@ -343,6 +349,13 @@ export default function Navbar() {
               onClick={() => setIsMenuOpen(false)}
             >
               กิจกรรม
+            </Link>
+            <Link
+              href="/my-registrations"
+              className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              ประวัติการจอง
             </Link>
             {canManageEvents && (
               <Link

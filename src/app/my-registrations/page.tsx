@@ -20,6 +20,16 @@ interface Registration {
   status: string;
 }
 
+interface RegistrationCardProps {
+  reg: Registration;
+  formatEventDate: (date: string) => string;
+  getPaymentStatusBadgeClass: (status: string) => string;
+  getStatusBadgeClass: (status: string) => string;
+}
+
+function RegistrationCard({ reg, formatEventDate, getPaymentStatusBadgeClass, getStatusBadgeClass }: RegistrationCardProps) {
+  return (
+
 export default function MyRegistrationsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -49,6 +59,7 @@ export default function MyRegistrationsPage() {
       }
 
       const data = await response.json();
+      console.log('Fetched registrations:', data.registrations); // Debug log
       setRegistrations(data.registrations || []);
     } catch (err) {
       console.error('Error fetching registrations:', err);
@@ -82,6 +93,46 @@ export default function MyRegistrationsPage() {
     }
     return 'bg-gray-100 text-gray-800';
   };
+
+  const formatEventDate = (dateString: string): string => {
+    if (!dateString) return 'ไม่ระบุวันที่';
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return dateString; // Return original if invalid
+      }
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // Categorize registrations
+  const categorizedRegistrations = {
+    active: [] as Registration[],
+    completed: [] as Registration[],
+    cancelled: [] as Registration[],
+  };
+
+  const now = new Date();
+  registrations.forEach((reg) => {
+    const statusLower = reg.status.toLowerCase();
+    const eventDate = reg.eventDate ? new Date(reg.eventDate) : null;
+    const isPastEvent = eventDate ? eventDate < now : false;
+
+    if (statusLower.includes('ยกเลิก') || statusLower.includes('cancelled')) {
+      categorizedRegistrations.cancelled.push(reg);
+    } else if (isPastEvent) {
+      categorizedRegistrations.completed.push(reg);
+    } else {
+      categorizedRegistrations.active.push(reg);
+    }
+  });
 
   if (status === 'loading' || loading) {
     return (
@@ -150,23 +201,80 @@ export default function MyRegistrationsPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Summary */}
-            <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <span className="text-sm sm:text-base font-medium text-gray-700">
-                  พบ {registrations.length} รายการ
-                </span>
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <span className="text-sm sm:text-base font-medium text-gray-700">
+                    พบ {registrations.length} รายการ
+                  </span>
+                </div>
+                <div className="flex gap-3 text-xs sm:text-sm">
+                  <span className="text-green-600 font-medium">กำลังดำเนินการ: {categorizedRegistrations.active.length}</span>
+                  <span className="text-gray-600 font-medium">จบแล้ว: {categorizedRegistrations.completed.length}</span>
+                  <span className="text-red-600 font-medium">ยกเลิก: {categorizedRegistrations.cancelled.length}</span>
+                </div>
               </div>
             </div>
 
-            {/* Registration Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {registrations.map((reg) => (
-                <div key={reg.registrationId} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+            {/* Active Events Section */}
+            {categorizedRegistrations.active.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-green-500 rounded"></span>
+                  กิจกรรมที่กำลังดำเนินการ ({categorizedRegistrations.active.length})
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {categorizedRegistrations.active.map((reg) => (
+                    <RegistrationCard key={reg.registrationId} reg={reg} formatEventDate={formatEventDate} getPaymentStatusBadgeClass={getPaymentStatusBadgeClass} getStatusBadgeClass={getStatusBadgeClass} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Completed Events Section */}
+            {categorizedRegistrations.completed.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-gray-400 rounded"></span>
+                  กิจกรรมที่จบแล้ว ({categorizedRegistrations.completed.length})
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {categorizedRegistrations.completed.map((reg) => (
+                    <RegistrationCard key={reg.registrationId} reg={reg} formatEventDate={formatEventDate} getPaymentStatusBadgeClass={getPaymentStatusBadgeClass} getStatusBadgeClass={getStatusBadgeClass} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cancelled Events Section */}
+            {categorizedRegistrations.cancelled.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-red-500 rounded"></span>
+                  กิจกรรมที่ยกเลิก ({categorizedRegistrations.cancelled.length})
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {categorizedRegistrations.cancelled.map((reg) => (
+                    <RegistrationCard key={reg.registrationId} reg={reg} formatEventDate={formatEventDate} getPaymentStatusBadgeClass={getPaymentStatusBadgeClass} getStatusBadgeClass={getStatusBadgeClass} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function RegistrationCard({ reg, formatEventDate, getPaymentStatusBadgeClass, getStatusBadgeClass }: RegistrationCardProps) {
+  return (
+    <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                   {/* Event Cover Image */}
                   <div className="relative h-40 sm:h-48 bg-gradient-to-br from-blue-100 to-indigo-100">
                     {reg.coverImageUrl ? (
@@ -197,11 +305,7 @@ export default function MyRegistrationsPage() {
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      {new Date(reg.eventDate).toLocaleDateString('th-TH', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                      {formatEventDate(reg.eventDate)}
                     </p>
 
                     {/* Registration Info */}
@@ -245,12 +349,6 @@ export default function MyRegistrationsPage() {
                       ดูรายละเอียด
                     </Link>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
     </div>
   );
 }

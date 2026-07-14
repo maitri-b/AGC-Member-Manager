@@ -183,6 +183,11 @@ export async function GET(
         baseFee: event.baseFee,
         additionalFeePerPerson: event.additionalFeePerPerson,
         memberDiscount: event.memberDiscount,
+        // Payment mode configuration
+        paymentMode: event.paymentMode || 'full',
+        depositAmount: event.depositAmount || 0,
+        depositPercentage: event.depositPercentage || 0,
+        useDepositPercentage: event.useDepositPercentage || false,
         // Event configuration for attendee types and room allocation
         useAttendeeTypePricing: event.useAttendeeTypePricing || false,
         attendeeTypes: event.attendeeTypes || [],

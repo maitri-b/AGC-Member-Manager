@@ -23,6 +23,11 @@ interface Event {
   isPublished: boolean;
   maxCapacity: number;
   maxPerCompany?: number;
+  // Payment mode
+  paymentMode?: 'full' | 'deposit';
+  depositAmount?: number;
+  depositPercentage?: number;
+  useDepositPercentage?: boolean;
   // Attendee type pricing
   useAttendeeTypePricing?: boolean;
   attendeeTypes?: Array<{
@@ -1137,14 +1142,14 @@ export default function EventDetailPage() {
             let totalPending = 0;
             let totalApproved = 0;
 
+            // Determine payment mode from event configuration
+            const isFullPaymentMode = eventData.event.paymentMode === 'full';
+
             eventData.attendees.forEach(attendee => {
               const reg = attendee.registration;
               const totalAmount = reg.totalAmount || 0;
               const depositAmount = reg.depositAmount || 0;
               const remainingAmount = reg.remainingAmount || 0;
-
-              // Determine payment mode - if depositAmount is 0, it's full payment mode
-              const isFullPaymentMode = depositAmount === 0;
 
               if (isFullPaymentMode) {
                 // Full Payment Mode

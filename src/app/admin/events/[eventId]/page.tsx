@@ -318,10 +318,19 @@ export default function EventDetailPage() {
 
         // Add room allocation columns
         sortedRoomTypes.forEach((roomType) => {
-          baseData[roomType.typeName] = roomAllocationMap[roomType.typeId] || 0;
+          const count = roomAllocationMap[roomType.typeId] || 0;
+          baseData[`ห้องพัก: ${roomType.typeName}`] = count > 0 ? `${count} ห้อง` : '';
+        });
+
+        // Calculate total room fee
+        let totalRoomFee = 0;
+        sortedRoomTypes.forEach((roomType) => {
+          const count = roomAllocationMap[roomType.typeId] || 0;
+          totalRoomFee += count * (roomType.price || 0);
         });
 
         // Add other merged data
+        baseData['ค่าห้องพักรวม'] = totalRoomFee;
         baseData['สถานะ'] = attendee.registration.status || '';
         baseData['สถานะการชำระ'] = paymentStatus;
         baseData['ยอดรวม'] = totalAmount;
@@ -361,8 +370,15 @@ export default function EventDetailPage() {
         const rowCount = attendeeNamesList.length || attendeeCount;
 
         if (rowCount > 1) {
-          // Merge columns A to M (all except attendee order and name)
-          for (let col = 0; col < 14; col++) {
+          // Calculate total columns (excluding last 2: attendee order and name)
+          // Base columns: 6 + room types + 6 other fields
+          const baseColumns = 6; // รหัส, บริษัท, ผู้ติดต่อ, เบอร์, ไลน์, จำนวน
+          const roomColumns = sortedRoomTypes.length;
+          const otherColumns = 6; // ค่าห้อง, สถานะ, สถานะชำระ, ยอดรวม, อนุมัติ, ความต้องการ, ค่าเสริม
+          const totalMergeColumns = baseColumns + roomColumns + otherColumns;
+
+          // Merge all columns except last 2 (attendee order and name)
+          for (let col = 0; col < totalMergeColumns; col++) {
             merges.push({
               s: { r: currentRow, c: col },
               e: { r: currentRow + rowCount - 1, c: col },
@@ -374,6 +390,36 @@ export default function EventDetailPage() {
       });
 
       ws['!merges'] = merges;
+
+      // Set column widths
+      const colWidths = [
+        { wch: 18 }, // รหัสลงทะเบียน
+        { wch: 35 }, // ชื่อบริษัท
+        { wch: 25 }, // ผู้ติดต่อ
+        { wch: 15 }, // เบอร์โทร
+        { wch: 20 }, // ชื่อไลน์
+        { wch: 12 }, // จำนวนผู้เข้าร่วม
+      ];
+
+      // Add room type columns widths
+      sortedRoomTypes.forEach(() => {
+        colWidths.push({ wch: 18 }); // ห้องพัก: [ชื่อประเภท]
+      });
+
+      // Add remaining columns widths
+      colWidths.push(
+        { wch: 15 }, // ค่าห้องพักรวม
+        { wch: 15 }, // สถานะ
+        { wch: 20 }, // สถานะการชำระ
+        { wch: 12 }, // ยอดรวม
+        { wch: 15 }, // ยอดอนุมัติแล้ว
+        { wch: 40 }, // ความต้องการพิเศษ
+        { wch: 15 }, // ค่าใช้จ่ายเสริม
+        { wch: 12 }, // ลำดับผู้เข้าร่วม
+        { wch: 30 }  // ชื่อผู้เข้าร่วม
+      );
+
+      ws['!cols'] = colWidths;
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Attendees');

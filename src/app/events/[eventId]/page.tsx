@@ -1560,315 +1560,88 @@ export default function EventDetailPage() {
 
                       {/* 2.5. Payment Slips Table - Show all payment slips */}
                       {paymentSlips.length > 0 && (
-                        <div className="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+                        <div className="bg-white rounded-lg p-3 sm:p-4 mb-4 border border-gray-200">
                           <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            ประวัติการชำระเงิน
+                            <span className="hidden sm:inline">ประวัติการชำระเงิน</span>
+                            <span className="sm:hidden">ประวัติชำระเงิน</span>
                           </h4>
 
-                          {/* Payment Slips Table */}
-                          <div className="overflow-x-auto -mx-4 sm:mx-0">
-                            <table className="w-full text-sm">
+                          {/* Payment Slips Table - Mobile Optimized */}
+                          <div className="overflow-x-auto -mx-3 sm:mx-0">
+                            <table className="w-full text-xs sm:text-sm">
                               <thead className="bg-gray-50 border-y border-gray-200">
                                 <tr>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">วันที่ชำระ</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">ประเภท</th>
-                                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">ยอดเงิน</th>
-                                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">สถานะ</th>
-                                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">ดูสลิป</th>
+                                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-700">วันที่</th>
+                                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-700">ประเภท</th>
+                                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right text-[10px] sm:text-xs font-semibold text-gray-700">ยอดเงิน</th>
+                                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-semibold text-gray-700">สถานะ</th>
+                                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-semibold text-gray-700">
+                                    <span className="hidden sm:inline">ดูสลิป</span>
+                                    <span className="sm:hidden">สลิป</span>
+                                  </th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-200">
-                                {paymentSlips.map((slip) => (
-                                  <tr key={slip.slipId} className="hover:bg-gray-50">
-                                    <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">
-                                      {new Date(slip.uploadedAt || slip.createdAt || new Date()).toLocaleDateString('th-TH', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric',
-                                      })}
-                                    </td>
-                                    <td className="px-3 py-3">
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                        {getPaymentTypeName(slip.paymentType)}
-                                      </span>
-                                    </td>
-                                    <td className="px-3 py-3 text-right text-xs font-semibold text-gray-900 whitespace-nowrap">
-                                      {slip.amount.toLocaleString()} บาท
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>
-                                        {getSlipStatusText(slip.status)}
-                                      </span>
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                      <button
-                                        onClick={() => {
-                                          setLightboxImage(slip.slipUrl);
-                                          setLightboxTitle(`สลิป${getPaymentTypeName(slip.paymentType)}`);
-                                          setLightboxOpen(true);
-                                        }}
-                                        className="text-blue-600 hover:text-blue-800 hover:underline text-xs font-medium"
-                                      >
-                                        ดูสลิป
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
+                                {paymentSlips.map((slip) => {
+                                  const date = new Date(slip.uploadedAt || slip.createdAt || new Date());
+                                  const day = date.getDate().toString().padStart(2, '0');
+                                  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                                  const year = date.getFullYear().toString().slice(-2);
+
+                                  return (
+                                    <tr key={slip.slipId} className="hover:bg-gray-50">
+                                      <td className="px-1.5 sm:px-3 py-2 sm:py-3 text-[10px] sm:text-xs text-gray-700 whitespace-nowrap">
+                                        {`${day}/${month}/${year}`}
+                                      </td>
+                                      <td className="px-1.5 sm:px-3 py-2 sm:py-3">
+                                        <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                                          <span className="hidden sm:inline">{getPaymentTypeName(slip.paymentType)}</span>
+                                          <span className="sm:hidden">
+                                            {slip.paymentType === 'deposit' ? 'มัดจำ' :
+                                             slip.paymentType === 'remaining' ? 'คงเหลือ' :
+                                             slip.paymentType === 'full' ? 'เต็ม' : 'เพิ่ม'}
+                                          </span>
+                                        </span>
+                                      </td>
+                                      <td className="px-1.5 sm:px-3 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-gray-900 whitespace-nowrap">
+                                        <span className="hidden sm:inline">{slip.amount.toLocaleString()} บาท</span>
+                                        <span className="sm:hidden">{(slip.amount / 1000).toFixed(1)}k</span>
+                                      </td>
+                                      <td className="px-1.5 sm:px-3 py-2 sm:py-3 text-center">
+                                        <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>
+                                          <span className="hidden sm:inline">{getSlipStatusText(slip.status)}</span>
+                                          <span className="sm:hidden">
+                                            {slip.status === 'pending' ? '⏳' :
+                                             slip.status === 'approved' ? '✓' : '✗'}
+                                          </span>
+                                        </span>
+                                      </td>
+                                      <td className="px-1.5 sm:px-3 py-2 sm:py-3 text-center">
+                                        <button
+                                          onClick={() => {
+                                            setLightboxImage(slip.slipUrl);
+                                            setLightboxTitle(`สลิป${getPaymentTypeName(slip.paymentType)}`);
+                                            setLightboxOpen(true);
+                                          }}
+                                          className="text-blue-600 hover:text-blue-800 hover:underline text-[10px] sm:text-xs font-medium"
+                                        >
+                                          <span className="hidden sm:inline">ดูสลิป</span>
+                                          <span className="sm:hidden">
+                                            <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                          </span>
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                             </table>
-                          </div>
-                          <div className="space-y-3">
-                            {/* Deposit Slip (for Deposit mode) OR Full Payment Slip (for Full mode) */}
-                            {(userRegistration.depositSlipUrl || (event.paymentMode !== 'deposit' && (userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl))) && (
-                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <div className="flex items-start gap-2">
-                                  {/* File Icon */}
-                                  <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-
-                                  {/* Slip Info */}
-                                  <div className="flex-1 min-w-0">
-                                    {(() => {
-                                      const slipUrl = userRegistration.depositSlipUrl || userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl || '';
-                                      const fileName = slipUrl.split('/').pop() || slipUrl.split('%2F').pop() || 'payment-slip';
-                                      const decodedFileName = decodeURIComponent(fileName);
-                                      const paymentType = event.paymentMode === 'deposit' ? 'มัดจำ' : 'ชำระเต็มจำนวน';
-                                      const amount = event.paymentMode === 'deposit'
-                                        ? userRegistration.depositAmount
-                                        : userRegistration.totalAmount;
-
-                                      return (
-                                        <>
-                                          <button
-                                            onClick={() => {
-                                              setLightboxImage(slipUrl);
-                                              setLightboxTitle(event.paymentMode === 'deposit' ? 'สลิปมัดจำ' : 'สลิปชำระเงิน');
-                                              setLightboxOpen(true);
-                                            }}
-                                            className="text-left hover:underline text-blue-700 font-medium text-sm break-all"
-                                          >
-                                            {decodedFileName}
-                                          </button>
-                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                              {paymentType}
-                                            </span>
-                                            {amount && (
-                                              <span className="text-xs font-semibold text-blue-900">
-                                                {amount.toLocaleString()} บาท
-                                              </span>
-                                            )}
-                                          </div>
-                                        </>
-                                      );
-                                    })()}
-
-                                    {(() => {
-                                      // For Full Payment: Use remainingPaidDate (set by GAS)
-                                      // For Deposit mode: Use depositPaidDate
-                                      const paidDate = event.paymentMode === 'deposit'
-                                        ? userRegistration.depositPaidDate
-                                        : userRegistration.remainingPaidDate;
-
-                                      if (paidDate) {
-                                        try {
-                                          const dateObj = typeof paidDate === 'string' ? new Date(paidDate) : paidDate;
-                                          return (
-                                            <p className="text-xs text-blue-700 mt-1">
-                                              <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                              </svg>
-                                              อัปโหลดเมื่อ: {dateObj.toLocaleString('th-TH', {
-                                                year: 'numeric',
-                                                month: 'long',
-                                                day: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                              })} น.
-                                            </p>
-                                          );
-                                        } catch (err) {
-                                          console.error('Error formatting date:', err, paidDate);
-                                          return null;
-                                        }
-                                      }
-                                      return null;
-                                    })()}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Remaining Slip (for Deposit mode only - when deposit is paid) */}
-                            {event.paymentMode === 'deposit' && userRegistration.depositPaid && userRegistration.remainingSlipUrl && (
-                              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div className="flex items-start gap-2">
-                                  {/* File Icon */}
-                                  <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-
-                                  {/* Slip Info */}
-                                  <div className="flex-1 min-w-0">
-                                    {(() => {
-                                      const slipUrl = userRegistration.remainingSlipUrl || '';
-                                      const fileName = slipUrl.split('/').pop() || slipUrl.split('%2F').pop() || 'remaining-payment-slip';
-                                      const decodedFileName = decodeURIComponent(fileName);
-
-                                      return (
-                                        <>
-                                          <button
-                                            onClick={() => {
-                                              setLightboxImage(slipUrl);
-                                              setLightboxTitle('สลิปยอดคงเหลือ');
-                                              setLightboxOpen(true);
-                                            }}
-                                            className="text-left hover:underline text-green-700 font-medium text-sm break-all"
-                                          >
-                                            {decodedFileName}
-                                          </button>
-                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                              ยอดคงเหลือ
-                                            </span>
-                                            {userRegistration.remainingAmount && (
-                                              <span className="text-xs font-semibold text-green-900">
-                                                {userRegistration.remainingAmount.toLocaleString()} บาท
-                                              </span>
-                                            )}
-                                          </div>
-                                        </>
-                                      );
-                                    })()}
-
-                                    {userRegistration.remainingPaidDate && (
-                                      <p className="text-xs text-green-700 mt-1">
-                                        <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        อัปโหลดเมื่อ: {new Date(userRegistration.remainingPaidDate).toLocaleString('th-TH', {
-                                          year: 'numeric',
-                                          month: 'long',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })} น.
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Additional Payments (for amount adjustments) */}
-                            {(() => {
-                              const additionalPayments = userRegistration.additionalPayments
-                                ? (() => {
-                                    try {
-                                      const parsed = JSON.parse(userRegistration.additionalPayments);
-                                      return Array.isArray(parsed) ? parsed : [];
-                                    } catch {
-                                      return [];
-                                    }
-                                  })()
-                                : [];
-
-                              if (additionalPayments.length === 0) return null;
-
-                              return additionalPayments.map((payment: any, index: number) => (
-                                <div key={payment.paymentId || index} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                                  <div className="flex items-start gap-2">
-                                    {/* File Icon */}
-                                    <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-
-                                    {/* Slip Info */}
-                                    <div className="flex-1 min-w-0">
-                                      {payment.slipUrl ? (
-                                        <>
-                                          <button
-                                            onClick={() => {
-                                              setLightboxImage(payment.slipUrl);
-                                              setLightboxTitle('สลิปเพิ่มเติม');
-                                              setLightboxOpen(true);
-                                            }}
-                                            className="text-left hover:underline text-orange-700 font-medium text-sm break-all"
-                                          >
-                                            {(() => {
-                                              const fileName = payment.slipUrl.split('/').pop() || payment.slipUrl.split('%2F').pop() || 'additional-payment-slip';
-                                              return decodeURIComponent(fileName);
-                                            })()}
-                                          </button>
-                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                                              ชำระเพิ่มเติม
-                                            </span>
-                                            {payment.amount && (
-                                              <span className="text-xs font-semibold text-orange-900">
-                                                {payment.amount.toLocaleString()} บาท
-                                              </span>
-                                            )}
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                              payment.status === 'อนุมัติแล้ว' ? 'bg-green-100 text-green-800' :
-                                              payment.status === 'รอตรวจสอบ' ? 'bg-purple-100 text-purple-800' :
-                                              payment.status === 'ปฏิเสธ' ? 'bg-red-100 text-red-800' :
-                                              'bg-yellow-100 text-yellow-800'
-                                            }`}>
-                                              {payment.status}
-                                            </span>
-                                          </div>
-                                          {payment.reason && (
-                                            <p className="text-xs text-orange-700 mt-1">
-                                              {payment.reason}
-                                            </p>
-                                          )}
-                                          {payment.uploadedAt && (
-                                            <p className="text-xs text-orange-700 mt-1">
-                                              <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                              </svg>
-                                              อัปโหลดเมื่อ: {new Date(payment.uploadedAt).toLocaleString('th-TH', {
-                                                year: 'numeric',
-                                                month: 'long',
-                                                day: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                              })} น.
-                                            </p>
-                                          )}
-                                        </>
-                                      ) : (
-                                        <div>
-                                          <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                                              ชำระเพิ่มเติม
-                                            </span>
-                                            {payment.amount && (
-                                              <span className="text-xs font-semibold text-orange-900">
-                                                {payment.amount.toLocaleString()} บาท
-                                              </span>
-                                            )}
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                              {payment.status}
-                                            </span>
-                                          </div>
-                                          {payment.reason && (
-                                            <p className="text-xs text-orange-700 mt-1">
-                                              {payment.reason}
-                                            </p>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ));
-                            })()}
                           </div>
                         </div>
                       )}

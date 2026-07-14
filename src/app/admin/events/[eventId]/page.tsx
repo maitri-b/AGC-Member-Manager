@@ -1142,7 +1142,8 @@ export default function EventDetailPage() {
               const remainingAmount = reg.remainingAmount || 0;
 
               // Determine payment mode
-              const isFullPaymentMode = depositAmount === 0 || reg.paymentMode === 'full';
+              // If depositAmount is 0, it's full payment mode
+              const isFullPaymentMode = depositAmount === 0;
 
               // Calculate approved amount based on what has been marked as paid
               let approvedAmount = 0;

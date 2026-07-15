@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
 import { adminDb } from '@/lib/firebase-admin';
+import { updateMember } from '@/lib/google-sheets';
 
 export async function PUT(
   request: NextRequest,
@@ -41,7 +42,23 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    // Update member status in Firestore
+    // Update member status in Google Sheets (primary source)
+    try {
+      await updateMember(memberId, {
+        status,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: session.user.name || session.user.id,
+      });
+      console.log(`[Google Sheets] Updated status to '${status}' for member ${memberId}`);
+    } catch (sheetError) {
+      console.error('Error updating status in Google Sheets:', sheetError);
+      return NextResponse.json(
+        { error: 'Failed to update member in Google Sheets' },
+        { status: 500 }
+      );
+    }
+
+    // Also update in Firestore if exists
     const db = adminDb();
     const membersRef = db.collection('members');
     const snapshot = await membersRef
@@ -49,16 +66,15 @@ export async function PUT(
       .limit(1)
       .get();
 
-    if (snapshot.empty) {
-      return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+    if (!snapshot.empty) {
+      const memberDoc = snapshot.docs[0];
+      await memberDoc.ref.update({
+        status,
+        updatedAt: new Date().toISOString(),
+        updatedBy: session.user.lineUserId || session.user.id || 'unknown',
+      });
+      console.log(`[Firestore] Updated status for member ${memberId}`);
     }
-
-    const memberDoc = snapshot.docs[0];
-    await memberDoc.ref.update({
-      status,
-      updatedAt: new Date().toISOString(),
-      updatedBy: session.user.lineUserId || session.user.id || 'unknown',
-    });
 
     console.log(`[Member Status Update] memberId=${memberId}, newStatus=${status}, updatedBy=${session.user.name || session.user.id}`);
 

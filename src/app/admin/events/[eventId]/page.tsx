@@ -162,6 +162,223 @@ function getAdditionalAmount(attendee: Attendee, eventPaymentMode: 'full' | 'dep
   }
 }
 
+// ✅ Payment History Inline Component
+function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: string; onUpdate: () => void }) {
+  const [paymentSlips, setPaymentSlips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState('');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    fetchPaymentSlips();
+  }, [registrationId]);
+
+  const fetchPaymentSlips = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/payments?registrationId=${registrationId}`);
+      if (!response.ok) throw new Error('Failed to fetch payment slips');
+      const data = await response.json();
+      setPaymentSlips(data.slips || []);
+    } catch (error) {
+      console.error('Error fetching payment slips:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (slipId: string) => {
+    try {
+      const response = await fetch(`/api/payments/${slipId}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error('Failed to approve payment');
+      alert('อนุมัติสลิปเรียบร้อยแล้ว');
+      await fetchPaymentSlips();
+      onUpdate();
+    } catch (error) {
+      console.error('Error approving payment:', error);
+      alert('ไม่สามารถอนุมัติสลิปได้');
+    }
+  };
+
+  const handleReject = async (slipId: string) => {
+    const reason = prompt('กรุณาระบุเหตุผลในการปฏิเสธ:');
+    if (!reason) return;
+
+    try {
+      const response = await fetch(`/api/payments/${slipId}/reject`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!response.ok) throw new Error('Failed to reject payment');
+      alert('ปฏิเสธสลิปเรียบร้อยแล้ว');
+      await fetchPaymentSlips();
+      onUpdate();
+    } catch (error) {
+      console.error('Error rejecting payment:', error);
+      alert('ไม่สามารถปฏิเสธสลิปได้');
+    }
+  };
+
+  const getPaymentTypeName = (type: string) => {
+    const names: Record<string, string> = {
+      full: 'ชำระเต็มจำนวน',
+      deposit: 'ชำระมัดจำ',
+      remaining: 'ชำระยอดคงเหลือ',
+      additional: 'ชำระเพิ่มเติม',
+    };
+    return names[type] || type;
+  };
+
+  const getSlipStatusBadgeClass = (status: string) => {
+    if (status === 'approved') return 'bg-green-100 text-green-800';
+    if (status === 'rejected') return 'bg-red-100 text-red-800';
+    return 'bg-yellow-100 text-yellow-800';
+  };
+
+  const getSlipStatusText = (status: string) => {
+    if (status === 'approved') return 'อนุมัติแล้ว';
+    if (status === 'rejected') return 'ปฏิเสธ';
+    return 'รอตรวจสอบ';
+  };
+
+  if (loading) {
+    return (
+      <div className="mt-3 p-3 bg-gray-50 rounded-lg text-center text-xs text-gray-500">
+        กำลังโหลดประวัติการชำระเงิน...
+      </div>
+    );
+  }
+
+  if (paymentSlips.length === 0) {
+    return null; // Don't show anything if no payment slips
+  }
+
+  return (
+    <>
+      <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
+        <h4 className="text-xs font-semibold text-gray-900 mb-2 flex items-center gap-2">
+          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          ประวัติการชำระเงิน
+        </h4>
+
+        {/* Mobile & Desktop Responsive Table */}
+        <div className="overflow-x-auto -mx-3 sm:mx-0">
+          <table className="w-full text-xs">
+            <thead className="bg-gray-50 border-y border-gray-200">
+              <tr>
+                <th className="px-2 py-1.5 text-left text-[10px] sm:text-xs font-semibold text-gray-700">วันที่</th>
+                <th className="px-2 py-1.5 text-left text-[10px] sm:text-xs font-semibold text-gray-700">ประเภท</th>
+                <th className="px-2 py-1.5 text-right text-[10px] sm:text-xs font-semibold text-gray-700">ยอดเงิน</th>
+                <th className="px-2 py-1.5 text-center text-[10px] sm:text-xs font-semibold text-gray-700">สถานะ</th>
+                <th className="px-2 py-1.5 text-center text-[10px] sm:text-xs font-semibold text-gray-700">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {paymentSlips.map((slip) => {
+                const date = new Date(slip.uploadedAt || slip.createdAt || new Date());
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const year = date.getFullYear().toString().slice(-2);
+
+                return (
+                  <tr key={slip.slipId} className="hover:bg-gray-50">
+                    <td className="px-2 py-2 text-[10px] sm:text-xs text-gray-700 whitespace-nowrap">
+                      {`${day}/${month}/${year}`}
+                    </td>
+                    <td className="px-2 py-2">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                        <span className="hidden sm:inline">{getPaymentTypeName(slip.paymentType)}</span>
+                        <span className="sm:hidden">
+                          {slip.paymentType === 'deposit' ? 'มัดจำ' :
+                           slip.paymentType === 'remaining' ? 'คงเหลือ' :
+                           slip.paymentType === 'full' ? 'เต็ม' : 'เพิ่ม'}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 text-right text-[10px] sm:text-xs font-semibold text-gray-900 whitespace-nowrap">
+                      <span className="hidden sm:inline">฿{slip.amount.toLocaleString()}</span>
+                      <span className="sm:hidden">฿{(slip.amount / 1000).toFixed(1)}k</span>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>
+                        <span className="hidden sm:inline">{getSlipStatusText(slip.status)}</span>
+                        <span className="sm:hidden">
+                          {slip.status === 'pending' ? '⏳' :
+                           slip.status === 'approved' ? '✓' : '✗'}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => {
+                            setLightboxImage(slip.slipUrl);
+                            setLightboxOpen(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-[10px] sm:text-xs font-medium"
+                          title="ดูสลิป"
+                        >
+                          👁️
+                        </button>
+                        {slip.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleApprove(slip.slipId)}
+                              className="text-green-600 hover:text-green-800 text-[10px] sm:text-xs font-medium"
+                              title="อนุมัติ"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={() => handleReject(slip.slipId)}
+                              className="text-red-600 hover:text-red-800 text-[10px] sm:text-xs font-medium"
+                              title="ปฏิเสธ"
+                            >
+                              ✗
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Lightbox for viewing slip image */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 text-2xl"
+            >
+              ✕
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Payment Slip"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function EventDetailPage() {
   const params = useParams();
   const eventId = decodeURIComponent(params.eventId as string);
@@ -2500,37 +2717,90 @@ export default function EventDetailPage() {
                             {/* Full Payment Section (when event uses Full Payment Mode) */}
                             {eventData.event.paymentMode === 'full' && (
                               <div className="border-t pt-2">
-                                {attendee.registration.depositPaid ? (
-                                  <div className="mt-1">
-                                    <div className="flex items-center gap-2 text-green-600 mb-2">
-                                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                      </svg>
-                                      ชำระครบแล้ว {attendee.registration.depositPaidDate && `(${formatDeadline(attendee.registration.depositPaidDate)})`}
-                                    </div>
-                                    {/* Show additional payment button if there are extra charges */}
-                                    {hasAdditionalCharges(attendee, 'full') ? (
-                                      <div className="space-y-2">
-                                        <div className="p-2 bg-orange-50 border border-orange-200 rounded text-xs">
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-orange-700 font-medium">ยอดเรียกเก็บเพิ่ม:</span>
-                                            <span className="font-semibold text-orange-600">฿{getAdditionalAmount(attendee, 'full').toLocaleString()}</span>
+                                {(() => {
+                                  // ✅ Calculate actual amounts paid
+                                  const totalAmount = attendee.registration.totalAmount || 0;
+                                  const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
+                                  const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
+                                  const actualPaid = fullPaymentAmountPaid || depositAmountPaid;
+                                  const additionalRequired = Math.max(0, totalAmount - actualPaid);
+                                  const isFullyPaid = actualPaid >= totalAmount && actualPaid > 0;
+                                  const hasPayment = attendee.registration.depositPaid;
+
+                                  return (
+                                    <>
+                                      {hasPayment ? (
+                                        <div className="mt-1 space-y-2">
+                                          {/* Show payment breakdown */}
+                                          <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs space-y-1">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-gray-700">ยอดที่ชำระแล้ว:</span>
+                                              <span className="font-semibold text-blue-600">฿{actualPaid.toLocaleString()}</span>
+                                            </div>
+                                            {additionalRequired > 0 && (
+                                              <div className="flex items-center justify-between border-t border-blue-300 pt-1">
+                                                <span className="text-orange-700 font-medium">ยอดที่ยังขาด:</span>
+                                                <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
+                                              </div>
+                                            )}
                                           </div>
+
+                                          {isFullyPaid ? (
+                                            <>
+                                              <div className="flex items-center gap-2 text-green-600">
+                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                                ชำระครบแล้ว {attendee.registration.depositPaidDate && `(${formatDeadline(attendee.registration.depositPaidDate)})`}
+                                              </div>
+                                              <button
+                                                onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                                className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                                title="ลบการลงทะเบียน"
+                                              >
+                                                ❌ ยกเลิกการลงทะเบียน
+                                              </button>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <div className="flex items-center gap-2 text-orange-600">
+                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                                ต้องชำระเงินเพิ่มเติม ฿{additionalRequired.toLocaleString()}
+                                              </div>
+                                              <div className="flex gap-2">
+                                                <button
+                                                  onClick={() => {
+                                                    const modifiedAttendee = {
+                                                      ...attendee,
+                                                      registration: {
+                                                        ...attendee.registration,
+                                                        remainingAmount: additionalRequired
+                                                      }
+                                                    };
+                                                    handleOpenPaymentModal(modifiedAttendee, 'remaining');
+                                                  }}
+                                                  className="flex-1 px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors"
+                                                >
+                                                  📤 อัพโหลดสลิปเพิ่ม
+                                                </button>
+                                                <button
+                                                  onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                                  className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                                  title="ลบการลงทะเบียน"
+                                                >
+                                                  ❌ ยกเลิก
+                                                </button>
+                                              </div>
+                                            </>
+                                          )}
                                         </div>
-                                        <div className="flex gap-2">
+                                      ) : (
+                                        <div className="mt-2 flex gap-2">
                                           <button
-                                            onClick={() => {
-                                              // Create a modified attendee object with updated remainingAmount
-                                              const modifiedAttendee = {
-                                                ...attendee,
-                                                registration: {
-                                                  ...attendee.registration,
-                                                  remainingAmount: getAdditionalAmount(attendee, 'full')
-                                                }
-                                              };
-                                              handleOpenPaymentModal(modifiedAttendee, 'remaining');
-                                            }}
-                                            className="flex-1 px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors"
+                                            onClick={() => handleOpenPaymentModal(attendee, 'full')}
+                                            className="flex-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
                                           >
                                             📤 อัพโหลดสลิป
                                           </button>
@@ -2542,37 +2812,19 @@ export default function EventDetailPage() {
                                             ❌ ยกเลิก
                                           </button>
                                         </div>
-                                      </div>
-                                    ) : (
-                                      <button
-                                        onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                        className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                        title="ลบการลงทะเบียน"
-                                      >
-                                        ❌ ยกเลิกการลงทะเบียน
-                                      </button>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="mt-2 flex gap-2">
-                                    <button
-                                      onClick={() => handleOpenPaymentModal(attendee, 'full')}
-                                      className="flex-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
-                                    >
-                                      📤 อัพโหลดสลิป
-                                    </button>
-                                    <button
-                                      onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                      className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                      title="ลบการลงทะเบียน"
-                                    >
-                                      ❌ ยกเลิก
-                                    </button>
-                                  </div>
-                                )}
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </div>
                             )}
                           </div>
+
+                          {/* ✅ Payment History - Inline Table */}
+                          <PaymentHistoryInline
+                            registrationId={attendee.registration.registrationId}
+                            onUpdate={() => fetchEventData()}
+                          />
                         </div>
                       )}
 

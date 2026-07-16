@@ -97,10 +97,25 @@ export async function POST(request: NextRequest) {
     console.log('[Admin Upload] ✅ Event ID validation passed');
 
     // Upload file to Firebase Storage
-    const bucket = adminStorage().bucket();
+    const storage = adminStorage();
+    // Try server-side env first, fallback to public env (for local dev)
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+    if (!bucketName) {
+      console.error('[Admin Upload] FIREBASE_STORAGE_BUCKET is not configured');
+      return NextResponse.json(
+        { error: 'Storage configuration error. Please contact administrator.' },
+        { status: 500 }
+      );
+    }
+
+    console.log('[Admin Upload] Using storage bucket:', bucketName);
+    const bucket = storage.bucket(bucketName);
     const fileExtension = fileName.split('.').pop();
     const storagePath = `payment-slips/${eventId}/${registrationId}/${Date.now()}.${fileExtension}`;
     const file = bucket.file(storagePath);
+
+    console.log('[Admin Upload] Storage path:', storagePath);
 
     // Decode base64 and upload
     const fileBuffer = Buffer.from(fileData, 'base64');

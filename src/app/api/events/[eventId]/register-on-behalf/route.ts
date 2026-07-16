@@ -140,7 +140,10 @@ export async function POST(
     }
 
     // Calculate registration fee
+    let eventFee = 0;
+    let roomFee = 0;
     let totalFee = 0;
+
     if (eventData.useAttendeeTypePricing && eventData.attendeeTypes) {
       // Calculate fee based on attendee types
       if (!attendeeTypeSelections || attendeeTypeSelections.length === 0) {
@@ -154,64 +157,66 @@ export async function POST(
       }
 
       // Calculate fee from attendee types
-      totalFee = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
+      eventFee = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
         const type = eventData.attendeeTypes.find((t: { typeId: string; price: number }) => t.typeId === s.typeId);
         if (!type) {
           return sum;
         }
         return sum + (type.price * s.quantity);
       }, 0);
-
-      // Validate and calculate room allocation fees (if room types are configured)
-      if (eventData.roomTypes && eventData.roomTypes.length > 0) {
-        if (!roomAllocations || roomAllocations.length === 0) {
-          return NextResponse.json({ error: 'กรุณาเลือกประเภทห้องพัก' }, { status: 400 });
-        }
-
-        // Calculate total room capacity
-        const totalRoomCapacity = roomAllocations.reduce((sum: number, r: { roomTypeId: string; roomCount: number }) => {
-          const roomType = eventData.roomTypes.find((rt: { typeId: string; capacity: number }) => rt.typeId === r.roomTypeId);
-          if (!roomType) {
-            return sum;
-          }
-          return sum + (roomType.capacity * r.roomCount);
-        }, 0);
-
-        // Calculate room fees
-        const roomFee = roomAllocations.reduce((sum: number, r: { roomTypeId: string; roomCount: number }) => {
-          const roomType = eventData.roomTypes.find((rt: { typeId: string; price: number }) => rt.typeId === r.roomTypeId);
-          if (!roomType) {
-            return sum;
-          }
-          return sum + (roomType.price * r.roomCount);
-        }, 0);
-
-        // Validate: room capacity must match or exceed attendee count
-        if (totalRoomCapacity !== attendeeCount) {
-          return NextResponse.json({
-            error: `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalRoomCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
-          }, { status: 400 });
-        }
-
-        // Add room fees to total
-        totalFee += roomFee;
-      }
     } else {
       // Original fee calculation (fixed or tiered pricing)
-      totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, !!targetMemberId);
+      eventFee = calculateRegistrationFee(eventData as Event, attendeeCount, !!targetMemberId);
     }
+
+    // Validate and calculate room allocation fees (if room types are configured)
+    // This works for BOTH attendee type pricing AND fixed/tiered pricing
+    if (eventData.roomTypes && eventData.roomTypes.length > 0) {
+      if (!roomAllocations || roomAllocations.length === 0) {
+        return NextResponse.json({ error: 'กรุณาเลือกประเภทห้องพัก' }, { status: 400 });
+      }
+
+      // Calculate total room capacity
+      const totalRoomCapacity = roomAllocations.reduce((sum: number, r: { roomTypeId: string; roomCount: number }) => {
+        const roomType = eventData.roomTypes.find((rt: { typeId: string; capacity: number }) => rt.typeId === r.roomTypeId);
+        if (!roomType) {
+          return sum;
+        }
+        return sum + (roomType.capacity * r.roomCount);
+      }, 0);
+
+      // Calculate room fees
+      roomFee = roomAllocations.reduce((sum: number, r: { roomTypeId: string; roomCount: number }) => {
+        const roomType = eventData.roomTypes.find((rt: { typeId: string; price: number }) => rt.typeId === r.roomTypeId);
+        if (!roomType) {
+          return sum;
+        }
+        return sum + (roomType.price * r.roomCount);
+      }, 0);
+
+      // Validate: room capacity must match or exceed attendee count
+      if (totalRoomCapacity !== attendeeCount) {
+        return NextResponse.json({
+          error: `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalRoomCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
+        }, { status: 400 });
+      }
+    }
+
+    // Calculate total fee = event fee + room fee
+    totalFee = eventFee + roomFee;
 
     // Calculate payment breakdown and deadlines based on payment mode
     let depositAmount = 0;
-    let remainingAmount = totalFee;
+    let remainingAmount = 0;
     let depositDeadline = '';
     let remainingDeadline = '';
+    let fullPaymentDeadline = '';
     let paymentStatus = totalFee > 0 ? 'รอชำระเงิน' : 'ลงทะเบียนแล้ว';
 
     const registrationDate = new Date().toISOString();
 
     if (eventData.paymentMode === 'deposit' && totalFee > 0) {
-      // Deposit Mode: Split payment into two installments
+      // ✅ Deposit Mode: Split payment into two installments
       const split = calculatePaymentSplit(totalFee, eventData as Event, attendeeCount);
       depositAmount = split.depositAmount;
       remainingAmount = split.remainingAmount;
@@ -226,8 +231,13 @@ export async function POST(
 
       paymentStatus = 'รอชำระมัดจำ';
     } else if (totalFee > 0) {
-      // Full Payment Mode: Calculate payment deadline
-      depositDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
+      // ✅ Full Payment Mode: No deposit/remaining split, use full payment deadline only
+      fullPaymentDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
+
+      // ✅ Keep deposit/remaining amounts as 0 (no split in full payment mode)
+      depositAmount = 0;
+      remainingAmount = 0;
+
       paymentStatus = 'รอชำระเงิน';
     }
 
@@ -252,9 +262,10 @@ export async function POST(
       attendee_names: JSON.stringify(attendeeNames),
       contact_phone: member?.mobile || member?.phone || '',
       contact_email: member?.email || '',
-      event_fee: totalFee,
+      event_fee: eventFee,        // ✅ Event registration fee only
+      room_fee: roomFee,           // ✅ Room allocation fee only
       shirt_fee: 0,
-      total_amount: totalFee,
+      total_amount: totalFee,      // ✅ Sum of eventFee + roomFee
       slip_url: '',
       // Deposit payment fields
       deposit_amount: depositAmount,
@@ -265,6 +276,8 @@ export async function POST(
       remaining_slip_url: '',
       deposit_deadline: depositDeadline,
       remaining_deadline: remainingDeadline,
+      // Full payment fields
+      full_payment_deadline: fullPaymentDeadline,  // ✅ Full payment deadline (for paymentMode='full')
       payment_status: paymentStatus,
       // Attendee type pricing
       attendee_type_selections: JSON.stringify(attendeeTypeSelections),
@@ -318,7 +331,8 @@ export async function POST(
       attendeeNames: registrationData.attendee_names,
       shirtCount: 0,
       shirtSizes: '[]',
-      eventFee: registrationData.event_fee,
+      eventFee: registrationData.event_fee,    // ✅ Event fee only
+      roomFee: registrationData.room_fee,      // ✅ Room fee only
       shirtFee: registrationData.shirt_fee,
       totalAmount: registrationData.total_amount,
       depositAmount: registrationData.deposit_amount,
@@ -329,6 +343,7 @@ export async function POST(
       remainingSlipUrl: registrationData.remaining_slip_url,
       depositDeadline: registrationData.deposit_deadline,
       remainingDeadline: registrationData.remaining_deadline,
+      fullPaymentDeadline: registrationData.full_payment_deadline,  // ✅ Full payment deadline
       paymentStatus: registrationData.payment_status,
       attendeeTypeSelections: registrationData.attendee_type_selections,
       roomAllocations: registrationData.room_allocations,

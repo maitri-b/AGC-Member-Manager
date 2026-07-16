@@ -41,7 +41,8 @@ interface Event {
   paymentQrCodeUrl?: string;
   paymentTerms?: string;
   paymentSlipSubmissionUrl?: string;
-  // Deposit payment configuration (New)
+  // Payment configuration (New)
+  paymentTiming?: 'deferred' | 'immediate';
   paymentMode?: 'full' | 'deposit';
   // Full payment deadline (for paymentMode = 'full')
   paymentDeadlineType?: 'none' | 'fixed' | 'hours';
@@ -176,6 +177,10 @@ export default function EventDetailPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState('');
   const [lightboxTitle, setLightboxTitle] = useState('');
+
+  // Immediate payment slip state (New)
+  const [paymentSlipFile, setPaymentSlipFile] = useState<File | null>(null);
+  const [slipPreviewUrl, setSlipPreviewUrl] = useState<string | null>(null);
 
   // Payment slip upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -496,26 +501,62 @@ export default function EventDetailPage() {
       }
     }
 
+    // Validate slip upload for immediate payment timing
+    const isImmediatePayment = event.paymentTiming === 'immediate';
+    const totalFee = calculatedTotalFee + calculatedRoomFee;
+
+    if (isImmediatePayment && totalFee > 0 && !paymentSlipFile) {
+      toast.error('กรุณาแนบหลักฐานการชำระเงิน');
+      return;
+    }
+
     setRegistering(true);
     try {
-      const response = await fetch(`/api/events/${eventId}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          attendeeCount,
-          attendeeNames: attendeeNames,
-          specialRequests,
-          attendeeTypeSelections, // Add attendee type selections
-          roomAllocations, // Add room allocations
-          // Guest information for staff without memberId
-          guestInfo: isStaffWithoutMember ? {
+      let response;
+
+      if (isImmediatePayment && paymentSlipFile) {
+        // Use FormData for file upload
+        const formData = new FormData();
+        formData.append('slipFile', paymentSlipFile);
+        formData.append('attendeeCount', attendeeCount.toString());
+        formData.append('attendeeNames', JSON.stringify(attendeeNames));
+        formData.append('specialRequests', specialRequests);
+        formData.append('attendeeTypeSelections', JSON.stringify(attendeeTypeSelections));
+        formData.append('roomAllocations', JSON.stringify(roomAllocations));
+
+        if (isStaffWithoutMember) {
+          formData.append('guestInfo', JSON.stringify({
             companyName: guestCompanyName,
             licenseNumber: guestLicenseNumber,
             contactName: guestContactName,
             phone: guestPhone,
-          } : undefined,
-        }),
-      });
+          }));
+        }
+
+        response = await fetch(`/api/events/${eventId}/register`, {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        // Use JSON for backward compatibility (deferred payment)
+        response = await fetch(`/api/events/${eventId}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            attendeeCount,
+            attendeeNames: attendeeNames,
+            specialRequests,
+            attendeeTypeSelections,
+            roomAllocations,
+            guestInfo: isStaffWithoutMember ? {
+              companyName: guestCompanyName,
+              licenseNumber: guestLicenseNumber,
+              contactName: guestContactName,
+              phone: guestPhone,
+            } : undefined,
+          }),
+        });
+      }
 
       const data = await response.json();
 
@@ -2731,6 +2772,94 @@ export default function EventDetailPage() {
                             </div>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Payment Slip Upload Section (Immediate Payment Mode) */}
+                  {event.paymentTiming === 'immediate' && (calculateRegistrationFee(event, attendeeCount, true) + calculatedRoomFee) > 0 && (
+                    <div className="bg-orange-50 border border-orange-300 rounded-lg p-6">
+                      <h3 className="text-base font-semibold text-orange-900 mb-2 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        หลักฐานการชำระเงิน *
+                      </h3>
+
+                      <p className="text-sm text-orange-800 mb-4">
+                        กรุณาแนบหลักฐานการโอนเงินเพื่อยืนยันการลงทะเบียน
+                        {event.paymentMode === 'deposit' && ' (มัดจำ)'}
+                      </p>
+
+                      {/* Amount to pay */}
+                      <div className="bg-white border border-orange-200 rounded p-4 mb-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700">
+                            {event.paymentMode === 'deposit' ? 'ยอดมัดจำที่ต้องชำระ:' : 'ยอดที่ต้องชำระ:'}
+                          </span>
+                          <span className="text-xl font-bold text-orange-600">
+                            {event.paymentMode === 'deposit'
+                              ? (event.useDepositPercentage
+                                  ? `฿${Math.round((calculateRegistrationFee(event, attendeeCount, true) + calculatedRoomFee) * ((event.depositPercentage || 0) / 100)).toLocaleString()}`
+                                  : `฿${(event.depositAmount || 0).toLocaleString()}`)
+                              : `฿${(calculateRegistrationFee(event, attendeeCount, true) + calculatedRoomFee).toLocaleString()}`
+                            }
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* File input */}
+                      <div className="space-y-3">
+                        <label className="block">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setPaymentSlipFile(file);
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setSlipPreviewUrl(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer"
+                          />
+                        </label>
+
+                        {slipPreviewUrl && (
+                          <div className="relative">
+                            <p className="text-xs text-gray-600 mb-2">ตัวอย่างหลักฐานการชำระเงิน:</p>
+                            <div className="relative inline-block">
+                              <img
+                                src={slipPreviewUrl}
+                                alt="Payment slip preview"
+                                className="max-w-xs rounded border border-orange-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPaymentSlipFile(null);
+                                  setSlipPreviewUrl(null);
+                                }}
+                                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                title="ลบไฟล์"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-orange-700 bg-orange-100 p-2 rounded">
+                          <strong>หมายเหตุ:</strong> การลงทะเบียนจะสำเร็จทันที แต่จะรอการตรวจสอบหลักฐานการชำระเงินจากทีมงาน
+                          {event.paymentMode === 'deposit' && ' หลังจากมัดจำได้รับการอนุมัติ คุณจะต้องชำระยอดคงเหลือ'}
+                        </p>
                       </div>
                     </div>
                   )}

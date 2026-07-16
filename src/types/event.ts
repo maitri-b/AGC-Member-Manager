@@ -44,14 +44,17 @@ export interface EventRegistration {
   fullPaymentPaid?: boolean;        // full_payment_paid - Has full payment been paid?
   fullPaymentPaidDate?: string;     // full_payment_paid_date - When full payment was paid (ISO timestamp)
   fullPaymentSlipUrl?: string;      // full_payment_slip_url - Slip for full payment
+  fullPaymentAmountPaid?: number;   // full_payment_amount_paid - Actual amount paid (for validation)
 
   // Deposit Payment Mode Fields (for paymentMode = 'deposit')
   depositAmount: number;            // deposit_amount - Deposit for this registration
   remainingAmount: number;          // remaining_amount - Remaining balance
   depositPaid: boolean;             // deposit_paid - Has deposit been paid?
   depositPaidDate: string;          // deposit_paid_date - When deposit was paid (ISO timestamp)
+  depositAmountPaid?: number;       // deposit_amount_paid - Actual deposit amount paid (for validation)
   remainingPaid?: boolean;          // remaining_paid - Has remaining been paid?
   remainingPaidDate: string;        // remaining_paid_date - When remaining was paid (ISO timestamp)
+  remainingAmountPaid?: number;     // remaining_amount_paid - Actual remaining amount paid (for validation)
   depositSlipUrl: string;           // deposit_slip_url - Slip for deposit payment
   remainingSlipUrl: string;         // remaining_slip_url - Slip for remaining payment
   depositDeadline: string;          // deposit_deadline - ISO timestamp when deposit is due
@@ -451,7 +454,11 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   fullPaymentPaid: 'full_payment_paid',
   fullPaymentPaidDate: 'full_payment_paid_date',
   fullPaymentSlipUrl: 'full_payment_slip_url',
+  fullPaymentAmountPaid: 'full_payment_amount_paid',
+  // Additional amount tracking fields (New - for flexible payment validation)
+  depositAmountPaid: 'deposit_amount_paid',
   remainingPaid: 'remaining_paid',
+  remainingAmountPaid: 'remaining_amount_paid',
 };
 
 // Reverse mapping for sheet to registration conversion

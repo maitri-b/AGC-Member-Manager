@@ -135,12 +135,29 @@ export async function PUT(
         updateData.admin_notes = currentNotes + paymentNote;
       }
 
+      // Get current payment amounts
+      const totalAmount = registration.totalAmount || 0;
+      const depositAmount = registration.depositAmount || 0;
+      const remainingAmount = registration.remainingAmount || 0;
+
       if (paymentType === 'deposit') {
         // Mark deposit as paid
         updateData.deposit_paid = true;
         updateData.deposit_paid_date = paidDate;
         if (slipUrl) {
           updateData.deposit_slip_url = slipUrl;
+        }
+
+        // Flexible validation: Allow any amount, but track what was actually paid
+        if (amount) {
+          updateData.deposit_amount_paid = amount;
+
+          // If amount is less than expected deposit, calculate additional required
+          if (amount < depositAmount) {
+            const additionalRequired = depositAmount - amount;
+            const currentNotes = (updateData.admin_notes as string) || (registration.adminNotes || '');
+            updateData.admin_notes = currentNotes + `\n[${paidDate}] ⚠️ ชำระมัดจำต่ำกว่าที่กำหนด: ยอดต้องชำระเพิ่ม ${additionalRequired.toLocaleString()} บาท`;
+          }
         }
 
         // Calculate remaining deadline if event has remaining deadline configuration
@@ -153,19 +170,46 @@ export async function PUT(
         if (slipUrl) {
           updateData.remaining_slip_url = slipUrl;
         }
-        // Note: We don't set a specific 'remaining_paid' flag,
-        // status is determined by having both depositPaid and remainingSlipUrl
+        updateData.remaining_paid = true;
+        updateData.remaining_paid_date = paidDate;
+
+        // Track actual amount paid
+        if (amount) {
+          updateData.remaining_amount_paid = amount;
+
+          // Check if this covers the remaining amount
+          const expectedRemaining = remainingAmount || (totalAmount - depositAmount);
+          if (amount < expectedRemaining) {
+            const additionalRequired = expectedRemaining - amount;
+            const currentNotes = (updateData.admin_notes as string) || (registration.adminNotes || '');
+            updateData.admin_notes = currentNotes + `\n[${paidDate}] ⚠️ ชำระยอดคงเหลือต่ำกว่าที่กำหนด: ยอดต้องชำระเพิ่ม ${additionalRequired.toLocaleString()} บาท`;
+          }
+        }
       } else if (paymentType === 'full') {
         // Mark both deposit and remaining as paid (full payment)
         updateData.deposit_paid = true;
         updateData.deposit_paid_date = paidDate;
+        updateData.full_payment_paid = true;
         if (slipUrl) {
           updateData.deposit_slip_url = slipUrl;
           updateData.remaining_slip_url = slipUrl;
+          updateData.full_payment_slip_url = slipUrl;
+        }
+
+        // Track actual amount paid
+        if (amount) {
+          updateData.full_payment_amount_paid = amount;
+
+          // Check if amount covers total
+          if (amount < totalAmount) {
+            const additionalRequired = totalAmount - amount;
+            const currentNotes = (updateData.admin_notes as string) || (registration.adminNotes || '');
+            updateData.admin_notes = currentNotes + `\n[${paidDate}] ⚠️ ชำระเต็มจำนวนต่ำกว่าที่กำหนด: ยอดต้องชำระเพิ่ม ${additionalRequired.toLocaleString()} บาท`;
+          }
         }
       }
 
-      // Recalculate payment status
+      // Recalculate payment status based on actual amounts paid
       const updatedRegistration = { ...registration, ...updateData };
       const newStatus = determinePaymentStatus(updatedRegistration as any, eventData as Event);
       updateData.payment_status = newStatus;

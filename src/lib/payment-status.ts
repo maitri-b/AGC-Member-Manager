@@ -58,8 +58,22 @@ export function determinePaymentStatus(
     const fullPaymentSlipUrl = registration.fullPaymentSlipUrl || registration.remainingSlipUrl || registration.depositSlipUrl || (registration as any).slipUrl;
     const fullPaymentDeadline = registration.fullPaymentDeadline || registration.remainingDeadline;
 
+    // ✅ NEW: Check actual amounts paid vs total amount
+    const totalAmount = registration.totalAmount || 0;
+    const fullPaymentAmountPaid = (registration as any).fullPaymentAmountPaid || 0;
+    const depositAmountPaid = (registration as any).depositAmountPaid || 0;
+    const actualPaid = fullPaymentAmountPaid || depositAmountPaid;
+
     // Check if payment already approved
     if (fullPaymentPaid) {
+      // ✅ Verify actual amount paid covers total
+      if (actualPaid >= totalAmount) {
+        return 'ชำระครบแล้ว';
+      } else if (actualPaid > 0) {
+        // Partial payment approved
+        return 'รอชำระส่วนที่เหลือ';
+      }
+      // Fallback: Marked as paid but no amount recorded (old data)
       return 'ชำระครบแล้ว';
     }
 
@@ -77,9 +91,38 @@ export function determinePaymentStatus(
   }
 
   // Priority 4: Deposit mode
-  const { depositPaid, depositDeadline, remainingDeadline, depositSlipUrl, remainingSlipUrl, remainingAmount } = registration;
+  const {
+    depositPaid,
+    depositDeadline,
+    remainingDeadline,
+    depositSlipUrl,
+    remainingSlipUrl,
+    remainingAmount,
+    depositAmount,
+    totalAmount: regTotalAmount,
+  } = registration;
 
-  // Check if fully paid
+  // ✅ NEW: Track actual amounts paid
+  const depositAmountPaid = (registration as any).depositAmountPaid || 0;
+  const remainingAmountPaid = (registration as any).remainingAmountPaid || 0;
+  const remainingPaid = (registration as any).remainingPaid || false;
+  const totalAmount = regTotalAmount || 0;
+  const totalPaid = depositAmountPaid + remainingAmountPaid;
+
+  // Check if fully paid (based on actual amounts)
+  if (depositPaid && remainingPaid) {
+    // ✅ Verify total paid covers total amount
+    if (totalPaid >= totalAmount) {
+      return 'ชำระครบแล้ว';
+    } else if (totalPaid > 0) {
+      // Both payments approved but still short
+      return 'รอชำระส่วนที่เหลือ';
+    }
+    // Fallback for old data
+    return 'ชำระครบแล้ว';
+  }
+
+  // Legacy check: remainingAmount === 0 (for backward compatibility)
   if (depositPaid && remainingAmount === 0) {
     return 'ชำระครบแล้ว';
   }

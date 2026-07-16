@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Verify eventId matches
-    if (registration.eventId !== eventId) {
+    // Verify eventId matches (only if registration has eventId)
+    if (registration.eventId && registration.eventId !== eventId) {
       console.error(`[GAS Webhook] Event ID mismatch: ${registration.eventId} vs ${eventId}`);
       return NextResponse.json({
         error: 'Event ID does not match registration',

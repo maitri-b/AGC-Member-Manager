@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
-    // Verify eventId matches registration
-    if (registration.eventId !== eventId) {
+    // Verify eventId matches registration (only if registration has eventId)
+    if (registration.eventId && registration.eventId !== eventId) {
       return NextResponse.json(
         { error: 'Event ID does not match registration' },
         { status: 400 }

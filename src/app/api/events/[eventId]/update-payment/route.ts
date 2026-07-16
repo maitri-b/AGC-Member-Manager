@@ -141,29 +141,52 @@ export async function PUT(
       const remainingAmount = registration.remainingAmount || 0;
 
       if (paymentType === 'deposit') {
-        // Mark deposit as paid
-        updateData.deposit_paid = true;
-        updateData.deposit_paid_date = paidDate;
-        if (slipUrl) {
-          updateData.deposit_slip_url = slipUrl;
-        }
-
-        // Flexible validation: Allow any amount, but track what was actually paid
-        if (amount) {
-          updateData.deposit_amount_paid = amount;
-
-          // If amount is less than expected deposit, calculate additional required
-          if (amount < depositAmount) {
-            const additionalRequired = depositAmount - amount;
-            const currentNotes = (updateData.admin_notes as string) || (registration.adminNotes || '');
-            updateData.admin_notes = currentNotes + `\n[${paidDate}] ⚠️ ชำระมัดจำต่ำกว่าที่กำหนด: ยอดต้องชำระเพิ่ม ${additionalRequired.toLocaleString()} บาท`;
+        // ✅ FIX: Check if event is in Full Payment Mode
+        // If so, treat 'deposit' paymentType as 'full' payment
+        if (eventData.paymentMode === 'full') {
+          // Full Payment Mode: Use full payment fields
+          updateData.full_payment_paid = true;
+          updateData.full_payment_paid_date = paidDate;
+          if (slipUrl) {
+            updateData.full_payment_slip_url = slipUrl;
           }
-        }
 
-        // Calculate remaining deadline if event has remaining deadline configuration
-        if (eventData.remainingDeadlineType && eventData.remainingDeadlineType !== 'none') {
-          const remainingDeadline = calculateRemainingDeadline(eventData as Event, paidDate);
-          updateData.remaining_deadline = remainingDeadline;
+          // Track actual amount paid
+          if (amount) {
+            updateData.full_payment_amount_paid = amount;
+
+            // Check if amount covers total
+            if (amount < totalAmount) {
+              const additionalRequired = totalAmount - amount;
+              const currentNotes = (updateData.admin_notes as string) || (registration.adminNotes || '');
+              updateData.admin_notes = currentNotes + `\n[${paidDate}] ⚠️ ชำระเต็มจำนวนต่ำกว่าที่กำหนด: ยอดต้องชำระเพิ่ม ${additionalRequired.toLocaleString()} บาท`;
+            }
+          }
+        } else {
+          // Deposit Mode: Use deposit payment fields
+          updateData.deposit_paid = true;
+          updateData.deposit_paid_date = paidDate;
+          if (slipUrl) {
+            updateData.deposit_slip_url = slipUrl;
+          }
+
+          // Flexible validation: Allow any amount, but track what was actually paid
+          if (amount) {
+            updateData.deposit_amount_paid = amount;
+
+            // If amount is less than expected deposit, calculate additional required
+            if (depositAmount > 0 && amount < depositAmount) {
+              const additionalRequired = depositAmount - amount;
+              const currentNotes = (updateData.admin_notes as string) || (registration.adminNotes || '');
+              updateData.admin_notes = currentNotes + `\n[${paidDate}] ⚠️ ชำระมัดจำต่ำกว่าที่กำหนด: ยอดต้องชำระเพิ่ม ${additionalRequired.toLocaleString()} บาท`;
+            }
+          }
+
+          // Calculate remaining deadline if event has remaining deadline configuration
+          if (eventData.remainingDeadlineType && eventData.remainingDeadlineType !== 'none') {
+            const remainingDeadline = calculateRemainingDeadline(eventData as Event, paidDate);
+            updateData.remaining_deadline = remainingDeadline;
+          }
         }
       } else if (paymentType === 'remaining') {
         // Mark remaining payment as received

@@ -181,6 +181,7 @@ export async function approvePaymentSlip(
       updateData.depositPaidDate = today;
       updateData.depositSlipUrl = slip.slipUrl; // Store slip URL
       updateData.paidAmount = slip.amount; // Track total paid amount
+      updateData.depositAmountPaid = slip.amount; // ✅ Track actual deposit amount paid
       updateData.paymentStatus = 'ชำระมัดจำแล้ว';
 
       // Calculate remaining deadline (if event uses deposit mode)
@@ -208,6 +209,9 @@ export async function approvePaymentSlip(
       const currentPaid = registrationData.paidAmount || 0;
       updateData.paidAmount = currentPaid + slip.amount;
 
+      // ✅ Track actual remaining amount paid
+      updateData.remainingAmountPaid = slip.amount;
+
       updateData.paymentStatus = 'ชำระยอดคงเหลือแล้ว';
       // Do NOT update 'status'
     } else if (slip.paymentType === 'full') {
@@ -215,8 +219,21 @@ export async function approvePaymentSlip(
       updateData.fullPaymentPaid = true;
       updateData.fullPaymentPaidDate = today;
       updateData.fullPaymentSlipUrl = slip.slipUrl;
+
+      // ✅ Track actual amount paid for validation
+      updateData.fullPaymentAmountPaid = slip.amount;
       updateData.paidAmount = slip.amount;
-      updateData.paymentStatus = 'ชำระเต็มจำนวนแล้ว';
+
+      // ✅ Determine payment status using Additional Payment System
+      const totalAmount = registrationData.totalAmount || 0;
+      const additionalPayments = parseAdditionalPayments(registrationData.additionalPayments);
+
+      if (isFullyPaid(totalAmount, slip.amount, additionalPayments)) {
+        updateData.paymentStatus = 'ชำระเต็มจำนวนแล้ว';
+      } else {
+        // ✅ Use 'รอชำระเงินเพิ่มเติม' to indicate additional payment needed
+        updateData.paymentStatus = 'รอชำระเงินเพิ่มเติม';
+      }
 
       // ✅ CLEAR deposit/remaining fields to avoid confusion
       // Full payment mode should NOT have deposit/remaining data

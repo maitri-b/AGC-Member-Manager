@@ -939,22 +939,30 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleOpenPaymentModal = (attendee: Attendee, paymentType: 'deposit' | 'remaining' | 'full' = 'deposit') => {
+  const handleOpenPaymentModal = (attendee: Attendee, paymentType?: 'deposit' | 'remaining' | 'full') => {
+    // ✅ FIX: Auto-detect paymentType from event configuration if not specified
+    let finalPaymentType: 'deposit' | 'remaining' | 'full' = paymentType || 'deposit';
+
+    // If event is in Full Payment Mode, default to 'full' instead of 'deposit'
+    if (!paymentType && eventData?.event?.paymentMode === 'full') {
+      finalPaymentType = 'full';
+    }
+
     // Auto-fill amount based on payment type
     let defaultAmount = 0;
-    if (paymentType === 'deposit') {
+    if (finalPaymentType === 'deposit') {
       defaultAmount = attendee.registration.depositAmount || 0;
-    } else if (paymentType === 'remaining') {
+    } else if (finalPaymentType === 'remaining') {
       defaultAmount = attendee.registration.remainingAmount || 0;
-    } else if (paymentType === 'full') {
+    } else if (finalPaymentType === 'full') {
       defaultAmount = attendee.registration.totalAmount || 0;
     }
 
     setPaymentFormData({
       registrationId: attendee.registration.registrationId,
-      paymentType,
+      paymentType: finalPaymentType,
       amount: defaultAmount,
-      slipUrl: paymentType === 'deposit' ? attendee.registration.depositSlipUrl : attendee.registration.remainingSlipUrl,
+      slipUrl: finalPaymentType === 'deposit' ? attendee.registration.depositSlipUrl : attendee.registration.remainingSlipUrl,
       paidDate: new Date().toISOString().split('T')[0],
     });
     setPaymentModalOpen(true);

@@ -185,14 +185,25 @@ export async function PUT(
           finalUpdateData.deposit_amount = split.depositAmount;
           finalUpdateData.remaining_amount = split.remainingAmount;
         } else {
-          // If deposit already paid, keep the paid deposit amount and recalculate remaining
-          const paidDeposit = currentRegistration.depositAmount || 0;
-          finalUpdateData.remaining_amount = newTotalAmount - paidDeposit;
+          // ✅ FIX: If deposit already paid, use ACTUAL paid amount to calculate remaining
+          // Get the actual amount paid (depositAmountPaid), fallback to depositAmount if not recorded
+          const actualDepositPaid = (currentRegistration as any).depositAmountPaid || currentRegistration.depositAmount || 0;
+          finalUpdateData.remaining_amount = newTotalAmount - actualDepositPaid;
+
+          // Keep depositAmount unchanged (it reflects what was originally expected)
+          // The difference between depositAmount and depositAmountPaid is tracked separately
         }
       }
 
       // ✅ RECALCULATE PAYMENT STATUS when totalAmount changes
-      const currentPaidAmount = currentRegistration.paidAmount || 0;
+      // Calculate actual total paid from tracked amounts
+      const depositAmountPaid = (currentRegistration as any).depositAmountPaid || 0;
+      const remainingAmountPaid = (currentRegistration as any).remainingAmountPaid || 0;
+      const fullPaymentAmountPaid = (currentRegistration as any).fullPaymentAmountPaid || 0;
+      const actualTotalPaid = fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+
+      // Fallback to legacy paidAmount if no tracked amounts
+      const currentPaidAmount = actualTotalPaid || currentRegistration.paidAmount || 0;
       const additionalPayments = parseAdditionalPayments(currentRegistration.additionalPayments);
       const fullyPaid = isFullyPaid(newTotalAmount, currentPaidAmount, additionalPayments);
 

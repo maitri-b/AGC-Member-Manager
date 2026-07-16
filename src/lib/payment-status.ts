@@ -58,20 +58,28 @@ export function determinePaymentStatus(
     const fullPaymentSlipUrl = registration.fullPaymentSlipUrl || registration.remainingSlipUrl || registration.depositSlipUrl || (registration as any).slipUrl;
     const fullPaymentDeadline = registration.fullPaymentDeadline || registration.remainingDeadline;
 
-    // ✅ NEW: Check actual amounts paid vs total amount
+    // ✅ Check actual amounts paid vs total amount (including additional payments)
     const totalAmount = registration.totalAmount || 0;
     const fullPaymentAmountPaid = (registration as any).fullPaymentAmountPaid || 0;
     const depositAmountPaid = (registration as any).depositAmountPaid || 0;
     const actualPaid = fullPaymentAmountPaid || depositAmountPaid;
 
+    // ✅ Parse additional payments
+    const additionalPayments = parseAdditionalPayments(registration.additionalPayments);
+
     // Check if payment already approved
     if (fullPaymentPaid) {
-      // ✅ Verify actual amount paid covers total
-      if (actualPaid >= totalAmount) {
+      // ✅ Use isFullyPaid() to check if fully paid including additional payments
+      if (isFullyPaid(totalAmount, actualPaid, additionalPayments)) {
         return 'ชำระครบแล้ว';
       } else if (actualPaid > 0) {
-        // Partial payment approved
-        return 'รอชำระส่วนที่เหลือ';
+        // ✅ Partial payment approved - need additional payment
+        // Check if additional payment slip is pending
+        const hasPendingAdditional = additionalPayments.some(p => p.status === 'รอตรวจสอบ');
+        if (hasPendingAdditional) {
+          return 'รอตรวจสอบเงินเพิ่มเติม';
+        }
+        return 'รอชำระเงินเพิ่มเติม';
       }
       // Fallback: Marked as paid but no amount recorded (old data)
       return 'ชำระครบแล้ว';
@@ -123,7 +131,9 @@ export function determinePaymentStatus(
   }
 
   // Legacy check: remainingAmount === 0 (for backward compatibility)
-  if (depositPaid && remainingAmount === 0) {
+  // ⚠️ IMPORTANT: Only apply this check in Deposit Mode
+  // In Full Payment Mode, remainingAmount is always 0 (no split)
+  if (event.paymentMode === 'deposit' && depositPaid && remainingAmount === 0) {
     return 'ชำระครบแล้ว';
   }
 
@@ -180,13 +190,18 @@ export function getStatusBadgeClass(status: string): string {
   }
 
   // Waiting for payment states (yellow - user action required)
-  if (status === 'รอชำระมัดจำ' || status === 'รอชำระเงิน') {
+  if (status === 'รอชำระมัดจำ' || status === 'รอชำระเงิน' || status === 'รอชำระเงินเพิ่มเติม') {
     return 'bg-yellow-100 text-yellow-800';
   }
 
   // Partial payment states (blue - deposit paid, waiting for remaining)
   if (status === 'รอชำระยอดที่เหลือ') {
     return 'bg-blue-100 text-blue-800';
+  }
+
+  // Additional payment pending verification (purple - waiting for admin)
+  if (status === 'รอตรวจสอบเงินเพิ่มเติม') {
+    return 'bg-purple-100 text-purple-800';
   }
 
   // Free or registered

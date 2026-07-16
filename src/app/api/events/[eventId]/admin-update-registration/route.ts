@@ -8,6 +8,7 @@ import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { Event, AttendeeType, RoomType, calculateRegistrationFee } from '@/types/event';
 import { calculatePaymentSplit } from '@/lib/payment-deadlines';
 import { logRegistrationUpdate, logRegistrationCancellation } from '@/lib/activity-log';
+import { isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
 
 // PUT - Admin update registration
 export async function PUT(
@@ -188,6 +189,52 @@ export async function PUT(
           const paidDeposit = currentRegistration.depositAmount || 0;
           finalUpdateData.remaining_amount = newTotalAmount - paidDeposit;
         }
+      }
+
+      // ✅ RECALCULATE PAYMENT STATUS when totalAmount changes
+      const currentPaidAmount = currentRegistration.paidAmount || 0;
+      const additionalPayments = parseAdditionalPayments(currentRegistration.additionalPayments);
+      const fullyPaid = isFullyPaid(newTotalAmount, currentPaidAmount, additionalPayments);
+
+      if (!fullyPaid && currentPaidAmount > 0) {
+        // Was fully paid before, but not anymore due to totalAmount increase
+        // Update paymentStatus to indicate additional payment needed
+        if (eventData.paymentMode === 'deposit') {
+          // Deposit mode: check what's been paid
+          if (currentRegistration.depositPaid && !currentRegistration.remainingPaid) {
+            finalUpdateData.payment_status = 'รอชำระยอดที่เหลือ';
+          } else if (currentRegistration.depositPaid && currentRegistration.remainingPaid) {
+            finalUpdateData.payment_status = 'รอชำระเพิ่มเติม'; // Need additional payment
+          } else {
+            finalUpdateData.payment_status = 'รอชำระมัดจำ';
+          }
+        } else {
+          // Full payment mode
+          if (currentRegistration.fullPaymentPaid) {
+            finalUpdateData.payment_status = 'รอชำระเพิ่มเติม'; // Need additional payment
+          } else {
+            finalUpdateData.payment_status = 'รอชำระเงิน';
+          }
+        }
+
+        // Change status from "ยืนยันแล้ว" back to "รอดำเนินการ"
+        if (currentRegistration.status === 'ยืนยันแล้ว') {
+          finalUpdateData.status = 'รอดำเนินการ';
+        }
+
+        console.log('[Admin Update] Total amount increased, payment no longer complete:', {
+          oldTotal: currentRegistration.totalAmount,
+          newTotal: newTotalAmount,
+          paidAmount: currentPaidAmount,
+          oldPaymentStatus: currentRegistration.paymentStatus,
+          newPaymentStatus: finalUpdateData.payment_status,
+          oldStatus: currentRegistration.status,
+          newStatus: finalUpdateData.status,
+        });
+      } else if (fullyPaid) {
+        // Still fully paid after recalculation
+        finalUpdateData.payment_status = 'ชำระเต็มจำนวนแล้ว';
+        finalUpdateData.status = 'ยืนยันแล้ว';
       }
     }
 

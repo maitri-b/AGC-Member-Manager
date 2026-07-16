@@ -5,11 +5,44 @@ Last Updated: 2026-07-10
 
 ---
 
-## 📋 Payment Modes
+## 📋 Payment Configuration
 
-The system supports **2 payment modes** configured per event:
+The system supports **2 dimensions** of payment configuration:
 
-### 1. Full Payment Mode (`paymentMode: 'full'`)
+### 📅 Payment Timing (`paymentTiming`)
+**When payment must be made relative to registration**
+
+#### 1. Deferred Payment (`paymentTiming: 'deferred'`) - **DEFAULT**
+**ชำระหลังลงทะเบียน**
+- User registers first, pays later
+- Registration succeeds immediately without payment
+- User uploads payment slip AFTER registration is confirmed
+- Current default behavior for all events
+
+#### 2. Immediate Payment (`paymentTiming: 'immediate'`) - **NEW**
+**ชำระพร้อมลงทะเบียน**
+- User must upload payment slip DURING registration
+- Registration form includes slip upload section (required)
+- Single submit for both registration + payment slip
+- Registration succeeds immediately, slip waits for admin approval
+- If slip is rejected, user can re-upload WITHOUT cancelling registration
+- Button text: "ยืนยันการลงทะเบียน" (Confirm Registration)
+
+**Key Differences:**
+| Feature | Deferred | Immediate |
+|---------|----------|-----------|
+| Registration completes | Without payment | With slip upload |
+| Slip upload timing | After registration | During registration |
+| On slip rejection | User re-uploads | User re-uploads (registration stays) |
+| User experience | Two-step process | One-step process |
+| Use case | Events with flexible payment | Events requiring upfront payment proof |
+
+---
+
+### 💰 Payment Mode (`paymentMode`)
+**How payment amount is split**
+
+#### 1. Full Payment Mode (`paymentMode: 'full'`)
 **จ่ายครั้งเดียวเต็มจำนวน**
 - User pays the full amount in one transaction
 - No deposit splitting
@@ -19,11 +52,18 @@ The system supports **2 payment modes** configured per event:
   - `paymentDeadlineFixed`: Fixed date (YYYY-MM-DD)
   - `paymentDeadlineHours`: Hours after registration
 
-### 2. Deposit Payment Mode (`paymentMode: 'deposit'`)
+#### 2. Deposit Payment Mode (`paymentMode: 'deposit'`)
 **จ่ายแบบแบ่งชำระ 2 ครั้ง**
 - **1st Payment**: Deposit (มัดจำ) - Fixed amount or percentage
 - **2nd Payment**: Remaining amount (ยอดคงเหลือ)
 - Two separate slip uploads with separate deadlines
+
+**Payment Timing + Payment Mode Combinations:**
+All 4 combinations are valid:
+- Deferred + Full Payment (current default)
+- Deferred + Deposit Payment (current deposit events)
+- **Immediate + Full Payment** (NEW - pay full amount during registration)
+- **Immediate + Deposit Payment** (NEW - pay deposit during registration, remaining later)
 
 ---
 
@@ -74,9 +114,9 @@ The system supports **2 payment modes** configured per event:
 
 ---
 
-## 🔄 Payment Flow
+## 🔄 Payment Flows
 
-### Full Payment Mode Flow:
+### Deferred + Full Payment Mode Flow (Current Default):
 
 ```
 1. User Registers
@@ -97,7 +137,7 @@ The system supports **2 payment modes** configured per event:
    verified_date = [Date]
 ```
 
-### Deposit Payment Mode Flow:
+### Deferred + Deposit Payment Mode Flow:
 
 ```
 1. User Registers
@@ -134,6 +174,77 @@ The system supports **2 payment modes** configured per event:
    status = "Confirmed"
    verified_by = [Admin name]
    verified_date = [Date]
+```
+
+### Immediate + Full Payment Mode Flow (NEW):
+
+```
+1. User Fills Registration Form
+   ↓
+   Form includes payment slip upload section (required)
+   total_amount = event_fee + shirt_fee (if any)
+
+2. User Submits Registration + Slip Together
+   ↓
+   registration_status = "รอดำเนินการ"
+   payment_status = "รอตรวจสอบ"
+   slip_url = [Uploaded file URL]
+   ✅ Registration is CREATED immediately (not waiting for approval)
+
+3. Admin Verifies Slip
+   ↓
+   ✅ APPROVED:
+      payment_status = "ชำระครบแล้ว"
+      registration_status = "ยืนยันแล้ว" (auto-updated)
+
+   ❌ REJECTED:
+      payment_status = "ปฏิเสธสลิป"
+      registration_status = "รอดำเนินการ" (unchanged)
+      → User can RE-UPLOAD slip without re-registering
+      → Registration remains valid
+```
+
+### Immediate + Deposit Payment Mode Flow (NEW):
+
+```
+1. User Fills Registration Form
+   ↓
+   Form includes DEPOSIT slip upload section (required)
+   total_amount = event_fee + shirt_fee
+   deposit_amount = [calculated from event config]
+   remaining_amount = total_amount - deposit_amount
+
+2. User Submits Registration + Deposit Slip Together
+   ↓
+   registration_status = "รอดำเนินการ"
+   payment_status = "รอตรวจสอบมัดจำ"
+   deposit_slip_url = [Uploaded file URL]
+   deposit_paid_date = [YYYY-MM-DD]
+   ✅ Registration is CREATED immediately
+
+3. Admin Verifies Deposit Slip
+   ↓
+   ✅ APPROVED:
+      deposit_paid = TRUE
+      payment_status = "รอชำระยอดที่เหลือ"
+      registration_status = "รอดำเนินการ" (still pending final payment)
+      remaining_deadline = [calculated]
+
+   ❌ REJECTED:
+      payment_status = "ปฏิเสธสลิป"
+      → User can RE-UPLOAD deposit slip
+      → Registration remains valid
+
+4. User Uploads Remaining Slip (Deferred - after registration)
+   ↓
+   remaining_slip_url = [Google Drive URL]
+   remaining_paid_date = [YYYY-MM-DD]
+   payment_status = "รอตรวจสอบยอดคงเหลือ"
+
+5. Admin Verifies Remaining Slip
+   ↓
+   payment_status = "ชำระครบแล้ว"
+   registration_status = "ยืนยันแล้ว" (auto-updated)
 ```
 
 ---
@@ -202,6 +313,10 @@ The system supports **2 payment modes** configured per event:
 
 ```typescript
 {
+  // Payment Timing Configuration (NEW)
+  paymentTiming?: 'deferred' | 'immediate',  // Default: 'deferred'
+
+  // Payment Mode Configuration
   paymentMode: 'full' | 'deposit',
 
   // For full payment mode:
@@ -223,6 +338,13 @@ The system supports **2 payment modes** configured per event:
   remainingDeadlineHours?: number,
 }
 ```
+
+**Notes:**
+- `paymentTiming` defaults to `'deferred'` for backward compatibility
+- Immediate payment timing works with both payment modes (full and deposit)
+- When `paymentTiming: 'immediate'`:
+  - For `paymentMode: 'full'`: User uploads full payment slip during registration
+  - For `paymentMode: 'deposit'`: User uploads deposit slip during registration, remaining slip later
 
 ---
 

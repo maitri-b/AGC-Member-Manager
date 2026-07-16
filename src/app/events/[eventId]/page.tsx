@@ -1879,8 +1879,15 @@ export default function EventDetailPage() {
                                 }
                               } else {
                                 paymentType = 'full';
-                                amount = (userRegistration as any).totalFee || event.registrationFee || 0;
+                                amount = userRegistration.totalAmount || event.registrationFee || 0;
                               }
+
+                              console.log('[Event Detail] Opening upload modal:', {
+                                paymentType,
+                                amount,
+                                totalAmount: userRegistration.totalAmount,
+                                eventFee: event.registrationFee,
+                              });
 
                               setUploadPaymentType(paymentType);
                               setUploadAmount(amount);

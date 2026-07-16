@@ -95,9 +95,16 @@ export default function PaymentSlipUploadModal({
 
       // Check response before parsing JSON
       if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        console.error('[Client] Upload failed, response:', errorText);
-        throw new Error(`อัพโหลดไฟล์ล้มเหลว: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        let errorMessage = `อัพโหลดไฟล์ล้มเหลว: ${uploadResponse.status}`;
+        try {
+          const errorData = await uploadResponse.json();
+          console.error('[Client] Upload failed, error data:', errorData);
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (e) {
+          const errorText = await uploadResponse.text();
+          console.error('[Client] Upload failed, response text:', errorText);
+        }
+        throw new Error(errorMessage);
       }
 
       const uploadData = await uploadResponse.json();

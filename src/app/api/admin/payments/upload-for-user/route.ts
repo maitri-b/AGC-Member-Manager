@@ -132,11 +132,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Make file publicly accessible
-    await file.makePublic();
+    // Get public URL (bucket must have public access configured)
+    // Note: Bucket uses Uniform bucket-level access, so file.makePublic() is not needed
+    const slipUrl = `https://storage.googleapis.com/${bucket.name}/${encodeURIComponent(storagePath)}`;
 
-    // Get public URL
-    const slipUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    console.log('[Admin Upload] File uploaded, URL:', slipUrl);
 
     // Create payment slip
     const slip = await createPaymentSlip({

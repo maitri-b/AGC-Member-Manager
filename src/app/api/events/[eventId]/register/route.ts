@@ -229,7 +229,10 @@ export async function POST(
     const registrationId = generateRegistrationId();
 
     // Calculate registration fee
+    let eventFee = 0;
+    let roomFee = 0;
     let totalFee = 0;
+
     if (eventData.useAttendeeTypePricing && eventData.attendeeTypes) {
       // Calculate fee based on attendee types
       if (!attendeeTypeSelections || attendeeTypeSelections.length === 0) {
@@ -243,46 +246,45 @@ export async function POST(
       }
 
       // Calculate fee from attendee types
-      totalFee = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
+      eventFee = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
         const type = eventData.attendeeTypes.find((t: { typeId: string; price: number }) => t.typeId === s.typeId);
         if (!type) {
           return sum;
         }
         return sum + (type.price * s.quantity);
       }, 0);
-
-      // Validate and calculate room allocation fees (if room types are configured)
-      if (eventData.roomTypes && eventData.roomTypes.length > 0) {
-        if (!roomAllocations || roomAllocations.length === 0) {
-          return NextResponse.json({ error: 'กรุณาเลือกประเภทห้องพัก' }, { status: 400 });
-        }
-
-        // Calculate total room capacity and validate
-        let totalRoomCapacity = 0;
-        let roomFee = 0;
-        for (const alloc of roomAllocations) {
-          const roomType = eventData.roomTypes.find((rt: { typeId: string; capacity: number; price: number }) => rt.typeId === alloc.roomTypeId);
-          if (!roomType) {
-            return NextResponse.json({ error: `ไม่พบประเภทห้อง: ${alloc.roomTypeId}` }, { status: 400 });
-          }
-          totalRoomCapacity += roomType.capacity * alloc.roomCount;
-          roomFee += roomType.price * alloc.roomCount;
-        }
-
-        // Exact match required
-        if (totalRoomCapacity !== attendeeCount) {
-          return NextResponse.json({
-            error: `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalRoomCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
-          }, { status: 400 });
-        }
-
-        // Add room fees to total
-        totalFee += roomFee;
-      }
     } else {
       // Original fee calculation (fixed or tiered pricing)
-      totalFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
+      eventFee = calculateRegistrationFee(eventData as Event, attendeeCount, true); // true = isMember
     }
+
+    // Validate and calculate room allocation fees (if room types are configured)
+    if (eventData.roomTypes && eventData.roomTypes.length > 0) {
+      if (!roomAllocations || roomAllocations.length === 0) {
+        return NextResponse.json({ error: 'กรุณาเลือกประเภทห้องพัก' }, { status: 400 });
+      }
+
+      // Calculate total room capacity and validate
+      let totalRoomCapacity = 0;
+      for (const alloc of roomAllocations) {
+        const roomType = eventData.roomTypes.find((rt: { typeId: string; capacity: number; price: number }) => rt.typeId === alloc.roomTypeId);
+        if (!roomType) {
+          return NextResponse.json({ error: `ไม่พบประเภทห้อง: ${alloc.roomTypeId}` }, { status: 400 });
+        }
+        totalRoomCapacity += roomType.capacity * alloc.roomCount;
+        roomFee += roomType.price * alloc.roomCount;
+      }
+
+      // Exact match required
+      if (totalRoomCapacity !== attendeeCount) {
+        return NextResponse.json({
+          error: `จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalRoomCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`
+        }, { status: 400 });
+      }
+    }
+
+    // Calculate total fee = event fee + room fee
+    totalFee = eventFee + roomFee;
 
     // Calculate payment breakdown and deadlines based on payment mode
     let depositAmount = 0;
@@ -358,7 +360,8 @@ export async function POST(
       attendeeNames: JSON.stringify(attendeeNames.length > 0 ? attendeeNames : [member ? (member.fullNameTH || member.nickname || '') : (guestInfo?.contactName || '')]),
       shirtCount: 0,
       shirtSizes: '[]',
-      eventFee: totalFee,
+      eventFee: eventFee,
+      roomFee: roomFee,
       shirtFee: 0,
       totalAmount: totalFee,
       depositAmount: depositAmount,

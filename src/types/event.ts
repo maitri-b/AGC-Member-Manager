@@ -34,6 +34,7 @@ export interface EventRegistration {
 
   // Payment
   eventFee: number;                 // event_fee
+  roomFee?: number;                 // room_fee (optional, for events with room allocation)
   shirtFee: number;                 // shirt_fee
   totalAmount: number;              // total_amount
   slipUrl: string;                  // slip_url (for full payment or legacy)
@@ -402,6 +403,7 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   shirtSizes: 'shirt_sizes',
   shirtReceived: 'shirt_received',
   eventFee: 'event_fee',
+  roomFee: 'room_fee',
   shirtFee: 'shirt_fee',
   totalAmount: 'total_amount',
   slipUrl: 'slip_url',

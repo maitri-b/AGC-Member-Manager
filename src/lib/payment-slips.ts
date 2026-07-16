@@ -8,6 +8,7 @@ import {
   generateSlipId,
   calculatePaymentSummary,
 } from '@/types/payment';
+import { isFullyPaid, parseAdditionalPayments } from './payment-status';
 
 /**
  * Get all payment slips for a specific registration
@@ -210,19 +211,25 @@ export async function approvePaymentSlip(
       updateData.paymentStatus = 'ชำระยอดคงเหลือแล้ว';
       // Do NOT update 'status'
     } else if (slip.paymentType === 'full') {
-      // ✅ Use Full Payment Fields
+      // ✅ Full Payment Mode - Only use Full Payment Fields
       updateData.fullPaymentPaid = true;
       updateData.fullPaymentPaidDate = today;
       updateData.fullPaymentSlipUrl = slip.slipUrl;
       updateData.paidAmount = slip.amount;
       updateData.paymentStatus = 'ชำระเต็มจำนวนแล้ว';
 
-      // ✅ Set deposit/remaining fields for backward compatibility
-      updateData.depositPaid = true;
-      updateData.depositPaidDate = today;
-      updateData.remainingPaid = true;
-      updateData.remainingPaidDate = today;
-      // Do NOT update 'status'
+      // ✅ CLEAR deposit/remaining fields to avoid confusion
+      // Full payment mode should NOT have deposit/remaining data
+      updateData.depositAmount = 0;
+      updateData.remainingAmount = 0;
+      updateData.depositPaid = false;
+      updateData.remainingPaid = false;
+      updateData.depositPaidDate = null;
+      updateData.remainingPaidDate = null;
+      updateData.depositSlipUrl = '';
+      updateData.remainingSlipUrl = '';
+      updateData.depositDeadline = null;
+      updateData.remainingDeadline = null;
     } else if (slip.paymentType === 'additional') {
       // Sync additional payment to eventRegistrations.additionalPayments
       const currentData = registrationDoc.data();
@@ -264,11 +271,34 @@ export async function approvePaymentSlip(
       // Don't update main payment status for additional payments
     }
 
+    // ✅ AUTO-UPDATE REGISTRATION STATUS based on payment completion
+    // Calculate if registration is fully paid after this approval
+    const totalAmount = registrationData.totalAmount || 0;
+    const currentPaidAmount = updateData.paidAmount !== undefined ? updateData.paidAmount : (registrationData.paidAmount || 0);
+
+    // Parse additional payments to check if fully paid
+    const additionalPaymentsJson = slip.paymentType === 'additional'
+      ? updateData.additionalPayments
+      : registrationData.additionalPayments;
+    const additionalPayments = parseAdditionalPayments(additionalPaymentsJson);
+
+    // Check if fully paid using the utility function
+    const fullyPaid = isFullyPaid(totalAmount, currentPaidAmount, additionalPayments);
+
+    // Update status field based on payment completion
+    if (fullyPaid) {
+      updateData.status = 'ยืนยันแล้ว'; // Confirmed status when fully paid
+    } else {
+      updateData.status = 'รอดำเนินการ'; // Pending status when not fully paid
+    }
+
     await registrationDoc.ref.update(updateData);
 
     console.log(`[Approve Slip] Updated eventRegistrations for ${slip.registrationId}:`, {
       paymentType: slip.paymentType,
       paymentStatus: updateData.paymentStatus,
+      status: updateData.status,
+      fullyPaid,
     });
   }
 }
@@ -347,21 +377,24 @@ export async function rejectPaymentSlip(
       updateData.paymentStatus = 'รอชำระยอดคงเหลือ';
       // Do NOT update 'status'
     } else if (slip.paymentType === 'full') {
-      // ✅ Clear Full Payment Fields
+      // ✅ Clear Full Payment Fields when rejected
       updateData.fullPaymentSlipUrl = '';
       updateData.fullPaymentPaidDate = null;
       updateData.fullPaymentPaid = false;
       updateData.paidAmount = 0;
       updateData.paymentStatus = 'รอชำระเงิน';
 
-      // ✅ Clear backward compatibility fields
+      // ✅ Clear all deposit/remaining fields (should not exist in full payment mode)
+      updateData.depositAmount = 0;
+      updateData.remainingAmount = 0;
       updateData.depositSlipUrl = '';
       updateData.remainingSlipUrl = '';
       updateData.depositPaidDate = null;
       updateData.remainingPaidDate = null;
       updateData.depositPaid = false;
       updateData.remainingPaid = false;
-      // Do NOT update 'status'
+      updateData.depositDeadline = null;
+      updateData.remainingDeadline = null;
     } else if (slip.paymentType === 'additional') {
       // Sync rejection to eventRegistrations.additionalPayments
       const currentData = registrationDoc.data();
@@ -404,11 +437,34 @@ export async function rejectPaymentSlip(
       // Don't update main payment status for additional payments
     }
 
+    // ✅ AUTO-UPDATE REGISTRATION STATUS based on payment completion after rejection
+    // Calculate if registration is still fully paid after this rejection
+    const totalAmount = registrationData.totalAmount || 0;
+    const currentPaidAmount = updateData.paidAmount !== undefined ? updateData.paidAmount : (registrationData.paidAmount || 0);
+
+    // Parse additional payments to check if still fully paid
+    const additionalPaymentsJson = slip.paymentType === 'additional'
+      ? updateData.additionalPayments
+      : registrationData.additionalPayments;
+    const additionalPayments = parseAdditionalPayments(additionalPaymentsJson);
+
+    // Check if still fully paid using the utility function
+    const fullyPaid = isFullyPaid(totalAmount, currentPaidAmount, additionalPayments);
+
+    // Update status field based on payment completion
+    if (fullyPaid) {
+      updateData.status = 'ยืนยันแล้ว'; // Still confirmed if still fully paid
+    } else {
+      updateData.status = 'รอดำเนินการ'; // Back to pending if no longer fully paid
+    }
+
     await registrationDoc.ref.update(updateData);
 
     console.log(`[Reject Slip] Updated eventRegistrations for ${slip.registrationId}:`, {
       paymentType: slip.paymentType,
       paymentStatus: updateData.paymentStatus,
+      status: updateData.status,
+      fullyPaid,
     });
   }
 }

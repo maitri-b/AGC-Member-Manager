@@ -230,7 +230,7 @@ export async function POST(
 
     // Calculate payment breakdown and deadlines based on payment mode
     let depositAmount = 0;
-    let remainingAmount = totalFee;
+    let remainingAmount = 0;
     let depositDeadline = '';
     let remainingDeadline = '';
     let fullPaymentDeadline = '';
@@ -239,7 +239,7 @@ export async function POST(
     const registrationDate = new Date().toISOString();
 
     if (eventData.paymentMode === 'deposit' && totalFee > 0) {
-      // Deposit Mode: Split payment into two installments
+      // ✅ Deposit Mode: Split payment into two installments
       const split = calculatePaymentSplit(totalFee, eventData as Event, attendeeCount);
       depositAmount = split.depositAmount;
       remainingAmount = split.remainingAmount;
@@ -254,11 +254,12 @@ export async function POST(
 
       paymentStatus = 'รอชำระมัดจำ';
     } else if (totalFee > 0) {
-      // ✅ Full Payment Mode: Use dedicated fullPaymentDeadline field
+      // ✅ Full Payment Mode: No deposit/remaining split, use full payment deadline only
       fullPaymentDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
 
-      // ✅ For backward compatibility, also set remainingDeadline (for legacy code)
-      remainingDeadline = fullPaymentDeadline;
+      // ✅ Keep deposit/remaining amounts as 0 (no split in full payment mode)
+      depositAmount = 0;
+      remainingAmount = 0;
 
       paymentStatus = 'รอชำระเงิน';
     }

@@ -110,20 +110,25 @@ interface EventData {
   attendees: Attendee[];
 }
 
-// Helper function to check if there are additional charges after full payment
+// Helper function to check if there are additional charges after payment
 function hasAdditionalCharges(attendee: Attendee, eventPaymentMode: 'full' | 'deposit'): boolean {
   const reg = attendee.registration;
   const totalAmount = reg.totalAmount || 0;
+  const paidAmount = reg.paidAmount || 0;
   const depositAmount = reg.depositAmount || 0;
   const remainingAmount = reg.remainingAmount || 0;
 
   if (eventPaymentMode === 'full') {
-    // Full payment mode: check if totalAmount > depositAmount and depositPaid is true
-    return reg.depositPaid === true && totalAmount > depositAmount;
+    // ✅ Full payment mode: check if totalAmount > paidAmount and payment has been made
+    // Use fullPaymentPaid or paidAmount to determine if payment started
+    const hasStartedPayment = reg.fullPaymentPaid === true || paidAmount > 0;
+    return hasStartedPayment && totalAmount > paidAmount;
   } else {
-    // Deposit mode: check if totalAmount > (depositAmount + remainingAmount) when both are paid
-    const paidAmount = (reg.depositPaid ? depositAmount : 0) + (reg.remainingSlipUrl ? remainingAmount : 0);
-    return reg.depositPaid === true && !!reg.remainingSlipUrl && totalAmount > paidAmount;
+    // Deposit mode: check if totalAmount > (depositAmount + remainingAmount) when payments are made
+    const depositPaidAmount = (reg.depositPaid ? depositAmount : 0);
+    const remainingPaidAmount = (reg.remainingPaid ? remainingAmount : 0);
+    const totalPaid = depositPaidAmount + remainingPaidAmount;
+    return reg.depositPaid === true && totalAmount > totalPaid;
   }
 }
 
@@ -131,14 +136,19 @@ function hasAdditionalCharges(attendee: Attendee, eventPaymentMode: 'full' | 'de
 function getAdditionalAmount(attendee: Attendee, eventPaymentMode: 'full' | 'deposit'): number {
   const reg = attendee.registration;
   const totalAmount = reg.totalAmount || 0;
+  const paidAmount = reg.paidAmount || 0;
   const depositAmount = reg.depositAmount || 0;
   const remainingAmount = reg.remainingAmount || 0;
 
   if (eventPaymentMode === 'full') {
-    return totalAmount - depositAmount;
+    // ✅ Full payment mode: calculate from totalAmount - paidAmount
+    return Math.max(0, totalAmount - paidAmount);
   } else {
-    const paidAmount = depositAmount + (reg.remainingSlipUrl ? remainingAmount : 0);
-    return totalAmount - paidAmount;
+    // Deposit mode: calculate from totalAmount - (deposit + remaining)
+    const depositPaidAmount = (reg.depositPaid ? depositAmount : 0);
+    const remainingPaidAmount = (reg.remainingPaid ? remainingAmount : 0);
+    const totalPaid = depositPaidAmount + remainingPaidAmount;
+    return Math.max(0, totalAmount - totalPaid);
   }
 }
 

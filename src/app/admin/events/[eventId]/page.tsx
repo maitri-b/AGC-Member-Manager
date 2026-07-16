@@ -110,6 +110,38 @@ interface EventData {
   attendees: Attendee[];
 }
 
+// Helper function to check if there are additional charges after full payment
+function hasAdditionalCharges(attendee: Attendee, eventPaymentMode: 'full' | 'deposit'): boolean {
+  const reg = attendee.registration;
+  const totalAmount = reg.totalAmount || 0;
+  const depositAmount = reg.depositAmount || 0;
+  const remainingAmount = reg.remainingAmount || 0;
+
+  if (eventPaymentMode === 'full') {
+    // Full payment mode: check if totalAmount > depositAmount and depositPaid is true
+    return reg.depositPaid === true && totalAmount > depositAmount;
+  } else {
+    // Deposit mode: check if totalAmount > (depositAmount + remainingAmount) when both are paid
+    const paidAmount = (reg.depositPaid ? depositAmount : 0) + (reg.remainingSlipUrl ? remainingAmount : 0);
+    return reg.depositPaid === true && !!reg.remainingSlipUrl && totalAmount > paidAmount;
+  }
+}
+
+// Helper function to calculate unpaid additional amount
+function getAdditionalAmount(attendee: Attendee, eventPaymentMode: 'full' | 'deposit'): number {
+  const reg = attendee.registration;
+  const totalAmount = reg.totalAmount || 0;
+  const depositAmount = reg.depositAmount || 0;
+  const remainingAmount = reg.remainingAmount || 0;
+
+  if (eventPaymentMode === 'full') {
+    return totalAmount - depositAmount;
+  } else {
+    const paidAmount = depositAmount + (reg.remainingSlipUrl ? remainingAmount : 0);
+    return totalAmount - paidAmount;
+  }
+}
+
 export default function EventDetailPage() {
   const params = useParams();
   const eventId = params.eventId as string;
@@ -1048,7 +1080,7 @@ export default function EventDetailPage() {
         throw new Error(data.error || 'ไม่สามารถเพิ่มค่าใช้จ่ายได้');
       }
 
-      setActionMessage({ type: 'success', text: data.message || 'เพิ่มค่าใช้จ่ายพิเศษเรียบร้อยแล้ว' });
+      setActionMessage({ type: 'success', text: data.message || 'เพิ่มค่าใช้จ่ายเสริมเรียบร้อยแล้ว' });
       setTimeout(() => setActionMessage(null), 3000);
       handleCloseSpecialChargeModal();
       fetchEventData(); // Refresh data
@@ -1063,7 +1095,7 @@ export default function EventDetailPage() {
   };
 
   const handleDeleteSpecialCharge = async (registrationId: string, chargeId: string) => {
-    if (!confirm('ยืนยันการลบค่าใช้จ่ายพิเศษนี้?')) return;
+    if (!confirm('ยืนยันการลบค่าใช้จ่ายเสริมนี้?')) return;
 
     setActionMessage(null);
 
@@ -1079,7 +1111,7 @@ export default function EventDetailPage() {
         throw new Error(data.error || 'ไม่สามารถลบค่าใช้จ่ายได้');
       }
 
-      setActionMessage({ type: 'success', text: data.message || 'ลบค่าใช้จ่ายพิเศษเรียบร้อยแล้ว' });
+      setActionMessage({ type: 'success', text: data.message || 'ลบค่าใช้จ่ายเสริมเรียบร้อยแล้ว' });
       setTimeout(() => setActionMessage(null), 3000);
       fetchEventData(); // Refresh data
     } catch (err) {
@@ -2145,12 +2177,12 @@ export default function EventDetailPage() {
                         return (
                           <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm font-semibold text-purple-900">ค่าใช้จ่ายพิเศษ</span>
+                              <span className="text-sm font-semibold text-purple-900">ค่าใช้จ่ายเสริม</span>
                               <button
                                 onClick={() => handleOpenSpecialChargeModal(attendee)}
                                 className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
                               >
-                                + เพิ่มค่าใช้จ่ายพิเศษ
+                                + เพิ่มค่าใช้จ่ายเสริม
                               </button>
                             </div>
 
@@ -2177,7 +2209,7 @@ export default function EventDetailPage() {
                                       <button
                                         onClick={() => handleDeleteSpecialCharge(attendee.registration.registrationId, charge.chargeId)}
                                         className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                                        title="ลบค่าใช้จ่ายพิเศษ"
+                                        title="ลบค่าใช้จ่ายเสริม"
                                       >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -2188,7 +2220,7 @@ export default function EventDetailPage() {
                                 ))}
                                 <div className="pt-2 border-t border-purple-200">
                                   <div className="flex justify-between items-center text-sm">
-                                    <span className="font-medium text-gray-600">รวมค่าใช้จ่ายพิเศษ:</span>
+                                    <span className="font-medium text-gray-600">รวมค่าใช้จ่ายเสริม:</span>
                                     <span className="font-bold text-purple-700">
                                       +฿{specialCharges.reduce((sum: number, c: any) => sum + c.amount, 0).toLocaleString()}
                                     </span>
@@ -2196,7 +2228,7 @@ export default function EventDetailPage() {
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-xs text-gray-500 italic">ไม่มีค่าใช้จ่ายพิเศษ</p>
+                              <p className="text-xs text-gray-500 italic">ไม่มีค่าใช้จ่ายเสริม</p>
                             )}
                           </div>
                         );
@@ -2298,13 +2330,50 @@ export default function EventDetailPage() {
                                           </svg>
                                           ชำระครบแล้ว
                                         </div>
-                                        <button
-                                          onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                          className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                          title="ลบการลงทะเบียน"
-                                        >
-                                          🗑️ ลบการลงทะเบียน
-                                        </button>
+                                        {/* Show additional payment button if there are extra charges */}
+                                        {hasAdditionalCharges(attendee, eventData.event.paymentMode || 'deposit') ? (
+                                          <div className="space-y-2">
+                                            <div className="p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+                                              <div className="flex items-center justify-between">
+                                                <span className="text-orange-700 font-medium">ยอดเรียกเก็บเพิ่ม:</span>
+                                                <span className="font-semibold text-orange-600">฿{getAdditionalAmount(attendee, eventData.event.paymentMode || 'deposit').toLocaleString()}</span>
+                                              </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <button
+                                                onClick={() => {
+                                                  // Create a modified attendee object with updated remainingAmount
+                                                  const modifiedAttendee = {
+                                                    ...attendee,
+                                                    registration: {
+                                                      ...attendee.registration,
+                                                      remainingAmount: getAdditionalAmount(attendee, eventData.event.paymentMode || 'deposit')
+                                                    }
+                                                  };
+                                                  handleOpenPaymentModal(modifiedAttendee, 'remaining');
+                                                }}
+                                                className="flex-1 px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors"
+                                              >
+                                                ✓ บันทึกการชำระเงิน
+                                              </button>
+                                              <button
+                                                onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                                className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                                title="ลบการลงทะเบียน"
+                                              >
+                                                🗑️ ลบ
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                            className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                            title="ลบการลงทะเบียน"
+                                          >
+                                            🗑️ ลบการลงทะเบียน
+                                          </button>
+                                        )}
                                       </div>
                                     ) : (
                                       <div className="mt-2 flex gap-2">
@@ -2339,13 +2408,50 @@ export default function EventDetailPage() {
                                       </svg>
                                       ชำระครบแล้ว {attendee.registration.depositPaidDate && `(${formatDeadline(attendee.registration.depositPaidDate)})`}
                                     </div>
-                                    <button
-                                      onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                      className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                      title="ลบการลงทะเบียน"
-                                    >
-                                      🗑️ ลบการลงทะเบียน
-                                    </button>
+                                    {/* Show additional payment button if there are extra charges */}
+                                    {hasAdditionalCharges(attendee, 'full') ? (
+                                      <div className="space-y-2">
+                                        <div className="p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-orange-700 font-medium">ยอดเรียกเก็บเพิ่ม:</span>
+                                            <span className="font-semibold text-orange-600">฿{getAdditionalAmount(attendee, 'full').toLocaleString()}</span>
+                                          </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => {
+                                              // Create a modified attendee object with updated remainingAmount
+                                              const modifiedAttendee = {
+                                                ...attendee,
+                                                registration: {
+                                                  ...attendee.registration,
+                                                  remainingAmount: getAdditionalAmount(attendee, 'full')
+                                                }
+                                              };
+                                              handleOpenPaymentModal(modifiedAttendee, 'remaining');
+                                            }}
+                                            className="flex-1 px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors"
+                                          >
+                                            ✓ บันทึกการชำระเงิน
+                                          </button>
+                                          <button
+                                            onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                            className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                            title="ลบการลงทะเบียน"
+                                          >
+                                            🗑️ ลบ
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                        className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                        title="ลบการลงทะเบียน"
+                                      >
+                                        🗑️ ลบการลงทะเบียน
+                                      </button>
+                                    )}
                                   </div>
                                 ) : (
                                   <div className="mt-2 flex gap-2">
@@ -2625,7 +2731,7 @@ export default function EventDetailPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              เพิ่มค่าใช้จ่ายพิเศษ
+              เพิ่มค่าใช้จ่ายเสริม
             </h2>
 
             <div className="space-y-4">
@@ -2643,7 +2749,7 @@ export default function EventDetailPage() {
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  ระบุรายละเอียดของค่าใช้จ่ายพิเศษ
+                  ระบุรายละเอียดของค่าใช้จ่ายเสริม
                 </p>
               </div>
 
@@ -2679,7 +2785,7 @@ export default function EventDetailPage() {
               {/* Note */}
               <div className="bg-purple-50 border border-purple-200 rounded p-3">
                 <p className="text-sm text-purple-800">
-                  <strong>หมายเหตุ:</strong> ค่าใช้จ่ายพิเศษจะถูกเพิ่มเข้าไปในยอดรวมทั้งหมด และจะแสดงเฉพาะกับสมาชิกท่านนี้เท่านั้น
+                  <strong>หมายเหตุ:</strong> ค่าใช้จ่ายเสริมจะถูกเพิ่มเข้าไปในยอดรวมทั้งหมด และจะแสดงเฉพาะกับสมาชิกท่านนี้เท่านั้น
                 </p>
               </div>
             </div>

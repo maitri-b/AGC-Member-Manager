@@ -1044,7 +1044,7 @@ export default function EventDetailPage() {
                           {/* Special charges breakdown */}
                           {userRegistration.specialCharges && userRegistration.specialCharges.length > 0 && (
                             <div className="mt-2 pt-2 border-t border-green-300">
-                              <p className="text-xs font-semibold text-purple-700 mb-1">ค่าใช้จ่ายพิเศษ:</p>
+                              <p className="text-xs font-semibold text-purple-700 mb-1">ค่าใช้จ่ายเสริม:</p>
                               {userRegistration.specialCharges.map((charge) => (
                                 <div key={charge.chargeId} className="flex justify-between text-purple-700">
                                   <span>{charge.description}</span>
@@ -1052,7 +1052,7 @@ export default function EventDetailPage() {
                                 </div>
                               ))}
                               <div className="flex justify-between font-medium pt-1 border-t border-purple-300 text-purple-800">
-                                <span>รวมค่าใช้จ่ายพิเศษ:</span>
+                                <span>รวมค่าใช้จ่ายเสริม:</span>
                                 <span>+{userRegistration.specialCharges.reduce((sum, c) => sum + c.amount, 0).toLocaleString()} บาท</span>
                               </div>
                             </div>

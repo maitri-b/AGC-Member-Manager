@@ -123,7 +123,7 @@ export async function POST(
 
     // Update admin notes
     const currentNotes = registration.adminNotes || '';
-    const chargeNote = `\n[${new Date().toLocaleDateString('th-TH')}] Admin เพิ่มค่าใช้จ่ายพิเศษ: ${description} - ${amount.toLocaleString()} บาท (โดย ${session.user.name || session.user.email})`;
+    const chargeNote = `\n[${new Date().toLocaleDateString('th-TH')}] Admin เพิ่มค่าใช้จ่ายเสริม: ${description} - ${amount.toLocaleString()} บาท (โดย ${session.user.name || session.user.email})`;
     updateData.admin_notes = currentNotes + chargeNote;
 
     console.log('[Special Charges] Adding charge:', {
@@ -147,7 +147,7 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
-        message: 'เพิ่มค่าใช้จ่ายพิเศษเรียบร้อยแล้ว',
+        message: 'เพิ่มค่าใช้จ่ายเสริมเรียบร้อยแล้ว',
         charge: newCharge,
         newTotalAmount,
       });
@@ -158,7 +158,7 @@ export async function POST(
   } catch (error) {
     console.error('Error adding special charge:', error);
     return NextResponse.json({
-      error: 'ไม่สามารถเพิ่มค่าใช้จ่ายพิเศษได้ กรุณาลองใหม่'
+      error: 'ไม่สามารถเพิ่มค่าใช้จ่ายเสริมได้ กรุณาลองใหม่'
     }, { status: 500 });
   }
 }
@@ -276,7 +276,7 @@ export async function DELETE(
 
     // Update admin notes
     const currentNotes = registration.adminNotes || '';
-    const removalNote = `\n[${new Date().toLocaleDateString('th-TH')}] Admin ลบค่าใช้จ่ายพิเศษ: ${chargeToRemove.description} - ${chargeToRemove.amount.toLocaleString()} บาท (โดย ${session.user.name || session.user.email})`;
+    const removalNote = `\n[${new Date().toLocaleDateString('th-TH')}] Admin ลบค่าใช้จ่ายเสริม: ${chargeToRemove.description} - ${chargeToRemove.amount.toLocaleString()} บาท (โดย ${session.user.name || session.user.email})`;
     updateData.admin_notes = currentNotes + removalNote;
 
     console.log('[Special Charges] Removing charge:', {
@@ -300,7 +300,7 @@ export async function DELETE(
 
       return NextResponse.json({
         success: true,
-        message: 'ลบค่าใช้จ่ายพิเศษเรียบร้อยแล้ว',
+        message: 'ลบค่าใช้จ่ายเสริมเรียบร้อยแล้ว',
         newTotalAmount,
       });
     } catch (updateError) {
@@ -310,7 +310,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error removing special charge:', error);
     return NextResponse.json({
-      error: 'ไม่สามารถลบค่าใช้จ่ายพิเศษได้ กรุณาลองใหม่'
+      error: 'ไม่สามารถลบค่าใช้จ่ายเสริมได้ กรุณาลองใหม่'
     }, { status: 500 });
   }
 }

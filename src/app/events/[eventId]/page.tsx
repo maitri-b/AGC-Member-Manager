@@ -1645,10 +1645,40 @@ export default function EventDetailPage() {
                       {/* 1. Total Amount Summary - Show First */}
                       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
                         <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
-                        <div className="flex items-baseline justify-between">
+                        <div className="flex items-baseline justify-between mb-3">
                           <span className="text-3xl font-bold">{userRegistration.totalAmount.toLocaleString()} บาท</span>
                           <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
                         </div>
+
+                        {/* Payment Breakdown */}
+                        {(() => {
+                          const totalAmount = userRegistration.totalAmount || 0;
+                          const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
+                          const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
+                          const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
+                          const paidAmount = (userRegistration as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+                          const additionalRequired = Math.max(0, totalAmount - paidAmount);
+
+                          return (
+                            <div className="border-t border-blue-500 pt-3 space-y-2 text-sm">
+                              {/* Show paid amount if > 0 */}
+                              {paidAmount > 0 && (
+                                <div className="flex items-center justify-between">
+                                  <span className="opacity-90">ยอดชำระแล้ว:</span>
+                                  <span className="font-semibold">฿{paidAmount.toLocaleString()}</span>
+                                </div>
+                              )}
+
+                              {/* Show outstanding if > 0 */}
+                              {additionalRequired > 0 && (
+                                <div className="flex items-center justify-between">
+                                  <span className="opacity-90">คงเหลือยอดค้างชำระ:</span>
+                                  <span className="font-semibold">฿{additionalRequired.toLocaleString()}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* 2. Payment Status - Large and Clear */}

@@ -137,6 +137,7 @@ export interface Event {
   useExternalPaymentLink?: boolean; // true = เปิด URL ตรงๆ (Google Form/LINE), false/undefined = ใช้ GAS upload slip พร้อม parameters (Default: false)
 
   // Payment Configuration (New)
+  paymentTiming?: 'deferred' | 'immediate'; // เวลาการชำระเงิน (Default: 'deferred' - ชำระหลังลงทะเบียน, 'immediate' - ชำระพร้อมลงทะเบียน)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')
 
   // Full Payment Deadline Configuration (for paymentMode = 'full')
@@ -214,6 +215,7 @@ export interface EventInput {
   useExternalPaymentLink?: boolean; // true = เปิด URL ตรงๆ (Google Form/LINE), false/undefined = ใช้ GAS upload slip พร้อม parameters (Default: false)
 
   // Payment Configuration (New)
+  paymentTiming?: 'deferred' | 'immediate'; // เวลาการชำระเงิน (Default: 'deferred' - ชำระหลังลงทะเบียน, 'immediate' - ชำระพร้อมลงทะเบียน)
   paymentMode?: 'full' | 'deposit'; // รูปแบบการชำระเงิน (Default: 'full')
 
   // Full Payment Deadline Configuration (for paymentMode = 'full')

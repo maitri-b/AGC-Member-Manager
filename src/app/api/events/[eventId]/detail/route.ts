@@ -85,7 +85,8 @@ export async function GET(
       requireAttendeeNames: eventData?.requireAttendeeNames ?? true,
       createdAt: eventData?.createdAt || '',
       updatedAt: eventData?.updatedAt || '',
-      // Deposit payment configuration (New)
+      // Payment configuration (New)
+      paymentTiming: eventData?.paymentTiming || 'deferred',
       paymentMode: eventData?.paymentMode || 'full',
       depositAmount: eventData?.depositAmount ?? 0,
       depositPercentage: eventData?.depositPercentage ?? 0,

@@ -117,7 +117,8 @@ export async function GET() {
         paymentSlipSubmissionUrl: data.paymentSlipSubmissionUrl || '',
         paymentSlipButtonText: data.paymentSlipButtonText || '',
         paymentInstructionText: data.paymentInstructionText || '',
-        // Deposit payment configuration (New)
+        // Payment configuration (New)
+        paymentTiming: data.paymentTiming || 'deferred',
         paymentMode: data.paymentMode || 'full',
         // Full payment deadline (for paymentMode = 'full')
         paymentDeadlineType: data.paymentDeadlineType || 'none',
@@ -221,7 +222,8 @@ export async function POST(request: NextRequest) {
       paymentSlipSubmissionUrl: body.paymentSlipSubmissionUrl || '',
       paymentSlipButtonText: body.paymentSlipButtonText || '',
       paymentInstructionText: body.paymentInstructionText || '',
-      // Deposit payment configuration (New)
+      // Payment configuration (New)
+      paymentTiming: body.paymentTiming || 'deferred',
       paymentMode: body.paymentMode || 'full',
       // Full payment deadline (for paymentMode = 'full')
       paymentDeadlineType: body.paymentDeadlineType || 'none',

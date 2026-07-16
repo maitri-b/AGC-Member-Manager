@@ -5,11 +5,11 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Toast, useToast } from '@/components/Toast';
+import PaymentSlipUploadModal from '@/components/PaymentSlipUploadModal';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier } from '@/types/event';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
-import { GAS_UPLOAD_SLIP_URL } from '@/lib/constants';
 
 interface Event {
   eventId: string;
@@ -176,6 +176,11 @@ export default function EventDetailPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState('');
   const [lightboxTitle, setLightboxTitle] = useState('');
+
+  // Payment slip upload modal state
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadPaymentType, setUploadPaymentType] = useState<'deposit' | 'remaining' | 'full' | 'additional'>('full');
+  const [uploadAmount, setUploadAmount] = useState(0);
 
   // Registration form visibility state
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
@@ -1853,96 +1858,56 @@ export default function EventDetailPage() {
                             </>
                           )}
 
-                          {event.paymentSlipSubmissionUrl ? (
-                            <button
-                              onClick={() => {
-                                if (!userRegistration) {
-                                  toast.error('กรุณาลงทะเบียนก่อนอัพโหลดสลิป');
-                                  return;
-                                }
+                          <button
+                            onClick={() => {
+                              if (!userRegistration) {
+                                toast.error('กรุณาลงทะเบียนก่อนอัพโหลดสลิป');
+                                return;
+                              }
 
-                                if (!event.paymentSlipSubmissionUrl) {
-                                  toast.error('ไม่พบ URL สำหรับอัพโหลดสลิป');
-                                  return;
-                                }
+                              // Determine payment type and amount
+                              let paymentType: 'deposit' | 'remaining' | 'full' = 'full';
+                              let amount = 0;
 
-                                const useExternal = (event as any).useExternalPaymentLink === true;
-
-                                if (useExternal) {
-                                  window.open(event.paymentSlipSubmissionUrl, '_blank');
+                              if (event.paymentMode === 'deposit') {
+                                if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
+                                  paymentType = 'remaining';
+                                  amount = userRegistration.remainingAmount;
                                 } else {
-                                  let paymentType: 'deposit' | 'remaining' | 'full' = 'full';
-
-                                  if (event.paymentMode === 'deposit') {
-                                    if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
-                                      paymentType = 'remaining';
-                                    } else {
-                                      paymentType = 'deposit';
-                                    }
-                                  } else {
-                                    paymentType = 'full';
-                                  }
-
-                                  const url = new URL(event.paymentSlipSubmissionUrl);
-                                  url.searchParams.append('registrationId', userRegistration.registrationId);
-                                  url.searchParams.append('eventId', event.eventId);
-                                  url.searchParams.append('lineUserId', session?.user?.id || '');
-                                  url.searchParams.append('paymentType', paymentType);
-
-                                  // Open in popup window
-                                  const popupWidth = Math.min(600, window.innerWidth - 40);
-                                  const popupHeight = Math.min(800, window.innerHeight - 40);
-                                  const left = (window.innerWidth - popupWidth) / 2;
-                                  const top = (window.innerHeight - popupHeight) / 2;
-
-                                  const popup = window.open(
-                                    url.toString(),
-                                    'slipUpload',
-                                    `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
-                                  );
-
-                                  if (!popup) {
-                                    toast.error('กรุณาอนุญาตให้เปิด popup window');
-                                  } else {
-                                    // Refresh data when popup closes
-                                    const checkClosed = setInterval(() => {
-                                      if (popup.closed) {
-                                        clearInterval(checkClosed);
-                                        setTimeout(() => {
-                                          fetchEventDetail();
-                                        }, 1000);
-                                      }
-                                    }, 500);
-                                  }
+                                  paymentType = 'deposit';
+                                  amount = userRegistration.depositAmount || 0;
                                 }
-                              }}
-                              className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-                            >
-                              <span className="flex items-center justify-center gap-2">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                </svg>
-                                {(() => {
-                                  // Custom button text if defined
-                                  if ((event as any).paymentSlipButtonText) {
-                                    return (event as any).paymentSlipButtonText;
-                                  }
+                              } else {
+                                paymentType = 'full';
+                                amount = (userRegistration as any).totalFee || event.registrationFee || 0;
+                              }
 
-                                  // Deposit mode - check if deposit is paid
-                                  if (event.paymentMode === 'deposit' && userRegistration.depositPaid) {
-                                    return 'ส่งสลิปชำระยอดที่เหลือ';
-                                  }
+                              setUploadPaymentType(paymentType);
+                              setUploadAmount(amount);
+                              setUploadModalOpen(true);
+                            }}
+                            className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                          >
+                            <span className="flex items-center justify-center gap-2">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {(() => {
+                                // Custom button text if defined
+                                if ((event as any).paymentSlipButtonText) {
+                                  return (event as any).paymentSlipButtonText;
+                                }
 
-                                  // Default text
-                                  return 'ส่งหลักฐานการชำระเงิน';
-                                })()}
-                              </span>
-                            </button>
-                          ) : (
-                            <div className="text-sm text-gray-600 bg-white rounded p-3 border border-gray-200">
-                              <p>โปรดชำระเงินและส่งหลักฐานการชำระตามช่องทางที่ระบุไว้ในข้อมูลการชำระเงินด้านบน</p>
-                            </div>
-                          )}
+                                // Deposit mode - check if deposit is paid
+                                if (event.paymentMode === 'deposit' && userRegistration.depositPaid) {
+                                  return 'ส่งสลิปชำระยอดที่เหลือ';
+                                }
+
+                                // Default text
+                                return 'ส่งหลักฐานการชำระเงิน';
+                              })()}
+                            </span>
+                          </button>
                         </div>
                       ) : null}
 
@@ -2826,6 +2791,22 @@ export default function EventDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Payment Slip Upload Modal */}
+      {userRegistration && event && (
+        <PaymentSlipUploadModal
+          isOpen={uploadModalOpen}
+          onClose={() => setUploadModalOpen(false)}
+          registrationId={userRegistration.registrationId}
+          eventId={event.eventId}
+          paymentType={uploadPaymentType}
+          amount={uploadAmount}
+          onSuccess={() => {
+            // Refresh event data after successful upload
+            fetchEventDetail();
+          }}
+        />
       )}
     </div>
   );

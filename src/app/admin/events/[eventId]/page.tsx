@@ -12,6 +12,7 @@ import { calculateRegistrationFee } from '@/types/event';
 import { formatThaiDateTime } from '@/lib/date-utils';
 import RegisterOnBehalfModal from './RegisterOnBehalfModal';
 import PaymentDetailsModal from '@/components/admin/PaymentDetailsModal';
+import PromoteEventModal from '@/components/admin/PromoteEventModal';
 
 interface Event {
   eventId: string;
@@ -396,6 +397,7 @@ export default function EventDetailPage() {
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedRegistrations, setExpandedRegistrations] = useState<Set<string>>(new Set());
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<{
     attendeeCount: number;
@@ -1044,8 +1046,13 @@ export default function EventDetailPage() {
 
   // Check if registration has approved payments
   const hasApprovedPayments = (registration: any): { hasPayment: boolean; totalPaid: number } => {
-    // Use existing paidAmount field (ยอดที่ชำระแล้วจริงๆ)
-    const paidAmount = registration.paidAmount || 0;
+    // ✅ FIX: paidAmount might not exist in API response, calculate from actual payment fields
+    const fullPaymentAmountPaid = registration.fullPaymentAmountPaid || 0;
+    const depositAmountPaid = registration.depositAmountPaid || 0;
+    const remainingAmountPaid = registration.remainingAmountPaid || 0;
+
+    // Use the appropriate paid amount based on payment mode
+    const paidAmount = registration.paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
     const hasPayment = paidAmount > 0;
 
     return { hasPayment, totalPaid: paidAmount };
@@ -1587,6 +1594,19 @@ export default function EventDetailPage() {
                   </span>
                 )}
               </div>
+            </div>
+            {/* Action Button */}
+            <div>
+              <button
+                onClick={() => setShowPromoteModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+                title="ส่งข้อความโปรโมทกิจกรรมนี้"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                </svg>
+                <span className="hidden sm:inline">โปรโมทกิจกรรม</span>
+              </button>
             </div>
           </div>
         </div>
@@ -2588,8 +2608,11 @@ export default function EventDetailPage() {
                             {/* Payment Breakdown - Show for all modes */}
                             {(() => {
                               const totalAmount = attendee.registration.totalAmount || 0;
-                              // ✅ Use existing paidAmount field (ยอดที่ชำระแล้วจริงๆ)
-                              const paidAmount = attendee.registration.paidAmount || 0;
+                              // ✅ FIX: Calculate paidAmount from actual payment fields (use 'as any' for TypeScript)
+                              const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
+                              const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
+                              const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
+                              const paidAmount = (attendee.registration as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
                               const additionalRequired = Math.max(0, totalAmount - paidAmount);
 
                               return (
@@ -2600,23 +2623,18 @@ export default function EventDetailPage() {
                                     <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
                                   </div>
 
-                                  {/* Show paid amount if > 0, otherwise show outstanding */}
-                                  {paidAmount > 0 ? (
+                                  {/* Show paid amount if > 0 */}
+                                  {paidAmount > 0 && (
                                     <div className="flex items-center justify-between">
                                       <span className="text-gray-600">ยอดชำระแล้ว:</span>
                                       <span className="font-semibold text-blue-600">฿{paidAmount.toLocaleString()}</span>
                                     </div>
-                                  ) : (
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">ยอดค้างชำระ:</span>
-                                      <span className="font-semibold text-orange-600">฿{totalAmount.toLocaleString()}</span>
-                                    </div>
                                   )}
 
-                                  {/* Show additional payment required if paid > 0 and still have outstanding */}
-                                  {paidAmount > 0 && additionalRequired > 0 && (
+                                  {/* Show outstanding if > 0 */}
+                                  {additionalRequired > 0 && (
                                     <div className="flex items-center justify-between">
-                                      <span className="text-orange-700 font-medium">ยอดชำระเพิ่ม:</span>
+                                      <span className="text-orange-700 font-medium">คงเหลือยอดค้างชำระ:</span>
                                       <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
                                     </div>
                                   )}
@@ -2708,7 +2726,11 @@ export default function EventDetailPage() {
                                                 <span className="font-semibold text-gray-900">฿{attendee.registration.totalAmount.toLocaleString()}</span>
                                               </div>
                                               {(() => {
-                                                const paidAmount = attendee.registration.paidAmount || 0;
+                                                // ✅ Calculate paidAmount from actual payment fields (use 'as any' for TypeScript)
+                                                const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
+                                                const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
+                                                const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
+                                                const paidAmount = (attendee.registration as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
                                                 const additionalRequired = getAdditionalAmount(attendee, eventData.event.paymentMode || 'deposit');
                                                 return (
                                                   <>
@@ -2786,9 +2808,12 @@ export default function EventDetailPage() {
                             {eventData.event.paymentMode === 'full' && (
                               <div className="border-t pt-2">
                                 {(() => {
-                                  // ✅ Use existing paidAmount field (ยอดที่ชำระแล้วจริงๆ)
+                                  // ✅ Calculate paidAmount from actual payment fields (use 'as any' for TypeScript)
                                   const totalAmount = attendee.registration.totalAmount || 0;
-                                  const paidAmount = attendee.registration.paidAmount || 0;
+                                  const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
+                                  const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
+                                  const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
+                                  const paidAmount = (attendee.registration as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
                                   const additionalRequired = Math.max(0, totalAmount - paidAmount);
                                   const isFullyPaid = paidAmount >= totalAmount && paidAmount > 0;
                                   const hasPayment = attendee.registration.depositPaid;
@@ -3400,6 +3425,15 @@ export default function EventDetailPage() {
         roomTypes={eventData?.event?.roomTypes}
         requireAttendeeNames={eventData?.event?.requireAttendeeNames ?? true}
         onSuccess={fetchEventData}
+      />
+
+      {/* Promote Event Modal */}
+      <PromoteEventModal
+        isOpen={showPromoteModal}
+        onClose={() => setShowPromoteModal(false)}
+        eventId={eventId as string}
+        eventName={eventData?.event?.eventName || ''}
+        eventDescription={eventData?.event?.description || ''}
       />
     </div>
   );

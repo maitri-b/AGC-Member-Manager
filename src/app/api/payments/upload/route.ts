@@ -127,7 +127,6 @@ export async function POST(request: NextRequest) {
         eventId,
         amount: Number(amount),
         paymentType,
-        description: description || undefined,
         slipUrl,
         uploadedAt: new Date().toISOString(),
         uploadedBy: session.user.lineUserId || session.user.id || 'unknown',
@@ -135,6 +134,7 @@ export async function POST(request: NextRequest) {
       };
 
       // Only add optional fields if they have values
+      if (description) slipData.description = description;
       if (paymentMethod) slipData.paymentMethod = paymentMethod;
       if (bankName) slipData.bankName = bankName;
       if (transferDate) slipData.transferDate = transferDate;

@@ -799,8 +799,8 @@ export default function EventDetailPage() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Attendees');
 
-      // Generate filename
-      const filename = `${eventData.event.eventName}_${new Date().toLocaleDateString('th-TH')}.xlsx`;
+      // Generate filename with Thai date format
+      const filename = `${eventData.event.eventName}_${formatThaiDateTime(new Date())}.xlsx`;
 
       // Download file
       XLSX.writeFile(wb, filename);
@@ -1044,28 +1044,11 @@ export default function EventDetailPage() {
 
   // Check if registration has approved payments
   const hasApprovedPayments = (registration: any): { hasPayment: boolean; totalPaid: number } => {
-    let totalPaid = 0;
-    let hasPayment = false;
+    // Use existing paidAmount field (ยอดที่ชำระแล้วจริงๆ)
+    const paidAmount = registration.paidAmount || 0;
+    const hasPayment = paidAmount > 0;
 
-    // Check deposit payment
-    if (registration.depositPaid) {
-      totalPaid += registration.depositAmount || 0;
-      hasPayment = true;
-    }
-
-    // Check full payment (for full payment mode)
-    if (registration.fullPaymentPaid) {
-      totalPaid += registration.totalAmount || 0;
-      hasPayment = true;
-    }
-
-    // Check remaining payment
-    if (registration.remainingPaid) {
-      totalPaid += registration.remainingAmount || 0;
-      hasPayment = true;
-    }
-
-    return { hasPayment, totalPaid };
+    return { hasPayment, totalPaid: paidAmount };
   };
 
   const handleOpenCancellationModal = (registrationId: string) => {
@@ -1075,6 +1058,16 @@ export default function EventDetailPage() {
 
     // Check for approved payments
     const { hasPayment, totalPaid } = hasApprovedPayments(attendee.registration);
+
+    // ✅ DEBUG: Log payment data
+    console.log('[Delete Modal Debug]', {
+      registrationId,
+      paidAmount: attendee.registration.paidAmount,
+      totalAmount: attendee.registration.totalAmount,
+      fullPaymentAmountPaid: (attendee.registration as any).fullPaymentAmountPaid,
+      hasPayment,
+      totalPaid,
+    });
 
     if (hasPayment) {
       // Show payment warning modal first
@@ -1118,7 +1111,7 @@ export default function EventDetailPage() {
 
   const handleCancelRegistration = async () => {
     if (!cancellationFormData.reason.trim()) {
-      setActionMessage({ type: 'error', text: 'กรุณาระบุสาเหตุการยกเลิก' });
+      setActionMessage({ type: 'error', text: 'กรุณาระบุสาเหตุการลบ' });
       return;
     }
 
@@ -1143,7 +1136,7 @@ export default function EventDetailPage() {
         throw new Error(data.error || 'ไม่สามารถยกเลิกได้');
       }
 
-      setActionMessage({ type: 'success', text: 'ยกเลิกการลงทะเบียนเรียบร้อยแล้ว' });
+      setActionMessage({ type: 'success', text: 'ลบการลงทะเบียนเรียบร้อยแล้ว' });
       setTimeout(() => setActionMessage(null), 3000);
       handleCloseCancellationModal();
       fetchEventData(); // Refresh data
@@ -2015,7 +2008,7 @@ export default function EventDetailPage() {
                           <span className="text-indigo-600 font-semibold">🎫 รหัส: {attendee.registration.registrationId}</span>
                         )}
                         {attendee.registration.registrationDate && (
-                          <span className="text-blue-600 font-medium">📅 ลงทะเบียน: {attendee.registration.registrationDate}</span>
+                          <span className="text-blue-600 font-medium">📅 ลงทะเบียน: {formatThaiDateTime(attendee.registration.registrationDate)}</span>
                         )}
                         {attendee.registration.licenseNumber && (
                           <span>ใบอนุญาต: {attendee.registration.licenseNumber}</span>
@@ -2450,24 +2443,35 @@ export default function EventDetailPage() {
 
                           const calculatedTotal = (calculatedEventFee || 0) + (calculatedRoomFee || 0) + (specialChargesTotal || 0);
 
+                          // Debug logging for calculation values
+                          console.log('[Real-time Calculation Debug]', {
+                            attendeeCount: editFormData.attendeeCount,
+                            calculatedEventFee,
+                            calculatedRoomFee,
+                            specialChargesTotal,
+                            calculatedTotal,
+                            useAttendeeTypePricing: eventData?.event?.useAttendeeTypePricing,
+                            attendeeTypeSelections: editFormData.attendeeTypeSelections,
+                            roomAllocations: editFormData.roomAllocations
+                          });
+
                           if (!calculatedTotal || calculatedTotal === 0 || isNaN(calculatedTotal)) return null;
 
                           return (
                             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                               <h4 className="text-xs font-semibold text-green-900 mb-2">💰 ยอดรวมที่คำนวณได้</h4>
                               <div className="space-y-1 text-xs text-gray-700">
-                                {calculatedEventFee > 0 && (
-                                  <div className="flex justify-between">
-                                    <span>ค่าเข้าร่วมกิจกรรม:</span>
-                                    <span className="font-semibold">฿{calculatedEventFee.toLocaleString()}</span>
-                                  </div>
-                                )}
-                                {calculatedRoomFee > 0 && (
-                                  <div className="flex justify-between">
-                                    <span>ค่าห้องพัก:</span>
-                                    <span className="font-semibold">฿{calculatedRoomFee.toLocaleString()}</span>
-                                  </div>
-                                )}
+                                {/* ALWAYS show event fee line */}
+                                <div className="flex justify-between">
+                                  <span>ค่าเข้าร่วมกิจกรรม:</span>
+                                  <span className="font-semibold">฿{calculatedEventFee.toLocaleString()}</span>
+                                </div>
+                                {/* ALWAYS show room fee line */}
+                                <div className="flex justify-between">
+                                  <span>ค่าห้องพัก:</span>
+                                  <span className="font-semibold">฿{calculatedRoomFee.toLocaleString()}</span>
+                                </div>
+                                {/* Only show special charges if > 0 */}
                                 {specialChargesTotal > 0 && (
                                   <div className="flex justify-between">
                                     <span>ค่าใช้จ่ายเสริม:</span>
@@ -2531,13 +2535,7 @@ export default function EventDetailPage() {
                                     <div className="flex-1">
                                       <p className="text-sm font-medium text-gray-800">{charge.description}</p>
                                       <p className="text-xs text-gray-500 mt-0.5">
-                                        เพิ่มเมื่อ: {new Date(charge.addedAt).toLocaleDateString('th-TH', {
-                                          year: 'numeric',
-                                          month: 'short',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })}
+                                        เพิ่มเมื่อ: {formatThaiDateTime(charge.addedAt)}
                                       </p>
                                     </div>
                                     <div className="flex items-center gap-2 ml-2">
@@ -2590,25 +2588,33 @@ export default function EventDetailPage() {
                             {/* Payment Breakdown - Show for all modes */}
                             {(() => {
                               const totalAmount = attendee.registration.totalAmount || 0;
-                              const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
-                              const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
-                              const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
-                              const actualPaid = fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
-                              const additionalRequired = Math.max(0, totalAmount - actualPaid);
+                              // ✅ Use existing paidAmount field (ยอดที่ชำระแล้วจริงๆ)
+                              const paidAmount = attendee.registration.paidAmount || 0;
+                              const additionalRequired = Math.max(0, totalAmount - paidAmount);
 
                               return (
                                 <>
+                                  {/* ALWAYS show total amount */}
                                   <div className="flex items-center justify-between">
                                     <span className="text-gray-600">ยอดรวมทั้งหมด:</span>
                                     <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
                                   </div>
-                                  {actualPaid > 0 && (
+
+                                  {/* Show paid amount if > 0, otherwise show outstanding */}
+                                  {paidAmount > 0 ? (
                                     <div className="flex items-center justify-between">
                                       <span className="text-gray-600">ยอดชำระแล้ว:</span>
-                                      <span className="font-semibold text-blue-600">฿{actualPaid.toLocaleString()}</span>
+                                      <span className="font-semibold text-blue-600">฿{paidAmount.toLocaleString()}</span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">ยอดค้างชำระ:</span>
+                                      <span className="font-semibold text-orange-600">฿{totalAmount.toLocaleString()}</span>
                                     </div>
                                   )}
-                                  {additionalRequired > 0 && actualPaid > 0 && (
+
+                                  {/* Show additional payment required if paid > 0 and still have outstanding */}
+                                  {paidAmount > 0 && additionalRequired > 0 && (
                                     <div className="flex items-center justify-between">
                                       <span className="text-orange-700 font-medium">ยอดชำระเพิ่ม:</span>
                                       <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
@@ -2648,7 +2654,7 @@ export default function EventDetailPage() {
                                           className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                           title="ลบการลงทะเบียน"
                                         >
-                                          ❌ ยกเลิกการลงทะเบียน
+                                          ❌ ลบการลงทะเบียน
                                         </button>
                                       )}
                                     </div>
@@ -2702,15 +2708,13 @@ export default function EventDetailPage() {
                                                 <span className="font-semibold text-gray-900">฿{attendee.registration.totalAmount.toLocaleString()}</span>
                                               </div>
                                               {(() => {
-                                                const depositAmountPaid = (attendee.registration as any).depositAmountPaid || attendee.registration.depositAmount || 0;
-                                                const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
-                                                const actualPaid = depositAmountPaid + remainingAmountPaid;
+                                                const paidAmount = attendee.registration.paidAmount || 0;
                                                 const additionalRequired = getAdditionalAmount(attendee, eventData.event.paymentMode || 'deposit');
                                                 return (
                                                   <>
                                                     <div className="flex items-center justify-between border-t border-blue-200 pt-1">
                                                       <span className="text-gray-700">ยอดชำระแล้ว:</span>
-                                                      <span className="font-semibold text-blue-600">฿{actualPaid.toLocaleString()}</span>
+                                                      <span className="font-semibold text-blue-600">฿{paidAmount.toLocaleString()}</span>
                                                     </div>
                                                     <div className="flex items-center justify-between border-t border-blue-200 pt-1">
                                                       <span className="text-orange-700 font-medium">ยอดชำระเพิ่ม:</span>
@@ -2752,7 +2756,7 @@ export default function EventDetailPage() {
                                             className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                             title="ลบการลงทะเบียน"
                                           >
-                                            ❌ ยกเลิกการลงทะเบียน
+                                            ❌ ลบการลงทะเบียน
                                           </button>
                                         )}
                                       </div>
@@ -2782,13 +2786,11 @@ export default function EventDetailPage() {
                             {eventData.event.paymentMode === 'full' && (
                               <div className="border-t pt-2">
                                 {(() => {
-                                  // ✅ Calculate actual amounts paid
+                                  // ✅ Use existing paidAmount field (ยอดที่ชำระแล้วจริงๆ)
                                   const totalAmount = attendee.registration.totalAmount || 0;
-                                  const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
-                                  const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
-                                  const actualPaid = fullPaymentAmountPaid || depositAmountPaid;
-                                  const additionalRequired = Math.max(0, totalAmount - actualPaid);
-                                  const isFullyPaid = actualPaid >= totalAmount && actualPaid > 0;
+                                  const paidAmount = attendee.registration.paidAmount || 0;
+                                  const additionalRequired = Math.max(0, totalAmount - paidAmount);
+                                  const isFullyPaid = paidAmount >= totalAmount && paidAmount > 0;
                                   const hasPayment = attendee.registration.depositPaid;
 
                                   return (
@@ -2803,7 +2805,7 @@ export default function EventDetailPage() {
                                             </div>
                                             <div className="flex items-center justify-between border-t border-blue-200 pt-1">
                                               <span className="text-gray-700">ยอดชำระแล้ว:</span>
-                                              <span className="font-semibold text-blue-600">฿{actualPaid.toLocaleString()}</span>
+                                              <span className="font-semibold text-blue-600">฿{paidAmount.toLocaleString()}</span>
                                             </div>
                                             {additionalRequired > 0 && (
                                               <div className="flex items-center justify-between border-t border-blue-200 pt-1">
@@ -2826,7 +2828,7 @@ export default function EventDetailPage() {
                                                 className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                                 title="ลบการลงทะเบียน"
                                               >
-                                                ❌ ยกเลิกการลงทะเบียน
+                                                ❌ ลบการลงทะเบียน
                                               </button>
                                             </>
                                           ) : (
@@ -2904,7 +2906,7 @@ export default function EventDetailPage() {
                           className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
                           title="ลบการลงทะเบียน"
                         >
-                          ❌ ยกเลิกการลงทะเบียน
+                          ❌ ลบการลงทะเบียน
                         </button>
                       </div>
                     )}
@@ -3234,26 +3236,26 @@ export default function EventDetailPage() {
       {cancellationModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">ยกเลิกการลงทะเบียน</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">ลบการลงทะเบียน</h3>
 
             <div className="space-y-4">
               {/* Warning */}
               <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
                 <p className="text-sm text-yellow-800">
-                  <strong>คำเตือน:</strong> การยกเลิกการลงทะเบียนจะเปลี่ยนสถานะเป็น "ยกเลิก" และไม่สามารถกู้คืนได้
+                  <strong>คำเตือน:</strong> การลบการลงทะเบียนจะเปลี่ยนสถานะเป็น "ยกเลิก" และไม่สามารถกู้คืนได้
                 </p>
               </div>
 
               {/* Cancellation Reason */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  สาเหตุการยกเลิก <span className="text-red-600">*</span>
+                  สาเหตุการลบ <span className="text-red-600">*</span>
                 </label>
                 <textarea
                   value={cancellationFormData.reason}
                   onChange={(e) => setCancellationFormData({ ...cancellationFormData, reason: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="ระบุสาเหตุการยกเลิก เช่น ลูกค้าขอยกเลิก, ไม่สะดวกเข้าร่วม, ฯลฯ"
+                  placeholder="ระบุสาเหตุการลบ เช่น ลูกค้าขอยกเลิก, ไม่สะดวกเข้าร่วม, ฯลฯ"
                   rows={4}
                   required
                 />
@@ -3269,7 +3271,7 @@ export default function EventDetailPage() {
                 disabled={cancelling || !cancellationFormData.reason.trim()}
                 className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {cancelling ? 'กำลังยกเลิก...' : 'ยืนยันการยกเลิก'}
+                {cancelling ? 'กำลังลบ...' : 'ยืนยันการลบ'}
               </button>
               <button
                 onClick={handleCloseCancellationModal}
@@ -3355,7 +3357,7 @@ export default function EventDetailPage() {
 
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-sm text-red-800">
-                  <strong>หากยืนยันยกเลิก:</strong>
+                  <strong>หากยืนยันลบ:</strong>
                 </p>
                 <ul className="list-disc list-inside text-sm text-red-700 mt-2 space-y-1">
                   <li>ระบบจะไม่คำนวณยอดเงิน ฿{paymentWarningModal.totalPaid.toLocaleString()} นี้ในยอดรับรวม</li>
@@ -3365,7 +3367,7 @@ export default function EventDetailPage() {
               </div>
 
               <p className="text-sm text-gray-600">
-                คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการลงทะเบียนนี้?
+                คุณแน่ใจหรือไม่ว่าต้องการลบการลงทะเบียนนี้?
               </p>
             </div>
 
@@ -3380,7 +3382,7 @@ export default function EventDetailPage() {
                 onClick={handleConfirmCancellationWithPayment}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
               >
-                ยืนยันยกเลิกการลงทะเบียน
+                ยืนยันลบการลงทะเบียน
               </button>
             </div>
           </div>

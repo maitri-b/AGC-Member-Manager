@@ -65,23 +65,33 @@ interface Attendee {
     tableNumber: string;
     contactPhone: string;
     contactEmail: string;
-    // Deposit payment fields (New)
+    // Payment fields
     totalAmount: number;
+    paidAmount?: number; // Total amount paid so far
+    additionalPayments?: string; // JSON stringified AdditionalPayment[]
+    // Deposit payment fields
     depositAmount: number;
     remainingAmount: number;
     depositPaid: boolean;
     depositPaidDate: string;
+    remainingPaid?: boolean;
+    remainingPaidDate?: string;
     depositSlipUrl: string;
     remainingSlipUrl: string;
     depositDeadline: string;
     remainingDeadline: string;
     paymentStatus: string;
-    // Attendee type pricing and room allocation (New)
+    // Full payment fields
+    fullPaymentPaid?: boolean;
+    fullPaymentPaidDate?: string;
+    fullPaymentSlipUrl?: string;
+    fullPaymentDeadline?: string;
+    // Attendee type pricing and room allocation
     attendeeTypeSelections?: string; // JSON stringified
     roomAllocations?: string; // JSON stringified
-    // Special charges (New)
+    // Special charges
     specialCharges?: string; // JSON stringified
-    // Special requests (New)
+    // Special requests
     specialRequests?: string;
   };
   member: {

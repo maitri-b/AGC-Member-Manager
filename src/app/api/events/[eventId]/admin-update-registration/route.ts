@@ -324,9 +324,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่พร้อมรับการแก้ไข' }, { status: 400 });
     }
 
-    // Update status to 'cancelled' instead of deleting
+    // ✅ Update status to 'ยกเลิก' (cancelled) instead of deleting
+    // This ensures cancelled registrations are excluded from payment summaries and reports
     const updateData: Record<string, unknown> = {
-      status: 'cancelled',
+      status: 'ยกเลิก', // Use Thai text to match system convention
       cancellation_reason: cancellationReason,
       cancelled_at: new Date().toISOString(),
       last_update_info: JSON.stringify({

@@ -10,6 +10,8 @@ import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
 import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline, calculateFullPaymentDeadline } from '@/lib/payment-deadlines';
 import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
+import { createPaymentSlip } from '@/lib/payment-slips';
+import { getStorage } from 'firebase-admin/storage';
 
 // Generate a unique 6-character registration ID
 function generateRegistrationId(): string {
@@ -19,6 +21,32 @@ function generateRegistrationId(): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+// Upload payment slip to Firebase Storage
+async function uploadPaymentSlipToStorage(
+  file: File,
+  eventId: string,
+  registrationId: string
+): Promise<string> {
+  const bucket = getStorage().bucket();
+  const timestamp = Date.now();
+  const fileName = `payment-slips/${eventId}/${registrationId}_${timestamp}.${file.name.split('.').pop()}`;
+
+  const fileBuffer = await file.arrayBuffer();
+  const blob = bucket.file(fileName);
+
+  await blob.save(Buffer.from(fileBuffer), {
+    metadata: {
+      contentType: file.type,
+    },
+  });
+
+  // Make file publicly readable
+  await blob.makePublic();
+
+  // Return public URL
+  return `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 }
 
 // POST - Register for event
@@ -34,7 +62,35 @@ export async function POST(
     }
 
     const { eventId } = await params;
-    const body = await request.json();
+
+    // Check if request is multipart/form-data (for file upload) or JSON
+    const contentType = request.headers.get('content-type') || '';
+    const isFormData = contentType.includes('multipart/form-data');
+
+    let body: any = {};
+    let slipFile: File | null = null;
+
+    if (isFormData) {
+      const formData = await request.formData();
+
+      // Extract file if present
+      const fileEntry = formData.get('slipFile');
+      if (fileEntry && fileEntry instanceof File) {
+        slipFile = fileEntry;
+      }
+
+      // Parse JSON fields from FormData
+      body.attendeeCount = parseInt(formData.get('attendeeCount') as string) || 1;
+      body.attendeeNames = formData.get('attendeeNames') ? JSON.parse(formData.get('attendeeNames') as string) : [];
+      body.specialRequests = formData.get('specialRequests') as string || '';
+      body.attendeeTypeSelections = formData.get('attendeeTypeSelections') ? JSON.parse(formData.get('attendeeTypeSelections') as string) : [];
+      body.roomAllocations = formData.get('roomAllocations') ? JSON.parse(formData.get('roomAllocations') as string) : [];
+      body.guestInfo = formData.get('guestInfo') ? JSON.parse(formData.get('guestInfo') as string) : null;
+    } else {
+      // Regular JSON request (backward compatibility)
+      body = await request.json();
+    }
+
     const { attendeeCount = 1, attendeeNames = [], specialRequests = '', attendeeTypeSelections = [], roomAllocations = [], guestInfo } = body;
 
     // Check if user is staff without memberId
@@ -238,6 +294,17 @@ export async function POST(
 
     const registrationDate = new Date().toISOString();
 
+    // ✅ Check if immediate payment is required
+    const paymentTiming = eventData.paymentTiming || 'deferred';
+    const isImmediatePayment = paymentTiming === 'immediate';
+
+    // Validate slip upload for immediate payment
+    if (isImmediatePayment && totalFee > 0 && !slipFile) {
+      return NextResponse.json({
+        error: 'กรุณาแนบหลักฐานการชำระเงิน'
+      }, { status: 400 });
+    }
+
     if (eventData.paymentMode === 'deposit' && totalFee > 0) {
       // ✅ Deposit Mode: Split payment into two installments
       const split = calculatePaymentSplit(totalFee, eventData as Event, attendeeCount);
@@ -252,7 +319,12 @@ export async function POST(
         remainingDeadline = calculateRemainingDeadline(eventData as Event, registrationDate);
       }
 
-      paymentStatus = 'รอชำระมัดจำ';
+      // Set paymentStatus based on payment timing
+      if (isImmediatePayment && slipFile) {
+        paymentStatus = 'รอตรวจสอบมัดจำ'; // Slip uploaded, waiting for verification
+      } else {
+        paymentStatus = 'รอชำระมัดจำ'; // Deferred payment
+      }
     } else if (totalFee > 0) {
       // ✅ Full Payment Mode: No deposit/remaining split, use full payment deadline only
       fullPaymentDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
@@ -261,7 +333,12 @@ export async function POST(
       depositAmount = 0;
       remainingAmount = 0;
 
-      paymentStatus = 'รอชำระเงิน';
+      // Set paymentStatus based on payment timing
+      if (isImmediatePayment && slipFile) {
+        paymentStatus = 'รอตรวจสอบ'; // Slip uploaded, waiting for verification
+      } else {
+        paymentStatus = 'รอชำระเงิน'; // Deferred payment
+      }
     }
 
     // Prepare registration data for Firestore
@@ -308,6 +385,37 @@ export async function POST(
 
     // Add to Firestore
     await addEventRegistrationToFirestore(eventId, registrationData);
+
+    // ✅ Handle immediate payment slip upload
+    let slipUrl = '';
+    if (isImmediatePayment && slipFile && totalFee > 0) {
+      try {
+        // Upload slip to Firebase Storage
+        slipUrl = await uploadPaymentSlipToStorage(slipFile, eventId, registrationId);
+
+        // Determine payment type based on payment mode
+        const paymentType = eventData.paymentMode === 'deposit' ? 'deposit' : 'full';
+        const paymentAmount = eventData.paymentMode === 'deposit' ? depositAmount : totalFee;
+
+        // Create payment slip record in paymentSlips collection
+        await createPaymentSlip({
+          registrationId,
+          eventId,
+          slipUrl,
+          amount: paymentAmount,
+          paymentType,
+          uploadedBy: session.user.id || '',
+          uploadedAt: new Date().toISOString(),
+          status: 'pending',
+        });
+
+        console.log(`[Immediate Payment] Slip uploaded for registration ${registrationId}: ${slipUrl}`);
+      } catch (uploadError) {
+        console.error('[Immediate Payment] Failed to upload slip:', uploadError);
+        // Don't fail the registration if slip upload fails
+        // User can re-upload later
+      }
+    }
 
     // ✅ Invalidate caches for this event (so next request gets fresh data)
     sheetsCache.invalidate(CacheKeys.eventAttendees(eventId));

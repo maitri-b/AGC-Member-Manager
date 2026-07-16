@@ -159,6 +159,31 @@ export default function EventsPage() {
   const canManageEvents = isCommittee ||
                           session?.user?.permissions?.includes('events:manage-assigned');
 
+  // Helper to parse Thai date format (DD/MM/YYYY) or ISO format
+  const parseEventDate = (dateStr: string): number => {
+    if (!dateStr) return 0;
+
+    // Try parsing as DD/MM/YYYY (Thai format)
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+        const year = parseInt(parts[2]);
+        // Convert Buddhist year to Gregorian if needed
+        const gregorianYear = year > 2400 ? year - 543 : year;
+        const date = new Date(gregorianYear, month, day);
+        if (!isNaN(date.getTime())) {
+          return date.getTime();
+        }
+      }
+    }
+
+    // Try parsing as ISO format or year only
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? 0 : date.getTime();
+  };
+
   // Sort events based on selected sort option
   const sortEvents = (eventList: Event[]) => {
     return [...eventList].sort((a, b) => {
@@ -169,13 +194,13 @@ export default function EventsPage() {
         return dateB - dateA;
       } else {
         // Sort by eventDate descending (most recent event first)
-        const dateA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
-        const dateB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
+        const dateA = parseEventDate(a.eventDate);
+        const dateB = parseEventDate(b.eventDate);
 
         // Handle invalid dates - push them to the end
-        if (isNaN(dateA) && isNaN(dateB)) return 0;
-        if (isNaN(dateA)) return 1;
-        if (isNaN(dateB)) return -1;
+        if (dateA === 0 && dateB === 0) return 0;
+        if (dateA === 0) return 1;
+        if (dateB === 0) return -1;
 
         return dateB - dateA;
       }

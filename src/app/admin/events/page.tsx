@@ -884,8 +884,29 @@ export default function AdminEventsPage() {
                 const dateB = new Date(b.createdAt).getTime();
                 return dateB - dateA; // Newest first
               } else {
-                const dateA = new Date(a.eventDate).getTime();
-                const dateB = new Date(b.eventDate).getTime();
+                // Parse Thai date format (DD/MM/YYYY) or ISO format
+                const parseDate = (dateStr: string): number => {
+                  if (!dateStr) return 0;
+                  // Try parsing as DD/MM/YYYY (Thai format)
+                  if (dateStr.includes('/')) {
+                    const parts = dateStr.split('/');
+                    if (parts.length === 3) {
+                      const day = parseInt(parts[0]);
+                      const month = parseInt(parts[1]) - 1;
+                      const year = parseInt(parts[2]);
+                      const gregorianYear = year > 2400 ? year - 543 : year;
+                      const date = new Date(gregorianYear, month, day);
+                      if (!isNaN(date.getTime())) return date.getTime();
+                    }
+                  }
+                  const date = new Date(dateStr);
+                  return isNaN(date.getTime()) ? 0 : date.getTime();
+                };
+                const dateA = parseDate(a.eventDate);
+                const dateB = parseDate(b.eventDate);
+                if (dateA === 0 && dateB === 0) return 0;
+                if (dateA === 0) return 1;
+                if (dateB === 0) return -1;
                 return dateB - dateA; // Most recent event first
               }
             }).map((event) => (

@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
 import { calculateRegistrationFee } from '@/types/event';
+import { formatThaiDateTime } from '@/lib/date-utils';
 import RegisterOnBehalfModal from './RegisterOnBehalfModal';
 import PaymentDetailsModal from '@/components/admin/PaymentDetailsModal';
 
@@ -1874,7 +1875,14 @@ export default function EventDetailPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {filteredAttendees.map((attendee, index) => {
+              {filteredAttendees
+                .sort((a, b) => {
+                  // Sort by registration date (oldest first)
+                  const dateA = new Date(a.registration.registrationDate || 0).getTime();
+                  const dateB = new Date(b.registration.registrationDate || 0).getTime();
+                  return dateA - dateB;
+                })
+                .map((attendee, index) => {
                 const isEditing = editingRegistration === attendee.registration.registrationId;
 
                 const isExpanded = expandedRegistrations.has(attendee.registration.registrationId);
@@ -2405,8 +2413,13 @@ export default function EventDetailPage() {
                             }
                           } else {
                             // Fixed or Tiered Pricing
-                            if (eventData?.event) {
-                              calculatedEventFee = calculateRegistrationFee(eventData.event as any, editFormData.attendeeCount, true);
+                            if (eventData?.event && editFormData.attendeeCount > 0) {
+                              try {
+                                calculatedEventFee = calculateRegistrationFee(eventData.event as any, editFormData.attendeeCount, true) || 0;
+                              } catch (e) {
+                                console.error('Error calculating event fee:', e);
+                                calculatedEventFee = 0;
+                              }
                             }
                           }
 
@@ -2422,17 +2435,22 @@ export default function EventDetailPage() {
                           // Get special charges
                           let specialChargesTotal = 0;
                           try {
-                            const specialCharges = attendee.registration.specialCharges
-                              ? JSON.parse(attendee.registration.specialCharges)
-                              : [];
-                            specialChargesTotal = specialCharges.reduce((sum: number, c: any) => sum + c.amount, 0);
+                            if (attendee?.registration?.specialCharges) {
+                              const specialCharges = typeof attendee.registration.specialCharges === 'string'
+                                ? JSON.parse(attendee.registration.specialCharges)
+                                : attendee.registration.specialCharges;
+                              if (Array.isArray(specialCharges)) {
+                                specialChargesTotal = specialCharges.reduce((sum: number, c: any) => sum + (c?.amount || 0), 0);
+                              }
+                            }
                           } catch (e) {
                             console.error('Error parsing special charges:', e);
+                            specialChargesTotal = 0;
                           }
 
-                          const calculatedTotal = calculatedEventFee + calculatedRoomFee + specialChargesTotal;
+                          const calculatedTotal = (calculatedEventFee || 0) + (calculatedRoomFee || 0) + (specialChargesTotal || 0);
 
-                          if (calculatedTotal === 0) return null;
+                          if (!calculatedTotal || calculatedTotal === 0 || isNaN(calculatedTotal)) return null;
 
                           return (
                             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -2569,11 +2587,36 @@ export default function EventDetailPage() {
                           </div>
 
                           <div className="space-y-2 text-xs">
-                            {/* Total Amount */}
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-600">ยอดรวมทั้งหมด:</span>
-                              <span className="font-semibold">฿{attendee.registration.totalAmount.toLocaleString()}</span>
-                            </div>
+                            {/* Payment Breakdown - Show for all modes */}
+                            {(() => {
+                              const totalAmount = attendee.registration.totalAmount || 0;
+                              const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
+                              const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
+                              const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
+                              const actualPaid = fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+                              const additionalRequired = Math.max(0, totalAmount - actualPaid);
+
+                              return (
+                                <>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-gray-600">ยอดรวมทั้งหมด:</span>
+                                    <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                  </div>
+                                  {actualPaid > 0 && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">ยอดชำระแล้ว:</span>
+                                      <span className="font-semibold text-blue-600">฿{actualPaid.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {additionalRequired > 0 && actualPaid > 0 && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-orange-700 font-medium">ยอดชำระเพิ่ม:</span>
+                                      <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
 
                             {/* Deposit Payment Section (Deposit Mode ONLY) */}
                             {attendee.registration.depositAmount > 0 && (

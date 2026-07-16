@@ -134,23 +134,48 @@ export function calculatePaymentSplit(
 /**
  * Format deadline for display (Bangkok timezone)
  * @param deadlineISO ISO timestamp
- * @returns Formatted string "DD/MM/YYYY HH:MM น."
+ * @returns Formatted string "dd mmm yy hh:mm" (e.g. "17 ก.ค. 69 14:30")
  */
 export function formatDeadline(deadlineISO: string): string {
   if (!deadlineISO) return '';
 
   const deadline = new Date(deadlineISO);
-  const options: Intl.DateTimeFormatOptions = {
+
+  // Check if valid date
+  if (isNaN(deadline.getTime())) return '';
+
+  const thaiMonths = [
+    'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+    'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+  ];
+
+  // Get Bangkok time components
+  const bangkokOptions: Intl.DateTimeFormatOptions = {
     timeZone: 'Asia/Bangkok',
-    day: '2-digit',
-    month: '2-digit',
     year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false
   };
 
-  const formatted = deadline.toLocaleString('th-TH', options);
-  return formatted + ' น.';
+  const bangkokTime = new Intl.DateTimeFormat('en-US', bangkokOptions).formatToParts(deadline);
+  const parts: Record<string, string> = {};
+  bangkokTime.forEach(part => {
+    if (part.type !== 'literal') {
+      parts[part.type] = part.value;
+    }
+  });
+
+  const day = parts.day;
+  const monthIndex = parseInt(parts.month) - 1;
+  const month = thaiMonths[monthIndex];
+  const year = (parseInt(parts.year) + 543).toString().slice(-2); // Last 2 digits of Buddhist year
+  const hours = parts.hour;
+  const minutes = parts.minute;
+
+  return `${day} ${month} ${year} ${hours}:${minutes}`;
 }
 
 /**

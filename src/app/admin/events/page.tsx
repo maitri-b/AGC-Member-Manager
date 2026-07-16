@@ -102,7 +102,8 @@ interface EventFormData {
   paymentSlipButtonText: string;
   paymentInstructionText: string;
   useExternalPaymentLink: boolean;
-  // Deposit payment configuration (New)
+  // Payment configuration (New)
+  paymentTiming: 'deferred' | 'immediate';
   paymentMode: 'full' | 'deposit';
   // Full payment deadline (for paymentMode = 'full')
   paymentDeadlineType: 'none' | 'fixed' | 'hours';
@@ -161,7 +162,8 @@ const initialFormData: EventFormData = {
   paymentSlipButtonText: '',
   paymentInstructionText: '',
   useExternalPaymentLink: false,
-  // Deposit payment configuration (New)
+  // Payment configuration (New)
+  paymentTiming: 'deferred',
   paymentMode: 'full',
   // Full payment deadline (for paymentMode = 'full')
   paymentDeadlineType: 'none',
@@ -386,7 +388,8 @@ export default function AdminEventsPage() {
         paymentSlipButtonText: (event as any).paymentSlipButtonText ?? '',
         paymentInstructionText: (event as any).paymentInstructionText ?? '',
         useExternalPaymentLink: (event as any).useExternalPaymentLink ?? false,
-        // Deposit payment configuration (New)
+        // Payment configuration (New)
+        paymentTiming: (event as any).paymentTiming ?? 'deferred',
         paymentMode: event.paymentMode ?? 'full',
         // Full payment deadline (for paymentMode = 'full')
         paymentDeadlineType: (event as any).paymentDeadlineType ?? 'none',
@@ -1807,13 +1810,48 @@ export default function AdminEventsPage() {
                   (formData.useAttendeeTypePricing && formData.attendeeTypes.length > 0)) && (
                   <div className="md:col-span-2 border-t pt-4 mt-4">
                     <h3 className="text-sm font-semibold text-gray-800 mb-3">
-                      ตั้งค่าการชำระเงิน (Deposit System)
+                      ตั้งค่าการชำระเงิน (Payment Configuration)
                     </h3>
+
+                    {/* Payment Timing Radio */}
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        เวลาการชำระเงิน (Payment Timing)
+                      </label>
+                      <div className="space-y-2">
+                        <label className="flex items-start gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            value="deferred"
+                            checked={formData.paymentTiming === 'deferred'}
+                            onChange={() => setFormData({ ...formData, paymentTiming: 'deferred' })}
+                            className="w-4 h-4 mt-0.5"
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm font-medium">ชำระหลังลงทะเบียน (Deferred)</span>
+                            <p className="text-xs text-gray-600 mt-0.5">สมาชิกลงทะเบียนก่อน แล้วชำระเงินภายหลัง</p>
+                          </div>
+                        </label>
+                        <label className="flex items-start gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            value="immediate"
+                            checked={formData.paymentTiming === 'immediate'}
+                            onChange={() => setFormData({ ...formData, paymentTiming: 'immediate' })}
+                            className="w-4 h-4 mt-0.5"
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm font-medium">ชำระพร้อมลงทะเบียน (Immediate)</span>
+                            <p className="text-xs text-gray-600 mt-0.5">สมาชิกต้องแนบหลักฐานการชำระพร้อมลงทะเบียน</p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
 
                     {/* Payment Mode Radio */}
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        รูปแบบการชำระเงิน
+                        รูปแบบการชำระเงิน (Payment Mode)
                       </label>
                       <div className="space-y-2">
                         <label className="flex items-center gap-2">

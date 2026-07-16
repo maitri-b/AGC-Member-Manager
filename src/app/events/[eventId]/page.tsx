@@ -1719,8 +1719,7 @@ export default function EventDetailPage() {
                                         </span>
                                       </td>
                                       <td className="px-1.5 sm:px-3 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-gray-900 whitespace-nowrap">
-                                        <span className="hidden sm:inline">{slip.amount.toLocaleString()} บาท</span>
-                                        <span className="sm:hidden">{(slip.amount / 1000).toFixed(1)}k</span>
+                                        ฿{slip.amount.toLocaleString()}
                                       </td>
                                       <td className="px-1.5 sm:px-3 py-2 sm:py-3 text-center">
                                         <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>
@@ -1819,16 +1818,16 @@ export default function EventDetailPage() {
                                     <h4 className="font-semibold text-orange-900 mb-2">⚠️ ต้องชำระเงินเพิ่มเติม</h4>
                                     <div className="space-y-1 text-sm text-orange-800">
                                       <div className="flex justify-between">
-                                        <span>ยอดทั้งหมด:</span>
-                                        <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
+                                        <span>ยอดรวมทั้งหมด:</span>
+                                        <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
                                       </div>
                                       <div className="flex justify-between">
-                                        <span>ชำระแล้ว:</span>
-                                        <span className="font-semibold">{(paidAmount + approvedAdditional).toLocaleString()} บาท</span>
+                                        <span>ยอดชำระแล้ว:</span>
+                                        <span className="font-semibold">฿{(paidAmount + approvedAdditional).toLocaleString()}</span>
                                       </div>
                                       <div className="flex justify-between border-t border-orange-300 pt-1 mt-1">
-                                        <span className="font-bold">ต้องชำระเพิ่ม:</span>
-                                        <span className="font-bold text-lg text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
+                                        <span className="font-bold">ยอดชำระเพิ่ม:</span>
+                                        <span className="font-bold text-lg text-orange-600">฿{additionalRequired.toLocaleString()}</span>
                                       </div>
                                     </div>
                                     <p className="text-xs text-orange-700 mt-2">

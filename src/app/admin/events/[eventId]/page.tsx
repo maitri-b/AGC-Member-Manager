@@ -8,6 +8,7 @@ import Image from 'next/image';
 import * as XLSX from 'xlsx';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
+import { calculateRegistrationFee } from '@/types/event';
 import RegisterOnBehalfModal from './RegisterOnBehalfModal';
 import PaymentDetailsModal from '@/components/admin/PaymentDetailsModal';
 
@@ -302,8 +303,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                       </span>
                     </td>
                     <td className="px-2 py-2 text-right text-[10px] sm:text-xs font-semibold text-gray-900 whitespace-nowrap">
-                      <span className="hidden sm:inline">฿{slip.amount.toLocaleString()}</span>
-                      <span className="sm:hidden">฿{(slip.amount / 1000).toFixed(1)}k</span>
+                      ฿{slip.amount.toLocaleString()}
                     </td>
                     <td className="px-2 py-2 text-center">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>
@@ -2150,83 +2150,6 @@ export default function EventDetailPage() {
                             <p className="text-xs text-gray-700 whitespace-pre-line">{attendee.registration.specialRequests}</p>
                           </div>
                         )}
-
-                        {/* Payment Information Display */}
-                        {attendee.registration.totalAmount > 0 && (
-                          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-xs font-semibold text-green-900">ข้อมูลการชำระเงิน:</p>
-                              <button
-                                onClick={() => handleOpenPaymentDetailsModal(attendee)}
-                                className="px-3 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition-colors"
-                                title="ดูประวัติการชำระเงินทั้งหมด"
-                              >
-                                📋 ดูประวัติการชำระเงิน
-                              </button>
-                            </div>
-                            <div className="space-y-2">
-                              {/* Total Amount */}
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-700">ยอดรวมทั้งหมด:</span>
-                                <span className="text-sm font-bold text-green-900">
-                                  {attendee.registration.totalAmount.toLocaleString()} บาท
-                                </span>
-                              </div>
-
-                              {/* Payment Status Badge */}
-                              {attendee.registration.paymentStatus && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-700">สถานะ:</span>
-                                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(attendee.registration.paymentStatus)}`}>
-                                    {attendee.registration.paymentStatus}
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Deposit Payment Info */}
-                              {attendee.registration.depositAmount > 0 && (
-                                <>
-                                  <div className="flex justify-between items-center text-xs">
-                                    <span className="text-gray-700">มัดจำ:</span>
-                                    <span className="font-medium text-gray-900">
-                                      {attendee.registration.depositAmount.toLocaleString()} บาท
-                                      {attendee.registration.depositPaid && attendee.registration.depositPaidDate && (
-                                        <span className="text-green-600 ml-2">✓ ชำระแล้ว ({attendee.registration.depositPaidDate})</span>
-                                      )}
-                                    </span>
-                                  </div>
-                                </>
-                              )}
-
-                              {/* Remaining Payment Info */}
-                              {attendee.registration.remainingAmount > 0 && (
-                                <>
-                                  <div className="flex justify-between items-center text-xs">
-                                    <span className="text-gray-700">ยอดคงเหลือ:</span>
-                                    <span className="font-medium text-gray-900">
-                                      {attendee.registration.remainingAmount.toLocaleString()} บาท
-                                      {attendee.registration.depositPaidDate && (
-                                        <span className="text-green-600 ml-2">✓ ชำระแล้ว ({attendee.registration.depositPaidDate})</span>
-                                      )}
-                                    </span>
-                                  </div>
-                                </>
-                              )}
-
-                              {/* Deadlines */}
-                              {attendee.registration.depositDeadline && (
-                                <div className="text-xs text-gray-600 pt-2 border-t border-green-200">
-                                  <span className="font-medium">กำหนดชำระมัดจำ:</span> {formatDeadline(attendee.registration.depositDeadline)}
-                                </div>
-                              )}
-                              {attendee.registration.remainingDeadline && (
-                                <div className="text-xs text-gray-600">
-                                  <span className="font-medium">กำหนดชำระยอดคงเหลือ:</span> {formatDeadline(attendee.registration.remainingDeadline)}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </>
                     )}
 
@@ -2465,6 +2388,86 @@ export default function EventDetailPage() {
                           />
                         </div>
 
+                        {/* Real-time Total Calculation */}
+                        {(() => {
+                          let calculatedEventFee = 0;
+                          let calculatedRoomFee = 0;
+
+                          // Calculate event fee based on pricing type
+                          if (eventData?.event?.useAttendeeTypePricing) {
+                            // Attendee type pricing
+                            if (editFormData.attendeeTypeSelections && eventData.event.attendeeTypes) {
+                              const attendeeTypes = eventData.event.attendeeTypes;
+                              calculatedEventFee = editFormData.attendeeTypeSelections.reduce((sum, sel) => {
+                                const type = attendeeTypes.find((t: any) => t.typeId === sel.typeId);
+                                return sum + (type ? type.price * sel.quantity : 0);
+                              }, 0);
+                            }
+                          } else {
+                            // Fixed or Tiered Pricing
+                            if (eventData?.event) {
+                              calculatedEventFee = calculateRegistrationFee(eventData.event as any, editFormData.attendeeCount, true);
+                            }
+                          }
+
+                          // Calculate room fee
+                          if (editFormData.roomAllocations && eventData?.event?.roomTypes) {
+                            const roomTypes = eventData.event.roomTypes;
+                            calculatedRoomFee = editFormData.roomAllocations.reduce((sum, alloc) => {
+                              const roomType = roomTypes.find((rt: any) => rt.typeId === alloc.roomTypeId);
+                              return sum + (roomType ? roomType.price * alloc.roomCount : 0);
+                            }, 0);
+                          }
+
+                          // Get special charges
+                          let specialChargesTotal = 0;
+                          try {
+                            const specialCharges = attendee.registration.specialCharges
+                              ? JSON.parse(attendee.registration.specialCharges)
+                              : [];
+                            specialChargesTotal = specialCharges.reduce((sum: number, c: any) => sum + c.amount, 0);
+                          } catch (e) {
+                            console.error('Error parsing special charges:', e);
+                          }
+
+                          const calculatedTotal = calculatedEventFee + calculatedRoomFee + specialChargesTotal;
+
+                          if (calculatedTotal === 0) return null;
+
+                          return (
+                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <h4 className="text-xs font-semibold text-green-900 mb-2">💰 ยอดรวมที่คำนวณได้</h4>
+                              <div className="space-y-1 text-xs text-gray-700">
+                                {calculatedEventFee > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>ค่าเข้าร่วมกิจกรรม:</span>
+                                    <span className="font-semibold">฿{calculatedEventFee.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {calculatedRoomFee > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>ค่าห้องพัก:</span>
+                                    <span className="font-semibold">฿{calculatedRoomFee.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {specialChargesTotal > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>ค่าใช้จ่ายเสริม:</span>
+                                    <span className="font-semibold">฿{specialChargesTotal.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between border-t border-green-300 pt-1 mt-1">
+                                  <span className="font-bold text-green-900">ยอดรวมทั้งหมด:</span>
+                                  <span className="font-bold text-lg text-green-700">฿{calculatedTotal.toLocaleString()}</span>
+                                </div>
+                              </div>
+                              <p className="text-xs text-green-700 mt-2 italic">
+                                * ยอดนี้จะถูกบันทึกเมื่อกดปุ่ม "บันทึก"
+                              </p>
+                            </div>
+                          );
+                        })()}
+
                         <div className="flex gap-2">
                           <button
                             onClick={handleSaveEdit}
@@ -2650,11 +2653,29 @@ export default function EventDetailPage() {
                                         {/* Show additional payment button if there are extra charges */}
                                         {hasAdditionalCharges(attendee, eventData.event.paymentMode || 'deposit') ? (
                                           <div className="space-y-2">
-                                            <div className="p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+                                            <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs space-y-1">
                                               <div className="flex items-center justify-between">
-                                                <span className="text-orange-700 font-medium">ยอดเรียกเก็บเพิ่ม:</span>
-                                                <span className="font-semibold text-orange-600">฿{getAdditionalAmount(attendee, eventData.event.paymentMode || 'deposit').toLocaleString()}</span>
+                                                <span className="text-gray-700">ยอดรวมทั้งหมด:</span>
+                                                <span className="font-semibold text-gray-900">฿{attendee.registration.totalAmount.toLocaleString()}</span>
                                               </div>
+                                              {(() => {
+                                                const depositAmountPaid = (attendee.registration as any).depositAmountPaid || attendee.registration.depositAmount || 0;
+                                                const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
+                                                const actualPaid = depositAmountPaid + remainingAmountPaid;
+                                                const additionalRequired = getAdditionalAmount(attendee, eventData.event.paymentMode || 'deposit');
+                                                return (
+                                                  <>
+                                                    <div className="flex items-center justify-between border-t border-blue-200 pt-1">
+                                                      <span className="text-gray-700">ยอดชำระแล้ว:</span>
+                                                      <span className="font-semibold text-blue-600">฿{actualPaid.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between border-t border-blue-200 pt-1">
+                                                      <span className="text-orange-700 font-medium">ยอดชำระเพิ่ม:</span>
+                                                      <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
+                                                    </div>
+                                                  </>
+                                                );
+                                              })()}
                                             </div>
                                             <div className="flex gap-2">
                                               <button
@@ -2734,12 +2755,16 @@ export default function EventDetailPage() {
                                           {/* Show payment breakdown */}
                                           <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs space-y-1">
                                             <div className="flex items-center justify-between">
-                                              <span className="text-gray-700">ยอดที่ชำระแล้ว:</span>
+                                              <span className="text-gray-700">ยอดรวมทั้งหมด:</span>
+                                              <span className="font-semibold text-gray-900">฿{totalAmount.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between border-t border-blue-200 pt-1">
+                                              <span className="text-gray-700">ยอดชำระแล้ว:</span>
                                               <span className="font-semibold text-blue-600">฿{actualPaid.toLocaleString()}</span>
                                             </div>
                                             {additionalRequired > 0 && (
-                                              <div className="flex items-center justify-between border-t border-blue-300 pt-1">
-                                                <span className="text-orange-700 font-medium">ยอดที่ยังขาด:</span>
+                                              <div className="flex items-center justify-between border-t border-blue-200 pt-1">
+                                                <span className="text-orange-700 font-medium">ยอดชำระเพิ่ม:</span>
                                                 <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
                                               </div>
                                             )}

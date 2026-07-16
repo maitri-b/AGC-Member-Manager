@@ -132,15 +132,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Generate a signed URL (valid for 7 days)
-    // This works even with Public Access Prevention enabled
-    const [signedUrl] = await file.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    const slipUrl = signedUrl;
-    console.log('[Admin Upload] File uploaded, signed URL generated');
+    // Use direct public URL
+    // Note: Requires Public Access Prevention to be disabled on bucket
+    const slipUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    console.log('[Admin Upload] File uploaded, public URL:', slipUrl);
 
     // Create payment slip
     const slip = await createPaymentSlip({

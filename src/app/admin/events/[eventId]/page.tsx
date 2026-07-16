@@ -144,7 +144,7 @@ function getAdditionalAmount(attendee: Attendee, eventPaymentMode: 'full' | 'dep
 
 export default function EventDetailPage() {
   const params = useParams();
-  const eventId = params.eventId as string;
+  const eventId = decodeURIComponent(params.eventId as string);
   const { data: session, status } = useSession();
   const router = useRouter();
   const [eventData, setEventData] = useState<EventData | null>(null);

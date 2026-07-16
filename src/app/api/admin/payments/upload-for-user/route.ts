@@ -142,7 +142,8 @@ export async function POST(request: NextRequest) {
     // Create payment slip
     let slip;
     try {
-      slip = await createPaymentSlip({
+      // Build slip data, only include fields that are not undefined
+      const slipData: any = {
         registrationId,
         eventId,
         amount: Number(amount),
@@ -152,10 +153,14 @@ export async function POST(request: NextRequest) {
         uploadedAt: new Date().toISOString(),
         uploadedBy: session.user.lineUserId || session.user.id || 'admin',
         status: 'pending', // Start as pending, admin can approve immediately after
-        paymentMethod: paymentMethod || undefined,
-        bankName: bankName || undefined,
-        transferDate: transferDate || undefined,
-      });
+      };
+
+      // Only add optional fields if they have values
+      if (paymentMethod) slipData.paymentMethod = paymentMethod;
+      if (bankName) slipData.bankName = bankName;
+      if (transferDate) slipData.transferDate = transferDate;
+
+      slip = await createPaymentSlip(slipData);
       console.log('[Admin Upload] ✅ Payment slip created successfully, slipId:', slip.slipId);
     } catch (error) {
       console.error('[Admin Upload] ❌ Error creating payment slip:', error);

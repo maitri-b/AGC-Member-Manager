@@ -228,6 +228,13 @@ export default function EventDetailPage() {
   // Cancellation modal state
   const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
 
+  // Payment warning modal state (for cancellations with approved payments)
+  const [paymentWarningModal, setPaymentWarningModal] = useState<{
+    isOpen: boolean;
+    totalPaid: number;
+    registrationId: string;
+  } | null>(null);
+
   // Payment details modal state
   const [paymentDetailsModalOpen, setPaymentDetailsModalOpen] = useState(false);
   const [selectedRegistrationForPayment, setSelectedRegistrationForPayment] = useState<{
@@ -817,12 +824,70 @@ export default function EventDetailPage() {
     setEditFormData({ ...editFormData, attendeeNames: newNames });
   };
 
+  // Check if registration has approved payments
+  const hasApprovedPayments = (registration: any): { hasPayment: boolean; totalPaid: number } => {
+    let totalPaid = 0;
+    let hasPayment = false;
+
+    // Check deposit payment
+    if (registration.depositPaid) {
+      totalPaid += registration.depositAmount || 0;
+      hasPayment = true;
+    }
+
+    // Check full payment (for full payment mode)
+    if (registration.fullPaymentPaid) {
+      totalPaid += registration.totalAmount || 0;
+      hasPayment = true;
+    }
+
+    // Check remaining payment
+    if (registration.remainingPaid) {
+      totalPaid += registration.remainingAmount || 0;
+      hasPayment = true;
+    }
+
+    return { hasPayment, totalPaid };
+  };
+
   const handleOpenCancellationModal = (registrationId: string) => {
-    setCancellationFormData({
-      registrationId,
-      reason: '',
-    });
-    setCancellationModalOpen(true);
+    // Find registration
+    const attendee = eventData?.attendees.find(a => a.registration.registrationId === registrationId);
+    if (!attendee) return;
+
+    // Check for approved payments
+    const { hasPayment, totalPaid } = hasApprovedPayments(attendee.registration);
+
+    if (hasPayment) {
+      // Show payment warning modal first
+      setPaymentWarningModal({
+        isOpen: true,
+        totalPaid,
+        registrationId,
+      });
+    } else {
+      // Proceed to standard cancellation modal
+      setCancellationFormData({
+        registrationId,
+        reason: '',
+      });
+      setCancellationModalOpen(true);
+    }
+  };
+
+  const handleConfirmCancellationWithPayment = () => {
+    // Close payment warning modal
+    const registrationId = paymentWarningModal?.registrationId;
+    setPaymentWarningModal(null);
+
+    if (registrationId) {
+      // Open standard cancellation modal
+      setCancellationFormData({
+        registrationId,
+        reason: '',
+      });
+      setCancellationModalOpen(true);
+    }
   };
 
   const handleCloseCancellationModal = () => {
@@ -2312,7 +2377,7 @@ export default function EventDetailPage() {
                                           className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                           title="ลบการลงทะเบียน"
                                         >
-                                          🗑️ ลบการลงทะเบียน
+                                          ❌ ยกเลิกการลงทะเบียน
                                         </button>
                                       )}
                                     </div>
@@ -2322,14 +2387,14 @@ export default function EventDetailPage() {
                                         onClick={() => handleOpenPaymentModal(attendee, 'deposit')}
                                         className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
                                       >
-                                        ✓ บันทึกการชำระเงิน
+                                        📤 อัพโหลดสลิป
                                       </button>
                                       <button
                                         onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                         className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                         title="ลบการลงทะเบียน"
                                       >
-                                        🗑️ ลบ
+                                        ❌ ยกเลิก
                                       </button>
                                     </div>
                                   )}
@@ -2381,14 +2446,14 @@ export default function EventDetailPage() {
                                                 }}
                                                 className="flex-1 px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors"
                                               >
-                                                ✓ บันทึกการชำระเงิน
+                                                📤 อัพโหลดสลิป
                                               </button>
                                               <button
                                                 onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                                 className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                                 title="ลบการลงทะเบียน"
                                               >
-                                                🗑️ ลบ
+                                                ❌ ยกเลิก
                                               </button>
                                             </div>
                                           </div>
@@ -2398,7 +2463,7 @@ export default function EventDetailPage() {
                                             className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                             title="ลบการลงทะเบียน"
                                           >
-                                            🗑️ ลบการลงทะเบียน
+                                            ❌ ยกเลิกการลงทะเบียน
                                           </button>
                                         )}
                                       </div>
@@ -2408,14 +2473,14 @@ export default function EventDetailPage() {
                                           onClick={() => handleOpenPaymentModal(attendee, 'remaining')}
                                           className="flex-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
                                         >
-                                          ✓ บันทึกการชำระเงิน
+                                          📤 อัพโหลดสลิป
                                         </button>
                                         <button
                                           onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                           className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                           title="ลบการลงทะเบียน"
                                         >
-                                          🗑️ ลบ
+                                          ❌ ยกเลิก
                                         </button>
                                       </div>
                                     )}
@@ -2459,14 +2524,14 @@ export default function EventDetailPage() {
                                             }}
                                             className="flex-1 px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors"
                                           >
-                                            ✓ บันทึกการชำระเงิน
+                                            📤 อัพโหลดสลิป
                                           </button>
                                           <button
                                             onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                             className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                             title="ลบการลงทะเบียน"
                                           >
-                                            🗑️ ลบ
+                                            ❌ ยกเลิก
                                           </button>
                                         </div>
                                       </div>
@@ -2476,7 +2541,7 @@ export default function EventDetailPage() {
                                         className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                         title="ลบการลงทะเบียน"
                                       >
-                                        🗑️ ลบการลงทะเบียน
+                                        ❌ ยกเลิกการลงทะเบียน
                                       </button>
                                     )}
                                   </div>
@@ -2486,14 +2551,14 @@ export default function EventDetailPage() {
                                       onClick={() => handleOpenPaymentModal(attendee, 'full')}
                                       className="flex-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
                                     >
-                                      ✓ บันทึกการชำระเงิน
+                                      📤 อัพโหลดสลิป
                                     </button>
                                     <button
                                       onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                       className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                       title="ลบการลงทะเบียน"
                                     >
-                                      🗑️ ลบ
+                                      ❌ ยกเลิก
                                     </button>
                                   </div>
                                 )}
@@ -2511,7 +2576,7 @@ export default function EventDetailPage() {
                           className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
                           title="ลบการลงทะเบียน"
                         >
-                          🗑️ ลบการลงทะเบียน
+                          ❌ ยกเลิกการลงทะเบียน
                         </button>
                       </div>
                     )}
@@ -2530,7 +2595,7 @@ export default function EventDetailPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              บันทึกการชำระเงิน
+              อัพโหลดสลิปการชำระเงิน
             </h2>
 
             <div className="space-y-4">
@@ -2930,6 +2995,68 @@ export default function EventDetailPage() {
           onClose={handleClosePaymentDetailsModal}
           onUpdate={handlePaymentDetailsUpdate}
         />
+      )}
+
+      {/* Payment Warning Modal (for cancellations with approved payments) */}
+      {paymentWarningModal?.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900">⚠️ คำเตือน: มียอดชำระเงินแล้ว</h2>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-yellow-900 mb-2">
+                  รหัสลงทะเบียน: {paymentWarningModal.registrationId}
+                </p>
+                <p className="text-sm text-yellow-800 mb-2">
+                  การลงทะเบียนนี้มียอดชำระเงินที่ได้รับการอนุมัติแล้ว:
+                </p>
+                <p className="text-2xl font-bold text-yellow-900">
+                  ฿{paymentWarningModal.totalPaid.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-800">
+                  <strong>หากยืนยันยกเลิก:</strong>
+                </p>
+                <ul className="list-disc list-inside text-sm text-red-700 mt-2 space-y-1">
+                  <li>ระบบจะไม่คำนวณยอดเงิน ฿{paymentWarningModal.totalPaid.toLocaleString()} นี้ในยอดรับรวม</li>
+                  <li>การลงทะเบียนจะถูกยกเลิกและไม่สามารถกู้คืนได้</li>
+                  <li>คุณอาจต้องติดต่อสมาชิกเพื่อคืนเงิน</li>
+                </ul>
+              </div>
+
+              <p className="text-sm text-gray-600">
+                คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการลงทะเบียนนี้?
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setPaymentWarningModal(null)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleConfirmCancellationWithPayment}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                ยืนยันยกเลิกการลงทะเบียน
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Register On Behalf Modal */}

@@ -189,10 +189,10 @@ export default function PaymentTimeline({ slips, onApprove, onReject, readonly =
       {/* Image Modal */}
       {showImageModal && selectedSlip && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
           onClick={() => setShowImageModal(false)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-lg overflow-hidden">
+          <div className="relative max-w-5xl max-h-[90vh] w-full h-full flex flex-col">
             <button
               onClick={() => setShowImageModal(false)}
               className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 z-10"
@@ -201,14 +201,19 @@ export default function PaymentTimeline({ slips, onApprove, onReject, readonly =
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <Image
-              src={selectedSlip.slipUrl}
-              alt="Payment Slip"
-              width={1000}
-              height={1000}
-              className="w-full h-auto object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div className="flex-1 flex items-center justify-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <Image
+                src={selectedSlip.slipUrl}
+                alt="Payment Slip"
+                width={1000}
+                height={1000}
+                className="max-w-full max-h-full object-contain rounded-lg"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+            <div className="text-center mt-4">
+              <p className="text-sm text-white text-opacity-70">คลิกที่พื้นหลังเพื่อปิด</p>
+            </div>
           </div>
         </div>
       )}

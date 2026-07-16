@@ -920,6 +920,10 @@ export default function EventDetailPage() {
           reader.readAsDataURL(paymentFormData.slipFile!);
         });
 
+        // Debug logging
+        console.log('[Client] Uploading payment slip with eventId:', eventId, 'Type:', typeof eventId);
+        console.log('[Client] RegistrationId:', paymentFormData.registrationId);
+
         // Upload via admin API
         const uploadResponse = await fetch('/api/admin/payments/upload-for-user', {
           method: 'POST',

@@ -57,8 +57,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
+    // Debug logging
+    console.log('[Admin Upload] Received eventId:', eventId, 'Type:', typeof eventId);
+    console.log('[Admin Upload] Registration eventId:', registration.eventId, 'Type:', typeof registration.eventId);
+    console.log('[Admin Upload] Registration data:', JSON.stringify(registration, null, 2));
+
     // Verify eventId matches registration (only if registration has eventId)
     if (registration.eventId && registration.eventId !== eventId) {
+      console.error('[Admin Upload] Event ID mismatch!', {
+        receivedEventId: eventId,
+        registrationEventId: registration.eventId,
+        registrationId,
+      });
       return NextResponse.json(
         { error: 'Event ID does not match registration' },
         { status: 400 }

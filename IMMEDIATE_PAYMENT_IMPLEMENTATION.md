@@ -4,7 +4,8 @@
 **Feature**: Add `paymentTiming` option to allow payment slip upload during registration
 
 **Created**: 2026-07-16
-**Status**: 🚧 In Progress
+**Status**: ✅ Completed
+**Completed**: 2026-07-16
 
 ---
 
@@ -35,11 +36,11 @@ This document tracks the implementation of **Immediate Payment Mode** - a new pa
 **Goal**: Add `paymentTiming` field to Event type and ensure backward compatibility
 
 #### Tasks:
-- [ ] Add `paymentTiming?: 'deferred' | 'immediate'` to Event interface in [src/types/event.ts](src/types/event.ts)
-- [ ] Set default value to `'deferred'` for backward compatibility
-- [ ] Update event creation API to accept new field
-- [ ] Update event update API to handle new field
-- [ ] Test existing events still work (should default to 'deferred')
+- [x] Add `paymentTiming?: 'deferred' | 'immediate'` to Event interface in [src/types/event.ts](src/types/event.ts)
+- [x] Set default value to `'deferred'` for backward compatibility
+- [x] Update event creation API to accept new field
+- [x] Update event update API to handle new field
+- [x] Test existing events still work (should default to 'deferred')
 
 #### Files to Modify:
 1. [src/types/event.ts](src/types/event.ts) - Add `paymentTiming` field
@@ -74,16 +75,16 @@ export interface Event {
 **Goal**: Update registration endpoint to accept payment slip upload during registration
 
 #### Tasks:
-- [ ] Add multipart/form-data support to registration API
-- [ ] Accept payment slip file in registration request
-- [ ] Upload slip to Firebase Storage immediately
-- [ ] Create registration with slip URL
-- [ ] Create payment slip record in `paymentSlips` collection with status 'pending'
-- [ ] Set appropriate `paymentStatus` on registration:
+- [x] Add multipart/form-data support to registration API
+- [x] Accept payment slip file in registration request
+- [x] Upload slip to Firebase Storage immediately
+- [x] Create registration with slip URL
+- [x] Create payment slip record in `paymentSlips` collection with status 'pending'
+- [x] Set appropriate `paymentStatus` on registration:
   - Full mode: "รอตรวจสอบ"
   - Deposit mode: "รอตรวจสอบมัดจำ"
-- [ ] Return success even if slip is pending approval
-- [ ] Handle validation: slip is required when `paymentTiming: 'immediate'`
+- [x] Return success even if slip is pending approval
+- [x] Handle validation: slip is required when `paymentTiming: 'immediate'`
 
 #### Files to Modify:
 1. [src/app/api/events/[eventId]/register/route.ts](src/app/api/events/[eventId]/register/route.ts) - Accept file upload
@@ -151,12 +152,12 @@ export async function POST(request: NextRequest) {
 **Goal**: Add toggle for Payment Timing in admin event creation/edit form
 
 #### Tasks:
-- [ ] Add "Payment Timing" section to event form
-- [ ] Create radio buttons: "Deferred (ชำระหลังลงทะเบียน)" vs "Immediate (ชำระพร้อมลงทะเบียน)"
-- [ ] Add helpful description text explaining each option
-- [ ] Default to "Deferred" for backward compatibility
-- [ ] Show appropriate help text based on selected payment mode
-- [ ] Save `paymentTiming` field when creating/updating event
+- [x] Add "Payment Timing" section to event form
+- [x] Create radio buttons: "Deferred (ชำระหลังลงทะเบียน)" vs "Immediate (ชำระพร้อมลงทะเบียน)"
+- [x] Add helpful description text explaining each option
+- [x] Default to "Deferred" for backward compatibility
+- [x] Show appropriate help text based on selected payment mode
+- [x] Save `paymentTiming` field when creating/updating event
 
 #### Files to Modify:
 1. [src/app/admin/events/new/page.tsx](src/app/admin/events/new/page.tsx) - Event creation form
@@ -187,19 +188,19 @@ export async function POST(request: NextRequest) {
 **Goal**: Show payment slip upload section during registration when `paymentTiming: 'immediate'`
 
 #### Tasks:
-- [ ] Conditionally show payment slip upload section based on `event.paymentTiming`
-- [ ] For Full Payment Mode:
+- [x] Conditionally show payment slip upload section based on `event.paymentTiming`
+- [x] For Full Payment Mode:
   - Show "Full Payment Slip" upload with amount display
   - Mark as required
-- [ ] For Deposit Payment Mode:
+- [x] For Deposit Payment Mode:
   - Show "Deposit Slip" upload with deposit amount display
   - Mark as required
   - Show info about remaining payment later
-- [ ] Update form validation to require slip when immediate timing
-- [ ] Change submit button text to "ยืนยันการลงทะเบียน"
-- [ ] Handle file upload in form submission
-- [ ] Show appropriate success message
-- [ ] Handle re-upload flow for rejected slips
+- [x] Update form validation to require slip when immediate timing
+- [x] Change submit button text to "ยืนยันการลงทะเบียน"
+- [x] Handle file upload in form submission
+- [x] Show appropriate success message
+- [x] Handle re-upload flow for rejected slips
 
 #### Files to Modify:
 1. [src/app/events/[eventId]/page.tsx](src/app/events/[eventId]/page.tsx) - Member event detail page
@@ -270,14 +271,14 @@ export async function POST(request: NextRequest) {
 
 ## 📊 Progress Tracking
 
-### Overall Progress: 0% Complete
+### Overall Progress: 100% Complete ✅
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| Phase 1: Backend Schema | 🔄 Not Started | 0/5 tasks |
-| Phase 2: Registration API | 🔄 Not Started | 0/8 tasks |
-| Phase 3: Admin UI | 🔄 Not Started | 0/6 tasks |
-| Phase 4: Member UI | 🔄 Not Started | 0/8 tasks |
+| Phase 1: Backend Schema | ✅ Completed | 5/5 tasks |
+| Phase 2: Registration API | ✅ Completed | 8/8 tasks |
+| Phase 3: Admin UI | ✅ Completed | 6/6 tasks |
+| Phase 4: Member UI | ✅ Completed | 8/8 tasks |
 
 ### Legend:
 - ✅ Completed

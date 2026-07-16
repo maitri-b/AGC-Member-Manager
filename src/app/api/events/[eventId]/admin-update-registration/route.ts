@@ -74,6 +74,7 @@ export async function PUT(
 
     // Recalculate eventFee based on pricing type
     let calculatedEventFee = currentRegistration.eventFee || 0;
+    let calculatedRoomFee = currentRegistration.roomFee || 0;
     let shouldRecalculate = false;
 
     // Determine if we need to recalculate
@@ -118,8 +119,9 @@ export async function PUT(
         calculatedEventFee = calculateRegistrationFee(eventData as Event, newAttendeeCount, isMember);
       }
 
-      // Add room fees (for all pricing types)
+      // ✅ FIX: Calculate room fees separately (for all pricing types)
       // Use updated room allocations if provided, otherwise use existing
+      calculatedRoomFee = 0; // Reset room fee
       let roomAllocations = [];
       if (updateData.room_allocations !== undefined) {
         try {
@@ -138,12 +140,11 @@ export async function PUT(
       }
 
       if (eventData.roomTypes && eventData.roomTypes.length > 0 && roomAllocations.length > 0) {
-        const roomFee = roomAllocations.reduce((sum: number, alloc: { roomTypeId: string; roomCount: number }) => {
+        calculatedRoomFee = roomAllocations.reduce((sum: number, alloc: { roomTypeId: string; roomCount: number }) => {
           const roomType = eventData.roomTypes.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
           if (!roomType) return sum;
           return sum + (roomType.price * alloc.roomCount);
         }, 0);
-        calculatedEventFee += roomFee;
       }
     }
 
@@ -158,16 +159,17 @@ export async function PUT(
       console.error('Error parsing special charges:', e);
     }
 
-    const newTotalAmount = calculatedEventFee + specialChargesTotal;
+    const newTotalAmount = calculatedEventFee + calculatedRoomFee + specialChargesTotal;
 
     // Prepare update data with admin info
     const finalUpdateData: Record<string, unknown> = {
       ...updateData,
     };
 
-    // Only update eventFee and totalAmount if they were recalculated
+    // Only update eventFee, roomFee, and totalAmount if they were recalculated
     if (shouldRecalculate) {
       finalUpdateData.event_fee = calculatedEventFee;
+      finalUpdateData.room_fee = calculatedRoomFee;
       finalUpdateData.total_amount = newTotalAmount;
 
       // Recalculate deposit and remaining amounts if event uses deposit payment mode
@@ -262,6 +264,7 @@ export async function PUT(
     console.log('[Admin Update Registration] Update data:', {
       registrationId,
       calculatedEventFee,
+      calculatedRoomFee,
       specialChargesTotal,
       newTotalAmount,
       finalUpdateData,

@@ -1762,7 +1762,16 @@ export default function EventDetailPage() {
                       {(() => {
                         // Calculate if additional payment is required
                         const totalAmount = userRegistration.totalAmount || 0;
-                        const paidAmount = userRegistration.paidAmount || 0;
+
+                        // ✅ Calculate actual total paid from tracked amounts
+                        const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
+                        const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
+                        const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
+                        const actualTotalPaid = fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+
+                        // Fallback to legacy paidAmount if no tracked amounts
+                        const paidAmount = actualTotalPaid || userRegistration.paidAmount || 0;
+
                         const additionalPayments = userRegistration.additionalPayments
                           ? (() => {
                               try {
@@ -1840,7 +1849,16 @@ export default function EventDetailPage() {
 
                         // Calculate if fully paid (including additional payments)
                         const totalAmount = userRegistration.totalAmount || 0;
-                        const paidAmount = userRegistration.paidAmount || 0;
+
+                        // ✅ Calculate actual total paid from tracked amounts
+                        const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
+                        const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
+                        const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
+                        const actualTotalPaid = fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+
+                        // Fallback to legacy paidAmount if no tracked amounts
+                        const paidAmount = actualTotalPaid || userRegistration.paidAmount || 0;
+
                         const additionalPayments = parseAdditionalPayments(userRegistration.additionalPayments);
 
                         // Check if fully paid using utility function

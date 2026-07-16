@@ -137,34 +137,53 @@ export async function POST(request: NextRequest) {
     const slipUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
     console.log('[Admin Upload] File uploaded, public URL:', slipUrl);
 
+    console.log('[Admin Upload] Creating payment slip in database...');
+
     // Create payment slip
-    const slip = await createPaymentSlip({
-      registrationId,
-      eventId,
-      amount: Number(amount),
-      paymentType,
-      description: description || `อัพโหลดโดย Admin: ${session.user.email || session.user.name || 'Unknown'}`,
-      slipUrl,
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: session.user.lineUserId || session.user.id || 'admin',
-      status: 'pending', // Start as pending, admin can approve immediately after
-      paymentMethod: paymentMethod || undefined,
-      bankName: bankName || undefined,
-      transferDate: transferDate || undefined,
-    });
+    let slip;
+    try {
+      slip = await createPaymentSlip({
+        registrationId,
+        eventId,
+        amount: Number(amount),
+        paymentType,
+        description: description || `อัพโหลดโดย Admin: ${session.user.email || session.user.name || 'Unknown'}`,
+        slipUrl,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: session.user.lineUserId || session.user.id || 'admin',
+        status: 'pending', // Start as pending, admin can approve immediately after
+        paymentMethod: paymentMethod || undefined,
+        bankName: bankName || undefined,
+        transferDate: transferDate || undefined,
+      });
+      console.log('[Admin Upload] ✅ Payment slip created successfully, slipId:', slip.slipId);
+    } catch (error) {
+      console.error('[Admin Upload] ❌ Error creating payment slip:', error);
+      throw error; // Re-throw to be caught by outer try-catch
+    }
+
+    console.log('[Admin Upload] Logging admin action...');
 
     // Log admin action
-    await adminDb().collection('adminLogs').add({
-      action: 'upload_payment_slip_for_user',
-      adminId: session.user.id,
-      adminEmail: session.user.email,
-      registrationId,
-      eventId,
-      slipId: slip.slipId,
-      paymentType,
-      amount: Number(amount),
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      await adminDb().collection('adminLogs').add({
+        action: 'upload_payment_slip_for_user',
+        adminId: session.user.id,
+        adminEmail: session.user.email,
+        registrationId,
+        eventId,
+        slipId: slip.slipId,
+        paymentType,
+        amount: Number(amount),
+        timestamp: new Date().toISOString(),
+      });
+      console.log('[Admin Upload] ✅ Admin action logged');
+    } catch (error) {
+      console.error('[Admin Upload] ⚠️ Error logging admin action (non-critical):', error);
+      // Don't throw - logging is non-critical
+    }
+
+    console.log('[Admin Upload] ✅ Upload complete, returning response');
 
     return NextResponse.json({
       success: true,
@@ -173,7 +192,8 @@ export async function POST(request: NextRequest) {
       message: 'Payment slip uploaded successfully by admin',
     });
   } catch (error) {
-    console.error('Error uploading payment slip for user:', error);
+    console.error('[Admin Upload] ❌ FATAL ERROR:', error);
+    console.error('[Admin Upload] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       { error: 'Failed to upload payment slip', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

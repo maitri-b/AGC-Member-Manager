@@ -940,11 +940,14 @@ export default function EventDetailPage() {
           }),
         });
 
-        const uploadData = await uploadResponse.json();
-
+        // Check response before parsing JSON
         if (!uploadResponse.ok) {
-          throw new Error(uploadData.error || 'ไม่สามารถอัพโหลดไฟล์ได้');
+          const errorText = await uploadResponse.text();
+          console.error('[Client] Upload failed, response:', errorText);
+          throw new Error(`อัพโหลดไฟล์ล้มเหลว: ${uploadResponse.status} ${uploadResponse.statusText}`);
         }
+
+        const uploadData = await uploadResponse.json();
 
         slipUrl = uploadData.slipUrl;
         setPaymentFormData({ ...paymentFormData, uploadingFile: false, slipUrl });

@@ -117,7 +117,7 @@ export function determinePaymentStatus(
  */
 export function getStatusBadgeClass(status: string): string {
   // Success states
-  if (status === 'ชำระครบแล้ว' || status.includes('ยืนยัน')) {
+  if (status === 'ชำระครบแล้ว' || status === 'ชำระเต็มจำนวนแล้ว' || status.includes('ยืนยัน')) {
     return 'bg-green-100 text-green-800';
   }
 

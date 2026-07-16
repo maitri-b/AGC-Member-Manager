@@ -32,6 +32,12 @@ export async function POST(request: NextRequest) {
       transferDate,
     } = body;
 
+    // Debug: Log incoming request body
+    console.log('[Admin Upload] === INCOMING REQUEST ===');
+    console.log('[Admin Upload] Request body keys:', Object.keys(body));
+    console.log('[Admin Upload] registrationId:', registrationId);
+    console.log('[Admin Upload] eventId from body:', eventId, 'Type:', typeof eventId);
+
     // Validation
     if (!registrationId || !eventId || !amount || !paymentType || !fileData || !fileName) {
       return NextResponse.json(
@@ -57,23 +63,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
-    // Debug logging
-    console.log('[Admin Upload] Received eventId:', eventId, 'Type:', typeof eventId);
-    console.log('[Admin Upload] Registration eventId:', registration.eventId, 'Type:', typeof registration.eventId);
-    console.log('[Admin Upload] Registration data:', JSON.stringify(registration, null, 2));
+    // Debug logging - detailed comparison
+    console.log('[Admin Upload] === VALIDATION CHECK ===');
+    console.log('[Admin Upload] Received eventId:', JSON.stringify(eventId), 'Type:', typeof eventId, 'Length:', eventId?.length);
+    console.log('[Admin Upload] Registration eventId:', JSON.stringify(registration.eventId), 'Type:', typeof registration.eventId, 'Length:', registration.eventId?.length);
+    console.log('[Admin Upload] Are they equal?', registration.eventId === eventId);
+    console.log('[Admin Upload] Trimmed equal?', registration.eventId?.trim() === eventId?.trim());
+    console.log('[Admin Upload] Registration has eventId?', !!registration.eventId);
+
+    // Show first 200 chars of registration data
+    const regDataPreview = JSON.stringify(registration).substring(0, 200);
+    console.log('[Admin Upload] Registration preview:', regDataPreview + '...');
 
     // Verify eventId matches registration (only if registration has eventId)
     if (registration.eventId && registration.eventId !== eventId) {
-      console.error('[Admin Upload] Event ID mismatch!', {
-        receivedEventId: eventId,
-        registrationEventId: registration.eventId,
-        registrationId,
-      });
+      console.error('[Admin Upload] ❌ EVENT ID MISMATCH!');
+      console.error('[Admin Upload] Expected (from request):', JSON.stringify(eventId));
+      console.error('[Admin Upload] Got (from registration):', JSON.stringify(registration.eventId));
+      console.error('[Admin Upload] Registration ID:', registrationId);
       return NextResponse.json(
-        { error: 'Event ID does not match registration' },
+        {
+          error: 'Event ID does not match registration',
+          debug: {
+            receivedEventId: eventId,
+            registrationEventId: registration.eventId,
+            registrationId,
+          }
+        },
         { status: 400 }
       );
     }
+
+    console.log('[Admin Upload] ✅ Event ID validation passed');
 
     // Upload file to Firebase Storage
     const bucket = adminStorage().bucket();

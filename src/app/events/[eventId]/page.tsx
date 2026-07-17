@@ -1656,21 +1656,9 @@ export default function EventDetailPage() {
                           const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
                           const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
                           const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                          // Calculate total paid from actual payment fields only (don't use paidAmount as it's not reliable)
+                          // Calculate total paid from actual payment fields only
                           const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                           const additionalRequired = Math.max(0, totalAmount - paidAmount);
-
-                          // DEBUG: Log payment calculation
-                          console.log('Member Payment Debug:', {
-                            registrationId: userRegistration.registrationId,
-                            totalAmount,
-                            fullPaymentAmountPaid,
-                            depositAmountPaid,
-                            remainingAmountPaid,
-                            paidAmount,
-                            additionalRequired,
-                            raw: userRegistration
-                          });
 
                           return (
                             <div className="border-t border-blue-500 pt-3 space-y-2 text-sm">
@@ -1805,14 +1793,11 @@ export default function EventDetailPage() {
                         // Calculate if additional payment is required
                         const totalAmount = userRegistration.totalAmount || 0;
 
-                        // ✅ Calculate actual total paid from tracked amounts
+                        // Calculate actual total paid from tracked amounts
                         const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
                         const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
                         const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
-                        const actualTotalPaid = fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
-
-                        // Fallback to legacy paidAmount if no tracked amounts
-                        const paidAmount = actualTotalPaid || userRegistration.paidAmount || 0;
+                        const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
 
                         const additionalPayments = userRegistration.additionalPayments
                           ? (() => {
@@ -1892,11 +1877,11 @@ export default function EventDetailPage() {
                         // Calculate if fully paid (including additional payments)
                         const totalAmount = userRegistration.totalAmount || 0;
 
-                        // ✅ Calculate actual total paid from tracked amounts
+                        // Calculate actual total paid from tracked amounts
                         const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
                         const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
                         const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
-                        const actualTotalPaid = fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+                        const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
 
                         // Fallback to legacy paidAmount if no tracked amounts
                         const paidAmount = actualTotalPaid || userRegistration.paidAmount || 0;

@@ -2659,14 +2659,6 @@ export default function EventDetailPage() {
                                       <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
                                     </div>
                                   )}
-
-                                  {/* DEBUG: Show fullPaymentAmountPaid from raw */}
-                                  <div className="flex items-center justify-between bg-yellow-50 p-2 rounded mt-2">
-                                    <span className="text-gray-600">ยอดที่ชำระแล้ว fullPaymentAmountPaid:</span>
-                                    <span className="font-semibold text-purple-600">
-                                      {(attendee.registration as any).fullPaymentAmountPaid || 0} บาท
-                                    </span>
-                                  </div>
                                 </>
                               );
                             })()}

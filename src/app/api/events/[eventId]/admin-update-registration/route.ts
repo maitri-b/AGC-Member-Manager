@@ -204,6 +204,18 @@ export async function PUT(
       const fullPaymentAmountPaid = (currentRegistration as any).fullPaymentAmountPaid || 0;
       const actualTotalPaid = fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
 
+      // ✅ PRESERVE payment amount fields so they don't get lost on update
+      // These fields track actual amounts paid and must be preserved
+      if (depositAmountPaid > 0) {
+        finalUpdateData.deposit_amount_paid = depositAmountPaid;
+      }
+      if (remainingAmountPaid > 0) {
+        finalUpdateData.remaining_amount_paid = remainingAmountPaid;
+      }
+      if (fullPaymentAmountPaid > 0) {
+        finalUpdateData.full_payment_amount_paid = fullPaymentAmountPaid;
+      }
+
       // Fallback to legacy paidAmount if no tracked amounts
       const currentPaidAmount = actualTotalPaid || currentRegistration.paidAmount || 0;
       const additionalPayments = parseAdditionalPayments(currentRegistration.additionalPayments);

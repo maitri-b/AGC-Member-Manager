@@ -134,6 +134,9 @@ export async function GET(
           totalAmount: Number(attendee.registration.totalAmount) || 0,
           depositAmount: Number(attendee.registration.depositAmount) || 0,
           remainingAmount: Number(attendee.registration.remainingAmount) || 0,
+          // Fee breakdown (for edit form calculations)
+          eventFee: Number(attendee.registration.eventFee) || 0,
+          roomFee: Number(attendee.registration.roomFee) || 0,
           depositPaid: Boolean(attendee.registration.depositPaid),
           depositPaidDate: String(attendee.registration.depositPaidDate || ''),
           // Payment slip URLs

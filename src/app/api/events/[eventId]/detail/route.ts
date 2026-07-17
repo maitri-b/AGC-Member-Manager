@@ -227,6 +227,17 @@ export async function GET(
               remainingAmount: latestReg.remainingAmount,
               depositPaid: latestReg.depositPaid,
               depositPaidDate: latestReg.depositPaidDate,
+              remainingPaid: (latestReg as any).remainingPaid,
+              remainingPaidDate: (latestReg as any).remainingPaidDate,
+              // Full payment fields
+              fullPaymentPaid: latestReg.fullPaymentPaid,
+              fullPaymentPaidDate: (latestReg as any).fullPaymentPaidDate,
+              fullPaymentSlipUrl: (latestReg as any).fullPaymentSlipUrl,
+              // ✅ CRITICAL: Payment amount fields - needed for frontend display!
+              fullPaymentAmountPaid: (latestReg as any).fullPaymentAmountPaid || 0,
+              depositAmountPaid: (latestReg as any).depositAmountPaid || 0,
+              remainingAmountPaid: (latestReg as any).remainingAmountPaid || 0,
+              paidAmount: (latestReg as any).paidAmount || 0,
               // Legacy slip URLs - kept for backward compatibility during migration
               depositSlipUrl: latestReg.depositSlipUrl,
               remainingSlipUrl: latestReg.remainingSlipUrl,
@@ -235,6 +246,8 @@ export async function GET(
               // Use actual paymentStatus from Firestore (updated by GAS webhook and approve/reject)
               // NOT determinePaymentStatus() which is legacy logic
               paymentStatus: latestReg.paymentStatus || 'รอชำระเงิน',
+              // Additional payments
+              additionalPayments: (latestReg as any).additionalPayments || '',
               // Attendee type selections, room allocations, and special charges (New)
               attendeeTypeSelections,
               roomAllocations,

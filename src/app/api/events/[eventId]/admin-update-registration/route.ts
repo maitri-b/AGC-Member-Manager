@@ -159,7 +159,18 @@ export async function PUT(
       console.error('Error parsing special charges:', e);
     }
 
-    const newTotalAmount = calculatedEventFee + calculatedRoomFee + specialChargesTotal;
+    // Parse discounts
+    let discountsTotal = 0;
+    try {
+      if (currentRegistration.discounts) {
+        const discounts = JSON.parse(currentRegistration.discounts);
+        discountsTotal = discounts.reduce((sum: number, d: { calculatedAmount: number }) => sum + d.calculatedAmount, 0);
+      }
+    } catch (e) {
+      console.error('Error parsing discounts:', e);
+    }
+
+    const newTotalAmount = Math.max(0, calculatedEventFee + calculatedRoomFee + specialChargesTotal - discountsTotal);
 
     // Prepare update data with admin info
     const finalUpdateData: Record<string, unknown> = {

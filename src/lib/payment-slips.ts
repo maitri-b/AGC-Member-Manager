@@ -700,3 +700,16 @@ export async function getEventPaymentStatistics(eventId: string): Promise<{
 
   return stats;
 }
+
+/**
+ * Check if a registration has pending payment slips
+ * Used to prevent editing registrations when there are unapproved slips
+ * @param registrationId Registration ID to check
+ * @returns True if registration has pending slips, false otherwise
+ */
+export async function hasPendingPaymentSlips(
+  registrationId: string
+): Promise<boolean> {
+  const slips = await getPaymentSlipsByRegistration(registrationId);
+  return slips.some(slip => slip.status === 'pending');
+}

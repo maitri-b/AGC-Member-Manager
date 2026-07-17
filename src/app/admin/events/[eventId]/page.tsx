@@ -951,6 +951,29 @@ export default function EventDetailPage() {
   const handleSaveEdit = async () => {
     if (!editingRegistration || !eventData) return;
 
+    // ✅ CRITICAL VALIDATION: Check for pending payment slips
+    // Before allowing registration edit, ensure there are no unapproved/unrejected payment slips
+    // This prevents confusion about what total amount should be when there are pending slips
+    try {
+      const checkResponse = await fetch(`/api/payments/check-pending?registrationId=${editingRegistration}`);
+      const checkData = await checkResponse.json();
+
+      if (checkResponse.ok && checkData.hasPending) {
+        setActionMessage({
+          type: 'error',
+          text: 'ไม่สามารถแก้ไขข้อมูลได้ เนื่องจากมีสลิปการชำระเงินที่รอตรวจสอบ กรุณาอนุมัติหรือปฏิเสธสลิปก่อน'
+        });
+        return;
+      }
+    } catch (err) {
+      console.error('Error checking pending payment slips:', err);
+      setActionMessage({
+        type: 'error',
+        text: 'เกิดข้อผิดพลาดในการตรวจสอบสลิปการชำระเงิน'
+      });
+      return;
+    }
+
     // Validate attendee type selections (if enabled)
     if (eventData.event.useAttendeeTypePricing && eventData.event.attendeeTypes && eventData.event.attendeeTypes.length > 0) {
       if (!editFormData.attendeeTypeSelections || editFormData.attendeeTypeSelections.length === 0) {

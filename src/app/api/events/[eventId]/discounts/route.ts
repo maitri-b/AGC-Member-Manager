@@ -398,8 +398,15 @@ export async function DELETE(
       updateData.remaining_amount = newRemainingAmount;
     }
 
+    // ✅ CRITICAL: Get approved payment slips total for accurate payment status calculation
+    const { getPaymentSlipsByRegistration } = await import('@/lib/payment-slips');
+    const slips = await getPaymentSlipsByRegistration(registration.registrationId);
+    const approvedSlipsTotal = slips
+      .filter(slip => slip.status === 'approved')
+      .reduce((sum, slip) => sum + (slip.amount || 0), 0);
+
     // ✅ CRITICAL: Recalculate payment status when totalAmount changes
-    const paymentStatusUpdate = await recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full');
+    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full', approvedSlipsTotal);
     updateData.payment_status = paymentStatusUpdate.payment_status;
     if (paymentStatusUpdate.status) {
       updateData.status = paymentStatusUpdate.status;

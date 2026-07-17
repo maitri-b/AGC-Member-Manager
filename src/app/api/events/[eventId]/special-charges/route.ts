@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/event-sheets';
-import { SpecialCharge } from '@/types/event';
+import { SpecialCharge, Discount } from '@/types/event';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { recalculatePaymentStatus } from '@/lib/payment-status';
 import { getPendingSlipsInfo } from '@/lib/payment-slips';
@@ -112,20 +112,32 @@ export async function POST(
 
     specialCharges.push(newCharge);
 
+    // Parse existing discounts
+    let discounts: Discount[] = [];
+    try {
+      if (registration.discounts) {
+        discounts = JSON.parse(registration.discounts);
+      }
+    } catch (e) {
+      console.error('Error parsing discounts:', e);
+    }
+
     // Calculate new total amount
     // ✅ FIXED: Include both eventFee AND roomFee in base calculation
     // eventFee = base event fee (from attendee types or tiered pricing)
     // roomFee = room allocation fees
-    // totalAmount = eventFee + roomFee + special charges
+    // totalAmount = eventFee + roomFee + special charges - discounts
     const eventFee = registration.eventFee || 0;
     const roomFee = (registration as any).roomFee || 0;
     const chargesTotal = specialCharges.reduce((sum, charge) => sum + charge.amount, 0);
-    const newTotalAmount = eventFee + roomFee + chargesTotal;
+    const discountsTotal = discounts.reduce((sum, d) => sum + d.calculatedAmount, 0);
+    const newTotalAmount = Math.max(0, eventFee + roomFee + chargesTotal - discountsTotal);
 
     console.log('[Special Charges] Total calculation:', {
       eventFee,
       roomFee,
       chargesTotal,
+      discountsTotal,
       newTotalAmount,
     });
 
@@ -308,20 +320,32 @@ export async function DELETE(
 
     specialCharges = specialCharges.filter(c => c.chargeId !== chargeId);
 
+    // Parse existing discounts
+    let discounts: Discount[] = [];
+    try {
+      if (registration.discounts) {
+        discounts = JSON.parse(registration.discounts);
+      }
+    } catch (e) {
+      console.error('Error parsing discounts:', e);
+    }
+
     // Calculate new total amount
     // ✅ FIXED: Include both eventFee AND roomFee in base calculation
     // eventFee = base event fee (from attendee types or tiered pricing)
     // roomFee = room allocation fees
-    // totalAmount = eventFee + roomFee + special charges
+    // totalAmount = eventFee + roomFee + special charges - discounts
     const eventFee = registration.eventFee || 0;
     const roomFee = (registration as any).roomFee || 0;
     const chargesTotal = specialCharges.reduce((sum, charge) => sum + charge.amount, 0);
-    const newTotalAmount = eventFee + roomFee + chargesTotal;
+    const discountsTotal = discounts.reduce((sum, d) => sum + d.calculatedAmount, 0);
+    const newTotalAmount = Math.max(0, eventFee + roomFee + chargesTotal - discountsTotal);
 
     console.log('[Special Charges] Total calculation:', {
       eventFee,
       roomFee,
       chargesTotal,
+      discountsTotal,
       newTotalAmount,
     });
 

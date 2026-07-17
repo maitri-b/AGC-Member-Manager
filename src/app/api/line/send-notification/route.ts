@@ -51,8 +51,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { memberId } = await request.json();
+    const body = await request.json();
+    const { memberId, lineUserIds, message: customMessage } = body;
 
+    // Support both old API (memberId) and new API (lineUserIds + custom message)
+    if (!memberId && (!lineUserIds || lineUserIds.length === 0)) {
+      return NextResponse.json({ error: 'Member ID or LINE User IDs are required' }, { status: 400 });
+    }
+
+    // Custom message mode (new)
+    if (lineUserIds && customMessage) {
+      if (!customMessage.trim()) {
+        return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+      }
+
+      // Send custom message to multiple users
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [] as string[],
+      };
+
+      for (const lineUserId of lineUserIds) {
+        try {
+          const response = await fetch(LINE_API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
+            },
+            body: JSON.stringify({
+              to: lineUserId,
+              messages: [
+                {
+                  type: 'text',
+                  text: customMessage,
+                },
+              ],
+            }),
+          });
+
+          if (response.ok) {
+            results.success++;
+          } else {
+            const errorData = await response.json();
+            results.failed++;
+            results.errors.push(`${lineUserId}: ${errorData.message || 'Unknown error'}`);
+          }
+        } catch (err) {
+          results.failed++;
+          results.errors.push(`${lineUserId}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `ส่งข้อความสำเร็จ ${results.success} คน${results.failed > 0 ? `, ไม่สำเร็จ ${results.failed} คน` : ''}`,
+        results,
+      });
+    }
+
+    // Legacy mode - send license expiry notification to single member
     if (!memberId) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 });
     }

@@ -45,8 +45,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check permission - must be admin
-    const canUpdate = hasPermission(session.user.permissions || [], 'members:manage');
+    // Check permission - must be admin, committee, or event staff
+    const canUpdate =
+      hasPermission(session.user.permissions || [], 'admin:access') ||
+      hasPermission(session.user.permissions || [], 'events:manage-assigned');
 
     if (!canUpdate) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });

@@ -16,9 +16,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check permission - must be admin or event staff
+    // Check permission - must be admin, committee, or event staff
     const canApprove =
-      hasPermission(session.user.permissions || [], 'members:manage') ||
+      hasPermission(session.user.permissions || [], 'admin:access') ||
       hasPermission(session.user.permissions || [], 'events:manage-assigned');
 
     if (!canApprove) {

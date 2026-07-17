@@ -121,7 +121,7 @@ export default function PromoteEventModal({
       setSending(true);
       setMessage(null);
 
-      const eventUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
+      const eventUrl = `/events/`;
       const memberIdsArray = Array.from(selectedMemberIds);
 
       const response = await fetch('/api/line/promote-event', {

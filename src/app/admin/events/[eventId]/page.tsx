@@ -2538,16 +2538,31 @@ export default function EventDetailPage() {
                           let calculatedEventFee = 0;
                           let calculatedRoomFee = 0;
 
+                          // ✅ Get or auto-initialize attendeeTypeSelections for calculation
+                          let effectiveAttendeeTypeSelections = editFormData.attendeeTypeSelections;
+                          if (eventData?.event?.useAttendeeTypePricing && (!effectiveAttendeeTypeSelections || effectiveAttendeeTypeSelections.length === 0)) {
+                            // Auto-initialize with first active type if needed
+                            const activeTypes = eventData.event.attendeeTypes?.filter((t: any) => t.isActive) || [];
+                            if (activeTypes.length > 0 && editFormData.attendeeCount > 0) {
+                              const firstType = activeTypes[0];
+                              effectiveAttendeeTypeSelections = [{
+                                typeId: firstType.typeId,
+                                quantity: editFormData.attendeeCount
+                              }];
+                              console.log('[Real-time Calc] Auto-initialized attendeeTypeSelections:', effectiveAttendeeTypeSelections);
+                            }
+                          }
+
                           // Calculate event fee based on pricing type
                           if (eventData?.event?.useAttendeeTypePricing) {
                             // Attendee type pricing
-                            if (editFormData.attendeeTypeSelections && eventData.event.attendeeTypes && eventData.event.attendeeTypes.length > 0) {
+                            if (effectiveAttendeeTypeSelections && effectiveAttendeeTypeSelections.length > 0 && eventData.event.attendeeTypes && eventData.event.attendeeTypes.length > 0) {
                               const attendeeTypes = eventData.event.attendeeTypes;
-                              calculatedEventFee = editFormData.attendeeTypeSelections.reduce((sum, sel) => {
+                              calculatedEventFee = effectiveAttendeeTypeSelections.reduce((sum, sel) => {
                                 const type = attendeeTypes.find((t: any) => t.typeId === sel.typeId);
                                 return sum + (type ? type.price * sel.quantity : 0);
                               }, 0);
-                            } else if (!editFormData.attendeeTypeSelections || editFormData.attendeeTypeSelections.length === 0) {
+                            } else {
                               // Fallback: If no attendee type selections, try to use stored eventFee
                               calculatedEventFee = (attendee?.registration as any)?.eventFee || 0;
                             }

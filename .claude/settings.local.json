@@ -57,7 +57,8 @@
       "Bash(Select-String \"events.*page.tsx\")",
       "Bash(Select-String \"error TS\" -Context 0,2)",
       "Bash(npx tsc --noEmit)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(timeout 300 bash:*)"
     ]
   }
 }

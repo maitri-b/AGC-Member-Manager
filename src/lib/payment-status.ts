@@ -174,6 +174,11 @@ export function getStatusBadgeClass(status: string): string {
     return 'bg-green-100 text-green-800';
   }
 
+  // Overpayment state (paid more than required)
+  if (status === 'ชำระเกินจำนวน') {
+    return 'bg-cyan-100 text-cyan-800';
+  }
+
   // Pending verification states (purple/indigo - waiting for admin action)
   if (status === 'รอตรวจสอบสลิป' || status === 'รอตรวจสอบ' || status === 'รอตรวจสอบมัดจำ' || status === 'รอตรวจสอบยอดคงเหลือ') {
     return 'bg-purple-100 text-purple-800';
@@ -317,7 +322,11 @@ export function recalculatePaymentStatus(
     payment_status: registration.paymentStatus || 'รอชำระเงิน'
   };
 
-  if (!fullyPaid && currentPaidAmount > 0) {
+  // ✅ CHECK FOR OVERPAYMENT (paid > totalAmount)
+  if (currentPaidAmount > newTotalAmount && currentPaidAmount > 0) {
+    result.payment_status = 'ชำระเกินจำนวน';
+    result.status = 'ยืนยันแล้ว'; // Still confirmed, just overpaid
+  } else if (!fullyPaid && currentPaidAmount > 0) {
     // Was fully paid before, but not anymore due to totalAmount increase
     // Update paymentStatus to indicate additional payment needed
     if (paymentMode === 'deposit') {

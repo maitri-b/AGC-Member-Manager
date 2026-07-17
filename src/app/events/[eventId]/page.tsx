@@ -1659,6 +1659,7 @@ export default function EventDetailPage() {
                           // Calculate total paid from actual payment fields only
                           const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                           const additionalRequired = Math.max(0, totalAmount - paidAmount);
+                          const overpaid = Math.max(0, paidAmount - totalAmount);
 
                           return (
                             <div className="border-t border-blue-500 pt-3 space-y-2 text-sm">
@@ -1675,6 +1676,14 @@ export default function EventDetailPage() {
                                 <div className="flex items-center justify-between">
                                   <span className="opacity-90">คงเหลือยอดค้างชำระ:</span>
                                   <span className="font-semibold">฿{additionalRequired.toLocaleString()}</span>
+                                </div>
+                              )}
+
+                              {/* Show overpayment if > 0 */}
+                              {overpaid > 0 && (
+                                <div className="flex items-center justify-between text-cyan-200">
+                                  <span className="opacity-90">ชำระเกิน:</span>
+                                  <span className="font-semibold">฿{overpaid.toLocaleString()}</span>
                                 </div>
                               )}
                             </div>
@@ -1794,9 +1803,9 @@ export default function EventDetailPage() {
                         const totalAmount = userRegistration.totalAmount || 0;
 
                         // Calculate actual total paid from tracked amounts
+                        const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
                         const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
                         const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                        const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
                         const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
 
                         const additionalPayments = userRegistration.additionalPayments
@@ -1878,9 +1887,9 @@ export default function EventDetailPage() {
                         const totalAmount = userRegistration.totalAmount || 0;
 
                         // Calculate actual total paid from tracked amounts
+                        const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
                         const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
                         const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                        const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
                         const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
 
                         // Fallback to legacy paidAmount if no tracked amounts

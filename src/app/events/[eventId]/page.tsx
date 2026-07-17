@@ -1219,6 +1219,17 @@ export default function EventDetailPage() {
                     </div>
                   )}
 
+                  {/* Payment Summary Card - Total Amount */}
+                  {userRegistration.totalAmount && userRegistration.totalAmount > 0 && (
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4">
+                      <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-3xl font-bold">{userRegistration.totalAmount.toLocaleString()} บาท</span>
+                        <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Attendee Names Section */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -1646,56 +1657,7 @@ export default function EventDetailPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                       <h3 className="font-semibold text-blue-900 mb-4">รายละเอียดการชำระเงิน</h3>
 
-                      {/* 1. Total Amount Summary - Show First */}
-                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
-                        <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
-                        <div className="flex items-baseline justify-between mb-3">
-                          <span className="text-3xl font-bold">{userRegistration.totalAmount.toLocaleString()} บาท</span>
-                          <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
-                        </div>
-
-                        {/* Payment Breakdown */}
-                        {(() => {
-                          const totalAmount = userRegistration.totalAmount || 0;
-                          const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
-                          const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
-                          const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                          // Calculate total paid from actual payment fields only
-                          const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
-                          const additionalRequired = Math.max(0, totalAmount - paidAmount);
-                          const overpaid = Math.max(0, paidAmount - totalAmount);
-
-                          return (
-                            <div className="border-t border-blue-500 pt-3 space-y-2 text-sm">
-                              {/* Show paid amount if > 0 */}
-                              {paidAmount > 0 && (
-                                <div className="flex items-center justify-between">
-                                  <span className="opacity-90">ยอดชำระแล้ว:</span>
-                                  <span className="font-semibold">฿{paidAmount.toLocaleString()}</span>
-                                </div>
-                              )}
-
-                              {/* Show outstanding if > 0 */}
-                              {additionalRequired > 0 && (
-                                <div className="flex items-center justify-between">
-                                  <span className="opacity-90">คงเหลือยอดค้างชำระ:</span>
-                                  <span className="font-semibold">฿{additionalRequired.toLocaleString()}</span>
-                                </div>
-                              )}
-
-                              {/* Show overpayment if > 0 */}
-                              {overpaid > 0 && (
-                                <div className="flex items-center justify-between text-cyan-200">
-                                  <span className="opacity-90">ชำระเกิน:</span>
-                                  <span className="font-semibold">฿{overpaid.toLocaleString()}</span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
-
-                      {/* 2. Payment Status - Large and Clear */}
+                      {/* 1. Payment Status - Large and Clear */}
                       {userRegistration.paymentStatus && (
                         <div className="bg-white rounded-lg p-4 mb-4 border-2 border-gray-200">
                           <div className="flex items-center justify-between mb-3">
@@ -1856,7 +1818,7 @@ export default function EventDetailPage() {
                                   </>
                                 ) : additionalRequired > 0 ? (
                                   <>
-                                    <h4 className="font-semibold text-orange-900 mb-2">⚠️ ต้องชำระเงินเพิ่มเติม</h4>
+                                    <h4 className="font-semibold text-orange-900 mb-2">ต้องชำระเงินเพิ่มเติม</h4>
                                     <div className="space-y-1 text-sm text-orange-800">
                                       <div className="flex justify-between">
                                         <span>ยอดรวมทั้งหมด:</span>

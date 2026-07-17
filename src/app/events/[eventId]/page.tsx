@@ -1656,7 +1656,8 @@ export default function EventDetailPage() {
                           const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
                           const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
                           const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                          const paidAmount = (userRegistration as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+                          // Calculate total paid from actual payment fields only (don't use paidAmount as it's not reliable)
+                          const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                           const additionalRequired = Math.max(0, totalAmount - paidAmount);
 
                           return (

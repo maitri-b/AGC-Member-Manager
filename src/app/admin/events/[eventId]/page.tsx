@@ -150,11 +150,13 @@ function getAdditionalAmount(attendee: Attendee, eventPaymentMode: 'full' | 'dep
   const reg = attendee.registration;
   const totalAmount = reg.totalAmount || 0;
 
-  // ✅ FIX: Calculate paidAmount from actual payment fields
+  // ✅ FIX: Calculate paidAmount from actual payment fields (don't use paidAmount field as it's not reliable)
   const fullPaymentAmountPaid = (reg as any).fullPaymentAmountPaid || 0;
   const depositAmountPaid = (reg as any).depositAmountPaid || 0;
   const remainingAmountPaid = (reg as any).remainingAmountPaid || 0;
-  const paidAmount = (reg as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+
+  // Calculate total paid from actual payment fields only
+  const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
 
   // Calculate additional required (remaining balance) regardless of payment mode
   return Math.max(0, totalAmount - paidAmount);
@@ -1057,8 +1059,8 @@ export default function EventDetailPage() {
     const depositAmountPaid = registration.depositAmountPaid || 0;
     const remainingAmountPaid = registration.remainingAmountPaid || 0;
 
-    // Use the appropriate paid amount based on payment mode
-    const paidAmount = registration.paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+    // Calculate total paid from actual payment fields only (don't use paidAmount as it's not reliable)
+    const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
     const hasPayment = paidAmount > 0;
 
     return { hasPayment, totalPaid: paidAmount };
@@ -2614,11 +2616,11 @@ export default function EventDetailPage() {
                             {/* Payment Breakdown - Show for all modes */}
                             {(() => {
                               const totalAmount = attendee.registration.totalAmount || 0;
-                              // ✅ FIX: Calculate paidAmount from actual payment fields (use 'as any' for TypeScript)
+                              // ✅ FIX: Calculate paidAmount from actual payment fields only (don't use paidAmount as it's not reliable)
                               const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
                               const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
                               const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
-                              const paidAmount = (attendee.registration as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+                              const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                               const additionalRequired = Math.max(0, totalAmount - paidAmount);
 
                               return (
@@ -2732,11 +2734,11 @@ export default function EventDetailPage() {
                                                 <span className="font-semibold text-gray-900">฿{attendee.registration.totalAmount.toLocaleString()}</span>
                                               </div>
                                               {(() => {
-                                                // ✅ Calculate paidAmount from actual payment fields (use 'as any' for TypeScript)
+                                                // ✅ Calculate paidAmount from actual payment fields only (don't use paidAmount as it's not reliable)
                                                 const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
                                                 const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
                                                 const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
-                                                const paidAmount = (attendee.registration as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+                                                const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                                                 const additionalRequired = getAdditionalAmount(attendee, eventData.event.paymentMode || 'deposit');
                                                 return (
                                                   <>
@@ -2814,12 +2816,12 @@ export default function EventDetailPage() {
                             {eventData.event.paymentMode === 'full' && (
                               <div className="border-t pt-2">
                                 {(() => {
-                                  // ✅ Calculate paidAmount from actual payment fields (use 'as any' for TypeScript)
+                                  // ✅ Calculate paidAmount from actual payment fields only (don't use paidAmount as it's not reliable)
                                   const totalAmount = attendee.registration.totalAmount || 0;
                                   const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
                                   const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
                                   const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
-                                  const paidAmount = (attendee.registration as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+                                  const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                                   const additionalRequired = Math.max(0, totalAmount - paidAmount);
                                   const isFullyPaid = paidAmount >= totalAmount && paidAmount > 0;
                                   const hasPayment = attendee.registration.depositPaid;

@@ -514,11 +514,13 @@ function ContactModal({
   onClose,
   staffList,
   onSuccess,
+  toast,
 }: {
   member: MemberWithProfile;
   onClose: () => void;
   staffList: StaffMember[];
   onSuccess: () => void;
+  toast: ReturnType<typeof useToast>;
 }) {
   const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
   const [showNewForm, setShowNewForm] = useState(false);
@@ -1062,8 +1064,27 @@ function ContactModal({
                         {c.status === 'pending' ? 'กำลังดำเนินการ' : 'เสร็จสิ้น'}
                       </span>
                     </div>
-                    <div className="mt-3 p-3 bg-gray-50 rounded text-sm text-gray-700 whitespace-pre-wrap max-h-32 overflow-y-auto">
-                      {c.message}
+                    <div className="mt-3">
+                      <div className="p-3 bg-gray-50 rounded text-sm text-gray-700 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                        {c.message}
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(c.message);
+                            toast.success('คัดลอกข้อความแล้ว');
+                          } catch (err) {
+                            console.error('Failed to copy message:', err);
+                            toast.error('ไม่สามารถคัดลอกได้');
+                          }
+                        }}
+                        className="mt-2 px-3 py-1.5 rounded-md text-sm flex items-center gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copy ข้อความ
+                      </button>
                     </div>
                     {c.resolution && (
                       <div className="mt-2 p-3 bg-green-50 rounded text-sm text-green-800">
@@ -2382,6 +2403,7 @@ export default function MembersPage() {
           member={contactMember}
           onClose={() => setContactMember(null)}
           staffList={staffList}
+          toast={toast}
           onSuccess={() => {
             toast.success('บันทึกเรียบร้อยแล้ว');
             fetchAllMembers(); // Refresh members in case LINE status changed

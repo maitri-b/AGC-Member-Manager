@@ -2624,7 +2624,7 @@ export default function EventDetailPage() {
                               const additionalRequired = Math.max(0, totalAmount - paidAmount);
 
                               // DEBUG: Log payment calculation
-                              console.log('Payment Debug:', {
+                              console.log('Payment Debug [BUILD a0fc466]:', {
                                 registrationId: attendee.registration.registrationId,
                                 totalAmount,
                                 fullPaymentAmountPaid,
@@ -2632,6 +2632,7 @@ export default function EventDetailPage() {
                                 remainingAmountPaid,
                                 paidAmount,
                                 additionalRequired,
+                                timestamp: new Date().toISOString(),
                                 raw: attendee.registration
                               });
 

@@ -2540,16 +2540,31 @@ export default function EventDetailPage() {
 
                           // ✅ Get or auto-initialize attendeeTypeSelections for calculation
                           let effectiveAttendeeTypeSelections = editFormData.attendeeTypeSelections;
+
+                          console.log('[Real-time Calc START]', {
+                            useAttendeeTypePricing: eventData?.event?.useAttendeeTypePricing,
+                            editFormData_attendeeCount: editFormData.attendeeCount,
+                            editFormData_attendeeTypeSelections: editFormData.attendeeTypeSelections,
+                            eventData_attendeeTypes: eventData?.event?.attendeeTypes,
+                          });
+
                           if (eventData?.event?.useAttendeeTypePricing && (!effectiveAttendeeTypeSelections || effectiveAttendeeTypeSelections.length === 0)) {
                             // Auto-initialize with first active type if needed
                             const activeTypes = eventData.event.attendeeTypes?.filter((t: any) => t.isActive) || [];
+                            console.log('[Real-time Calc] Active types found:', activeTypes);
+
                             if (activeTypes.length > 0 && editFormData.attendeeCount > 0) {
                               const firstType = activeTypes[0];
                               effectiveAttendeeTypeSelections = [{
                                 typeId: firstType.typeId,
                                 quantity: editFormData.attendeeCount
                               }];
-                              console.log('[Real-time Calc] Auto-initialized attendeeTypeSelections:', effectiveAttendeeTypeSelections);
+                              console.log('[Real-time Calc] ✅ Auto-initialized attendeeTypeSelections:', effectiveAttendeeTypeSelections);
+                            } else {
+                              console.log('[Real-time Calc] ❌ Cannot auto-initialize:', {
+                                activeTypesLength: activeTypes.length,
+                                attendeeCount: editFormData.attendeeCount
+                              });
                             }
                           }
 
@@ -2558,12 +2573,24 @@ export default function EventDetailPage() {
                             // Attendee type pricing
                             if (effectiveAttendeeTypeSelections && effectiveAttendeeTypeSelections.length > 0 && eventData.event.attendeeTypes && eventData.event.attendeeTypes.length > 0) {
                               const attendeeTypes = eventData.event.attendeeTypes;
+                              console.log('[Real-time Calc] Calculating with effectiveAttendeeTypeSelections:', effectiveAttendeeTypeSelections);
+
                               calculatedEventFee = effectiveAttendeeTypeSelections.reduce((sum, sel) => {
                                 const type = attendeeTypes.find((t: any) => t.typeId === sel.typeId);
-                                return sum + (type ? type.price * sel.quantity : 0);
+                                const lineTotal = type ? type.price * sel.quantity : 0;
+                                console.log('[Real-time Calc] Line calculation:', {
+                                  typeId: sel.typeId,
+                                  quantity: sel.quantity,
+                                  type: type,
+                                  price: type?.price,
+                                  lineTotal
+                                });
+                                return sum + lineTotal;
                               }, 0);
+                              console.log('[Real-time Calc] ✅ Calculated eventFee:', calculatedEventFee);
                             } else {
                               // Fallback: If no attendee type selections, try to use stored eventFee
+                              console.log('[Real-time Calc] ⚠️ Using fallback eventFee from database');
                               calculatedEventFee = (attendee?.registration as any)?.eventFee || 0;
                             }
                           } else {

@@ -7,6 +7,7 @@ import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } fr
 import { SpecialCharge } from '@/types/event';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { recalculatePaymentStatus } from '@/lib/payment-status';
+import { hasPendingPaymentSlips } from '@/lib/payment-slips';
 
 // POST - Add special charge to a registration
 export async function POST(
@@ -81,6 +82,15 @@ export async function POST(
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
+    // ✅ VALIDATION: Check for pending payment slips
+    const hasPendingSlips = await hasPendingPaymentSlips(registrationId);
+    if (hasPendingSlips) {
+      return NextResponse.json({
+        error: 'ไม่สามารถเพิ่มค่าใช้จ่ายเสริมได้',
+        details: 'มีสลิปการชำระเงินที่รออนุมัติ กรุณาอนุมัติหรือปฏิเสธสลิปก่อนเพิ่มค่าใช้จ่ายเสริม'
+      }, { status: 400 });
+    }
+
     // Parse existing special charges
     let specialCharges: SpecialCharge[] = [];
     try {
@@ -103,11 +113,21 @@ export async function POST(
     specialCharges.push(newCharge);
 
     // Calculate new total amount
-    // eventFee = base event fee (from attendee types or tiered pricing, including room fees)
-    // totalAmount = eventFee + special charges
+    // ✅ FIXED: Include both eventFee AND roomFee in base calculation
+    // eventFee = base event fee (from attendee types or tiered pricing)
+    // roomFee = room allocation fees
+    // totalAmount = eventFee + roomFee + special charges
     const eventFee = registration.eventFee || 0;
+    const roomFee = (registration as any).roomFee || 0;
     const chargesTotal = specialCharges.reduce((sum, charge) => sum + charge.amount, 0);
-    const newTotalAmount = eventFee + chargesTotal;
+    const newTotalAmount = eventFee + roomFee + chargesTotal;
+
+    console.log('[Special Charges] Total calculation:', {
+      eventFee,
+      roomFee,
+      chargesTotal,
+      newTotalAmount,
+    });
 
     // Prepare update data
     const updateData: Record<string, unknown> = {
@@ -254,6 +274,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
+    // ✅ VALIDATION: Check for pending payment slips
+    const hasPendingSlips = await hasPendingPaymentSlips(registrationId);
+    if (hasPendingSlips) {
+      return NextResponse.json({
+        error: 'ไม่สามารถลบค่าใช้จ่ายเสริมได้',
+        details: 'มีสลิปการชำระเงินที่รออนุมัติ กรุณาอนุมัติหรือปฏิเสธสลิปก่อนลบค่าใช้จ่ายเสริม'
+      }, { status: 400 });
+    }
+
     // Parse existing special charges
     let specialCharges: SpecialCharge[] = [];
     try {
@@ -273,11 +302,21 @@ export async function DELETE(
     specialCharges = specialCharges.filter(c => c.chargeId !== chargeId);
 
     // Calculate new total amount
-    // eventFee = base event fee (from attendee types or tiered pricing, including room fees)
-    // totalAmount = eventFee + special charges
+    // ✅ FIXED: Include both eventFee AND roomFee in base calculation
+    // eventFee = base event fee (from attendee types or tiered pricing)
+    // roomFee = room allocation fees
+    // totalAmount = eventFee + roomFee + special charges
     const eventFee = registration.eventFee || 0;
+    const roomFee = (registration as any).roomFee || 0;
     const chargesTotal = specialCharges.reduce((sum, charge) => sum + charge.amount, 0);
-    const newTotalAmount = eventFee + chargesTotal;
+    const newTotalAmount = eventFee + roomFee + chargesTotal;
+
+    console.log('[Special Charges] Total calculation:', {
+      eventFee,
+      roomFee,
+      chargesTotal,
+      newTotalAmount,
+    });
 
     // Prepare update data
     const updateData: Record<string, unknown> = {

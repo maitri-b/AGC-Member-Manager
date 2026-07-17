@@ -528,6 +528,358 @@ console.log('[Special Charges] Payment status recalculated:', {
 
 ---
 
+---
+
+## 🆕 Session 2: Real-time Calculation Coverage & UI Improvements (2026-07-18)
+
+### 📋 ปัญหาใหม่ที่พบ
+
+หลังจากแก้ปัญหา Payment Amount Fields แล้ว พบว่า **Real-time Calculation ในหน้า Admin Event Detail ยังไม่ทำงานกับ Fixed Pricing และ Tiered Pricing**
+
+#### Scenario:
+1. Admin เปิดหน้า Event Detail ที่ใช้ Fixed Pricing (registrationFee = 1000 บาท, attendeeCount = 5)
+2. ควรแสดง: eventFee = 1000 × 5 = 5,000 บาท
+3. **ปัญหา:** แสดง eventFee = 0 บาท
+
+### 🔍 สาเหตุ: Missing Event Configuration Fields
+
+การคำนวณแบบ real-time ที่ Frontend ใช้ฟังก์ชัน `calculateRegistrationFee()` ซึ่งต้องการข้อมูลจาก event configuration:
+
+```typescript
+// src/types/event.ts - calculateRegistrationFee() function (lines 579-644)
+export function calculateRegistrationFee(
+  event: Event | EventInput,
+  attendeeCount: number,
+  isMember: boolean = true
+): number {
+  // 1. Tiered Pricing - ใช้ priceTiers
+  if (event.pricingType === 'tiered' && event.priceTiers && event.priceTiers.length > 0) {
+    // Complex tier calculation...
+  }
+
+  // 2. Legacy Tiered Pricing - ใช้ baseFee + additionalFeePerPerson
+  if (event.pricingType === 'tiered' && event.baseFee !== undefined && event.additionalFeePerPerson !== undefined) {
+    const baseAmount = event.baseFee;
+    const additionalAmount = (attendeeCount - 1) * event.additionalFeePerPerson;
+    // ...
+  }
+
+  // 3. Fixed Pricing - ⚠️ ต้องการ event.registrationFee
+  return event.registrationFee * attendeeCount;  // Line 643
+}
+```
+
+**ปัญหา:** API ไม่ส่ง `registrationFee`, `baseFee`, `additionalFeePerPerson` จึงคำนวณไม่ได้!
+
+---
+
+### ✅ วิธีแก้: Three-Point Fix Pattern (อีกครั้ง!)
+
+ใช้ pattern เดียวกับตอนแก้ Payment Amount Fields แต่ครั้งนี้แก้ที่ **Event Configuration Fields**
+
+#### 🔧 Fix 1: Admin API - เพิ่ม Event Pricing Config
+
+**ไฟล์:** `src/app/api/events/[eventId]/route.ts`
+
+**บรรทัด:** ~186-192
+
+**เพิ่ม registrationFee ใน event config:**
+
+```typescript
+event: {
+  eventId: event.eventId,
+  eventName: event.eventName,
+  // ... other fields ...
+  // Event pricing configuration
+  pricingType: event.pricingType || 'fixed',
+  registrationFee: event.registrationFee || 0,  // ✅ ADDED - สำคัญสำหรับ Fixed pricing!
+  priceTiers: event.priceTiers || undefined,
+  baseFee: event.baseFee,
+  additionalFeePerPerson: event.additionalFeePerPerson,
+  memberDiscount: event.memberDiscount,
+  // ...
+}
+```
+
+**ความสำคัญ:**
+- `registrationFee` - ใช้สำหรับ Fixed Pricing (`registrationFee * attendeeCount`)
+- `priceTiers` - ใช้สำหรับ Tiered Pricing แบบใหม่
+- `baseFee`, `additionalFeePerPerson` - ใช้สำหรับ Tiered Pricing แบบเดิม
+
+#### 🔧 Fix 2: Admin API - เพิ่ม Fee Breakdown ใน Registration
+
+**บรรทัด:** ~137-139
+
+**เพิ่ม eventFee และ roomFee:**
+
+```typescript
+registration: {
+  // ... other fields ...
+  // Fee breakdown (for edit form calculations)
+  eventFee: Number(attendee.registration.eventFee) || 0,  // ✅ ADDED
+  roomFee: Number(attendee.registration.roomFee) || 0,    // ✅ ADDED
+  // ...
+}
+```
+
+**ทำไมต้องเพิ่ม eventFee/roomFee:**
+- เป็น fallback values กรณีที่การคำนวณแบบ real-time ล้มเหลว
+- ใช้แสดงค่าที่บันทึกไว้แล้วใน Firestore
+- ช่วยให้ debug ได้ง่าย (เทียบค่า calculated vs. stored)
+
+#### 🔧 Fix 3: Member API - เพิ่ม Fee Breakdown
+
+**ไฟล์:** `src/app/api/events/[eventId]/detail/route.ts`
+
+**บรรทัด:** ~229-230
+
+**เพิ่มใน userRegistration:**
+
+```typescript
+userRegistration = {
+  // ... other fields ...
+  // Fee breakdown (for edit form calculations)
+  eventFee: (latestReg as any).eventFee || 0,  // ✅ ADDED
+  roomFee: (latestReg as any).roomFee || 0,    // ✅ ADDED
+  // ...
+}
+```
+
+**📍 Commit:** "Add registrationFee and eventFee/roomFee to API responses for real-time calculation"
+
+---
+
+### 🧪 Coverage Verification
+
+#### ตรวจสอบว่าการแก้ไขครอบคลุมทุก Pricing Type:
+
+**1. Attendee Type Pricing** ✅
+- ใช้ `attendeeTypeSelections` และ `event.attendeeTypes`
+- คำนวณจาก type price × quantity
+- **ทำงานได้อยู่แล้ว** (ไม่ต้องแก้)
+
+**2. Fixed Pricing** ✅
+- ใช้ `event.registrationFee * attendeeCount`
+- **แก้ไขแล้ว** โดยการเพิ่ม `registrationFee` ใน API
+
+**3. Tiered Pricing (New)** ✅
+- ใช้ `event.priceTiers` array
+- มีการส่ง `priceTiers` อยู่แล้วใน API
+- **ทำงานได้อยู่แล้ว**
+
+**4. Tiered Pricing (Legacy)** ✅
+- ใช้ `event.baseFee + (attendeeCount - 1) * event.additionalFeePerPerson`
+- มีการส่ง `baseFee` และ `additionalFeePerPerson` อยู่แล้วใน API
+- **ทำงานได้อยู่แล้ว**
+
+#### ตรวจสอบว่าการแก้ไขครอบคลุมทุก Payment Mode:
+
+**1. Full Payment Mode** ✅
+- การคำนวณ eventFee เหมือนกันกับ Deposit Mode
+- เพียงแต่ไม่มีการแยก deposit/remaining
+- **ครอบคลุมแล้ว**
+
+**2. Deposit Payment Mode** ✅
+- การคำนวณ totalAmount = eventFee + roomFee + specialCharges
+- Payment mode มีผลเฉพาะการติดตามการชำระเงิน (depositPaid, remainingPaid)
+- **ไม่มีผลกับการคำนวณค่าธรรมเนียม** → ครอบคลุมแล้ว
+
+---
+
+### 📌 Key Learning: Fee Calculation vs Payment Tracking
+
+**สิ่งสำคัญที่ต้องเข้าใจ:**
+
+```
+การคำนวณค่าธรรมเนียม (Fee Calculation)
+  ↓
+  เหมือนกันทั้ง Full Payment และ Deposit Payment Mode
+  ↓
+  totalAmount = eventFee + roomFee + specialCharges
+
+Payment Mode มีผลเฉพาะ:
+  ↓
+  การติดตามการชำระเงิน (Payment Tracking)
+  ↓
+  - Full Mode: fullPaymentPaid, fullPaymentAmountPaid
+  - Deposit Mode: depositPaid, depositAmountPaid, remainingPaid, remainingAmountPaid
+```
+
+**ดังนั้น:** การแก้ไข API ให้ส่ง `registrationFee` จึงครอบคลุมทั้ง Full และ Deposit Mode ทันที!
+
+---
+
+### 🎨 UI Improvements - Member Event Detail Page
+
+นอกจากแก้ไข real-time calculation แล้ว ยังได้ปรับปรุง UI เพื่อให้แสดงข้อมูลชัดเจนขึ้น:
+
+#### 1. Payment Summary Card - ทำให้เรียบง่าย
+
+**ไฟล์:** `src/app/events/[eventId]/page.tsx`
+
+**บรรทัด:** ~1649-1656
+
+**Before:**
+```typescript
+// แสดงทั้ง Total, Paid, Outstanding
+<div>ยอดรวม: {total}</div>
+<div>ชำระแล้ว: {paid}</div>
+<div>คงเหลือ: {outstanding}</div>
+```
+
+**After:**
+```typescript
+// แสดงแค่ยอดรวม
+<div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
+  <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
+  <div className="flex items-baseline justify-between">
+    <span className="text-3xl font-bold">{totalAmount.toLocaleString()} บาท</span>
+    <span className="text-sm opacity-90">({attendeeCount} คน)</span>
+  </div>
+</div>
+```
+
+**เหตุผล:** ให้ user มองเห็นยอดรวมก่อน จากนั้นดูรายละเอียดการชำระใน Payment Status section ด้านล่าง
+
+#### 2. Additional Payment Alert - ย้ายตำแหน่ง
+
+**บรรทัด:** ~1667-1752
+
+**Before:** อยู่ที่ท้ายสุด (หลัง Payment History)
+
+**After:** ย้ายมาอยู่หลัง Payment Status และก่อน Payment History
+
+**Layout ใหม่:**
+```
+1. Payment Summary Card (ยอดรวม)
+2. Payment Breakdown (รายละเอียดค่าใช้จ่าย)
+   - Event Fee
+   - Room Fee
+   - Special Charges
+3. Payment Status (สถานะการชำระเงิน)
+4. Additional Payment Alert (⚠️ ต้องชำระเพิ่ม) ← ย้ายมาตรงนี้!
+5. Payment History (ประวัติการชำระเงิน)
+```
+
+**เหตุผล:**
+- ให้ user เห็น alert ทันทีหลังจากดู Payment Status
+- ไม่ต้อง scroll ลงไปล่างสุดถึงจะเห็นว่าต้องชำระเพิ่ม
+
+#### 3. Additional Payment Alert - ลบ Emoji
+
+**Before:**
+```typescript
+<h4 className="font-semibold text-orange-900 mb-2">⚠️ ต้องชำระเงินเพิ่มเติม</h4>
+```
+
+**After:**
+```typescript
+<h4 className="font-semibold text-orange-900 mb-2">ต้องชำระเงินเพิ่มเติม</h4>
+```
+
+**เหตุผล:** Card สีส้มและ icon แล้ว ไม่จำเป็นต้องมี emoji เพิ่ม
+
+**📍 Commit:** "Fix: Revert member event detail UI to correct layout"
+
+---
+
+### 🚨 ข้อผิดพลาดที่เกิดขึ้นระหว่างแก้ไข
+
+#### Mistake: เข้าใจผิดความต้องการในการย้าย UI
+
+**User Request (Thai):**
+> "ให้เอา card payment summary ไว้ที่เดิม เอาการ์ดสีแดง pastel มาไว้ต่อท้าย สถานะการชำระเงิน ให้อยู่ก่อน ประวัติการชำระเงิน"
+
+**ความหมาย:**
+- **Payment Summary Card:** อยู่ที่เดิม (ไม่ย้าย)
+- **Additional Payment Alert (การ์ดสีส้ม/แดง pastel):** ย้ายมาอยู่หลัง Payment Status และก่อน Payment History
+
+**สิ่งที่ทำผิดในรอบแรก:**
+- ย้าย Payment Summary Card ไปอยู่หลัง Attendee Count section
+- ไม่ได้ย้าย Additional Payment Alert
+
+**การแก้ไข:**
+1. Revert Payment Summary Card กลับไปตำแหน่งเดิม (ใน Payment Breakdown section)
+2. ย้าย Additional Payment Alert ไปตำแหน่งที่ถูกต้อง
+3. ลบ duplicate Additional Payment Alert section
+
+**บทเรียน:**
+- อ่านความต้องการภาษาไทยให้ละเอียด โดยเฉพาะคำว่า "ไว้ที่เดิม" vs "ย้าย"
+- ถามกลับถ้าไม่แน่ใจ แทนที่จะเดาเอาเอง
+- ทำการ commit แบบ incremental เพื่อให้ revert ได้ง่ายถ้าผิด
+
+---
+
+### 📝 Areas to Check Further
+
+**1. ทดสอบกับ Fixed Pricing Events จริง**
+- สร้าง event ใหม่ที่ใช้ Fixed Pricing
+- ลงทะเบียน → ตรวจสอบว่า eventFee คำนวณถูกต้อง
+- Admin แก้ไข attendeeCount → ตรวจสอบว่า eventFee update แบบ real-time
+
+**2. ทดสอบกับ Deposit Payment Mode**
+- สร้าง event ที่ใช้ Deposit Mode + Fixed Pricing
+- ลงทะเบียน → ชำระมัดจำ → ตรวจสอบการแสดงผล
+- Admin เพิ่ม special charges → ตรวจสอบว่ายอดคงเหลือคำนวณถูกต้อง
+
+**3. ตรวจสอบ Edge Cases**
+- Event ที่ `registrationFee = 0` (ฟรี)
+- Event ที่ `registrationFee = undefined` (ข้อมูลเก่า)
+- Event ที่เปลี่ยน pricing type ระหว่างทาง (fixed → tiered)
+
+**4. ตรวจสอบ Performance**
+- Event ที่มี attendees จำนวนมาก (100+ คน)
+- Real-time calculation ควรเร็ว (ไม่ทำให้ UI lag)
+- ตรวจสอบว่าไม่มี unnecessary re-renders
+
+**5. ตรวจสอบ Console Logs**
+- ดู debug logs ใน Admin Event Detail page
+- ตรวจสอบว่าค่า calculated ตรงกับ stored values
+- หา warning หรือ error ที่อาจเกิดขึ้น
+
+---
+
+### 🎯 Summary of This Session
+
+| การแก้ไข | ไฟล์ | เหตุผล | สถานะ |
+|---------|------|--------|-------|
+| เพิ่ม `registrationFee` ใน Admin API | `src/app/api/events/[eventId]/route.ts` | สำหรับ Fixed Pricing calculation | ✅ |
+| เพิ่ม `eventFee`, `roomFee` ใน Admin API | `src/app/api/events/[eventId]/route.ts` | Fallback values สำหรับแสดงผล | ✅ |
+| เพิ่ม `eventFee`, `roomFee` ใน Member API | `src/app/api/events/[eventId]/detail/route.ts` | Fallback values สำหรับ edit form | ✅ |
+| ทำ Payment Summary Card ให้เรียบง่าย | `src/app/events/[eventId]/page.tsx` | แสดงแค่ยอดรวม | ✅ |
+| ย้าย Additional Payment Alert | `src/app/events/[eventId]/page.tsx` | ให้เห็น alert ทันทีหลัง Payment Status | ✅ |
+| ลบ ⚠️ emoji จาก Alert | `src/app/events/[eventId]/page.tsx` | ลดความซ้ำซ้อน | ✅ |
+
+---
+
+### 💡 Key Insights
+
+**1. Pattern Recognition:**
+- การแก้ไขปัญหาการแสดงข้อมูลใน Frontend มักต้องตรวจสอบ **3 ชั้น**: Firestore Reader → API → Frontend
+- ใช้ pattern เดียวกันกับ Payment Amount Fields Fix แต่กับ Event Configuration Fields
+
+**2. Understanding `calculateRegistrationFee()`:**
+- ฟังก์ชันนี้เป็นหัวใจของการคำนวณค่าธรรมเนียม
+- รองรับ 3 pricing types: Fixed, Tiered (new), Tiered (legacy)
+- ต้องการข้อมูลจาก event configuration เพื่อคำนวณ
+
+**3. Fee Calculation ≠ Payment Tracking:**
+- การคำนวณค่าธรรมเนียม (totalAmount) เหมือนกันทั้ง Full และ Deposit Mode
+- Payment Mode มีผลเฉพาะการติดตามการชำระเงิน (depositPaid, fullPaymentPaid)
+- การแก้ไขที่ Fee Calculation จึงครอบคลุมทุก Payment Mode อัตโนมัติ
+
+**4. UI/UX Considerations:**
+- การจัด layout ควรให้ข้อมูลสำคัญอยู่ใน visual hierarchy ที่ถูกต้อง
+- Alert messages ควรอยู่ใกล้กับข้อมูลที่เกี่ยวข้อง (Payment Status)
+- ลดความซ้ำซ้อนของ visual elements (emoji, icons, colors)
+
+**5. Communication:**
+- อ่านความต้องการให้ละเอียด โดยเฉพาะภาษาไทย
+- ถามกลับถ้าไม่แน่ใจ
+- ทำ commit incremental เพื่อให้ revert ได้ง่าย
+
+---
+
 **สร้างเมื่อ:** 2026-07-17
-**อัพเดทล่าสุด:** 2026-07-17
+**อัพเดทล่าสุด:** 2026-07-18 (เพิ่ม Session 2: Real-time Calculation Coverage & UI Improvements)
 **Status:** ✅ แก้ไขสำเร็จ - Tested and Deployed

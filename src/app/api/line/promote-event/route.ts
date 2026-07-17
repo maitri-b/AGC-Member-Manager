@@ -35,14 +35,18 @@ export async function POST(request: NextRequest) {
       shortDescription = shortDescription.substring(0, 200) + '...';
     }
 
+    // Build full event URL with domain
+    const fullEventUrl = eventUrl.startsWith('http')
+      ? eventUrl
+      : `https://agc-member-manager.vercel.app${eventUrl}`;
+
     // Build promotion message
     const message = `🎉 ${eventName}
 
-${shortDescription}${shortDescription.length > 200 ? '\n\nอ่านเพิ่มเติม 👉' : ''}
+${shortDescription}
 
-เชิญชวนให้เข้าร่วมกิจกรรม
 คลิกเพื่อดูรายละเอียดและลงทะเบียน:
-${eventUrl}`;
+${fullEventUrl}`;
 
     const results: { lineUserId: string; success: boolean; error?: string }[] = [];
 

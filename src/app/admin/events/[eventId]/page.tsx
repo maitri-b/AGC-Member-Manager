@@ -2889,7 +2889,7 @@ export default function EventDetailPage() {
                                         className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                         title="ลบการลงทะเบียน"
                                       >
-                                        ❌ ยกเลิก
+                                        ❌ ลบการลงทะเบียน
                                       </button>
                                     </div>
                                   )}
@@ -2968,7 +2968,7 @@ export default function EventDetailPage() {
                                                 className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                                 title="ลบการลงทะเบียน"
                                               >
-                                                ❌ ยกเลิก
+                                                ❌ ลบการลงทะเบียน
                                               </button>
                                             </div>
                                           </div>
@@ -2995,7 +2995,7 @@ export default function EventDetailPage() {
                                           className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                           title="ลบการลงทะเบียน"
                                         >
-                                          ❌ ยกเลิก
+                                          ❌ ลบการลงทะเบียน
                                         </button>
                                       </div>
                                     )}
@@ -3085,7 +3085,7 @@ export default function EventDetailPage() {
                                                   className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                                   title="ลบการลงทะเบียน"
                                                 >
-                                                  ❌ ยกเลิก
+                                                  ❌ ลบการลงทะเบียน
                                                 </button>
                                               </div>
                                             </>
@@ -3104,7 +3104,7 @@ export default function EventDetailPage() {
                                             className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
                                             title="ลบการลงทะเบียน"
                                           >
-                                            ❌ ยกเลิก
+                                            ❌ ลบการลงทะเบียน
                                           </button>
                                         </div>
                                       )}

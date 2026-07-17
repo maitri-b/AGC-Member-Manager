@@ -195,34 +195,41 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
       const response = await fetch(`/api/payments/${slipId}/approve`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
-      if (!response.ok) throw new Error('Failed to approve payment');
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to approve payment');
+      }
       alert('อนุมัติสลิปเรียบร้อยแล้ว');
       await fetchPaymentSlips();
       onUpdate();
     } catch (error) {
       console.error('Error approving payment:', error);
-      alert('ไม่สามารถอนุมัติสลิปได้');
+      alert(error instanceof Error ? error.message : 'ไม่สามารถอนุมัติสลิปได้');
     }
   };
 
   const handleReject = async (slipId: string) => {
-    const reason = prompt('กรุณาระบุเหตุผลในการปฏิเสธ:');
-    if (!reason) return;
+    const rejectionReason = prompt('กรุณาระบุเหตุผลในการปฏิเสธ:');
+    if (!rejectionReason) return;
 
     try {
       const response = await fetch(`/api/payments/${slipId}/reject`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ rejectionReason }),
       });
-      if (!response.ok) throw new Error('Failed to reject payment');
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to reject payment');
+      }
       alert('ปฏิเสธสลิปเรียบร้อยแล้ว');
       await fetchPaymentSlips();
       onUpdate();
     } catch (error) {
       console.error('Error rejecting payment:', error);
-      alert('ไม่สามารถปฏิเสธสลิปได้');
+      alert(error instanceof Error ? error.message : 'ไม่สามารถปฏิเสธสลิปได้');
     }
   };
 

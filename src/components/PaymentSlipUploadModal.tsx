@@ -17,6 +17,10 @@ interface PaymentSlipUploadModalProps {
   totalAmount?: number;
   depositAmount?: number;
   remainingAmount?: number;
+  // ✅ NEW: Actual amounts already paid (for calculating remaining balance)
+  fullPaymentAmountPaid?: number;
+  depositAmountPaid?: number;
+  remainingAmountPaid?: number;
 }
 
 export default function PaymentSlipUploadModal({
@@ -32,6 +36,9 @@ export default function PaymentSlipUploadModal({
   totalAmount = 0,
   depositAmount = 0,
   remainingAmount = 0,
+  fullPaymentAmountPaid = 0,
+  depositAmountPaid = 0,
+  remainingAmountPaid = 0,
 }: PaymentSlipUploadModalProps) {
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -190,20 +197,28 @@ export default function PaymentSlipUploadModal({
       // Deposit payment mode
       if (!depositPaid) {
         // Deposit not yet paid - can pay deposit or full
+        // Calculate remaining amount needed for deposit (in case partial payment was made)
+        const depositRemaining = Math.max(0, depositAmount - depositAmountPaid);
+        const totalRemaining = Math.max(0, totalAmount - depositAmountPaid - remainingAmountPaid);
+
         options.push(
-          { value: 'deposit', label: 'มัดจำ', suggestedAmount: depositAmount },
-          { value: 'full', label: 'เต็มจำนวน (ชำระทั้งหมด)', suggestedAmount: totalAmount }
+          { value: 'deposit', label: 'มัดจำ', suggestedAmount: depositRemaining },
+          { value: 'full', label: 'เต็มจำนวน (ชำระทั้งหมด)', suggestedAmount: totalRemaining }
         );
       } else {
-        // Deposit already paid - can pay remaining or additional
+        // Deposit already paid - can pay remaining
+        // Calculate remaining amount needed (subtract what's already been paid for remaining)
+        const remainingNeeded = Math.max(0, remainingAmount - remainingAmountPaid);
         options.push(
-          { value: 'remaining', label: 'ยอดคงเหลือ', suggestedAmount: remainingAmount }
+          { value: 'remaining', label: 'ยอดคงเหลือ', suggestedAmount: remainingNeeded }
         );
       }
     } else {
       // Full payment mode
+      // Calculate remaining amount needed (subtract what's already been paid)
+      const fullPaymentRemaining = Math.max(0, totalAmount - fullPaymentAmountPaid);
       options.push(
-        { value: 'full', label: 'เต็มจำนวน', suggestedAmount: totalAmount }
+        { value: 'full', label: 'เต็มจำนวน', suggestedAmount: fullPaymentRemaining }
       );
     }
 

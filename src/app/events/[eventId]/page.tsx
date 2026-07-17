@@ -113,6 +113,10 @@ interface UserRegistration {
   // Payment tracking (for additional payments after amount adjustments)
   paidAmount?: number;
   additionalPayments?: string; // JSON stringified AdditionalPayment[]
+  // ✅ NEW: Actual payment amounts paid (for tracking partial payments)
+  fullPaymentAmountPaid?: number;
+  depositAmountPaid?: number;
+  remainingAmountPaid?: number;
   // Attendee type selections, room allocations, and special charges (New)
   attendeeTypeSelections?: AttendeeTypeSelection[];
   roomAllocations?: RoomAllocation[];
@@ -3010,6 +3014,9 @@ export default function EventDetailPage() {
           totalAmount={userRegistration.totalAmount || 0}
           depositAmount={userRegistration.depositAmount || 0}
           remainingAmount={userRegistration.remainingAmount || 0}
+          fullPaymentAmountPaid={userRegistration.fullPaymentAmountPaid || 0}
+          depositAmountPaid={userRegistration.depositAmountPaid || 0}
+          remainingAmountPaid={userRegistration.remainingAmountPaid || 0}
           onSuccess={() => {
             // Refresh event data after successful upload
             fetchEventDetail();

@@ -905,6 +905,21 @@ export default function EventDetailPage() {
       console.error('Error parsing attendeeTypeSelections:', e);
     }
 
+    // ✅ CRITICAL FIX: If attendeeTypeSelections is empty but event uses attendee type pricing,
+    // initialize with default selection (all attendees as first active type)
+    if ((!attendeeTypeSelections || attendeeTypeSelections.length === 0) && eventData?.event?.useAttendeeTypePricing) {
+      const activeTypes = eventData.event.attendeeTypes?.filter((t: any) => t.isActive) || [];
+      if (activeTypes.length > 0 && attendee.registration.attendeeCount > 0) {
+        // Set all attendees to the first active type
+        const firstType = activeTypes[0];
+        attendeeTypeSelections = [{
+          typeId: firstType.typeId,
+          quantity: attendee.registration.attendeeCount
+        }];
+        console.log('[Edit Registration] Auto-initialized attendeeTypeSelections:', attendeeTypeSelections);
+      }
+    }
+
     // Parse room allocations
     let roomAllocations: Array<{ roomTypeId: string; roomCount: number }> = [];
     try {

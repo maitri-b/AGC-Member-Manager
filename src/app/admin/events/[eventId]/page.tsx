@@ -191,6 +191,10 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
   };
 
   const handleApprove = async (slipId: string) => {
+    if (!confirm('คุณต้องการอนุมัติสลิปนี้ใช่หรือไม่?')) {
+      return;
+    }
+
     try {
       const response = await fetch(`/api/payments/${slipId}/approve`, {
         method: 'PUT',
@@ -324,32 +328,32 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                       </span>
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => {
                             setLightboxImage(slip.slipUrl);
                             setLightboxOpen(true);
                           }}
-                          className="text-blue-600 hover:text-blue-800 text-[10px] sm:text-xs font-medium"
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                           title="ดูสลิป"
                         >
-                          👁️
+                          👁️ ดู
                         </button>
                         {slip.status === 'pending' && (
                           <>
                             <button
                               onClick={() => handleApprove(slip.slipId)}
-                              className="text-green-600 hover:text-green-800 text-[10px] sm:text-xs font-medium"
+                              className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
                               title="อนุมัติ"
                             >
-                              ✓
+                              ✓ อนุมัติ
                             </button>
                             <button
                               onClick={() => handleReject(slip.slipId)}
-                              className="text-red-600 hover:text-red-800 text-[10px] sm:text-xs font-medium"
-                              title="ปฏิเสธ"
+                              className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                              title="ลบ"
                             >
-                              ✗
+                              ✗ ลบ
                             </button>
                           </>
                         )}

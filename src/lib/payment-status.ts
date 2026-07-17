@@ -288,3 +288,65 @@ export function isFullyPaid(
 ): boolean {
   return calculateAdditionalPaymentRequired(totalAmount, paidAmount, additionalPayments) === 0;
 }
+
+/**
+ * Recalculate payment status when totalAmount changes
+ * This handles scenarios where admin adds/removes special charges
+ * @param registration Current registration data
+ * @param newTotalAmount New total amount after changes
+ * @param paymentMode Event payment mode ('full' or 'deposit')
+ * @returns Object with updated payment_status and status fields
+ */
+export function recalculatePaymentStatus(
+  registration: EventRegistration,
+  newTotalAmount: number,
+  paymentMode: string = 'full'
+): { payment_status: string; status?: string } {
+  // Calculate actual total paid from tracked amounts
+  const depositAmountPaid = (registration as any).depositAmountPaid || 0;
+  const remainingAmountPaid = (registration as any).remainingAmountPaid || 0;
+  const fullPaymentAmountPaid = (registration as any).fullPaymentAmountPaid || 0;
+  const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+
+  // Fallback to legacy paidAmount if no tracked amounts
+  const currentPaidAmount = actualTotalPaid || registration.paidAmount || 0;
+  const additionalPayments = parseAdditionalPayments(registration.additionalPayments);
+  const fullyPaid = isFullyPaid(newTotalAmount, currentPaidAmount, additionalPayments);
+
+  const result: { payment_status: string; status?: string } = {
+    payment_status: registration.paymentStatus || 'รอชำระเงิน'
+  };
+
+  if (!fullyPaid && currentPaidAmount > 0) {
+    // Was fully paid before, but not anymore due to totalAmount increase
+    // Update paymentStatus to indicate additional payment needed
+    if (paymentMode === 'deposit') {
+      // Deposit mode: check what's been paid
+      if (registration.depositPaid && !(registration as any).remainingPaid) {
+        result.payment_status = 'รอชำระยอดที่เหลือ';
+      } else if (registration.depositPaid && (registration as any).remainingPaid) {
+        result.payment_status = 'รอชำระเพิ่มเติม'; // Need additional payment
+      } else {
+        result.payment_status = 'รอชำระมัดจำ';
+      }
+    } else {
+      // Full payment mode
+      if (registration.fullPaymentPaid) {
+        result.payment_status = 'รอชำระเพิ่มเติม'; // Need additional payment
+      } else {
+        result.payment_status = 'รอชำระเงิน';
+      }
+    }
+
+    // Change status from "ยืนยันแล้ว" back to "รอดำเนินการ" if payment is no longer complete
+    if (registration.status === 'ยืนยันแล้ว') {
+      result.status = 'รอดำเนินการ';
+    }
+  } else if (fullyPaid) {
+    // Still fully paid after recalculation
+    result.payment_status = 'ชำระเต็มจำนวนแล้ว';
+    result.status = 'ยืนยันแล้ว';
+  }
+
+  return result;
+}

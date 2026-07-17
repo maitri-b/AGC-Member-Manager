@@ -6,6 +6,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/event-sheets';
 import { SpecialCharge } from '@/types/event';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
+import { recalculatePaymentStatus } from '@/lib/payment-status';
 
 // POST - Add special charge to a registration
 export async function POST(
@@ -120,6 +121,22 @@ export async function POST(
       const newRemainingAmount = newTotalAmount - registration.depositAmount;
       updateData.remaining_amount = newRemainingAmount;
     }
+
+    // ✅ CRITICAL: Recalculate payment status when totalAmount changes
+    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full');
+    updateData.payment_status = paymentStatusUpdate.payment_status;
+    if (paymentStatusUpdate.status) {
+      updateData.status = paymentStatusUpdate.status;
+    }
+
+    console.log('[Special Charges] Payment status recalculated:', {
+      oldTotal: registration.totalAmount,
+      newTotal: newTotalAmount,
+      oldPaymentStatus: registration.paymentStatus,
+      newPaymentStatus: updateData.payment_status,
+      oldStatus: registration.status,
+      newStatus: updateData.status,
+    });
 
     // Update admin notes
     const currentNotes = registration.adminNotes || '';
@@ -273,6 +290,22 @@ export async function DELETE(
       const newRemainingAmount = newTotalAmount - registration.depositAmount;
       updateData.remaining_amount = newRemainingAmount;
     }
+
+    // ✅ CRITICAL: Recalculate payment status when totalAmount changes
+    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full');
+    updateData.payment_status = paymentStatusUpdate.payment_status;
+    if (paymentStatusUpdate.status) {
+      updateData.status = paymentStatusUpdate.status;
+    }
+
+    console.log('[Special Charges] Payment status recalculated after removal:', {
+      oldTotal: registration.totalAmount,
+      newTotal: newTotalAmount,
+      oldPaymentStatus: registration.paymentStatus,
+      newPaymentStatus: updateData.payment_status,
+      oldStatus: registration.status,
+      newStatus: updateData.status,
+    });
 
     // Update admin notes
     const currentNotes = registration.adminNotes || '';

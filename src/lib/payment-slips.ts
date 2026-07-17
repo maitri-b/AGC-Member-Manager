@@ -8,7 +8,7 @@ import {
   generateSlipId,
   calculatePaymentSummary,
 } from '@/types/payment';
-import { isFullyPaid, parseAdditionalPayments } from './payment-status';
+import { isFullyPaid, parseAdditionalPayments, recalculatePaymentStatus } from './payment-status';
 
 /**
  * Get all payment slips for a specific registration
@@ -175,6 +175,11 @@ export async function approvePaymentSlip(
 
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
+    // Get event details for payment mode and deadline calculation
+    const { getEventById } = await import('./event-sheets');
+    const event = await getEventById(slip.eventId);
+    const paymentMode = event?.paymentMode || 'full';
+
     // Update ONLY payment_status (not status - that's for registration confirmation)
     if (slip.paymentType === 'deposit') {
       updateData.depositPaid = true;
@@ -185,11 +190,7 @@ export async function approvePaymentSlip(
       updateData.paymentStatus = 'ชำระมัดจำแล้ว';
 
       // Calculate remaining deadline (if event uses deposit mode)
-      // Import getEventById from event-sheets.ts
-      const { getEventById } = await import('./event-sheets');
-      const event = await getEventById(slip.eventId);
-
-      if (event && event.paymentMode === 'deposit') {
+      if (event && paymentMode === 'deposit') {
         // Calculate remaining deadline based on event configuration
         if (event.remainingDeadlineType === 'fixed' && event.remainingDeadlineFixed) {
           updateData.remainingDeadline = event.remainingDeadlineFixed;
@@ -289,25 +290,35 @@ export async function approvePaymentSlip(
     }
 
     // ✅ AUTO-UPDATE REGISTRATION STATUS based on payment completion
-    // Calculate if registration is fully paid after this approval
+    // Build updated registration data for recalculation
+    const updatedRegistrationData = {
+      ...registrationData,
+      ...updateData,
+    };
+
+    // ✅ CRITICAL: Recalculate payment status based on CURRENT totalAmount
+    // This handles scenarios where admin added special charges after user paid
     const totalAmount = registrationData.totalAmount || 0;
-    const currentPaidAmount = updateData.paidAmount !== undefined ? updateData.paidAmount : (registrationData.paidAmount || 0);
+    const paymentStatusUpdate = recalculatePaymentStatus(
+      updatedRegistrationData as any,
+      totalAmount,
+      paymentMode
+    );
 
-    // Parse additional payments to check if fully paid
-    const additionalPaymentsJson = slip.paymentType === 'additional'
-      ? updateData.additionalPayments
-      : registrationData.additionalPayments;
-    const additionalPayments = parseAdditionalPayments(additionalPaymentsJson);
-
-    // Check if fully paid using the utility function
-    const fullyPaid = isFullyPaid(totalAmount, currentPaidAmount, additionalPayments);
-
-    // Update status field based on payment completion
-    if (fullyPaid) {
-      updateData.status = 'ยืนยันแล้ว'; // Confirmed status when fully paid
-    } else {
-      updateData.status = 'รอดำเนินการ'; // Pending status when not fully paid
+    // Apply recalculated payment status
+    updateData.paymentStatus = paymentStatusUpdate.payment_status;
+    if (paymentStatusUpdate.status) {
+      updateData.status = paymentStatusUpdate.status;
     }
+
+    console.log('[Approve Slip] Payment status recalculated:', {
+      totalAmount,
+      paidAmount: updateData.paidAmount,
+      oldPaymentStatus: registrationData.paymentStatus,
+      newPaymentStatus: updateData.paymentStatus,
+      oldStatus: registrationData.status,
+      newStatus: updateData.status,
+    });
 
     await registrationDoc.ref.update(updateData);
 
@@ -315,7 +326,6 @@ export async function approvePaymentSlip(
       paymentType: slip.paymentType,
       paymentStatus: updateData.paymentStatus,
       status: updateData.status,
-      fullyPaid,
     });
   }
 }

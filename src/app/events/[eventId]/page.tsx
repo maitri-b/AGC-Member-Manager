@@ -1219,17 +1219,6 @@ export default function EventDetailPage() {
                     </div>
                   )}
 
-                  {/* Payment Summary Card - Total Amount */}
-                  {userRegistration.totalAmount && userRegistration.totalAmount > 0 && (
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4">
-                      <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-3xl font-bold">{userRegistration.totalAmount.toLocaleString()} บาท</span>
-                        <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Attendee Names Section */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -1657,7 +1646,16 @@ export default function EventDetailPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                       <h3 className="font-semibold text-blue-900 mb-4">รายละเอียดการชำระเงิน</h3>
 
-                      {/* 1. Payment Status - Large and Clear */}
+                      {/* 1. Total Amount Summary */}
+                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
+                        <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-3xl font-bold">{userRegistration.totalAmount.toLocaleString()} บาท</span>
+                          <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
+                        </div>
+                      </div>
+
+                      {/* 2. Payment Status - Large and Clear */}
                       {userRegistration.paymentStatus && (
                         <div className="bg-white rounded-lg p-4 mb-4 border-2 border-gray-200">
                           <div className="flex items-center justify-between mb-3">
@@ -1676,7 +1674,88 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* 2.5. Payment Slips Table - Show all payment slips */}
+                      {/* 2.5. Additional Payment Required Notice - Moved here */}
+                      {(() => {
+                        // Calculate if additional payment is required
+                        const totalAmount = userRegistration.totalAmount || 0;
+
+                        // Calculate actual total paid from tracked amounts
+                        const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
+                        const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
+                        const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
+                        const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+
+                        const additionalPayments = userRegistration.additionalPayments
+                          ? (() => {
+                              try {
+                                const parsed = JSON.parse(userRegistration.additionalPayments);
+                                return Array.isArray(parsed) ? parsed : [];
+                              } catch {
+                                return [];
+                              }
+                            })()
+                          : [];
+
+                        // Sum approved additional payments
+                        const approvedAdditional = additionalPayments
+                          .filter((p: any) => p.status === 'อนุมัติแล้ว')
+                          .reduce((sum: number, p: any) => sum + p.amount, 0);
+
+                        const additionalRequired = Math.max(0, totalAmount - (paidAmount + approvedAdditional));
+
+                        // Check if there's a pending additional payment
+                        const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
+
+                        // Check if this is truly an "additional" payment (not first payment)
+                        // Only show additional payment notice if user has already paid something
+                        const isAdditionalPayment = paidAmount > 0 || approvedAdditional > 0;
+
+                        // Only show this section for actual additional payments, not initial payments
+                        if (!isAdditionalPayment || (additionalRequired === 0 && !hasPendingAdditional)) return null;
+
+                        return (
+                          <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-4">
+                            <div className="flex items-start gap-3">
+                              <svg className="w-6 h-6 text-orange-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              <div className="flex-1">
+                                {hasPendingAdditional ? (
+                                  <>
+                                    <h4 className="font-semibold text-orange-900 mb-1">🔍 กำลังตรวจสอบสลิปเงินเพิ่มเติม</h4>
+                                    <p className="text-sm text-orange-800">
+                                      ระบบได้รับสลิปการชำระเงินเพิ่มเติมของคุณแล้ว กรุณารอการตรวจสอบจากทีมงาน
+                                    </p>
+                                  </>
+                                ) : additionalRequired > 0 ? (
+                                  <>
+                                    <h4 className="font-semibold text-orange-900 mb-2">ต้องชำระเงินเพิ่มเติม</h4>
+                                    <div className="space-y-1 text-sm text-orange-800">
+                                      <div className="flex justify-between">
+                                        <span>ยอดรวมทั้งหมด:</span>
+                                        <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>ยอดชำระแล้ว:</span>
+                                        <span className="font-semibold">฿{(paidAmount + approvedAdditional).toLocaleString()}</span>
+                                      </div>
+                                      <div className="flex justify-between border-t border-orange-300 pt-1 mt-1">
+                                        <span className="font-bold">ยอดชำระเพิ่ม:</span>
+                                        <span className="font-bold text-lg text-orange-600">฿{additionalRequired.toLocaleString()}</span>
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-orange-700 mt-2">
+                                      กรุณาชำระเงินเพิ่มเติมและส่งสลิปผ่านปุ่มด้านล่าง
+                                    </p>
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* 2.6. Payment Slips Table - Show all payment slips */}
                       {paymentSlips.length > 0 && (
                         <div className="bg-white rounded-lg p-3 sm:p-4 mb-4 border border-gray-200">
                           <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -1762,87 +1841,6 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
-
-                      {/* 2.6. Additional Payment Required Notice */}
-                      {(() => {
-                        // Calculate if additional payment is required
-                        const totalAmount = userRegistration.totalAmount || 0;
-
-                        // Calculate actual total paid from tracked amounts
-                        const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
-                        const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
-                        const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                        const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
-
-                        const additionalPayments = userRegistration.additionalPayments
-                          ? (() => {
-                              try {
-                                const parsed = JSON.parse(userRegistration.additionalPayments);
-                                return Array.isArray(parsed) ? parsed : [];
-                              } catch {
-                                return [];
-                              }
-                            })()
-                          : [];
-
-                        // Sum approved additional payments
-                        const approvedAdditional = additionalPayments
-                          .filter((p: any) => p.status === 'อนุมัติแล้ว')
-                          .reduce((sum: number, p: any) => sum + p.amount, 0);
-
-                        const additionalRequired = Math.max(0, totalAmount - (paidAmount + approvedAdditional));
-
-                        // Check if there's a pending additional payment
-                        const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
-
-                        // Check if this is truly an "additional" payment (not first payment)
-                        // Only show additional payment notice if user has already paid something
-                        const isAdditionalPayment = paidAmount > 0 || approvedAdditional > 0;
-
-                        // Only show this section for actual additional payments, not initial payments
-                        if (!isAdditionalPayment || (additionalRequired === 0 && !hasPendingAdditional)) return null;
-
-                        return (
-                          <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-4">
-                            <div className="flex items-start gap-3">
-                              <svg className="w-6 h-6 text-orange-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                              </svg>
-                              <div className="flex-1">
-                                {hasPendingAdditional ? (
-                                  <>
-                                    <h4 className="font-semibold text-orange-900 mb-1">🔍 กำลังตรวจสอบสลิปเงินเพิ่มเติม</h4>
-                                    <p className="text-sm text-orange-800">
-                                      ระบบได้รับสลิปการชำระเงินเพิ่มเติมของคุณแล้ว กรุณารอการตรวจสอบจากทีมงาน
-                                    </p>
-                                  </>
-                                ) : additionalRequired > 0 ? (
-                                  <>
-                                    <h4 className="font-semibold text-orange-900 mb-2">ต้องชำระเงินเพิ่มเติม</h4>
-                                    <div className="space-y-1 text-sm text-orange-800">
-                                      <div className="flex justify-between">
-                                        <span>ยอดรวมทั้งหมด:</span>
-                                        <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span>ยอดชำระแล้ว:</span>
-                                        <span className="font-semibold">฿{(paidAmount + approvedAdditional).toLocaleString()}</span>
-                                      </div>
-                                      <div className="flex justify-between border-t border-orange-300 pt-1 mt-1">
-                                        <span className="font-bold">ยอดชำระเพิ่ม:</span>
-                                        <span className="font-bold text-lg text-orange-600">฿{additionalRequired.toLocaleString()}</span>
-                                      </div>
-                                    </div>
-                                    <p className="text-xs text-orange-700 mt-2">
-                                      กรุณาชำระเงินเพิ่มเติมและส่งสลิปผ่านปุ่มด้านล่าง
-                                    </p>
-                                  </>
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
 
                       {/* 3. Payment Submission Section - Show Upload Button/Instructions */}
                       {(() => {

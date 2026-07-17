@@ -304,9 +304,43 @@ export async function approvePaymentSlip(
       .filter(s => s.status === 'approved' || s.slipId === slipId) // Include current slip being approved
       .reduce((sum, s) => sum + (s.amount || 0), 0);
 
-    // ✅ CRITICAL: Recalculate payment status based on CURRENT totalAmount
-    // This handles scenarios where admin added special charges after user paid
-    const totalAmount = registrationData.totalAmount || 0;
+    // ✅ CRITICAL: Recalculate totalAmount from components to include special charges and discounts
+    // This handles scenarios where admin added/removed charges or discounts after registration
+    const eventFee = registrationData.eventFee || 0;
+    const roomFee = registrationData.roomFee || 0;
+
+    let specialChargesTotal = 0;
+    try {
+      if (registrationData.specialCharges) {
+        const specialCharges = JSON.parse(registrationData.specialCharges);
+        specialChargesTotal = specialCharges.reduce((sum: number, charge: { amount: number }) => sum + charge.amount, 0);
+      }
+    } catch (e) {
+      console.error('Error parsing special charges:', e);
+    }
+
+    let discountsTotal = 0;
+    try {
+      if (registrationData.discounts) {
+        const discounts = JSON.parse(registrationData.discounts);
+        discountsTotal = discounts.reduce((sum: number, d: { calculatedAmount: number }) => sum + d.calculatedAmount, 0);
+      }
+    } catch (e) {
+      console.error('Error parsing discounts:', e);
+    }
+
+    const totalAmount = Math.max(0, eventFee + roomFee + specialChargesTotal - discountsTotal);
+
+    console.log('[Approve Slip] Total calculation:', {
+      registrationId: slip.registrationId,
+      eventFee,
+      roomFee,
+      specialChargesTotal,
+      discountsTotal,
+      totalAmount,
+      storedTotalAmount: registrationData.totalAmount,
+    });
+
     const paymentStatusUpdate = recalculatePaymentStatus(
       updatedRegistrationData as any,
       totalAmount,

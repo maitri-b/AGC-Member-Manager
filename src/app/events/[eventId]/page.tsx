@@ -1108,6 +1108,27 @@ export default function EventDetailPage() {
                             </div>
                           )}
 
+                          {/* Discounts breakdown */}
+                          {userRegistration.discounts && userRegistration.discounts.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-green-300">
+                              <p className="text-xs font-semibold text-orange-700 mb-1">ส่วนลด:</p>
+                              {userRegistration.discounts.map((discount) => (
+                                <div key={discount.discountId} className="flex justify-between text-orange-700">
+                                  <span>
+                                    {discount.description}
+                                    {discount.discountType === 'percentage' && ` (${discount.value}%)`}
+                                    {discount.discountType === 'free' && ' (ฟรี)'}
+                                  </span>
+                                  <span>-{discount.calculatedAmount.toLocaleString()} บาท</span>
+                                </div>
+                              ))}
+                              <div className="flex justify-between font-medium pt-1 border-t border-orange-300 text-orange-800">
+                                <span>รวมส่วนลด:</span>
+                                <span>-{userRegistration.discounts.reduce((sum, d) => sum + d.calculatedAmount, 0).toLocaleString()} บาท</span>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Grand total */}
                           {userRegistration.totalAmount !== undefined && userRegistration.totalAmount > 0 && (
                             <div className="flex justify-between font-bold text-sm pt-2 border-t-2 border-green-400 text-green-900">

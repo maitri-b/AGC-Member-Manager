@@ -7,7 +7,7 @@ import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } fr
 import { Discount } from '@/types/event';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { recalculatePaymentStatus } from '@/lib/payment-status';
-import { hasPendingPaymentSlips } from '@/lib/payment-slips';
+import { getPendingSlipsInfo } from '@/lib/payment-slips';
 
 // POST - Add discount to a registration
 export async function POST(
@@ -90,11 +90,11 @@ export async function POST(
     }
 
     // ✅ VALIDATION: Check for pending payment slips
-    const hasPendingSlips = await hasPendingPaymentSlips(registrationId);
-    if (hasPendingSlips) {
+    const pendingInfo = await getPendingSlipsInfo(registrationId);
+    if (pendingInfo.hasPending) {
       return NextResponse.json({
         error: 'ไม่สามารถเพิ่มส่วนลดได้',
-        details: 'มีสลิปการชำระเงินที่รออนุมัติ กรุณาอนุมัติหรือปฏิเสธสลิปก่อนเพิ่มส่วนลด'
+        details: `มีสลิป ${pendingInfo.count} รายการที่รออนุมัติ กรุณาอนุมัติหรือปฏิเสธสลิปก่อนเพิ่มส่วนลด`
       }, { status: 400 });
     }
 
@@ -189,8 +189,15 @@ export async function POST(
       updateData.remaining_amount = newRemainingAmount;
     }
 
+    // ✅ CRITICAL: Get approved payment slips total for accurate payment status calculation
+    const { getPaymentSlipsByRegistration } = await import('@/lib/payment-slips');
+    const slips = await getPaymentSlipsByRegistration(registration.registrationId);
+    const approvedSlipsTotal = slips
+      .filter(slip => slip.status === 'approved')
+      .reduce((sum, slip) => sum + (slip.amount || 0), 0);
+
     // ✅ CRITICAL: Recalculate payment status when totalAmount changes
-    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full');
+    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full', approvedSlipsTotal);
     updateData.payment_status = paymentStatusUpdate.payment_status;
     if (paymentStatusUpdate.status) {
       updateData.status = paymentStatusUpdate.status;
@@ -322,11 +329,11 @@ export async function DELETE(
     }
 
     // ✅ VALIDATION: Check for pending payment slips
-    const hasPendingSlips = await hasPendingPaymentSlips(registrationId);
-    if (hasPendingSlips) {
+    const pendingInfo = await getPendingSlipsInfo(registrationId);
+    if (pendingInfo.hasPending) {
       return NextResponse.json({
         error: 'ไม่สามารถลบส่วนลดได้',
-        details: 'มีสลิปการชำระเงินที่รออนุมัติ กรุณาอนุมัติหรือปฏิเสธสลิปก่อนลบส่วนลด'
+        details: `มีสลิป ${pendingInfo.count} รายการที่รออนุมัติ กรุณาอนุมัติหรือปฏิเสธสลิปก่อนลบส่วนลด`
       }, { status: 400 });
     }
 
@@ -392,7 +399,7 @@ export async function DELETE(
     }
 
     // ✅ CRITICAL: Recalculate payment status when totalAmount changes
-    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full');
+    const paymentStatusUpdate = await recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full');
     updateData.payment_status = paymentStatusUpdate.payment_status;
     if (paymentStatusUpdate.status) {
       updateData.status = paymentStatusUpdate.status;

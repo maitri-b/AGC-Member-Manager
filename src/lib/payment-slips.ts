@@ -296,13 +296,22 @@ export async function approvePaymentSlip(
       ...updateData,
     };
 
+    // ✅ CRITICAL: Get approved payment slips total for accurate payment status calculation
+    // NOTE: We need to calculate BEFORE updating the current slip to approved
+    // to avoid counting it twice
+    const allSlips = await getPaymentSlipsByRegistration(slip.registrationId);
+    const approvedSlipsTotal = allSlips
+      .filter(s => s.status === 'approved' || s.slipId === slipId) // Include current slip being approved
+      .reduce((sum, s) => sum + (s.amount || 0), 0);
+
     // ✅ CRITICAL: Recalculate payment status based on CURRENT totalAmount
     // This handles scenarios where admin added special charges after user paid
     const totalAmount = registrationData.totalAmount || 0;
     const paymentStatusUpdate = recalculatePaymentStatus(
       updatedRegistrationData as any,
       totalAmount,
-      paymentMode
+      paymentMode,
+      approvedSlipsTotal
     );
 
     // Apply recalculated payment status
@@ -712,4 +721,20 @@ export async function hasPendingPaymentSlips(
 ): Promise<boolean> {
   const slips = await getPaymentSlipsByRegistration(registrationId);
   return slips.some(slip => slip.status === 'pending');
+}
+
+/**
+ * Get information about pending payment slips for a registration
+ * @param registrationId Registration ID to check
+ * @returns Object with hasPending (boolean) and count (number) of pending slips
+ */
+export async function getPendingSlipsInfo(
+  registrationId: string
+): Promise<{ hasPending: boolean; count: number }> {
+  const slips = await getPaymentSlipsByRegistration(registrationId);
+  const pendingSlips = slips.filter(slip => slip.status === 'pending');
+  return {
+    hasPending: pendingSlips.length > 0,
+    count: pendingSlips.length
+  };
 }

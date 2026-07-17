@@ -300,18 +300,35 @@ export function isFullyPaid(
  * @param registration Current registration data
  * @param newTotalAmount New total amount after changes
  * @param paymentMode Event payment mode ('full' or 'deposit')
+ * @param approvedSlipsTotal Total amount from approved payment slips (optional, will be fetched if not provided)
  * @returns Object with updated payment_status and status fields
  */
 export function recalculatePaymentStatus(
   registration: EventRegistration,
   newTotalAmount: number,
-  paymentMode: string = 'full'
+  paymentMode: string = 'full',
+  approvedSlipsTotal: number = 0
 ): { payment_status: string; status?: string } {
   // Calculate actual total paid from tracked amounts
   const depositAmountPaid = (registration as any).depositAmountPaid || 0;
   const remainingAmountPaid = (registration as any).remainingAmountPaid || 0;
   const fullPaymentAmountPaid = (registration as any).fullPaymentAmountPaid || 0;
-  const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+  let actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+
+  // ✅ CRITICAL: Include payment slips from Payment Slips collection
+  if (approvedSlipsTotal > 0) {
+    console.log(`[recalculatePaymentStatus] Registration ${registration.registrationId}:`, {
+      fullPaymentAmountPaid,
+      depositAmountPaid,
+      remainingAmountPaid,
+      approvedSlipsTotal,
+      totalBeforeSlips: actualTotalPaid,
+      totalAfterSlips: actualTotalPaid + approvedSlipsTotal,
+      newTotalAmount,
+    });
+
+    actualTotalPaid += approvedSlipsTotal;
+  }
 
   // Fallback to legacy paidAmount if no tracked amounts
   const currentPaidAmount = actualTotalPaid || registration.paidAmount || 0;

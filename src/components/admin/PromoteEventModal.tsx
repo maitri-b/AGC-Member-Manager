@@ -9,6 +9,12 @@ interface PromoteEventModalProps {
   eventId: string;
   eventName: string;
   eventDescription?: string;
+  registeredMembers?: Array<{
+    lineUserId: string;
+    contactName: string;
+    companyName: string;
+    lineDisplayName?: string;
+  }>;
 }
 
 interface PromotionHistory {
@@ -32,6 +38,7 @@ export default function PromoteEventModal({
   eventId,
   eventName,
   eventDescription = '',
+  registeredMembers = [],
 }: PromoteEventModalProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
@@ -44,6 +51,10 @@ export default function PromoteEventModal({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [sentLineUserIds, setSentLineUserIds] = useState<Set<string>>(new Set());
 
+  // NEW: Message mode - 'promote' or 'custom'
+  const [messageMode, setMessageMode] = useState<'promote' | 'custom'>('promote');
+  const [customMessage, setCustomMessage] = useState('');
+
   useEffect(() => {
     if (isOpen) {
       fetchMembers();
@@ -52,6 +63,8 @@ export default function PromoteEventModal({
       setSearchTerm('');
       setMessage(null);
       setActiveTab('select');
+      setMessageMode('promote'); // Reset to promote mode
+      setCustomMessage(''); // Clear custom message
     }
   }, [isOpen, eventId]);
 
@@ -105,6 +118,14 @@ export default function PromoteEventModal({
   const filteredMembers = useMemo(() => {
     let filtered = [...members];
 
+    // Filter by message mode
+    if (messageMode === 'custom') {
+      // Custom mode: Only show registered members
+      const registeredLineUserIds = new Set(registeredMembers.map(m => m.lineUserId));
+      filtered = filtered.filter(member => registeredLineUserIds.has(member.lineUserId || ''));
+    }
+    // Promote mode: Show all club members (default behavior)
+
     // Search filter
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
@@ -131,7 +152,7 @@ export default function PromoteEventModal({
     });
 
     return filtered;
-  }, [members, searchTerm]);
+  }, [members, searchTerm, messageMode, registeredMembers]);
 
   const handleToggleSelect = (lineUserId: string) => {
     setSelectedMemberIds((prev) => {
@@ -159,26 +180,49 @@ export default function PromoteEventModal({
       return;
     }
 
+    // Validate custom message
+    if (messageMode === 'custom' && !customMessage.trim()) {
+      setMessage({ type: 'error', text: 'กรุณากรอกข้อความ' });
+      return;
+    }
+
     try {
       setSending(true);
       setMessage(null);
 
-      const eventUrl = `/events/`;
       const memberIdsArray = Array.from(selectedMemberIds);
 
-      const response = await fetch('/api/line/promote-event', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          memberIds: memberIdsArray,
-          eventId,
-          eventName,
-          eventDescription,
-          eventUrl,
-        }),
-      });
+      let response;
+
+      if (messageMode === 'promote') {
+        // Promote mode: Use existing promote-event API
+        const eventUrl = `/events/`;
+        response = await fetch('/api/line/promote-event', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            memberIds: memberIdsArray,
+            eventId,
+            eventName,
+            eventDescription,
+            eventUrl,
+          }),
+        });
+      } else {
+        // Custom mode: Use send-notification API
+        response = await fetch('/api/line/send-notification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            lineUserIds: memberIdsArray,
+            message: customMessage,
+          }),
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -190,16 +234,19 @@ export default function PromoteEventModal({
 
       // Reset selection after success
       setSelectedMemberIds(new Set());
+      setCustomMessage('');
 
-      // Refresh history
-      await fetchHistory();
+      // Refresh history (only for promote mode as custom doesn't log)
+      if (messageMode === 'promote') {
+        await fetchHistory();
+      }
 
       // Close modal after 2 seconds
       setTimeout(() => {
         onClose();
       }, 2000);
     } catch (error) {
-      console.error('Error sending promotion:', error);
+      console.error('Error sending message:', error);
       setMessage({
         type: 'error',
         text: error instanceof Error ? error.message : 'ไม่สามารถส่งข้อความได้',
@@ -242,7 +289,7 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">ส่งข้อความโปรโมทกิจกรรม</h2>
+              <h2 className="text-xl font-bold text-gray-900">ส่งข้อความ LINE</h2>
               <p className="text-sm text-gray-600 mt-1">{eventName}</p>
             </div>
             <button
@@ -254,6 +301,40 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
               </svg>
             </button>
           </div>
+
+          {/* Message Mode Selection */}
+          {activeTab === 'select' && (
+            <div className="mb-4 bg-gray-50 rounded-lg p-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">ประเภทข้อความ:</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMessageMode('promote')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    messageMode === 'promote'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  📢 โปรโมทกิจกรรม
+                </button>
+                <button
+                  onClick={() => setMessageMode('custom')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    messageMode === 'custom'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  ✉️ ข้อความกำหนดเอง
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {messageMode === 'promote'
+                  ? '• ส่งข้อความโปรโมทกิจกรรม (เนื้อหาคงที่) ให้สมาชิกทั้งชมรม'
+                  : '• ส่งข้อความกำหนดเอง (แก้ไขได้) ให้สมาชิกที่ลงทะเบียน'}
+              </p>
+            </div>
+          )}
 
           {/* Tabs */}
           <div className="flex gap-2">
@@ -340,10 +421,39 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
           ) : (
             /* Select Members Tab */
             <>
+              {/* Custom Message Input (only in custom mode) */}
+              {messageMode === 'custom' && (
+                <div className="bg-white border border-gray-300 rounded-lg p-4">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    เนื้อหาข้อความ: <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    placeholder="พิมพ์ข้อความที่ต้องการส่งให้สมาชิกที่ลงทะเบียน..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px] font-sans"
+                    maxLength={1000}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {customMessage.length}/1000 ตัวอักษร
+                  </p>
+                </div>
+              )}
+
               {/* Message Preview */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-2">ตัวอย่างข้อความที่จะส่ง:</h3>
-                <pre className="text-sm text-blue-800 whitespace-pre-wrap font-sans">{messagePreview}</pre>
+              <div className={`border rounded-lg p-4 ${
+                messageMode === 'promote' ? 'bg-purple-50 border-purple-200' : 'bg-blue-50 border-blue-200'
+              }`}>
+                <h3 className={`text-sm font-semibold mb-2 ${
+                  messageMode === 'promote' ? 'text-purple-900' : 'text-blue-900'
+                }`}>
+                  ตัวอย่างข้อความที่จะส่ง:
+                </h3>
+                <pre className={`text-sm whitespace-pre-wrap font-sans ${
+                  messageMode === 'promote' ? 'text-purple-800' : 'text-blue-800'
+                }`}>
+                  {messageMode === 'promote' ? messagePreview : (customMessage || '(ยังไม่ได้กรอกข้อความ)')}
+                </pre>
               </div>
 
           {/* Success/Error Message */}
@@ -381,12 +491,19 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
                     onChange={handleSelectAll}
                     className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">เลือกทั้งหมด</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {messageMode === 'custom' ? 'ส่งทุกคน' : 'เลือกทั้งหมด'}
+                  </span>
                 </label>
                 <span className="text-sm text-gray-600">
                   เลือกแล้ว {selectedMemberIds.size} / {filteredMembers.length} คน
                 </span>
               </div>
+              {messageMode === 'custom' && (
+                <span className="text-xs text-blue-600 font-medium">
+                  📋 ผู้ลงทะเบียน {filteredMembers.length} คน
+                </span>
+              )}
             </div>
 
             {loading ? (

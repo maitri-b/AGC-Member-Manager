@@ -1424,6 +1424,69 @@ export default function EventDetailPage() {
     });
   };
 
+  const handleCopyQuickReport = () => {
+    if (!eventData) return;
+
+    // Calculate payment totals
+    let totalAmount = 0;
+    let totalPending = 0;
+    let totalApproved = 0;
+
+    const isFullPaymentMode = eventData.event.paymentMode === 'full';
+
+    eventData.attendees.forEach(attendee => {
+      const reg = attendee.registration;
+      const amount = reg.totalAmount || 0;
+      const depositAmount = reg.depositAmount || 0;
+      const remainingAmount = reg.remainingAmount || 0;
+
+      totalAmount += amount;
+
+      if (isFullPaymentMode) {
+        const isPaid = (reg as any).fullPaymentPaid === true;
+        const hasSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
+
+        if (isPaid) {
+          totalApproved += amount;
+        } else if (hasSlip) {
+          totalPending += amount;
+        }
+      } else {
+        // Deposit payment
+        if (reg.depositPaid === true) {
+          totalApproved += depositAmount;
+        } else if (reg.depositSlipUrl && reg.depositSlipUrl.trim() !== '') {
+          totalPending += depositAmount;
+        }
+
+        // Remaining payment
+        if ((reg as any).remainingPaid === true) {
+          totalApproved += remainingAmount;
+        } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
+          totalPending += remainingAmount;
+        }
+      }
+    });
+
+    const report = `อัพเดทยอดสมาชิกลงทะเบียน
+กิจกรรม ${eventData.event.eventName}
+จำนวนเอเจ้นท์ที่ลงทะเบียน ${eventData.summary.agentRegistrations} เอเจ้นท์
+จำนวนผู้เข้าร่วม ${eventData.summary.totalAttendees} คน
+
+ยอดเงินที่เรียกเก็บรวม ${totalAmount.toLocaleString()} บาท
+ยอดเงินที่รอตรวจสอบ ${totalPending.toLocaleString()} บาท
+ยอดเงินที่ตรวจสอบแล้ว ${totalApproved.toLocaleString()} บาท`;
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(report).then(() => {
+      setActionMessage({ type: 'success', text: 'คัดลอกรายงานสำเร็จ!' });
+      setTimeout(() => setActionMessage(null), 2000);
+    }).catch(() => {
+      setActionMessage({ type: 'error', text: 'ไม่สามารถคัดลอกได้' });
+      setTimeout(() => setActionMessage(null), 2000);
+    });
+  };
+
   const handleAddSpecialCharge = async () => {
     if (!specialChargeFormData.description || specialChargeFormData.amount <= 0) {
       setActionMessage({ type: 'error', text: 'กรุณากรอกรายละเอียดและจำนวนเงิน' });
@@ -1643,17 +1706,30 @@ export default function EventDetailPage() {
                 )}
               </div>
             </div>
-            {/* Action Button */}
-            <div>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              {/* Copy Quick Report Button */}
+              <button
+                onClick={handleCopyQuickReport}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                title="คัดลอกรายงานด่วน"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span className="hidden sm:inline">Copy รายงาน</span>
+              </button>
+
+              {/* Send LINE Message Button */}
               <button
                 onClick={() => setShowPromoteModal(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
-                title="ส่งข้อความโปรโมทกิจกรรมนี้"
+                title="ส่งข้อความ LINE ถึงสมาชิก"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-                <span className="hidden sm:inline">โปรโมทกิจกรรม</span>
+                <span className="hidden sm:inline">ส่งข้อความ LINE</span>
               </button>
             </div>
           </div>
@@ -3516,6 +3592,16 @@ export default function EventDetailPage() {
         eventId={eventId as string}
         eventName={eventData?.event?.eventName || ''}
         eventDescription={eventData?.event?.description || ''}
+        registeredMembers={
+          eventData?.attendees
+            .filter(a => a.registration.lineUserId && a.registration.status !== 'cancelled')
+            .map(a => ({
+              lineUserId: a.registration.lineUserId,
+              contactName: a.registration.contactName,
+              companyName: a.registration.companyName,
+              lineDisplayName: a.lineProfile?.lineDisplayName,
+            })) || []
+        }
       />
     </div>
   );

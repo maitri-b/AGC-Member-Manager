@@ -288,6 +288,7 @@ async function getEventRegistrationsFromFirestore(eventId: string): Promise<Even
         shirtSizes: data.shirtSizes || '',
         shirtReceived: data.shirtReceived || false,
         eventFee: data.eventFee || 0,
+        roomFee: data.roomFee || 0,
         shirtFee: data.shirtFee || 0,
         totalAmount: data.totalAmount || 0,
         slipUrl: data.remainingSlipUrl || data.depositSlipUrl || '',
@@ -327,6 +328,7 @@ async function getEventRegistrationsFromFirestore(eventId: string): Promise<Even
         attendeeTypeSelections: data.attendeeTypeSelections || '',
         roomAllocations: data.roomAllocations || '',
         specialCharges: data.specialCharges || '',
+        discounts: data.discounts || '',
         notes: data.notes || '',
       } as EventRegistration;
     });

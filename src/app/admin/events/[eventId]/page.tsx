@@ -69,6 +69,8 @@ interface Attendee {
     contactPhone: string;
     contactEmail: string;
     // Payment fields
+    eventFee?: number; // Base event fee (from attendee types or tiered pricing)
+    roomFee?: number; // Room allocation fee
     totalAmount: number;
     paidAmount?: number; // Total amount paid so far
     additionalPayments?: string; // JSON stringified AdditionalPayment[]
@@ -2425,12 +2427,15 @@ export default function EventDetailPage() {
                           // Calculate event fee based on pricing type
                           if (eventData?.event?.useAttendeeTypePricing) {
                             // Attendee type pricing
-                            if (editFormData.attendeeTypeSelections && eventData.event.attendeeTypes) {
+                            if (editFormData.attendeeTypeSelections && eventData.event.attendeeTypes && eventData.event.attendeeTypes.length > 0) {
                               const attendeeTypes = eventData.event.attendeeTypes;
                               calculatedEventFee = editFormData.attendeeTypeSelections.reduce((sum, sel) => {
                                 const type = attendeeTypes.find((t: any) => t.typeId === sel.typeId);
                                 return sum + (type ? type.price * sel.quantity : 0);
                               }, 0);
+                            } else if (!editFormData.attendeeTypeSelections || editFormData.attendeeTypeSelections.length === 0) {
+                              // Fallback: If no attendee type selections, try to use stored eventFee
+                              calculatedEventFee = (attendee?.registration as any)?.eventFee || 0;
                             }
                           } else {
                             // Fixed or Tiered Pricing
@@ -2439,18 +2444,25 @@ export default function EventDetailPage() {
                                 calculatedEventFee = calculateRegistrationFee(eventData.event as any, editFormData.attendeeCount, true) || 0;
                               } catch (e) {
                                 console.error('Error calculating event fee:', e);
-                                calculatedEventFee = 0;
+                                // Fallback to stored eventFee
+                                calculatedEventFee = (attendee?.registration as any)?.eventFee || 0;
                               }
+                            } else {
+                              // Fallback: Use stored eventFee if calculation not possible
+                              calculatedEventFee = (attendee?.registration as any)?.eventFee || 0;
                             }
                           }
 
                           // Calculate room fee
-                          if (editFormData.roomAllocations && eventData?.event?.roomTypes) {
+                          if (editFormData.roomAllocations && editFormData.roomAllocations.length > 0 && eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0) {
                             const roomTypes = eventData.event.roomTypes;
                             calculatedRoomFee = editFormData.roomAllocations.reduce((sum, alloc) => {
                               const roomType = roomTypes.find((rt: any) => rt.typeId === alloc.roomTypeId);
                               return sum + (roomType ? roomType.price * alloc.roomCount : 0);
                             }, 0);
+                          } else {
+                            // Fallback: Use stored roomFee if no calculations possible
+                            calculatedRoomFee = (attendee?.registration as any)?.roomFee || 0;
                           }
 
                           // Get special charges
@@ -2473,6 +2485,7 @@ export default function EventDetailPage() {
 
                           // Debug logging for calculation values
                           console.log('[Real-time Calculation Debug]', {
+                            registrationId: attendee?.registration?.registrationId,
                             attendeeCount: editFormData.attendeeCount,
                             calculatedEventFee,
                             calculatedRoomFee,
@@ -2480,10 +2493,20 @@ export default function EventDetailPage() {
                             calculatedTotal,
                             useAttendeeTypePricing: eventData?.event?.useAttendeeTypePricing,
                             attendeeTypeSelections: editFormData.attendeeTypeSelections,
-                            roomAllocations: editFormData.roomAllocations
+                            attendeeTypes: eventData?.event?.attendeeTypes,
+                            roomAllocations: editFormData.roomAllocations,
+                            roomTypes: eventData?.event?.roomTypes,
+                            storedEventFee: (attendee?.registration as any)?.eventFee,
+                            storedRoomFee: (attendee?.registration as any)?.roomFee,
+                            storedTotalAmount: attendee?.registration?.totalAmount
                           });
 
-                          if (!calculatedTotal || calculatedTotal === 0 || isNaN(calculatedTotal)) return null;
+                          // Show calculation even if total is 0 (could be free event or pending calculation)
+                          // Only hide if NaN or negative
+                          if (isNaN(calculatedTotal) || calculatedTotal < 0) {
+                            console.warn('[Real-time Calculation] Invalid total:', calculatedTotal);
+                            return null;
+                          }
 
                           return (
                             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">

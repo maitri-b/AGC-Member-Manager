@@ -71,6 +71,7 @@ export default function PromoteEventModal({
         return hasLineUserId && hasNormalStatus;
       });
 
+      console.log('Fetched members sample (first 3):', filteredMembers.slice(0, 3));
       setMembers(filteredMembers);
     } catch (error) {
       console.error('Error fetching members:', error);

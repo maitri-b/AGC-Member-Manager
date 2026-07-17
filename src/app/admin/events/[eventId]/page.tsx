@@ -149,20 +149,15 @@ function hasAdditionalCharges(attendee: Attendee, eventPaymentMode: 'full' | 'de
 function getAdditionalAmount(attendee: Attendee, eventPaymentMode: 'full' | 'deposit'): number {
   const reg = attendee.registration;
   const totalAmount = reg.totalAmount || 0;
-  const paidAmount = reg.paidAmount || 0;
-  const depositAmount = reg.depositAmount || 0;
-  const remainingAmount = reg.remainingAmount || 0;
 
-  if (eventPaymentMode === 'full') {
-    // ✅ Full payment mode: calculate from totalAmount - paidAmount
-    return Math.max(0, totalAmount - paidAmount);
-  } else {
-    // Deposit mode: calculate from totalAmount - (deposit + remaining)
-    const depositPaidAmount = (reg.depositPaid ? depositAmount : 0);
-    const remainingPaidAmount = (reg.remainingPaid ? remainingAmount : 0);
-    const totalPaid = depositPaidAmount + remainingPaidAmount;
-    return Math.max(0, totalAmount - totalPaid);
-  }
+  // ✅ FIX: Calculate paidAmount from actual payment fields
+  const fullPaymentAmountPaid = (reg as any).fullPaymentAmountPaid || 0;
+  const depositAmountPaid = (reg as any).depositAmountPaid || 0;
+  const remainingAmountPaid = (reg as any).remainingAmountPaid || 0;
+  const paidAmount = (reg as any).paidAmount || fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
+
+  // Calculate additional required (remaining balance) regardless of payment mode
+  return Math.max(0, totalAmount - paidAmount);
 }
 
 // ✅ Payment History Inline Component

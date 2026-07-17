@@ -30,10 +30,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event details are required' }, { status: 400 });
     }
 
-    // Truncate description to 200 characters
+    // Truncate description to 600 characters
     let shortDescription = eventDescription || '';
-    if (shortDescription.length > 200) {
-      shortDescription = shortDescription.substring(0, 200) + '...';
+    if (shortDescription.length > 600) {
+      shortDescription = shortDescription.substring(0, 600) + '...';
     }
 
     // Build full event URL with domain

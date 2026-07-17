@@ -26,33 +26,60 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch promotion history for this event
+    // IMPORTANT: Don't use .where() + .orderBy() together to avoid composite index requirement
     const historySnapshot = await adminDb()
       .collection('promotionHistory')
       .where('eventId', '==', eventId)
-      .orderBy('sentAt', 'desc')
       .get();
 
-    const history = historySnapshot.docs.map(doc => ({
+    // Map to array and convert dates
+    let history = historySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       sentAt: doc.data().sentAt?.toDate?.()?.toISOString() || doc.data().sentAt,
     }));
 
+    // Sort in JavaScript instead of Firestore
+    history.sort((a: any, b: any) => {
+      const dateA = new Date(a.sentAt).getTime();
+      const dateB = new Date(b.sentAt).getTime();
+      return dateB - dateA; // descending order
+    });
+
     // Get member details for each line user
     const lineUserIds = [...new Set(history.map((h: any) => h.lineUserId))];
-    const membersSnapshot = await adminDb()
-      .collection('members')
+
+    // Fetch from users collection to get member info
+    const usersSnapshot = await adminDb()
+      .collection('users')
       .where('lineUserId', 'in', lineUserIds.slice(0, 10)) // Firestore limit
       .get();
 
-    const memberMap: Record<string, any> = {};
+    // Also fetch all members to get full details
+    const membersSnapshot = await adminDb()
+      .collection('members')
+      .get();
+
+    const membersDataMap: Record<string, any> = {};
     membersSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      memberMap[data.lineUserId] = {
-        memberId: doc.id,
+      membersDataMap[doc.id] = {
         fullNameTH: data.fullNameTH,
         companyNameTH: data.companyNameTH,
-        lineDisplayName: data.lineDisplayName,
+      };
+    });
+
+    const memberMap: Record<string, any> = {};
+    usersSnapshot.docs.forEach(doc => {
+      const userData = doc.data();
+      const memberId = userData.memberId;
+      const memberDetails = memberId ? membersDataMap[memberId] : null;
+
+      memberMap[userData.lineUserId] = {
+        memberId: userData.memberId || doc.id,
+        fullNameTH: memberDetails?.fullNameTH || userData.fullNameTH || '',
+        companyNameTH: memberDetails?.companyNameTH || userData.companyNameTH || '',
+        lineDisplayName: userData.lineDisplayName || userData.displayName || userData.name || '',
       };
     });
 

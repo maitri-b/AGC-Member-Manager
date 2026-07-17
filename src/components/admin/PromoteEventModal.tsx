@@ -211,10 +211,10 @@ export default function PromoteEventModal({
   // Generate message preview
   const messagePreview = useMemo(() => {
     let shortDescription = eventDescription;
-    const needsTruncation = shortDescription.length > 200;
+    const needsTruncation = shortDescription.length > 600;
 
     if (needsTruncation) {
-      shortDescription = shortDescription.substring(0, 200) + '...';
+      shortDescription = shortDescription.substring(0, 600) + '...';
     }
 
     return `🎉 ${eventName}

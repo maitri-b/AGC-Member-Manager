@@ -22,6 +22,20 @@ export async function GET() {
     const db = adminDb();
     const usersSnapshot = await db.collection('users').get();
 
+    // Get all members data to join with users
+    const membersSnapshot = await db.collection('members').get();
+    const membersMap = new Map<string, { fullNameTH: string; nickname: string; companyNameTH: string; companyNameEN: string }>();
+
+    membersSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      membersMap.set(doc.id, {
+        fullNameTH: data.fullNameTH || '',
+        nickname: data.nickname || '',
+        companyNameTH: data.companyNameTH || '',
+        companyNameEN: data.companyNameEN || '',
+      });
+    });
+
     // Get all verification requests to join with users
     const verificationSnapshot = await db.collection('verificationRequests').get();
     const verificationMap = new Map<string, { licenseNumber: string; phone: string; status: string }>();
@@ -53,6 +67,7 @@ export async function GET() {
     const users = usersSnapshot.docs.map(doc => {
       const userData = doc.data();
       const verificationData = verificationMap.get(doc.id);
+      const memberData = userData.memberId ? membersMap.get(userData.memberId) : null;
 
       // Determine verification status:
       // 1. If user role is 'member' or higher, they are verified
@@ -81,6 +96,11 @@ export async function GET() {
         verificationStatus: finalVerificationStatus,
         // Include assigned events for event-staff and event-co
         assignedEventIds: userData.assignedEventIds || [],
+        // Add member data from members collection
+        fullNameTH: memberData?.fullNameTH || userData.fullNameTH || '',
+        nickname: memberData?.nickname || userData.nickname || '',
+        companyNameTH: memberData?.companyNameTH || userData.companyNameTH || '',
+        companyNameEN: memberData?.companyNameEN || userData.companyNameEN || '',
       };
     });
 

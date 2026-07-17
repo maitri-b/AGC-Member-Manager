@@ -225,6 +225,9 @@ export async function GET(
               totalAmount: recalculatedTotal, // Use recalculated total
               depositAmount: latestReg.depositAmount,
               remainingAmount: latestReg.remainingAmount,
+              // Fee breakdown (for edit form calculations)
+              eventFee: (latestReg as any).eventFee || 0,
+              roomFee: (latestReg as any).roomFee || 0,
               depositPaid: latestReg.depositPaid,
               depositPaidDate: latestReg.depositPaidDate,
               remainingPaid: (latestReg as any).remainingPaid,

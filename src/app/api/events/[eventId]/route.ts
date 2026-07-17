@@ -188,6 +188,7 @@ export async function GET(
         year: event.year,
         // Event pricing configuration
         pricingType: event.pricingType || 'fixed',
+        registrationFee: event.registrationFee || 0,
         priceTiers: event.priceTiers || undefined,
         baseFee: event.baseFee,
         additionalFeePerPerson: event.additionalFeePerPerson,

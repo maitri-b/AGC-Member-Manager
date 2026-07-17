@@ -11,6 +11,21 @@ interface PromoteEventModalProps {
   eventDescription?: string;
 }
 
+interface PromotionHistory {
+  id: string;
+  eventId: string;
+  lineUserId: string;
+  sentAt: string;
+  sentBy: string;
+  sentByName: string;
+  member: {
+    memberId: string;
+    fullNameTH?: string;
+    companyNameTH?: string;
+    lineDisplayName?: string;
+  } | null;
+}
+
 export default function PromoteEventModal({
   isOpen,
   onClose,
@@ -24,15 +39,21 @@ export default function PromoteEventModal({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<'select' | 'history'>('select');
+  const [history, setHistory] = useState<PromotionHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [sentLineUserIds, setSentLineUserIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isOpen) {
       fetchMembers();
+      fetchHistory();
       setSelectedMemberIds(new Set());
       setSearchTerm('');
       setMessage(null);
+      setActiveTab('select');
     }
-  }, [isOpen]);
+  }, [isOpen, eventId]);
 
   const fetchMembers = async () => {
     try {
@@ -56,6 +77,26 @@ export default function PromoteEventModal({
       setMessage({ type: 'error', text: 'ไม่สามารถโหลดรายชื่อสมาชิกได้' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const response = await fetch(`/api/line/promotion-history?eventId=${eventId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch history');
+      }
+      const data = await response.json();
+      setHistory(data.history || []);
+
+      // Create set of line user IDs who have been sent messages
+      const sentIds = new Set<string>(data.history.map((h: PromotionHistory) => h.lineUserId));
+      setSentLineUserIds(sentIds);
+    } catch (error) {
+      console.error('Error fetching promotion history:', error);
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -149,6 +190,9 @@ export default function PromoteEventModal({
       // Reset selection after success
       setSelectedMemberIds(new Set());
 
+      // Refresh history
+      await fetchHistory();
+
       // Close modal after 2 seconds
       setTimeout(() => {
         onClose();
@@ -194,28 +238,112 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">ส่งข้อความโปรโมทกิจกรรม</h2>
-            <p className="text-sm text-gray-600 mt-1">{eventName}</p>
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">ส่งข้อความโปรโมทกิจกรรม</h2>
+              <p className="text-sm text-gray-600 mt-1">{eventName}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+
+          {/* Tabs */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('select')}
+              className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+                activeTab === 'select'
+                  ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              เลือกผู้รับ
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+                activeTab === 'history'
+                  ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              ประวัติการส่ง ({history.length})
+            </button>
+          </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Message Preview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-blue-900 mb-2">ตัวอย่างข้อความที่จะส่ง:</h3>
-            <pre className="text-sm text-blue-800 whitespace-pre-wrap font-sans">{messagePreview}</pre>
-          </div>
+          {activeTab === 'history' ? (
+            /* History Tab */
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">ประวัติการส่งข้อความ</h3>
+
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">กำลังโหลดประวัติ...</p>
+                  </div>
+                </div>
+              ) : history.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  ยังไม่มีประวัติการส่งข้อความสำหรับกิจกรรมนี้
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {history.map((record) => (
+                    <div key={record.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">
+                            {record.member?.lineDisplayName || record.lineUserId}
+                          </div>
+                          {record.member?.companyNameTH && (
+                            <div className="text-sm text-gray-600 mt-1">
+                              {record.member.companyNameTH}
+                            </div>
+                          )}
+                          {record.member?.memberId && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-2">
+                              ID: {record.member.memberId}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right text-sm text-gray-500">
+                          <div>{new Date(record.sentAt).toLocaleDateString('th-TH', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}</div>
+                          <div className="text-xs mt-1">
+                            {new Date(record.sentAt).toLocaleTimeString('th-TH', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Select Members Tab */
+            <>
+              {/* Message Preview */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">ตัวอย่างข้อความที่จะส่ง:</h3>
+                <pre className="text-sm text-blue-800 whitespace-pre-wrap font-sans">{messagePreview}</pre>
+              </div>
 
           {/* Success/Error Message */}
           {message && (
@@ -296,15 +424,23 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
                             {member.lineDisplayName || member.fullNameTH || member.nickname || '-'}
                           </span>
 
+                          {member.companyNameTH && (
+                            <span className="text-sm text-gray-600">
+                              - {member.companyNameTH}
+                            </span>
+                          )}
+
                           {member.memberId && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                               ID: {member.memberId}
                             </span>
                           )}
-                        </div>
 
-                        <div className="text-sm text-gray-600 mt-1">
-                          LINE: {member.lineDisplayName || '-'}
+                          {sentLineUserIds.has(member.lineUserId!) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                              ✓ ส่งแล้ว
+                            </span>
+                          )}
                         </div>
                       </div>
                     </label>
@@ -313,6 +449,8 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
               </div>
             )}
           </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}

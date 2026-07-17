@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
+import { adminDb } from '@/lib/firebase-admin';
 
 const LINE_API_URL = 'https://api.line.me/v2/bot/message/push';
 
@@ -99,6 +100,33 @@ ${fullEventUrl}`;
 
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
+
+    // Save promotion history for successful sends
+    const promotionHistoryRef = adminDb().collection('promotionHistory');
+    const batch = adminDb().batch();
+    const sentAt = new Date();
+
+    for (const result of results) {
+      if (result.success) {
+        const historyDoc = promotionHistoryRef.doc();
+        batch.set(historyDoc, {
+          eventId,
+          eventName,
+          lineUserId: result.lineUserId,
+          sentAt,
+          sentBy: session.user.lineUserId || session.user.id || 'unknown',
+          sentByName: session.user.name || 'Unknown',
+          message,
+        });
+      }
+    }
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error('Error saving promotion history:', error);
+      // Don't fail the request if history save fails
+    }
 
     return NextResponse.json({
       success: true,

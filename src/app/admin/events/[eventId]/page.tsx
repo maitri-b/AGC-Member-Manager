@@ -2623,6 +2623,18 @@ export default function EventDetailPage() {
                               const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                               const additionalRequired = Math.max(0, totalAmount - paidAmount);
 
+                              // DEBUG: Log payment calculation
+                              console.log('Payment Debug:', {
+                                registrationId: attendee.registration.registrationId,
+                                totalAmount,
+                                fullPaymentAmountPaid,
+                                depositAmountPaid,
+                                remainingAmountPaid,
+                                paidAmount,
+                                additionalRequired,
+                                raw: attendee.registration
+                              });
+
                               return (
                                 <>
                                   {/* ALWAYS show total amount */}

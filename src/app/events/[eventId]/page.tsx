@@ -1660,6 +1660,18 @@ export default function EventDetailPage() {
                           const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                           const additionalRequired = Math.max(0, totalAmount - paidAmount);
 
+                          // DEBUG: Log payment calculation
+                          console.log('Member Payment Debug:', {
+                            registrationId: userRegistration.registrationId,
+                            totalAmount,
+                            fullPaymentAmountPaid,
+                            depositAmountPaid,
+                            remainingAmountPaid,
+                            paidAmount,
+                            additionalRequired,
+                            raw: userRegistration
+                          });
+
                           return (
                             <div className="border-t border-blue-500 pt-3 space-y-2 text-sm">
                               {/* Show paid amount if > 0 */}

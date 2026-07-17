@@ -164,6 +164,8 @@ export async function GET(
           roomAllocations: String(attendee.registration.roomAllocations || ''),
           // Special charges
           specialCharges: String(attendee.registration.specialCharges || ''),
+          // Discounts
+          discounts: String(attendee.registration.discounts || ''),
           // Special requests
           specialRequests: String(attendee.registration.specialRequests || ''),
         },

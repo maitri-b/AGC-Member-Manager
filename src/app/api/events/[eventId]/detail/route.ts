@@ -143,10 +143,11 @@ export async function GET(
               return dateB > dateA ? 1 : -1; // descending order
             })[0];
 
-            // Parse attendee type selections, room allocations, and special charges from JSON strings
+            // Parse attendee type selections, room allocations, special charges, and discounts from JSON strings
             let attendeeTypeSelections = [];
             let roomAllocations = [];
             let specialCharges = [];
+            let discounts = [];
             try {
               if (latestReg.attendeeTypeSelections) {
                 attendeeTypeSelections = JSON.parse(latestReg.attendeeTypeSelections);
@@ -168,9 +169,16 @@ export async function GET(
             } catch (e) {
               console.error('Error parsing specialCharges:', e);
             }
+            try {
+              if (latestReg.discounts) {
+                discounts = JSON.parse(latestReg.discounts);
+              }
+            } catch (e) {
+              console.error('Error parsing discounts:', e);
+            }
 
-            // Recalculate totalAmount to ensure it includes all fees
-            // This handles cases where old data might not have room fees included
+            // Recalculate totalAmount to ensure it includes all fees and discounts
+            // This handles cases where old data might not have room fees or discounts included
             let recalculatedTotal = latestReg.totalAmount || 0;
 
             // If we have attendee type selections, recalculate from scratch
@@ -200,11 +208,17 @@ export async function GET(
                 specialChargesFee = specialCharges.reduce((sum: number, c: { amount: number }) => sum + c.amount, 0);
               }
 
-              recalculatedTotal = eventFee + roomFee + specialChargesFee;
+              // Subtract discounts
+              let discountsFee = 0;
+              if (discounts.length > 0) {
+                discountsFee = discounts.reduce((sum: number, d: { calculatedAmount: number }) => sum + d.calculatedAmount, 0);
+              }
+
+              recalculatedTotal = Math.max(0, eventFee + roomFee + specialChargesFee - discountsFee);
 
               // If recalculated total is different, log it for debugging
               if (recalculatedTotal !== latestReg.totalAmount) {
-                console.log(`[Fee Recalculation] Registration ${latestReg.registrationId}: ${latestReg.totalAmount} → ${recalculatedTotal} (eventFee: ${eventFee}, roomFee: ${roomFee}, specialCharges: ${specialChargesFee})`);
+                console.log(`[Fee Recalculation] Registration ${latestReg.registrationId}: ${latestReg.totalAmount} → ${recalculatedTotal} (eventFee: ${eventFee}, roomFee: ${roomFee}, specialCharges: ${specialChargesFee}, discounts: ${discountsFee})`);
               }
             }
 
@@ -251,10 +265,11 @@ export async function GET(
               paymentStatus: latestReg.paymentStatus || 'รอชำระเงิน',
               // Additional payments
               additionalPayments: (latestReg as any).additionalPayments || '',
-              // Attendee type selections, room allocations, and special charges (New)
+              // Attendee type selections, room allocations, special charges, and discounts (New)
               attendeeTypeSelections,
               roomAllocations,
               specialCharges,
+              discounts,
               // Payment slips from new collection (New)
               paymentSlips,
               paymentSummary,

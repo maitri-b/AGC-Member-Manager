@@ -96,6 +96,8 @@ interface Attendee {
     roomAllocations?: string; // JSON stringified
     // Special charges
     specialCharges?: string; // JSON stringified
+    // Discounts
+    discounts?: string; // JSON stringified
     // Special requests
     specialRequests?: string;
   };
@@ -454,6 +456,21 @@ export default function EventDetailPage() {
     amount: 0,
   });
   const [addingCharge, setAddingCharge] = useState(false);
+
+  // Discounts state
+  const [discountsModalOpen, setDiscountsModalOpen] = useState(false);
+  const [discountFormData, setDiscountFormData] = useState<{
+    registrationId: string;
+    description: string;
+    discountType: 'fixed' | 'percentage' | 'free';
+    value: number;
+  }>({
+    registrationId: '',
+    description: '',
+    discountType: 'fixed',
+    value: 0,
+  });
+  const [addingDiscount, setAddingDiscount] = useState(false);
 
   // Cancellation modal state
   const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
@@ -1551,6 +1568,88 @@ export default function EventDetailPage() {
     }
   };
 
+  // Discount handlers
+  const handleOpenDiscountModal = (attendee: Attendee) => {
+    setDiscountFormData({
+      registrationId: attendee.registration.registrationId,
+      description: '',
+      discountType: 'fixed',
+      value: 0,
+    });
+    setDiscountsModalOpen(true);
+  };
+
+  const handleCloseDiscountModal = () => {
+    setDiscountsModalOpen(false);
+    setDiscountFormData({
+      registrationId: '',
+      description: '',
+      discountType: 'fixed',
+      value: 0,
+    });
+  };
+
+  const handleAddDiscount = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setAddingDiscount(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/discounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(discountFormData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่สามารถเพิ่มส่วนลดได้');
+      }
+
+      setActionMessage({ type: 'success', text: data.message || 'เพิ่มส่วนลดเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      handleCloseDiscountModal();
+      fetchEventData(); // Refresh data
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
+    } finally {
+      setAddingDiscount(false);
+    }
+  };
+
+  const handleDeleteDiscount = async (registrationId: string, discountId: string) => {
+    if (!confirm('ยืนยันการลบส่วนลดนี้?')) return;
+
+    setActionMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/events/${eventId}/discounts?registrationId=${registrationId}&discountId=${discountId}`,
+        { method: 'DELETE' }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่สามารถลบส่วนลดได้');
+      }
+
+      setActionMessage({ type: 'success', text: data.message || 'ลบส่วนลดเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      fetchEventData(); // Refresh data
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
+    }
+  };
+
   const filteredAttendees = eventData?.attendees.filter(attendee => {
     // Check if registration is cancelled
     const status = String(attendee.registration.status || '').toLowerCase();
@@ -2637,7 +2736,23 @@ export default function EventDetailPage() {
                             specialChargesTotal = 0;
                           }
 
-                          const calculatedTotal = (calculatedEventFee || 0) + (calculatedRoomFee || 0) + (specialChargesTotal || 0);
+                          // Get discounts
+                          let discountsTotal = 0;
+                          try {
+                            if (attendee?.registration?.discounts) {
+                              const discounts = typeof attendee.registration.discounts === 'string'
+                                ? JSON.parse(attendee.registration.discounts)
+                                : attendee.registration.discounts;
+                              if (Array.isArray(discounts)) {
+                                discountsTotal = discounts.reduce((sum: number, d: any) => sum + (d?.calculatedAmount || 0), 0);
+                              }
+                            }
+                          } catch (e) {
+                            console.error('Error parsing discounts:', e);
+                            discountsTotal = 0;
+                          }
+
+                          const calculatedTotal = Math.max(0, (calculatedEventFee || 0) + (calculatedRoomFee || 0) + (specialChargesTotal || 0) - (discountsTotal || 0));
 
                           // Debug logging for calculation values
                           console.log('[Real-time Calculation Debug]', {
@@ -2646,6 +2761,7 @@ export default function EventDetailPage() {
                             calculatedEventFee,
                             calculatedRoomFee,
                             specialChargesTotal,
+                            discountsTotal,
                             calculatedTotal,
                             useAttendeeTypePricing: eventData?.event?.useAttendeeTypePricing,
                             attendeeTypeSelections: editFormData.attendeeTypeSelections,
@@ -2682,7 +2798,14 @@ export default function EventDetailPage() {
                                 {specialChargesTotal > 0 && (
                                   <div className="flex justify-between">
                                     <span>ค่าใช้จ่ายเสริม:</span>
-                                    <span className="font-semibold">฿{specialChargesTotal.toLocaleString()}</span>
+                                    <span className="font-semibold">+฿{specialChargesTotal.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {/* Only show discounts if > 0 */}
+                                {discountsTotal > 0 && (
+                                  <div className="flex justify-between text-green-700">
+                                    <span>ส่วนลด:</span>
+                                    <span className="font-semibold">-฿{discountsTotal.toLocaleString()}</span>
                                   </div>
                                 )}
                                 <div className="flex justify-between border-t border-green-300 pt-1 mt-1">
@@ -2777,6 +2900,74 @@ export default function EventDetailPage() {
                         );
                       } catch (e) {
                         console.error('Error parsing special charges:', e);
+                        return null;
+                      }
+                    })()}
+
+                    {/* Discounts Section - Always visible, shown AFTER Special Charges */}
+                    {attendee.registration.totalAmount > 0 && (() => {
+                      try {
+                        const discounts = attendee.registration.discounts
+                          ? JSON.parse(attendee.registration.discounts)
+                          : [];
+
+                        return (
+                          <div className="p-3 bg-green-50 rounded-lg border border-green-200 mt-3">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-sm font-semibold text-green-900">ส่วนลด</span>
+                              <button
+                                onClick={() => handleOpenDiscountModal(attendee)}
+                                className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                              >
+                                + เพิ่มส่วนลด
+                              </button>
+                            </div>
+
+                            {discounts.length > 0 ? (
+                              <div className="space-y-2">
+                                {discounts.map((discount: any) => (
+                                  <div key={discount.discountId} className="flex items-start justify-between bg-white border border-green-200 rounded p-2">
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-gray-800">{discount.description}</p>
+                                      <p className="text-xs text-gray-500 mt-0.5">
+                                        {discount.discountType === 'free' ? 'ฟรี (100%)' :
+                                         discount.discountType === 'percentage' ? `${discount.value}%` :
+                                         'ระบุจำนวน'}
+                                        {' • '}เพิ่มเมื่อ: {formatThaiDateTime(discount.addedAt)}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 ml-2">
+                                      <span className="text-sm font-bold text-green-700">
+                                        -฿{discount.calculatedAmount.toLocaleString()}
+                                      </span>
+                                      <button
+                                        onClick={() => handleDeleteDiscount(attendee.registration.registrationId, discount.discountId)}
+                                        className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                        title="ลบส่วนลด"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                                <div className="pt-2 border-t border-green-200">
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span className="font-medium text-gray-600">รวมส่วนลด:</span>
+                                    <span className="font-bold text-green-700">
+                                      -฿{discounts.reduce((sum: number, d: any) => sum + d.calculatedAmount, 0).toLocaleString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-500 italic">ไม่มีส่วนลด</p>
+                            )}
+                          </div>
+                        );
+                      } catch (e) {
+                        console.error('Error parsing discounts:', e);
                         return null;
                       }
                     })()}
@@ -3453,6 +3644,108 @@ export default function EventDetailPage() {
                 ยกเลิก
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discounts Modal */}
+      {discountsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              เพิ่มส่วนลด
+            </h2>
+
+            <form onSubmit={handleAddDiscount} className="space-y-4">
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  รายละเอียดส่วนลด
+                </label>
+                <input
+                  type="text"
+                  value={discountFormData.description}
+                  onChange={(e) => setDiscountFormData({ ...discountFormData, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="เช่น ส่วนลดสมาชิกพิเศษ, Early Bird"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ระบุรายละเอียดของส่วนลด
+                </p>
+              </div>
+
+              {/* Discount Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ประเภทส่วนลด
+                </label>
+                <select
+                  value={discountFormData.discountType}
+                  onChange={(e) => setDiscountFormData({
+                    ...discountFormData,
+                    discountType: e.target.value as 'fixed' | 'percentage' | 'free',
+                    value: e.target.value === 'free' ? 0 : discountFormData.value
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="fixed">ระบุจำนวนเงิน (บาท)</option>
+                  <option value="percentage">เปอร์เซ็นต์ (%)</option>
+                  <option value="free">ฟรี (ไม่ต้องชำระเลย)</option>
+                </select>
+              </div>
+
+              {/* Value (only for fixed and percentage) */}
+              {discountFormData.discountType !== 'free' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {discountFormData.discountType === 'percentage' ? 'เปอร์เซ็นต์ (%)' : 'จำนวนเงิน (บาท)'}
+                  </label>
+                  <input
+                    type="number"
+                    value={discountFormData.value}
+                    onChange={(e) => setDiscountFormData({ ...discountFormData, value: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder={discountFormData.discountType === 'percentage' ? '0-100' : '0'}
+                    min="0"
+                    max={discountFormData.discountType === 'percentage' ? '100' : undefined}
+                    step={discountFormData.discountType === 'percentage' ? '1' : '0.01'}
+                    required
+                  />
+                </div>
+              )}
+
+              {/* Note */}
+              <div className="bg-green-50 border border-green-200 rounded p-3">
+                <p className="text-sm text-green-800">
+                  <strong>หมายเหตุ:</strong> ส่วนลดจะถูกหักออกจากยอดรวมทั้งหมด (Event Fee + Room Fee + Special Charges)
+                  {discountFormData.discountType === 'free' && (
+                    <span className="block mt-1 font-semibold">
+                      ส่วนลดแบบฟรีจะทำให้ยอดชำระเป็น 0 บาท
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={addingDiscount}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  {addingDiscount ? 'กำลังเพิ่ม...' : 'เพิ่มส่วนลด'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseDiscountModal}
+                  disabled={addingDiscount}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -96,6 +96,9 @@ export interface EventRegistration {
   // Special Charges (New - admin can add custom charges to specific registrations)
   specialCharges?: string;          // special_charges (JSON stringified SpecialCharge[])
 
+  // Discounts (New - admin can give discounts to specific registrations)
+  discounts?: string;               // discounts (JSON stringified Discount[])
+
   // Cancellation Info (New - for tracking cancellation details)
   cancellationReason?: string;      // cancellation_reason - Reason for cancellation
   cancelledAt?: string;             // cancelled_at - ISO timestamp when cancelled
@@ -371,6 +374,17 @@ export interface SpecialCharge {
   addedAt: string;               // ISO timestamp when added
 }
 
+// Discount (New - admin can give discounts to specific registrations)
+export interface Discount {
+  discountId: string;            // Unique ID for this discount
+  description: string;           // Description of the discount (e.g., "ส่วนลดสมาชิกพิเศษ", "Early Bird")
+  discountType: 'fixed' | 'percentage' | 'free'; // Discount type
+  value: number;                 // For 'fixed': amount in baht, for 'percentage': percentage value (e.g., 10 for 10%)
+  calculatedAmount: number;      // Actual discount amount applied (calculated from value)
+  addedBy: string;               // Admin user ID who added this discount
+  addedAt: string;               // ISO timestamp when added
+}
+
 // Additional Payment (New - for tracking additional payments when amount changes)
 export interface AdditionalPayment {
   paymentId: string;             // Unique ID for this payment
@@ -443,6 +457,8 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   roomAllocations: 'room_allocations',
   // Special charges (New)
   specialCharges: 'special_charges',
+  // Discounts (New)
+  discounts: 'discounts',
   // Cancellation info (New)
   cancellationReason: 'cancellation_reason',
   cancelledAt: 'cancelled_at',

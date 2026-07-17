@@ -143,9 +143,15 @@ export async function GET(
           fullPaymentSlipUrl: String(attendee.registration.fullPaymentSlipUrl || ''),
           fullPaymentPaid: Boolean(attendee.registration.fullPaymentPaid),
           fullPaymentPaidDate: String(attendee.registration.fullPaymentPaidDate || ''),
+          fullPaymentAmountPaid: Number(attendee.registration.fullPaymentAmountPaid) || 0,
           // Remaining payment paid status
           remainingPaid: Boolean(attendee.registration.remainingPaid),
           remainingPaidDate: String(attendee.registration.remainingPaidDate || ''),
+          remainingAmountPaid: Number(attendee.registration.remainingAmountPaid) || 0,
+          // Deposit amount paid
+          depositAmountPaid: Number(attendee.registration.depositAmountPaid) || 0,
+          // General paid amount (fallback)
+          paidAmount: Number(attendee.registration.paidAmount) || 0,
           // Payment deadlines
           depositDeadline: String(attendee.registration.depositDeadline || ''),
           remainingDeadline: String(attendee.registration.remainingDeadline || ''),

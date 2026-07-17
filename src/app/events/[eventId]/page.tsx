@@ -3005,6 +3005,11 @@ export default function EventDetailPage() {
           eventId={event.eventId}
           paymentType={uploadPaymentType}
           amount={uploadAmount}
+          paymentMode={event.paymentMode || 'full'}
+          depositPaid={userRegistration.depositPaid || false}
+          totalAmount={userRegistration.totalAmount || 0}
+          depositAmount={userRegistration.depositAmount || 0}
+          remainingAmount={userRegistration.remainingAmount || 0}
           onSuccess={() => {
             // Refresh event data after successful upload
             fetchEventDetail();

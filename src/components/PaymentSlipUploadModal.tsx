@@ -11,6 +11,12 @@ interface PaymentSlipUploadModalProps {
   paymentType: 'deposit' | 'remaining' | 'full' | 'additional';
   amount: number;
   onSuccess?: () => void;
+  // Payment mode context for determining available payment types
+  paymentMode?: 'full' | 'deposit';
+  depositPaid?: boolean;
+  totalAmount?: number;
+  depositAmount?: number;
+  remainingAmount?: number;
 }
 
 export default function PaymentSlipUploadModal({
@@ -18,15 +24,36 @@ export default function PaymentSlipUploadModal({
   onClose,
   registrationId,
   eventId,
-  paymentType,
-  amount,
+  paymentType: initialPaymentType,
+  amount: initialAmount,
   onSuccess,
+  paymentMode = 'full',
+  depositPaid = false,
+  totalAmount = 0,
+  depositAmount = 0,
+  remainingAmount = 0,
 }: PaymentSlipUploadModalProps) {
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [description, setDescription] = useState('');
 
-  if (!isOpen) return null;
+  // ✅ NEW: User-editable payment type and amount
+  const [selectedPaymentType, setSelectedPaymentType] = useState<'deposit' | 'remaining' | 'full' | 'additional'>(initialPaymentType);
+  const [customAmount, setCustomAmount] = useState<string>(initialAmount.toString());
+
+  // Reset form when modal opens
+  if (!isOpen) {
+    // Reset state when closed
+    if (slipFile || description || selectedPaymentType !== initialPaymentType || customAmount !== initialAmount.toString()) {
+      setTimeout(() => {
+        setSlipFile(null);
+        setDescription('');
+        setSelectedPaymentType(initialPaymentType);
+        setCustomAmount(initialAmount.toString());
+      }, 300);
+    }
+    return null;
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,6 +83,13 @@ export default function PaymentSlipUploadModal({
       return;
     }
 
+    // ✅ Validate custom amount
+    const amountValue = parseFloat(customAmount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      toast.error('กรุณากรอกจำนวนเงินที่ถูกต้อง');
+      return;
+    }
+
     setUploading(true);
 
     try {
@@ -75,7 +109,8 @@ export default function PaymentSlipUploadModal({
       console.log('[Client] Uploading payment slip...');
       console.log('[Client] registrationId:', registrationId);
       console.log('[Client] eventId:', eventId);
-      console.log('[Client] paymentType:', paymentType);
+      console.log('[Client] paymentType:', selectedPaymentType);
+      console.log('[Client] amount:', amountValue);
 
       // Upload via member API
       const uploadResponse = await fetch('/api/payments/upload', {
@@ -84,8 +119,8 @@ export default function PaymentSlipUploadModal({
         body: JSON.stringify({
           registrationId,
           eventId,
-          amount,
-          paymentType,
+          amount: amountValue,  // ✅ Use user-input amount
+          paymentType: selectedPaymentType,  // ✅ Use user-selected payment type
           fileData: fileBase64,
           fileName: slipFile.name,
           mimeType: slipFile.type,
@@ -132,8 +167,8 @@ export default function PaymentSlipUploadModal({
     }
   };
 
-  const getPaymentTypeLabel = () => {
-    switch (paymentType) {
+  const getPaymentTypeLabel = (type: string) => {
+    switch (type) {
       case 'deposit':
         return 'มัดจำ';
       case 'remaining':
@@ -145,6 +180,39 @@ export default function PaymentSlipUploadModal({
       default:
         return '';
     }
+  };
+
+  // ✅ Determine available payment type options based on payment mode and status
+  const getAvailablePaymentTypes = (): Array<{ value: string; label: string; suggestedAmount: number }> => {
+    const options: Array<{ value: string; label: string; suggestedAmount: number }> = [];
+
+    if (paymentMode === 'deposit') {
+      // Deposit payment mode
+      if (!depositPaid) {
+        // Deposit not yet paid - can pay deposit or full
+        options.push(
+          { value: 'deposit', label: 'มัดจำ', suggestedAmount: depositAmount },
+          { value: 'full', label: 'เต็มจำนวน (ชำระทั้งหมด)', suggestedAmount: totalAmount }
+        );
+      } else {
+        // Deposit already paid - can pay remaining or additional
+        options.push(
+          { value: 'remaining', label: 'ยอดคงเหลือ', suggestedAmount: remainingAmount }
+        );
+      }
+    } else {
+      // Full payment mode
+      options.push(
+        { value: 'full', label: 'เต็มจำนวน', suggestedAmount: totalAmount }
+      );
+    }
+
+    // Additional payment option - always available
+    options.push(
+      { value: 'additional', label: 'ค่าใช้จ่ายเพิ่มเติม', suggestedAmount: 0 }
+    );
+
+    return options;
   };
 
   return (
@@ -168,22 +236,67 @@ export default function PaymentSlipUploadModal({
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Payment Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+          {/* Registration ID - Read only */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">ประเภท:</span>
-              <span className="text-sm font-semibold text-gray-900">{getPaymentTypeLabel()}</span>
+              <span className="text-xs text-gray-500">Registration ID:</span>
+              <span className="text-xs font-mono text-gray-900">{registrationId}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">จำนวนเงิน:</span>
-              <span className="text-sm font-semibold text-blue-600">
-                ฿{amount.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Registration ID:</span>
-              <span className="text-sm font-mono text-gray-900">{registrationId}</span>
-            </div>
+          </div>
+
+          {/* Payment Type Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ประเภทการชำระเงิน <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={selectedPaymentType}
+              onChange={(e) => {
+                const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'additional';
+                setSelectedPaymentType(newType);
+
+                // Auto-fill suggested amount
+                const option = getAvailablePaymentTypes().find(opt => opt.value === newType);
+                if (option && option.suggestedAmount > 0) {
+                  setCustomAmount(option.suggestedAmount.toString());
+                } else {
+                  setCustomAmount('');
+                }
+              }}
+              disabled={uploading}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm disabled:opacity-50"
+            >
+              {getAvailablePaymentTypes().map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                  {option.suggestedAmount > 0 && ` (แนะนำ: ฿${option.suggestedAmount.toLocaleString()})`}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              เลือกประเภทการชำระเงินที่ตรงกับการโอนของคุณ
+            </p>
+          </div>
+
+          {/* Amount Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              จำนวนเงินที่โอน (บาท) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={customAmount}
+              onChange={(e) => setCustomAmount(e.target.value)}
+              disabled={uploading}
+              placeholder="กรอกจำนวนเงินที่โอนจริง"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm disabled:opacity-50"
+              required
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              กรอกจำนวนเงินที่คุณโอนจริง (อาจแตกต่างจากยอดแนะนำก็ได้)
+            </p>
           </div>
 
           {/* File Upload */}

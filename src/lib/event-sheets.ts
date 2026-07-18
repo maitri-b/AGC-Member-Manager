@@ -307,6 +307,7 @@ async function getEventRegistrationsFromFirestore(eventId: string): Promise<Even
         remainingPaid: data.remainingPaid || false,
         remainingAmountPaid: data.remainingAmountPaid || 0,
         depositAmountPaid: data.depositAmountPaid || 0,
+        additionalPaymentAmountPaid: data.additionalPaymentAmountPaid || 0, // ✅ CRITICAL FIX: Track additional payments
         paidAmount: data.paidAmount || 0,
         depositDeadline: data.depositDeadline || '',
         remainingDeadline: data.remainingDeadline || '',

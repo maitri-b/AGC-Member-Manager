@@ -158,35 +158,6 @@ export default function ApplicationsPage() {
     }
   };
 
-  const handleUpdateDocStatus = async (docStatus: 'pending' | 'uploaded' | 'received') => {
-    if (!selectedApp) return;
-
-    setUpdating(true);
-    try {
-      const response = await fetch('/api/admin/applications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          applicationId: selectedApp.id,
-          documentStatus: docStatus,
-          notes,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update');
-      }
-
-      toast.success('อัพเดทสถานะเอกสารเรียบร้อย');
-      setSelectedApp({ ...selectedApp, documentStatus: docStatus });
-      fetchApplications();
-    } catch (error) {
-      toast.error('เกิดข้อผิดพลาด');
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   const handleSaveNotes = async () => {
     if (!selectedApp) return;
 
@@ -516,80 +487,120 @@ export default function ApplicationsPage() {
                   <h4 className="font-medium text-gray-700 mb-3">เอกสารประกอบการสมัคร</h4>
                   <div className="grid grid-cols-2 gap-4">
                     {/* License Document */}
-                    {selectedApp.licenseDocumentUrl && (
-                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                        <p className="text-xs text-gray-500 mb-2">ใบอนุญาตธุรกิจนำเที่ยว</p>
-                        <div className="relative group">
-                          <img
-                            src={selectedApp.licenseDocumentUrl}
-                            alt="License Document"
-                            className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => {
-                              setLightboxImage(selectedApp.licenseDocumentUrl!);
-                              setLightboxOpen(true);
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
-                            onClick={() => {
-                              setLightboxImage(selectedApp.licenseDocumentUrl!);
-                              setLightboxOpen(true);
-                            }}>
-                            <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                    {selectedApp.licenseDocumentUrl && (() => {
+                      const isPDF = selectedApp.licenseDocumentUrl.toLowerCase().endsWith('.pdf');
+
+                      return (
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <p className="text-xs text-gray-500 mb-2">ใบอนุญาตธุรกิจนำเที่ยว</p>
+                          {isPDF ? (
+                            // PDF Icon - No thumbnail, just link
+                            <a
+                              href={selectedApp.licenseDocumentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex flex-col items-center justify-center h-32 bg-red-50 rounded hover:bg-red-100 transition-colors"
+                            >
+                              <svg className="w-16 h-16 text-red-600 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M4 18h12a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H7a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2zm2-14h8v2H6V4z" />
+                              </svg>
+                              <span className="text-sm font-medium text-red-700">PDF Document</span>
+                            </a>
+                          ) : (
+                            // Image Thumbnail - Can click to view in lightbox
+                            <div className="relative group">
+                              <img
+                                src={selectedApp.licenseDocumentUrl}
+                                alt="License Document"
+                                className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => {
+                                  setLightboxImage(selectedApp.licenseDocumentUrl!);
+                                  setLightboxOpen(true);
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
+                                onClick={() => {
+                                  setLightboxImage(selectedApp.licenseDocumentUrl!);
+                                  setLightboxOpen(true);
+                                }}>
+                                <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                </svg>
+                              </div>
+                            </div>
+                          )}
+                          <a
+                            href={selectedApp.licenseDocumentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
-                          </div>
+                            เปิดในแท็บใหม่
+                          </a>
                         </div>
-                        <a
-                          href={selectedApp.licenseDocumentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          เปิดในแท็บใหม่
-                        </a>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Business Card */}
-                    {selectedApp.businessCardUrl && (
-                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                        <p className="text-xs text-gray-500 mb-2">นามบัตร</p>
-                        <div className="relative group">
-                          <img
-                            src={selectedApp.businessCardUrl}
-                            alt="Business Card"
-                            className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => {
-                              setLightboxImage(selectedApp.businessCardUrl!);
-                              setLightboxOpen(true);
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
-                            onClick={() => {
-                              setLightboxImage(selectedApp.businessCardUrl!);
-                              setLightboxOpen(true);
-                            }}>
-                            <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                    {selectedApp.businessCardUrl && (() => {
+                      const isPDF = selectedApp.businessCardUrl.toLowerCase().endsWith('.pdf');
+
+                      return (
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <p className="text-xs text-gray-500 mb-2">นามบัตร</p>
+                          {isPDF ? (
+                            // PDF Icon - No thumbnail, just link
+                            <a
+                              href={selectedApp.businessCardUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex flex-col items-center justify-center h-32 bg-red-50 rounded hover:bg-red-100 transition-colors"
+                            >
+                              <svg className="w-16 h-16 text-red-600 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M4 18h12a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H7a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2zm2-14h8v2H6V4z" />
+                              </svg>
+                              <span className="text-sm font-medium text-red-700">PDF Document</span>
+                            </a>
+                          ) : (
+                            // Image Thumbnail - Can click to view in lightbox
+                            <div className="relative group">
+                              <img
+                                src={selectedApp.businessCardUrl}
+                                alt="Business Card"
+                                className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => {
+                                  setLightboxImage(selectedApp.businessCardUrl!);
+                                  setLightboxOpen(true);
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
+                                onClick={() => {
+                                  setLightboxImage(selectedApp.businessCardUrl!);
+                                  setLightboxOpen(true);
+                                }}>
+                                <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                </svg>
+                              </div>
+                            </div>
+                          )}
+                          <a
+                            href={selectedApp.businessCardUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
-                          </div>
+                            เปิดในแท็บใหม่
+                          </a>
                         </div>
-                        <a
-                          href={selectedApp.businessCardUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          เปิดในแท็บใหม่
-                        </a>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -638,46 +649,6 @@ export default function ApplicationsPage() {
                   )}
                 </div>
               )}
-
-              {/* Document Status */}
-              <div>
-                <h4 className="font-medium text-gray-700 mb-3">สถานะเอกสาร</h4>
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => handleUpdateDocStatus('pending')}
-                    disabled={updating || selectedApp.documentStatus === 'pending'}
-                    className={`px-3 py-1.5 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
-                      selectedApp.documentStatus === 'pending'
-                        ? 'bg-orange-100 text-orange-800 font-medium'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    รอเอกสาร
-                  </button>
-                  <button
-                    onClick={() => handleUpdateDocStatus('uploaded')}
-                    disabled={updating || selectedApp.documentStatus === 'uploaded'}
-                    className={`px-3 py-1.5 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
-                      selectedApp.documentStatus === 'uploaded'
-                        ? 'bg-blue-100 text-blue-800 font-medium'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    อัพโหลดแล้ว
-                  </button>
-                  <button
-                    onClick={() => handleUpdateDocStatus('received')}
-                    disabled={updating || selectedApp.documentStatus === 'received'}
-                    className={`px-3 py-1.5 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
-                      selectedApp.documentStatus === 'received'
-                        ? 'bg-green-100 text-green-800 font-medium'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    ได้รับเอกสารแล้ว
-                  </button>
-                </div>
-              </div>
 
               {/* Notes */}
               <div>

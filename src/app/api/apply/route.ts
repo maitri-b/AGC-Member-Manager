@@ -79,34 +79,45 @@ export async function POST(request: NextRequest) {
 
     const db = adminDb();
 
-    // Check if user has already applied
-    console.log('[Apply API] === DUPLICATE CHECK START ===');
-    console.log('[Apply API] Session user ID:', session.user.id);
-    console.log('[Apply API] Session user object:', JSON.stringify(session.user, null, 2));
+    // ✅ Check if user is Admin/Committee/Event Team - exempt from duplicate check
+    const userRole = session.user.role || 'member';
+    const exemptRoles = ['admin', 'committee', 'event_team'];
+    const isExempt = exemptRoles.includes(userRole);
 
-    const existingApplication = await db.collection('membershipApplications')
-      .where('lineUserId', '==', session.user.id)
-      .where('status', 'in', ['pending', 'approved'])
-      .limit(1)
-      .get();
+    console.log('[Apply API] User role:', userRole, '| Exempt from duplicate check:', isExempt);
 
-    console.log('[Apply API] Duplicate check query completed');
-    console.log('[Apply API] Query empty?', existingApplication.empty);
-    console.log('[Apply API] Number of docs found:', existingApplication.size);
+    // Check if user has already applied (skip for exempt roles)
+    if (!isExempt) {
+      console.log('[Apply API] === DUPLICATE CHECK START ===');
+      console.log('[Apply API] Session user ID:', session.user.id);
+      console.log('[Apply API] Session user object:', JSON.stringify(session.user, null, 2));
 
-    if (!existingApplication.empty) {
-      const existingDocs = existingApplication.docs.map(doc => ({
-        id: doc.id,
-        lineUserId: doc.data().lineUserId,
-        status: doc.data().status,
-        nickname: doc.data().nickname,
-        createdAt: doc.data().createdAt,
-      }));
-      console.log('[Apply API] ❌ Found existing application(s):', JSON.stringify(existingDocs, null, 2));
-      return NextResponse.json({ error: 'คุณได้ส่งใบสมัครแล้ว กรุณารอการพิจารณา' }, { status: 400 });
+      const existingApplication = await db.collection('membershipApplications')
+        .where('lineUserId', '==', session.user.id)
+        .where('status', 'in', ['pending', 'approved'])
+        .limit(1)
+        .get();
+
+      console.log('[Apply API] Duplicate check query completed');
+      console.log('[Apply API] Query empty?', existingApplication.empty);
+      console.log('[Apply API] Number of docs found:', existingApplication.size);
+
+      if (!existingApplication.empty) {
+        const existingDocs = existingApplication.docs.map(doc => ({
+          id: doc.id,
+          lineUserId: doc.data().lineUserId,
+          status: doc.data().status,
+          nickname: doc.data().nickname,
+          createdAt: doc.data().createdAt,
+        }));
+        console.log('[Apply API] ❌ Found existing application(s):', JSON.stringify(existingDocs, null, 2));
+        return NextResponse.json({ error: 'คุณได้ส่งใบสมัครแล้ว กรุณารอการพิจารณา' }, { status: 400 });
+      }
+
+      console.log('[Apply API] ✅ No duplicate found, proceeding with application');
+    } else {
+      console.log('[Apply API] ✅ User is', userRole, '- skipping duplicate check');
     }
-
-    console.log('[Apply API] ✅ No duplicate found, proceeding with application');
 
     // Check if license number already exists in applications
     console.log('[Apply API] === LICENSE NUMBER CHECK START ===');
@@ -268,7 +279,18 @@ export async function GET(request: NextRequest) {
 
     const db = adminDb();
 
-    console.log('[Apply API GET] Checking for existing application, userId:', session.user.id);
+    // ✅ Check if user is Admin/Committee/Event Team - always allow them to see the form
+    const userRole = session.user.role || 'member';
+    const exemptRoles = ['admin', 'committee', 'event_team'];
+    const isExempt = exemptRoles.includes(userRole);
+
+    console.log('[Apply API GET] Checking for existing application, userId:', session.user.id, '| Role:', userRole);
+
+    // If user is exempt, always return no application (so they can fill the form)
+    if (isExempt) {
+      console.log('[Apply API GET] User is', userRole, '- allowing form access');
+      return NextResponse.json({ hasApplication: false });
+    }
 
     // ✅ FIXED: Fetch with where only, then sort in JavaScript (per AGENTS.md rules)
     const applicationsSnapshot = await db.collection('membershipApplications')

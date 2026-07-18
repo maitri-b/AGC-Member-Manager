@@ -433,7 +433,7 @@ export default function EventDetailPage() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentFormData, setPaymentFormData] = useState<{
     registrationId: string;
-    paymentType: 'deposit' | 'remaining' | 'full' | 'refund';
+    paymentType: 'deposit' | 'remaining' | 'full' | 'refund' | 'additional';
     amount: number;
     slipUrl: string;
     paidDate: string;
@@ -1311,21 +1311,38 @@ export default function EventDetailPage() {
     const hasActiveRemaining = activeSlips.some((s: any) => s.paymentType === 'remaining');
     const hasPendingSlips = adminPaymentSlips.some((slip: any) => slip.status === 'pending');
 
+    // Calculate if overpaid (for refund availability)
+    const approvedSlips = adminPaymentSlips.filter((slip: any) => slip.status === 'approved');
+    const totalPaid = approvedSlips.reduce((sum: number, slip: any) => {
+      if (slip.paymentType === 'refund') {
+        return sum - (slip.amount || 0);
+      }
+      return sum + (slip.amount || 0);
+    }, 0);
+
+    const attendee = eventData?.attendees?.find(
+      a => a.registration.registrationId === paymentFormData.registrationId
+    );
+    const totalAmount = attendee?.registration.totalAmount || 0;
+    const isOverpaid = totalPaid > totalAmount;
+
     return {
       canUploadDeposit: !hasActiveFull && !hasActiveDeposit,
       canUploadRemaining: !hasActiveFull && !hasActiveRemaining && hasActiveDeposit,
       canUploadFull: !hasActiveFull,
-      canUploadRefund: !hasPendingSlips, // Block refund if there are pending slips
+      canUploadAdditional: true, // Always allow additional payments
+      canUploadRefund: !hasPendingSlips && isOverpaid, // Only allow refund if no pending slips AND overpaid
       hasWarnings: {
         deposit: hasActiveDeposit,
         remaining: hasActiveRemaining,
         full: hasActiveFull,
-      }
+      },
+      refundReason: !isOverpaid ? 'ยังไม่มีการชำระเกิน' : ''
     };
   };
 
   // Calculate suggested amount based on payment type and existing slips
-  const getAdminSuggestedAmount = (paymentType: 'deposit' | 'remaining' | 'full' | 'refund') => {
+  const getAdminSuggestedAmount = (paymentType: 'deposit' | 'remaining' | 'full' | 'refund' | 'additional') => {
     // Find the attendee from current modal
     const attendee = eventData?.attendees?.find(
       a => a.registration.registrationId === paymentFormData.registrationId
@@ -1364,6 +1381,10 @@ export default function EventDetailPage() {
         // Suggest overpaid amount (if any)
         const overpaid = totalPaid - totalAmount;
         return Math.max(0, overpaid);
+
+      case 'additional':
+        // Additional payments start at 0 (admin enters custom amount)
+        return 0;
 
       default:
         return 0;
@@ -3500,7 +3521,7 @@ export default function EventDetailPage() {
                                 value="deposit"
                                 checked={paymentFormData.paymentType === 'deposit'}
                                 onChange={(e) => {
-                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund';
+                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' | 'additional';
                                   setPaymentFormData({
                                     ...paymentFormData,
                                     paymentType: newType,
@@ -3523,7 +3544,7 @@ export default function EventDetailPage() {
                                 value="remaining"
                                 checked={paymentFormData.paymentType === 'remaining'}
                                 onChange={(e) => {
-                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund';
+                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' | 'additional';
                                   setPaymentFormData({
                                     ...paymentFormData,
                                     paymentType: newType,
@@ -3546,7 +3567,7 @@ export default function EventDetailPage() {
                                 value="full"
                                 checked={paymentFormData.paymentType === 'full'}
                                 onChange={(e) => {
-                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund';
+                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' | 'additional';
                                   setPaymentFormData({
                                     ...paymentFormData,
                                     paymentType: newType,
@@ -3561,6 +3582,23 @@ export default function EventDetailPage() {
                                 <span className="text-xs text-amber-600 ml-auto">⚠️ มีสลิปอยู่แล้ว</span>
                               )}
                             </label>
+                            <label className="flex items-center gap-2 cursor-pointer p-2 border border-purple-300 rounded hover:bg-purple-50">
+                              <input
+                                type="radio"
+                                value="additional"
+                                checked={paymentFormData.paymentType === 'additional'}
+                                onChange={(e) => {
+                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' | 'additional';
+                                  setPaymentFormData({
+                                    ...paymentFormData,
+                                    paymentType: newType,
+                                    amount: 0 // Additional always starts at 0
+                                  });
+                                }}
+                                className="w-4 h-4 text-purple-600"
+                              />
+                              <span className="text-sm font-semibold text-purple-700">💰 ค่าใช้จ่ายเพิ่มเติม</span>
+                            </label>
                             <label className={`flex items-center gap-2 p-2 border border-red-300 rounded ${
                               available.canUploadRefund ? 'cursor-pointer hover:bg-red-50' : 'opacity-50 cursor-not-allowed bg-gray-50'
                             }`}>
@@ -3569,7 +3607,7 @@ export default function EventDetailPage() {
                                 value="refund"
                                 checked={paymentFormData.paymentType === 'refund'}
                                 onChange={(e) => {
-                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund';
+                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' | 'additional';
                                   setPaymentFormData({
                                     ...paymentFormData,
                                     paymentType: newType,
@@ -3581,7 +3619,9 @@ export default function EventDetailPage() {
                               />
                               <span className="text-sm font-semibold text-red-700">💸 โอนเงินคืน (Refund)</span>
                               {!available.canUploadRefund && (
-                                <span className="text-xs text-red-600 ml-auto">❌ มีสลิปรออนุมัติ</span>
+                                <span className="text-xs text-red-600 ml-auto">
+                                  ❌ {available.refundReason || 'มีสลิปรออนุมัติ'}
+                                </span>
                               )}
                             </label>
                           </>

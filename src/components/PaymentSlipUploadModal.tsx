@@ -243,6 +243,17 @@ export default function PaymentSlipUploadModal({
     }
   };
 
+  // ✅ Calculate total paid from approved slips (same logic as Admin modal)
+  const calculateTotalPaid = () => {
+    const approvedSlips = paymentSlips.filter(slip => slip.status === 'approved');
+    return approvedSlips.reduce((sum, slip) => {
+      if (slip.paymentType === 'refund') {
+        return sum - (slip.amount || 0); // Subtract refund amount
+      }
+      return sum + (slip.amount || 0);
+    }, 0);
+  };
+
   // ✅ NEW: Determine available payment type options based on active slips
   const getAvailablePaymentTypes = (): Array<{ value: string; label: string; suggestedAmount: number }> => {
     const options: Array<{ value: string; label: string; suggestedAmount: number }> = [];
@@ -260,6 +271,9 @@ export default function PaymentSlipUploadModal({
     const hasActiveDeposit = activeSlips.some(s => s.paymentType === 'deposit');
     const hasActiveRemaining = activeSlips.some(s => s.paymentType === 'remaining');
 
+    // Calculate total paid from approved slips
+    const totalPaid = calculateTotalPaid();
+
     if (paymentMode === 'deposit') {
       // Deposit payment mode
       if (hasActiveFull) {
@@ -273,7 +287,7 @@ export default function PaymentSlipUploadModal({
       } else if (hasActiveDeposit) {
         // Path A: Paid deposit only
         // Allow remaining and additional
-        const remainingNeeded = Math.max(0, remainingAmount - remainingAmountPaid);
+        const remainingNeeded = Math.max(0, totalAmount - totalPaid);
         options.push(
           { value: 'remaining', label: 'ยอดคงเหลือ', suggestedAmount: remainingNeeded }
         );
@@ -281,12 +295,12 @@ export default function PaymentSlipUploadModal({
       } else {
         // No payment yet
         // Allow deposit, full, additional
-        const depositRemaining = Math.max(0, depositAmount - depositAmountPaid);
-        const totalRemaining = Math.max(0, totalAmount - depositAmountPaid - remainingAmountPaid);
+        const depositNeeded = Math.max(0, depositAmount - totalPaid);
+        const totalNeeded = Math.max(0, totalAmount - totalPaid);
 
         options.push(
-          { value: 'deposit', label: 'มัดจำ', suggestedAmount: depositRemaining },
-          { value: 'full', label: 'เต็มจำนวน (ชำระทั้งหมด)', suggestedAmount: totalRemaining }
+          { value: 'deposit', label: 'มัดจำ', suggestedAmount: depositNeeded },
+          { value: 'full', label: 'เต็มจำนวน (ชำระทั้งหมด)', suggestedAmount: totalNeeded }
         );
         console.log('[getAvailablePaymentTypes] Deposit mode - no active slips');
       }
@@ -299,10 +313,10 @@ export default function PaymentSlipUploadModal({
       } else {
         // No full payment slip yet
         // Allow full and additional
-        const fullPaymentRemaining = Math.max(0, totalAmount - fullPaymentAmountPaid);
+        const fullPaymentNeeded = Math.max(0, totalAmount - totalPaid);
 
         options.push(
-          { value: 'full', label: 'เต็มจำนวน', suggestedAmount: fullPaymentRemaining }
+          { value: 'full', label: 'เต็มจำนวน', suggestedAmount: fullPaymentNeeded }
         );
         console.log('[getAvailablePaymentTypes] Full mode - no active full slip');
       }

@@ -62,9 +62,9 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    if (!['deposit', 'remaining', 'full'].includes(paymentType)) {
+    if (!['deposit', 'remaining', 'full', 'additional', 'refund'].includes(paymentType)) {
       return NextResponse.json({
-        error: 'paymentType must be "deposit", "remaining", or "full"'
+        error: 'paymentType must be "deposit", "remaining", "full", "additional", or "refund"'
       }, { status: 400 });
     }
 

@@ -3490,12 +3490,12 @@ export default function EventDetailPage() {
       {/* Payment Confirmation Modal */}
       {paymentModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-4">
+            <h2 className="text-lg font-bold text-gray-900 mb-3">
               อัพโหลดสลิปการชำระเงิน
             </h2>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Payment Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3635,93 +3635,94 @@ export default function EventDetailPage() {
                 )}
               </div>
 
-              {/* Amount Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  จำนวนเงินที่ชำระ (บาท) *
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={paymentFormData.amount === 0 ? '' : paymentFormData.amount}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    const amount = value === '' ? 0 : parseFloat(value);
-                    setPaymentFormData({ ...paymentFormData, amount });
-                  }}
-                  onBlur={(e) => {
-                    if (e.target.value === '') {
-                      setPaymentFormData({ ...paymentFormData, amount: 0 });
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0.00"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  ระบุยอดเงินที่ลูกค้าชำระจริง
-                </p>
-              </div>
+              {/* Amount and Date in same row */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Amount Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    จำนวนเงิน (บาท) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={paymentFormData.amount === 0 ? '' : paymentFormData.amount}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const amount = value === '' ? 0 : parseFloat(value);
+                      setPaymentFormData({ ...paymentFormData, amount });
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value === '') {
+                        setPaymentFormData({ ...paymentFormData, amount: 0 });
+                      }
+                    }}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
 
-              {/* Payment Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  วันที่ชำระเงิน *
-                </label>
-                <input
-                  type="date"
-                  value={paymentFormData.paidDate}
-                  onChange={(e) => setPaymentFormData({ ...paymentFormData, paidDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  ระบุวันที่ลูกค้าชำระเงินจริง (ใช้สำหรับคำนวณกำหนดชำระส่วนถัดไป)
-                </p>
+                {/* Payment Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    วันที่ชำระ *
+                  </label>
+                  <input
+                    type="date"
+                    value={paymentFormData.paidDate}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, paidDate: e.target.value })}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               </div>
 
               {/* Slip Upload Options */}
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   📎 สลิปการโอนเงิน
                 </label>
 
-                {/* File Upload Option */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                {/* File Upload Option - Compact */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 hover:border-blue-400 transition-colors">
                   <label className="cursor-pointer block">
-                    <div className="flex flex-col items-center">
+                    <div className="flex items-center gap-3">
                       {paymentFormData.slipFile ? (
                         <>
-                          <div className="text-green-600 mb-2">
-                            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="text-green-600">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                           </div>
-                          <p className="text-sm font-medium text-gray-700">{paymentFormData.slipFile.name}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {(paymentFormData.slipFile.size / 1024).toFixed(2)} KB
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-700 truncate">{paymentFormData.slipFile.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {(paymentFormData.slipFile.size / 1024).toFixed(2)} KB
+                            </p>
+                          </div>
                           <button
                             type="button"
                             onClick={(e) => {
                               e.preventDefault();
                               setPaymentFormData({ ...paymentFormData, slipFile: null });
                             }}
-                            className="mt-2 text-xs text-red-600 hover:text-red-800"
+                            className="text-xs text-red-600 hover:text-red-800 px-2 py-1"
                           >
-                            ลบไฟล์
+                            ลบ
                           </button>
                         </>
                       ) : (
                         <>
-                          <div className="text-gray-400 mb-2">
-                            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="text-gray-400">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
                           </div>
-                          <p className="text-sm font-medium text-gray-700">คลิกเพื่ออัพโหลดไฟล์</p>
-                          <p className="text-xs text-gray-500 mt-1">JPG, PNG, PDF (สูงสุด 5MB)</p>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-700">คลิกเพื่ออัพโหลดไฟล์</p>
+                            <p className="text-xs text-gray-500">JPG, PNG, PDF (สูงสุด 5MB)</p>
+                          </div>
                         </>
                       )}
                     </div>
@@ -3744,22 +3745,20 @@ export default function EventDetailPage() {
                 </div>
 
                 {paymentFormData.uploadingFile && (
-                  <div className="bg-blue-50 border border-blue-200 rounded p-3 flex items-center gap-2">
-                    <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <div className="bg-blue-50 border border-blue-200 rounded p-2 flex items-center gap-2 mt-2">
+                    <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span className="text-sm text-blue-800">กำลังอัพโหลดไฟล์...</span>
+                    <span className="text-xs text-blue-800">กำลังอัพโหลดไฟล์...</span>
                   </div>
                 )}
               </div>
 
-              {/* Note */}
-              <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                <p className="text-sm text-blue-800">
+              {/* Note - Compact */}
+              <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                <p className="text-xs text-blue-800">
                   <strong>หมายเหตุ:</strong> การกดยืนยันจะบันทึกการชำระเงินลงในระบบและอัพเดทสถานะอัตโนมัติ
-                  {paymentFormData.paymentType === 'deposit' && ' และคำนวณกำหนดชำระยอดคงเหลือ'}
-                  {paymentFormData.paymentType === 'full' && ' (ทั้งมัดจำและยอดคงเหลือ)'}
                 </p>
               </div>
             </div>

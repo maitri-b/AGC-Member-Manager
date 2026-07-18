@@ -1790,25 +1790,7 @@ export default function EventDetailPage() {
                                 </svg>
                                 <div className="flex-1">
                                   <h4 className="font-semibold text-purple-900 mb-2">💸 คืนเงินแล้ว</h4>
-                                  <div className="space-y-1 text-sm text-purple-800">
-                                    <div className="flex justify-between">
-                                      <span>ยอดรวมทั้งหมด:</span>
-                                      <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span>ยอดชำระแล้ว:</span>
-                                      <span className="font-semibold">{(paidAmount + approvedAdditional).toLocaleString()} บาท</span>
-                                    </div>
-                                    <div className="flex justify-between border-t border-purple-300 pt-1 mt-1">
-                                      <span className="font-bold text-purple-600">ยอดคืนเงิน:</span>
-                                      <span className="font-bold text-lg text-purple-600">-{totalRefunded.toLocaleString()} บาท</span>
-                                    </div>
-                                    <div className="flex justify-between border-t border-purple-300 pt-1 mt-1">
-                                      <span className="font-bold">ยอดคงเหลือสุทธิ:</span>
-                                      <span className="font-bold text-lg text-purple-900">{(paidAmount + approvedAdditional - totalRefunded).toLocaleString()} บาท</span>
-                                    </div>
-                                  </div>
-                                  <p className="text-xs text-purple-700 mt-2">
+                                  <p className="text-sm text-purple-800">
                                     ระบบได้ทำการคืนเงินให้คุณแล้ว หากมีข้อสงสัยกรุณาติดต่อทีมงาน
                                   </p>
                                 </div>
@@ -1826,22 +1808,8 @@ export default function EventDetailPage() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 <div className="flex-1">
-                                  <h4 className="font-semibold text-blue-900 mb-2">ชำระเงินเกินจำนวน</h4>
-                                  <div className="space-y-1 text-sm text-blue-800">
-                                    <div className="flex justify-between">
-                                      <span>ยอดรวมทั้งหมด:</span>
-                                      <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span>ยอดชำระแล้ว:</span>
-                                      <span className="font-semibold">{(paidAmount + approvedAdditional).toLocaleString()} บาท</span>
-                                    </div>
-                                    <div className="flex justify-between border-t border-blue-300 pt-1 mt-1">
-                                      <span className="font-bold">ชำระเกิน:</span>
-                                      <span className="font-bold text-lg text-blue-600">{overpayment.toLocaleString()} บาท</span>
-                                    </div>
-                                  </div>
-                                  <p className="text-xs text-blue-700 mt-2">
+                                  <h4 className="font-semibold text-blue-900 mb-2">ℹ️ ชำระเงินเกินจำนวน</h4>
+                                  <p className="text-sm text-blue-800">
                                     คุณได้ชำระเงินเกินจำนวนที่กำหนด ยอดเกินสามารถนำไปใช้กับกิจกรรมครั้งต่อไป หรือติดต่อทีมงานเพื่อขอคืนเงิน
                                   </p>
                                 </div>
@@ -1869,22 +1837,8 @@ export default function EventDetailPage() {
                                   </>
                                 ) : additionalRequired > 0 ? (
                                   <>
-                                    <h4 className="font-semibold text-orange-900 mb-2">ต้องชำระเงินเพิ่มเติม</h4>
-                                    <div className="space-y-1 text-sm text-orange-800">
-                                      <div className="flex justify-between">
-                                        <span>ยอดรวมทั้งหมด:</span>
-                                        <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span>ยอดชำระแล้ว:</span>
-                                        <span className="font-semibold">{(paidAmount + approvedAdditional).toLocaleString()} บาท</span>
-                                      </div>
-                                      <div className="flex justify-between border-t border-orange-300 pt-1 mt-1">
-                                        <span className="font-bold">ยอดชำระเพิ่ม:</span>
-                                        <span className="font-bold text-lg text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
-                                      </div>
-                                    </div>
-                                    <p className="text-xs text-orange-700 mt-2">
+                                    <h4 className="font-semibold text-orange-900 mb-2">⚠️ ต้องชำระเงินเพิ่มเติม</h4>
+                                    <p className="text-sm text-orange-800">
                                       กรุณาชำระเงินเพิ่มเติมและส่งสลิปผ่านปุ่มด้านล่าง
                                     </p>
                                   </>

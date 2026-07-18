@@ -1241,20 +1241,11 @@ export default function EventDetailPage() {
       finalPaymentType = 'full';
     }
 
-    // Auto-fill amount based on payment type
-    let defaultAmount = 0;
-    if (finalPaymentType === 'deposit') {
-      defaultAmount = attendee.registration.depositAmount || 0;
-    } else if (finalPaymentType === 'remaining') {
-      defaultAmount = attendee.registration.remainingAmount || 0;
-    } else if (finalPaymentType === 'full') {
-      defaultAmount = attendee.registration.totalAmount || 0;
-    }
-
+    // Set initial form data (amount will be updated after fetching slips)
     setPaymentFormData({
       registrationId: attendee.registration.registrationId,
       paymentType: finalPaymentType,
-      amount: defaultAmount,
+      amount: 0, // Will be calculated after fetching slips
       slipUrl: finalPaymentType === 'deposit' ? attendee.registration.depositSlipUrl : attendee.registration.remainingSlipUrl,
       paidDate: new Date().toISOString().split('T')[0],
     });
@@ -1266,7 +1257,38 @@ export default function EventDetailPage() {
       const response = await fetch(`/api/payments/slips?registrationId=${attendee.registration.registrationId}`);
       if (response.ok) {
         const data = await response.json();
-        setAdminPaymentSlips(data.slips || []);
+        const fetchedSlips = data.slips || [];
+        setAdminPaymentSlips(fetchedSlips);
+
+        // Calculate suggested amount based on fetched slips
+        // We need to calculate it here because getAdminSuggestedAmount depends on adminPaymentSlips state
+        const approvedSlips = fetchedSlips.filter((slip: any) => slip.status === 'approved');
+        const totalPaid = approvedSlips.reduce((sum: number, slip: any) => {
+          if (slip.paymentType === 'refund') {
+            return sum - (slip.amount || 0);
+          }
+          return sum + (slip.amount || 0);
+        }, 0);
+
+        const totalAmount = attendee.registration.totalAmount || 0;
+        const depositAmount = attendee.registration.depositAmount || 0;
+
+        let suggestedAmount = 0;
+        switch (finalPaymentType) {
+          case 'deposit':
+            suggestedAmount = Math.max(0, depositAmount - totalPaid);
+            break;
+          case 'remaining':
+          case 'full':
+            suggestedAmount = Math.max(0, totalAmount - totalPaid);
+            break;
+        }
+
+        // Update form data with calculated amount
+        setPaymentFormData(prev => ({
+          ...prev,
+          amount: suggestedAmount
+        }));
       }
     } catch (error) {
       console.error('[Admin Modal] Failed to fetch payment slips:', error);
@@ -1300,6 +1322,52 @@ export default function EventDetailPage() {
         full: hasActiveFull,
       }
     };
+  };
+
+  // Calculate suggested amount based on payment type and existing slips
+  const getAdminSuggestedAmount = (paymentType: 'deposit' | 'remaining' | 'full' | 'refund') => {
+    // Find the attendee from current modal
+    const attendee = eventData?.attendees?.find(
+      a => a.registration.registrationId === paymentFormData.registrationId
+    );
+
+    if (!attendee) return 0;
+
+    // Calculate total approved payments
+    const approvedSlips = adminPaymentSlips.filter((slip: any) => slip.status === 'approved');
+    const totalPaid = approvedSlips.reduce((sum: number, slip: any) => {
+      // Don't count refunds as payments
+      if (slip.paymentType === 'refund') {
+        return sum - (slip.amount || 0); // Subtract refund amount
+      }
+      return sum + (slip.amount || 0);
+    }, 0);
+
+    const totalAmount = attendee.registration.totalAmount || 0;
+    const depositAmount = attendee.registration.depositAmount || 0;
+    const remainingAmount = attendee.registration.remainingAmount || 0;
+
+    switch (paymentType) {
+      case 'deposit':
+        // Suggest deposit amount minus what's already paid
+        return Math.max(0, depositAmount - totalPaid);
+
+      case 'remaining':
+        // Suggest remaining amount (should be paid after deposit)
+        return Math.max(0, totalAmount - totalPaid);
+
+      case 'full':
+        // Suggest total amount minus what's already paid
+        return Math.max(0, totalAmount - totalPaid);
+
+      case 'refund':
+        // Suggest overpaid amount (if any)
+        const overpaid = totalPaid - totalAmount;
+        return Math.max(0, overpaid);
+
+      default:
+        return 0;
+    }
   };
 
   const handleClosePaymentModal = () => {
@@ -3431,7 +3499,14 @@ export default function EventDetailPage() {
                                 type="radio"
                                 value="deposit"
                                 checked={paymentFormData.paymentType === 'deposit'}
-                                onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
+                                onChange={(e) => {
+                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund';
+                                  setPaymentFormData({
+                                    ...paymentFormData,
+                                    paymentType: newType,
+                                    amount: getAdminSuggestedAmount(newType)
+                                  });
+                                }}
                                 disabled={!available.canUploadDeposit}
                                 className="w-4 h-4 text-blue-600"
                               />
@@ -3447,7 +3522,14 @@ export default function EventDetailPage() {
                                 type="radio"
                                 value="remaining"
                                 checked={paymentFormData.paymentType === 'remaining'}
-                                onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
+                                onChange={(e) => {
+                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund';
+                                  setPaymentFormData({
+                                    ...paymentFormData,
+                                    paymentType: newType,
+                                    amount: getAdminSuggestedAmount(newType)
+                                  });
+                                }}
                                 disabled={!available.canUploadRemaining}
                                 className="w-4 h-4 text-blue-600"
                               />
@@ -3463,7 +3545,14 @@ export default function EventDetailPage() {
                                 type="radio"
                                 value="full"
                                 checked={paymentFormData.paymentType === 'full'}
-                                onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
+                                onChange={(e) => {
+                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund';
+                                  setPaymentFormData({
+                                    ...paymentFormData,
+                                    paymentType: newType,
+                                    amount: getAdminSuggestedAmount(newType)
+                                  });
+                                }}
                                 disabled={!available.canUploadFull}
                                 className="w-4 h-4 text-blue-600"
                               />
@@ -3479,7 +3568,14 @@ export default function EventDetailPage() {
                                 type="radio"
                                 value="refund"
                                 checked={paymentFormData.paymentType === 'refund'}
-                                onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
+                                onChange={(e) => {
+                                  const newType = e.target.value as 'deposit' | 'remaining' | 'full' | 'refund';
+                                  setPaymentFormData({
+                                    ...paymentFormData,
+                                    paymentType: newType,
+                                    amount: getAdminSuggestedAmount(newType)
+                                  });
+                                }}
                                 disabled={!available.canUploadRefund}
                                 className="w-4 h-4 text-red-600"
                               />

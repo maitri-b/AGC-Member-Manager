@@ -1756,12 +1756,48 @@ export default function EventDetailPage() {
 
                         const additionalRequired = Math.max(0, totalAmount - (paidAmount + approvedAdditional));
 
+                        // Check for overpayment
+                        const overpayment = (userRegistration as any).overpaymentAmount || 0;
+
                         // Check if there's a pending additional payment
                         const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
 
                         // Check if this is truly an "additional" payment (not first payment)
                         // Only show additional payment notice if user has already paid something
                         const isAdditionalPayment = paidAmount > 0 || approvedAdditional > 0;
+
+                        // Show overpayment alert first
+                        if (overpayment > 0) {
+                          return (
+                            <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                              <div className="flex items-start gap-3">
+                                <svg className="w-6 h-6 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-blue-900 mb-2">ชำระเงินเกินจำนวน</h4>
+                                  <div className="space-y-1 text-sm text-blue-800">
+                                    <div className="flex justify-between">
+                                      <span>ยอดรวมทั้งหมด:</span>
+                                      <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>ยอดชำระแล้ว:</span>
+                                      <span className="font-semibold">฿{(paidAmount + approvedAdditional).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-blue-300 pt-1 mt-1">
+                                      <span className="font-bold">ชำระเกิน:</span>
+                                      <span className="font-bold text-lg text-blue-600">฿{overpayment.toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-blue-700 mt-2">
+                                    คุณได้ชำระเงินเกินจำนวนที่กำหนด ยอดเกินสามารถนำไปใช้กับกิจกรรมครั้งต่อไป หรือติดต่อทีมงานเพื่อขอคืนเงิน
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
 
                         // Only show this section for actual additional payments, not initial payments
                         if (!isAdditionalPayment || (additionalRequired === 0 && !hasPendingAdditional)) return null;

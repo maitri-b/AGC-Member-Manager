@@ -354,6 +354,11 @@ export async function approvePaymentSlip(
       updateData.status = paymentStatusUpdate.status;
     }
 
+    // ✅ Store overpayment amount
+    if (paymentStatusUpdate.overpayment_amount !== undefined) {
+      updateData.overpayment_amount = paymentStatusUpdate.overpayment_amount;
+    }
+
     console.log('[Approve Slip] Payment status recalculated:', {
       totalAmount,
       paidAmount: updateData.paidAmount,
@@ -361,6 +366,7 @@ export async function approvePaymentSlip(
       newPaymentStatus: updateData.paymentStatus,
       oldStatus: registrationData.status,
       newStatus: updateData.status,
+      overpaymentAmount: updateData.overpayment_amount,
     });
 
     await registrationDoc.ref.update(updateData);

@@ -308,7 +308,7 @@ export function recalculatePaymentStatus(
   newTotalAmount: number,
   paymentMode: string = 'full',
   approvedSlipsTotal: number = 0
-): { payment_status: string; status?: string } {
+): { payment_status: string; status?: string; overpayment_amount?: number } {
   // Calculate actual total paid from tracked amounts
   const depositAmountPaid = (registration as any).depositAmountPaid || 0;
   const remainingAmountPaid = (registration as any).remainingAmountPaid || 0;
@@ -341,14 +341,19 @@ export function recalculatePaymentStatus(
   const additionalPayments = parseAdditionalPayments(registration.additionalPayments);
   const fullyPaid = isFullyPaid(newTotalAmount, currentPaidAmount, additionalPayments);
 
-  const result: { payment_status: string; status?: string } = {
+  const result: { payment_status: string; status?: string; overpayment_amount?: number } = {
     payment_status: registration.paymentStatus || 'รอชำระเงิน'
   };
 
   // ✅ CHECK FOR OVERPAYMENT (paid > totalAmount)
   if (currentPaidAmount > newTotalAmount && currentPaidAmount > 0) {
+    const overpayment = currentPaidAmount - newTotalAmount;
     result.payment_status = 'ชำระเกินจำนวน';
     result.status = 'ยืนยันแล้ว'; // Still confirmed, just overpaid
+    result.overpayment_amount = overpayment; // ✅ Store overpayment amount
+  } else {
+    // Clear overpayment if not overpaying
+    result.overpayment_amount = 0;
   } else if (!fullyPaid && currentPaidAmount > 0) {
     // Was fully paid before, but not anymore due to totalAmount increase
     // Update paymentStatus to indicate additional payment needed

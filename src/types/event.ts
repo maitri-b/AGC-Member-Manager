@@ -106,6 +106,9 @@ export interface EventRegistration {
   // Payment Tracking (New - for tracking total paid amount and additional payments)
   paidAmount?: number;              // paid_amount - Total amount paid so far (deposit + remaining + additional)
   additionalPayments?: string;      // additional_payments - JSON stringified AdditionalPayment[]
+
+  // Overpayment Tracking (New - for tracking overpayment amount)
+  overpaymentAmount?: number;       // overpayment_amount - Amount paid in excess (paidAmount - totalAmount) when paidAmount > totalAmount
 }
 
 // Event metadata (for managing multiple events)
@@ -465,6 +468,7 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   // Payment tracking (New - for additional payments)
   paidAmount: 'paid_amount',
   additionalPayments: 'additional_payments',
+  overpaymentAmount: 'overpayment_amount',
   // Full Payment Mode Fields (New)
   fullPaymentDeadline: 'full_payment_deadline',
   fullPaymentPaid: 'full_payment_paid',

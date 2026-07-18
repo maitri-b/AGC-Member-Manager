@@ -8,7 +8,7 @@ import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { Event, AttendeeType, RoomType, calculateRegistrationFee } from '@/types/event';
 import { calculatePaymentSplit } from '@/lib/payment-deadlines';
 import { logRegistrationUpdate, logRegistrationCancellation } from '@/lib/activity-log';
-import { isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
+import { isFullyPaid, parseAdditionalPayments, recalculatePaymentStatus } from '@/lib/payment-status';
 
 // PUT - Admin update registration
 export async function PUT(
@@ -213,7 +213,6 @@ export async function PUT(
       const depositAmountPaid = (currentRegistration as any).depositAmountPaid || 0;
       const remainingAmountPaid = (currentRegistration as any).remainingAmountPaid || 0;
       const fullPaymentAmountPaid = (currentRegistration as any).fullPaymentAmountPaid || 0;
-      const actualTotalPaid = fullPaymentAmountPaid || (depositAmountPaid + remainingAmountPaid);
 
       // ✅ PRESERVE payment amount fields so they don't get lost on update
       // These fields track actual amounts paid and must be preserved
@@ -227,51 +226,40 @@ export async function PUT(
         finalUpdateData.full_payment_amount_paid = fullPaymentAmountPaid;
       }
 
-      // Fallback to legacy paidAmount if no tracked amounts
-      const currentPaidAmount = actualTotalPaid || currentRegistration.paidAmount || 0;
-      const additionalPayments = parseAdditionalPayments(currentRegistration.additionalPayments);
-      const fullyPaid = isFullyPaid(newTotalAmount, currentPaidAmount, additionalPayments);
+      // ✅ CRITICAL: Get approved payment slips total for accurate payment status calculation
+      const { getPaymentSlipsByRegistration } = await import('@/lib/payment-slips');
+      const slips = await getPaymentSlipsByRegistration(registrationId);
+      const approvedSlipsTotal = slips
+        .filter(slip => slip.status === 'approved')
+        .reduce((sum, slip) => sum + (slip.amount || 0), 0);
 
-      if (!fullyPaid && currentPaidAmount > 0) {
-        // Was fully paid before, but not anymore due to totalAmount increase
-        // Update paymentStatus to indicate additional payment needed
-        if (eventData.paymentMode === 'deposit') {
-          // Deposit mode: check what's been paid
-          if (currentRegistration.depositPaid && !currentRegistration.remainingPaid) {
-            finalUpdateData.payment_status = 'รอชำระยอดที่เหลือ';
-          } else if (currentRegistration.depositPaid && currentRegistration.remainingPaid) {
-            finalUpdateData.payment_status = 'รอชำระเพิ่มเติม'; // Need additional payment
-          } else {
-            finalUpdateData.payment_status = 'รอชำระมัดจำ';
-          }
-        } else {
-          // Full payment mode
-          if (currentRegistration.fullPaymentPaid) {
-            finalUpdateData.payment_status = 'รอชำระเพิ่มเติม'; // Need additional payment
-          } else {
-            finalUpdateData.payment_status = 'รอชำระเงิน';
-          }
-        }
+      // ✅ Use recalculatePaymentStatus for consistency with slip approval and charges/discounts
+      const paymentStatusUpdate = recalculatePaymentStatus(
+        currentRegistration,
+        newTotalAmount,
+        eventData.paymentMode || 'full',
+        approvedSlipsTotal
+      );
 
-        // Change status from "ยืนยันแล้ว" back to "รอดำเนินการ"
-        if (currentRegistration.status === 'ยืนยันแล้ว') {
-          finalUpdateData.status = 'รอดำเนินการ';
-        }
-
-        console.log('[Admin Update] Total amount increased, payment no longer complete:', {
-          oldTotal: currentRegistration.totalAmount,
-          newTotal: newTotalAmount,
-          paidAmount: currentPaidAmount,
-          oldPaymentStatus: currentRegistration.paymentStatus,
-          newPaymentStatus: finalUpdateData.payment_status,
-          oldStatus: currentRegistration.status,
-          newStatus: finalUpdateData.status,
-        });
-      } else if (fullyPaid) {
-        // Still fully paid after recalculation
-        finalUpdateData.payment_status = 'ชำระเต็มจำนวนแล้ว';
-        finalUpdateData.status = 'ยืนยันแล้ว';
+      finalUpdateData.payment_status = paymentStatusUpdate.payment_status;
+      if (paymentStatusUpdate.status) {
+        finalUpdateData.status = paymentStatusUpdate.status;
       }
+
+      // ✅ Store overpayment amount
+      if (paymentStatusUpdate.overpayment_amount !== undefined) {
+        finalUpdateData.overpayment_amount = paymentStatusUpdate.overpayment_amount;
+      }
+
+      console.log('[Admin Update] Payment status recalculated:', {
+        oldTotal: currentRegistration.totalAmount,
+        newTotal: newTotalAmount,
+        oldPaymentStatus: currentRegistration.paymentStatus,
+        newPaymentStatus: finalUpdateData.payment_status,
+        oldStatus: currentRegistration.status,
+        newStatus: finalUpdateData.status,
+        overpaymentAmount: finalUpdateData.overpayment_amount,
+      });
     }
 
     // Add admin update info

@@ -167,6 +167,10 @@ export async function POST(
     if (paymentStatusUpdate.status) {
       updateData.status = paymentStatusUpdate.status;
     }
+    // ✅ Store overpayment amount
+    if (paymentStatusUpdate.overpayment_amount !== undefined) {
+      updateData.overpayment_amount = paymentStatusUpdate.overpayment_amount;
+    }
 
     console.log('[Special Charges] Payment status recalculated:', {
       oldTotal: registration.totalAmount,
@@ -373,6 +377,10 @@ export async function DELETE(
     updateData.payment_status = paymentStatusUpdate.payment_status;
     if (paymentStatusUpdate.status) {
       updateData.status = paymentStatusUpdate.status;
+    }
+    // ✅ Store overpayment amount
+    if (paymentStatusUpdate.overpayment_amount !== undefined) {
+      updateData.overpayment_amount = paymentStatusUpdate.overpayment_amount;
     }
 
     console.log('[Special Charges] Payment status recalculated after removal:', {

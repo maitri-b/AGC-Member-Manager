@@ -450,6 +450,10 @@ export default function EventDetailPage() {
   });
   const [confirmingPayment, setConfirmingPayment] = useState(false);
 
+  // Payment slips validation state (for Admin modal)
+  const [adminPaymentSlips, setAdminPaymentSlips] = useState<any[]>([]);
+  const [loadingAdminSlips, setLoadingAdminSlips] = useState(false);
+
   // Special charges state
   const [specialChargesModalOpen, setSpecialChargesModalOpen] = useState(false);
   const [specialChargeFormData, setSpecialChargeFormData] = useState<{
@@ -1228,7 +1232,7 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleOpenPaymentModal = (attendee: Attendee, paymentType?: 'deposit' | 'remaining' | 'full') => {
+  const handleOpenPaymentModal = async (attendee: Attendee, paymentType?: 'deposit' | 'remaining' | 'full') => {
     // ✅ FIX: Auto-detect paymentType from event configuration if not specified
     let finalPaymentType: 'deposit' | 'remaining' | 'full' = paymentType || 'deposit';
 
@@ -1255,6 +1259,47 @@ export default function EventDetailPage() {
       paidDate: new Date().toISOString().split('T')[0],
     });
     setPaymentModalOpen(true);
+
+    // Fetch existing payment slips for validation
+    setLoadingAdminSlips(true);
+    try {
+      const response = await fetch(`/api/payments/slips?registrationId=${attendee.registration.registrationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAdminPaymentSlips(data.slips || []);
+      }
+    } catch (error) {
+      console.error('[Admin Modal] Failed to fetch payment slips:', error);
+      setAdminPaymentSlips([]);
+    } finally {
+      setLoadingAdminSlips(false);
+    }
+  };
+
+  // Get available payment types based on existing slips (for Admin modal)
+  const getAdminAvailablePaymentTypes = () => {
+    // Filter active slips (approved + pending, excluding refund)
+    const activeSlips = adminPaymentSlips.filter((slip: any) =>
+      (slip.status === 'approved' || slip.status === 'pending') &&
+      slip.paymentType !== 'refund'
+    );
+
+    const hasActiveFull = activeSlips.some((s: any) => s.paymentType === 'full');
+    const hasActiveDeposit = activeSlips.some((s: any) => s.paymentType === 'deposit');
+    const hasActiveRemaining = activeSlips.some((s: any) => s.paymentType === 'remaining');
+    const hasPendingSlips = adminPaymentSlips.some((slip: any) => slip.status === 'pending');
+
+    return {
+      canUploadDeposit: !hasActiveFull && !hasActiveDeposit,
+      canUploadRemaining: !hasActiveFull && !hasActiveRemaining && hasActiveDeposit,
+      canUploadFull: !hasActiveFull,
+      canUploadRefund: !hasPendingSlips, // Block refund if there are pending slips
+      hasWarnings: {
+        deposit: hasActiveDeposit,
+        remaining: hasActiveRemaining,
+        full: hasActiveFull,
+      }
+    };
   };
 
   const handleClosePaymentModal = () => {
@@ -1268,6 +1313,7 @@ export default function EventDetailPage() {
       slipFile: null,
       uploadingFile: false,
     });
+    setAdminPaymentSlips([]); // Reset slips
   };
 
   const handleConfirmPayment = async () => {
@@ -3366,48 +3412,91 @@ export default function EventDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   ประเภทการชำระเงิน *
                 </label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
-                    <input
-                      type="radio"
-                      value="deposit"
-                      checked={paymentFormData.paymentType === 'deposit'}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
-                      className="w-4 h-4 text-blue-600"
-                    />
-                    <span className="text-sm">ชำระมัดจำ (งวดที่ 1)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
-                    <input
-                      type="radio"
-                      value="remaining"
-                      checked={paymentFormData.paymentType === 'remaining'}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
-                      className="w-4 h-4 text-blue-600"
-                    />
-                    <span className="text-sm">ชำระยอดที่เหลือ (งวดที่ 2)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
-                    <input
-                      type="radio"
-                      value="full"
-                      checked={paymentFormData.paymentType === 'full'}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
-                      className="w-4 h-4 text-blue-600"
-                    />
-                    <span className="text-sm font-semibold text-green-700">ชำระเต็มจำนวน (ทั้งหมด)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer p-2 border border-red-300 rounded hover:bg-red-50">
-                    <input
-                      type="radio"
-                      value="refund"
-                      checked={paymentFormData.paymentType === 'refund'}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
-                      className="w-4 h-4 text-red-600"
-                    />
-                    <span className="text-sm font-semibold text-red-700">💸 โอนเงินคืน (Refund)</span>
-                  </label>
-                </div>
+                {loadingAdminSlips ? (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-xs text-gray-500 mt-2">กำลังตรวจสอบประวัติการชำระเงิน...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      {(() => {
+                        const available = getAdminAvailablePaymentTypes();
+                        return (
+                          <>
+                            <label className={`flex items-center gap-2 p-2 border rounded ${
+                              available.canUploadDeposit ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50 cursor-not-allowed bg-gray-50'
+                            }`}>
+                              <input
+                                type="radio"
+                                value="deposit"
+                                checked={paymentFormData.paymentType === 'deposit'}
+                                onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
+                                disabled={!available.canUploadDeposit}
+                                className="w-4 h-4 text-blue-600"
+                              />
+                              <span className="text-sm">ชำระมัดจำ (งวดที่ 1)</span>
+                              {available.hasWarnings.deposit && (
+                                <span className="text-xs text-amber-600 ml-auto">⚠️ มีสลิปอยู่แล้ว</span>
+                              )}
+                            </label>
+                            <label className={`flex items-center gap-2 p-2 border rounded ${
+                              available.canUploadRemaining ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50 cursor-not-allowed bg-gray-50'
+                            }`}>
+                              <input
+                                type="radio"
+                                value="remaining"
+                                checked={paymentFormData.paymentType === 'remaining'}
+                                onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
+                                disabled={!available.canUploadRemaining}
+                                className="w-4 h-4 text-blue-600"
+                              />
+                              <span className="text-sm">ชำระยอดที่เหลือ (งวดที่ 2)</span>
+                              {available.hasWarnings.remaining && (
+                                <span className="text-xs text-amber-600 ml-auto">⚠️ มีสลิปอยู่แล้ว</span>
+                              )}
+                            </label>
+                            <label className={`flex items-center gap-2 p-2 border rounded ${
+                              available.canUploadFull ? 'cursor-pointer hover:bg-gray-50' : 'opacity-50 cursor-not-allowed bg-gray-50'
+                            }`}>
+                              <input
+                                type="radio"
+                                value="full"
+                                checked={paymentFormData.paymentType === 'full'}
+                                onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
+                                disabled={!available.canUploadFull}
+                                className="w-4 h-4 text-blue-600"
+                              />
+                              <span className="text-sm font-semibold text-green-700">ชำระเต็มจำนวน (ทั้งหมด)</span>
+                              {available.hasWarnings.full && (
+                                <span className="text-xs text-amber-600 ml-auto">⚠️ มีสลิปอยู่แล้ว</span>
+                              )}
+                            </label>
+                            <label className={`flex items-center gap-2 p-2 border border-red-300 rounded ${
+                              available.canUploadRefund ? 'cursor-pointer hover:bg-red-50' : 'opacity-50 cursor-not-allowed bg-gray-50'
+                            }`}>
+                              <input
+                                type="radio"
+                                value="refund"
+                                checked={paymentFormData.paymentType === 'refund'}
+                                onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
+                                disabled={!available.canUploadRefund}
+                                className="w-4 h-4 text-red-600"
+                              />
+                              <span className="text-sm font-semibold text-red-700">💸 โอนเงินคืน (Refund)</span>
+                              {!available.canUploadRefund && (
+                                <span className="text-xs text-red-600 ml-auto">❌ มีสลิปรออนุมัติ</span>
+                              )}
+                            </label>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      หมายเหตุ: การอัพโหลดสลิปประเภทเดิมซ้ำจะถูกตรวจสอบที่ฝั่ง server และอาจถูกปฏิเสธ
+                    </p>
+                  </>
+                )}
               </div>
 
               {/* Amount Input */}

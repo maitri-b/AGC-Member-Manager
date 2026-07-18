@@ -247,6 +247,7 @@ function getPaymentTypeDescription(paymentType: PaymentType): string {
     deposit: 'ชำระมัดจำ',
     remaining: 'ชำระยอดคงเหลือ',
     additional: 'ชำระเพิ่มเติม',
+    refund: 'โอนเงินคืน',
   };
   return descriptions[paymentType];
 }

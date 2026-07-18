@@ -493,42 +493,32 @@ export default function ApplicationsPage() {
                       return (
                         <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                           <p className="text-xs text-gray-500 mb-2">ใบอนุญาตธุรกิจนำเที่ยว</p>
-                          {isPDF ? (
-                            // PDF Icon - No thumbnail, just link
-                            <a
-                              href={selectedApp.licenseDocumentUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex flex-col items-center justify-center h-32 bg-red-50 rounded hover:bg-red-100 transition-colors"
-                            >
-                              <svg className="w-16 h-16 text-red-600 mb-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M4 18h12a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H7a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2zm2-14h8v2H6V4z" />
-                              </svg>
-                              <span className="text-sm font-medium text-red-700">PDF Document</span>
-                            </a>
-                          ) : (
-                            // Image Thumbnail - Can click to view in lightbox
-                            <div className="relative group">
-                              <img
-                                src={selectedApp.licenseDocumentUrl}
-                                alt="License Document"
-                                className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => {
-                                  setLightboxImage(selectedApp.licenseDocumentUrl!);
-                                  setLightboxOpen(true);
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
-                                onClick={() => {
-                                  setLightboxImage(selectedApp.licenseDocumentUrl!);
-                                  setLightboxOpen(true);
-                                }}>
-                                <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                          <a
+                            href={selectedApp.licenseDocumentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex flex-col items-center justify-center h-32 rounded hover:bg-opacity-80 transition-colors ${
+                              isPDF ? 'bg-red-50 hover:bg-red-100' : 'bg-blue-50 hover:bg-blue-100'
+                            }`}
+                          >
+                            {isPDF ? (
+                              // PDF Icon
+                              <>
+                                <svg className="w-16 h-16 text-red-600 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M4 18h12a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H7a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2zm2-14h8v2H6V4z" />
                                 </svg>
-                              </div>
-                            </div>
-                          )}
+                                <span className="text-sm font-medium text-red-700">PDF Document</span>
+                              </>
+                            ) : (
+                              // Image Icon
+                              <>
+                                <svg className="w-16 h-16 text-blue-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-sm font-medium text-blue-700">Image File</span>
+                              </>
+                            )}
+                          </a>
                           <a
                             href={selectedApp.licenseDocumentUrl}
                             target="_blank"
@@ -551,42 +541,32 @@ export default function ApplicationsPage() {
                       return (
                         <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                           <p className="text-xs text-gray-500 mb-2">นามบัตร</p>
-                          {isPDF ? (
-                            // PDF Icon - No thumbnail, just link
-                            <a
-                              href={selectedApp.businessCardUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex flex-col items-center justify-center h-32 bg-red-50 rounded hover:bg-red-100 transition-colors"
-                            >
-                              <svg className="w-16 h-16 text-red-600 mb-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M4 18h12a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H7a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2zm2-14h8v2H6V4z" />
-                              </svg>
-                              <span className="text-sm font-medium text-red-700">PDF Document</span>
-                            </a>
-                          ) : (
-                            // Image Thumbnail - Can click to view in lightbox
-                            <div className="relative group">
-                              <img
-                                src={selectedApp.businessCardUrl}
-                                alt="Business Card"
-                                className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => {
-                                  setLightboxImage(selectedApp.businessCardUrl!);
-                                  setLightboxOpen(true);
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
-                                onClick={() => {
-                                  setLightboxImage(selectedApp.businessCardUrl!);
-                                  setLightboxOpen(true);
-                                }}>
-                                <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                          <a
+                            href={selectedApp.businessCardUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex flex-col items-center justify-center h-32 rounded hover:bg-opacity-80 transition-colors ${
+                              isPDF ? 'bg-red-50 hover:bg-red-100' : 'bg-blue-50 hover:bg-blue-100'
+                            }`}
+                          >
+                            {isPDF ? (
+                              // PDF Icon
+                              <>
+                                <svg className="w-16 h-16 text-red-600 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M4 18h12a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H7a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2zm2-14h8v2H6V4z" />
                                 </svg>
-                              </div>
-                            </div>
-                          )}
+                                <span className="text-sm font-medium text-red-700">PDF Document</span>
+                              </>
+                            ) : (
+                              // Image Icon
+                              <>
+                                <svg className="w-16 h-16 text-blue-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-sm font-medium text-blue-700">Image File</span>
+                              </>
+                            )}
+                          </a>
                           <a
                             href={selectedApp.businessCardUrl}
                             target="_blank"

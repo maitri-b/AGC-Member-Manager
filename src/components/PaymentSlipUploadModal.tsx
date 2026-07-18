@@ -217,8 +217,18 @@ export default function PaymentSlipUploadModal({
       // Full payment mode
       // Calculate remaining amount needed (subtract what's already been paid)
       const fullPaymentRemaining = Math.max(0, totalAmount - fullPaymentAmountPaid);
+
+      // ✅ FIXED: Determine correct label based on payment status
+      // If already paid some amount (fullPaymentAmountPaid > 0), this is "additional" payment
+      // If never paid anything, this is "full" payment
+      let label = 'เต็มจำนวน';
+      if (fullPaymentAmountPaid > 0) {
+        // Already paid something - this is additional/remaining payment
+        label = 'ยอดคงเหลือ';
+      }
+
       options.push(
-        { value: 'full', label: 'เต็มจำนวน', suggestedAmount: fullPaymentRemaining }
+        { value: 'full', label: label, suggestedAmount: fullPaymentRemaining }
       );
     }
 

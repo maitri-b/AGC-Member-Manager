@@ -38,7 +38,7 @@ async function getTestRegistrations(limit: number = 10) {
   return snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
-  }));
+  } as any));
 }
 
 /**

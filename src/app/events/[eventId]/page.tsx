@@ -80,7 +80,7 @@ interface PaymentSlip {
   registrationId: string;
   eventId: string;
   amount: number;
-  paymentType: 'deposit' | 'remaining' | 'full' | 'additional';
+  paymentType: 'deposit' | 'remaining' | 'full' | 'additional' | 'refund';
   description: string;
   slipUrl: string;
   uploadedAt?: string;

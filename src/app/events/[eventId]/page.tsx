@@ -1690,12 +1690,40 @@ export default function EventDetailPage() {
                             </span>
                           </div>
                           {/* Payment Status Description */}
-                          <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 border border-gray-200 mb-3">
                             <svg className="w-4 h-4 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             {getPaymentStatusDescription(userRegistration.paymentStatus)}
                           </div>
+                          {/* Payment Summary */}
+                          {(() => {
+                            const totalAmount = userRegistration.totalAmount || 0;
+                            const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
+                            const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
+                            const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
+                            const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+                            const outstanding = Math.max(0, totalAmount - paidAmount);
+
+                            return (
+                              <div className="text-sm space-y-1">
+                                <div className="flex justify-between text-gray-700">
+                                  <span>ยอดรวมทั้งหมด:</span>
+                                  <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-700">
+                                  <span>ยอดชำระแล้ว:</span>
+                                  <span className="font-semibold">฿{paidAmount.toLocaleString()}</span>
+                                </div>
+                                <div className={`flex justify-between border-t pt-1 mt-1 ${
+                                  outstanding === 0 ? 'text-green-700 border-green-300' : 'text-red-700 border-red-300'
+                                }`}>
+                                  <span className="font-bold">ยอดคงเหลือค้างชำระ:</span>
+                                  <span className="font-bold">{outstanding.toLocaleString()} บาท</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
 

@@ -456,6 +456,61 @@ export default function EventDetailPage() {
   const [adminPaymentSlips, setAdminPaymentSlips] = useState<any[]>([]);
   const [loadingAdminSlips, setLoadingAdminSlips] = useState(false);
 
+  // ✅ CRITICAL FIX: Auto-select correct payment type based on available options (Admin modal)
+  useEffect(() => {
+    if (adminPaymentSlips.length > 0 && paymentModalOpen) {
+      const available = getAdminAvailablePaymentTypes();
+      const currentType = paymentFormData.paymentType;
+
+      // Check if current payment type is still available
+      let isCurrentTypeAvailable = false;
+      switch (currentType) {
+        case 'deposit':
+          isCurrentTypeAvailable = available.canUploadDeposit;
+          break;
+        case 'remaining':
+          isCurrentTypeAvailable = available.canUploadRemaining;
+          break;
+        case 'full':
+          isCurrentTypeAvailable = available.canUploadFull;
+          break;
+        case 'additional':
+          isCurrentTypeAvailable = available.canUploadAdditional;
+          break;
+        case 'refund':
+          isCurrentTypeAvailable = available.canUploadRefund;
+          break;
+      }
+
+      // If current type is not available, auto-select the first available option
+      if (!isCurrentTypeAvailable) {
+        let newType: 'deposit' | 'remaining' | 'full' | 'additional' | 'refund' | null = null;
+
+        // Priority: additional > full > remaining > deposit > refund
+        if (available.canUploadAdditional) {
+          newType = 'additional';
+        } else if (available.canUploadFull) {
+          newType = 'full';
+        } else if (available.canUploadRemaining) {
+          newType = 'remaining';
+        } else if (available.canUploadDeposit) {
+          newType = 'deposit';
+        } else if (available.canUploadRefund) {
+          newType = 'refund';
+        }
+
+        if (newType) {
+          console.log('[Admin Modal] Auto-selecting payment type:', newType, 'from', currentType);
+          setPaymentFormData(prev => ({
+            ...prev,
+            paymentType: newType!,
+            amount: getAdminSuggestedAmount(newType!)
+          }));
+        }
+      }
+    }
+  }, [adminPaymentSlips, paymentModalOpen, paymentFormData.paymentType]);
+
   // Special charges state
   const [specialChargesModalOpen, setSpecialChargesModalOpen] = useState(false);
   const [specialChargeFormData, setSpecialChargeFormData] = useState<{

@@ -199,9 +199,15 @@ export async function POST(request: NextRequest) {
         status: 'approved', // ✅ Admin uploads are automatically approved
         reviewedBy: session.user.id, // ✅ Auto-approved by the admin who uploaded
         reviewedAt: new Date().toISOString(), // ✅ Reviewed at upload time
-        reviewerEmail: session.user.email,
-        reviewerName: session.user.name || session.user.email,
       };
+
+      // ✅ CRITICAL FIX: Only add reviewer fields if they have values (Firestore rejects undefined)
+      if (session.user.email) {
+        slipData.reviewerEmail = session.user.email;
+      }
+      if (session.user.name || session.user.email) {
+        slipData.reviewerName = session.user.name || session.user.email;
+      }
 
       // Only add optional fields if they have values
       if (paymentMethod) slipData.paymentMethod = paymentMethod;

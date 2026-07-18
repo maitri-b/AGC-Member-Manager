@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, adminStorage } from '@/lib/firebase-admin';
 import { getMemberById } from '@/lib/google-sheets';
 
 // Get user's change requests
@@ -49,10 +49,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { changes, reason } = body;
+    const { changes, reason, licenseDocumentData, licenseDocumentName, licenseDocumentType } = body;
 
-    if (!changes || Object.keys(changes).length === 0) {
-      return NextResponse.json({ error: 'No changes provided' }, { status: 400 });
+    // ✅ NEW: Allow request with either field changes or license document upload
+    if ((!changes || Object.keys(changes).length === 0) && !licenseDocumentData) {
+      return NextResponse.json({ error: 'No changes or document upload provided' }, { status: 400 });
     }
 
     // Get current member data for comparison
@@ -78,21 +79,70 @@ export async function POST(request: NextRequest) {
     const changeDetails: Record<string, { oldValue: string; newValue: string }> = {};
     const allowedFields = ['fullNameTH', 'nickname', 'companyNameTH', 'companyNameEN', 'positionCompany', 'licenseNumber', 'lineId'];
 
-    for (const field of Object.keys(changes)) {
-      if (allowedFields.includes(field) && changes[field] !== currentMember[field as keyof typeof currentMember]) {
-        changeDetails[field] = {
-          oldValue: String(currentMember[field as keyof typeof currentMember] || ''),
-          newValue: String(changes[field] || ''),
-        };
+    if (changes) {
+      for (const field of Object.keys(changes)) {
+        if (allowedFields.includes(field) && changes[field] !== currentMember[field as keyof typeof currentMember]) {
+          changeDetails[field] = {
+            oldValue: String(currentMember[field as keyof typeof currentMember] || ''),
+            newValue: String(changes[field] || ''),
+          };
+        }
       }
     }
 
-    if (Object.keys(changeDetails).length === 0) {
-      return NextResponse.json({ error: 'No valid changes detected' }, { status: 400 });
+    // ✅ NEW: Upload license document if provided
+    let newLicenseDocumentUrl = null;
+    if (licenseDocumentData && licenseDocumentName) {
+      const storage = adminStorage();
+      const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+      if (!bucketName) {
+        console.error('[Change Request] FIREBASE_STORAGE_BUCKET is not configured');
+        return NextResponse.json(
+          { error: 'Storage configuration error. Please contact administrator.' },
+          { status: 500 }
+        );
+      }
+
+      console.log('[Change Request] Uploading new license document to storage bucket:', bucketName);
+      const bucket = storage.bucket(bucketName);
+
+      try {
+        const timestamp = Date.now();
+        const fileExtension = licenseDocumentName.split('.').pop();
+        const storagePath = `profile-change-requests/${session.user.memberId}/${timestamp}-license.${fileExtension}`;
+        const file = bucket.file(storagePath);
+
+        const fileBuffer = Buffer.from(licenseDocumentData, 'base64');
+        await file.save(fileBuffer, {
+          metadata: {
+            contentType: licenseDocumentType || 'application/octet-stream',
+            metadata: {
+              uploadedBy: session.user.id,
+              memberId: session.user.memberId,
+              documentType: 'license',
+            },
+          },
+        });
+
+        newLicenseDocumentUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+        console.log('[Change Request] License document uploaded:', newLicenseDocumentUrl);
+      } catch (uploadError) {
+        console.error('[Change Request] File upload error:', uploadError);
+        return NextResponse.json(
+          { error: 'ไม่สามารถอัพโหลดไฟล์ได้ กรุณาลองใหม่อีกครั้ง' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // ✅ NEW: Require at least one change (field change or document upload)
+    if (Object.keys(changeDetails).length === 0 && !newLicenseDocumentUrl) {
+      return NextResponse.json({ error: 'No valid changes or document upload detected' }, { status: 400 });
     }
 
     // Create the change request
-    const changeRequest = {
+    const changeRequest: Record<string, unknown> = {
       userId: session.user.id,
       memberId: session.user.memberId,
       lineDisplayName: session.user.name || '',
@@ -103,6 +153,11 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+
+    // ✅ NEW: Include license document URL if uploaded
+    if (newLicenseDocumentUrl) {
+      changeRequest.newLicenseDocumentUrl = newLicenseDocumentUrl;
+    }
 
     const docRef = await adminDb().collection('profileChangeRequests').add(changeRequest);
 

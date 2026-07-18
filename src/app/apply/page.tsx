@@ -91,6 +91,10 @@ export default function ApplyPage() {
   const [checkingLicense, setCheckingLicense] = useState(false);
   const [licenseExists, setLicenseExists] = useState(false);
 
+  // ✅ NEW: File uploads for license document and business card
+  const [licenseDocument, setLicenseDocument] = useState<File | null>(null);
+  const [businessCard, setBusinessCard] = useState<File | null>(null);
+
   // Pre-fill LINE name from session
   useEffect(() => {
     if (session?.user) {
@@ -172,6 +176,56 @@ export default function ApplyPage() {
     }
   };
 
+  // ✅ NEW: Handle file selection for license document
+  const handleLicenseDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('กรุณาเลือกไฟล์ภาพ (JPG, PNG, WebP) หรือ PDF เท่านั้น');
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('ขนาดไฟล์ต้องไม่เกิน 10 MB');
+        return;
+      }
+
+      setLicenseDocument(file);
+      // Clear error
+      if (errors.licenseDocument) {
+        setErrors(prev => ({ ...prev, licenseDocument: '' }));
+      }
+    }
+  };
+
+  // ✅ NEW: Handle file selection for business card
+  const handleBusinessCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('กรุณาเลือกไฟล์ภาพ (JPG, PNG, WebP) หรือ PDF เท่านั้น');
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('ขนาดไฟล์ต้องไม่เกิน 10 MB');
+        return;
+      }
+
+      setBusinessCard(file);
+      // Clear error
+      if (errors.businessCard) {
+        setErrors(prev => ({ ...prev, businessCard: '' }));
+      }
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -187,6 +241,10 @@ export default function ApplyPage() {
     if (!formData.mobile.trim()) newErrors.mobile = 'กรุณากรอกเบอร์มือถือ';
     if (!formData.sponsor1.trim()) newErrors.sponsor1 = 'กรุณากรอกผู้รับรองสมาชิก ท่านที่ 1';
     if (!formData.sponsor2.trim()) newErrors.sponsor2 = 'กรุณากรอกผู้รับรองสมาชิก ท่านที่ 2';
+
+    // ✅ NEW: File uploads validation
+    if (!licenseDocument) newErrors.licenseDocument = 'กรุณาอัพโหลดใบอนุญาตธุรกิจนำเที่ยว';
+    if (!businessCard) newErrors.businessCard = 'กรุณาอัพโหลดนามบัตร';
 
     // Email validation
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -222,12 +280,44 @@ export default function ApplyPage() {
     setSubmitting(true);
 
     try {
+      // ✅ NEW: Convert files to base64
+      const licenseDocumentBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          const base64Data = base64.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(licenseDocument!);
+      });
+
+      const businessCardBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          const base64Data = base64.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(businessCard!);
+      });
+
       const response = await fetch('/api/apply', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          // ✅ NEW: Include file data
+          licenseDocumentData: licenseDocumentBase64,
+          licenseDocumentName: licenseDocument!.name,
+          licenseDocumentType: licenseDocument!.type,
+          businessCardData: businessCardBase64,
+          businessCardName: businessCard!.name,
+          businessCardType: businessCard!.type,
+        }),
       });
 
       const data = await response.json();
@@ -590,6 +680,83 @@ export default function ApplyPage() {
                   </p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">รูปแบบ: xx/xxxxx (เช่น 11/12345)</p>
+              </div>
+            </div>
+
+            {/* ✅ NEW: Document Upload Section */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-base font-semibold text-gray-800 mb-3">เอกสารประกอบการสมัคร</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* License Document Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ใบอนุญาตธุรกิจนำเที่ยว <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                    onChange={handleLicenseDocumentChange}
+                    disabled={submitting}
+                    className={`block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-md file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      ${errors.licenseDocument ? 'border border-red-500 rounded-md' : ''}`}
+                  />
+                  {licenseDocument && (
+                    <p className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {licenseDocument.name} ({(licenseDocument.size / 1024).toFixed(0)} KB)
+                    </p>
+                  )}
+                  {errors.licenseDocument && (
+                    <p className="text-red-500 text-xs mt-1">{errors.licenseDocument}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    รองรับ: JPG, PNG, WebP, PDF (สูงสุด 10 MB)
+                  </p>
+                </div>
+
+                {/* Business Card Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    นามบัตร <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                    onChange={handleBusinessCardChange}
+                    disabled={submitting}
+                    className={`block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-md file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      ${errors.businessCard ? 'border border-red-500 rounded-md' : ''}`}
+                  />
+                  {businessCard && (
+                    <p className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {businessCard.name} ({(businessCard.size / 1024).toFixed(0)} KB)
+                    </p>
+                  )}
+                  {errors.businessCard && (
+                    <p className="text-red-500 text-xs mt-1">{errors.businessCard}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    รองรับ: JPG, PNG, WebP, PDF (สูงสุด 10 MB)
+                  </p>
+                </div>
               </div>
             </div>
           </div>

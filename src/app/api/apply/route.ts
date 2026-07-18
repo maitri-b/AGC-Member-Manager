@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, adminStorage } from '@/lib/firebase-admin';
 import { getAllMembers } from '@/lib/google-sheets';
 
 export async function POST(request: NextRequest) {
@@ -32,6 +32,16 @@ export async function POST(request: NextRequest) {
       sponsor2: body.sponsor2 || '',
     };
 
+    // ✅ NEW: Extract file upload data
+    const {
+      licenseDocumentData,
+      licenseDocumentName,
+      licenseDocumentType,
+      businessCardData,
+      businessCardName,
+      businessCardType,
+    } = body;
+
     // Validate required fields
     const requiredFields = [
       'companyNameEN',
@@ -56,6 +66,15 @@ export async function POST(request: NextRequest) {
     // Validate email format
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(applicationData.email)) {
       return NextResponse.json({ error: 'กรุณากรอกอีเมลให้ถูกต้อง' }, { status: 400 });
+    }
+
+    // ✅ NEW: Validate file uploads
+    if (!licenseDocumentData || !licenseDocumentName) {
+      return NextResponse.json({ error: 'กรุณาอัพโหลดใบอนุญาตธุรกิจนำเที่ยว' }, { status: 400 });
+    }
+
+    if (!businessCardData || !businessCardName) {
+      return NextResponse.json({ error: 'กรุณาอัพโหลดนามบัตร' }, { status: 400 });
     }
 
     const db = adminDb();
@@ -103,15 +122,83 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const applicationId = `APP-${timestamp}`;
 
+    // ✅ NEW: Upload files to Cloud Storage
+    const storage = adminStorage();
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+    if (!bucketName) {
+      console.error('[Apply] FIREBASE_STORAGE_BUCKET is not configured');
+      return NextResponse.json(
+        { error: 'Storage configuration error. Please contact administrator.' },
+        { status: 500 }
+      );
+    }
+
+    console.log('[Apply] Uploading documents to storage bucket:', bucketName);
+    const bucket = storage.bucket(bucketName);
+
+    let licenseDocumentUrl = '';
+    let businessCardUrl = '';
+
+    try {
+      // Upload license document
+      const licenseExtension = licenseDocumentName.split('.').pop();
+      const licensePath = `apply-applications/${applicationId}/license.${licenseExtension}`;
+      const licenseFile = bucket.file(licensePath);
+
+      const licenseBuffer = Buffer.from(licenseDocumentData, 'base64');
+      await licenseFile.save(licenseBuffer, {
+        metadata: {
+          contentType: licenseDocumentType || 'application/octet-stream',
+          metadata: {
+            uploadedBy: session.user.id,
+            applicationId,
+            documentType: 'license',
+          },
+        },
+      });
+
+      licenseDocumentUrl = `https://storage.googleapis.com/${bucket.name}/${licensePath}`;
+      console.log('[Apply] License document uploaded:', licenseDocumentUrl);
+
+      // Upload business card
+      const businessCardExtension = businessCardName.split('.').pop();
+      const businessCardPath = `apply-applications/${applicationId}/business-card.${businessCardExtension}`;
+      const businessCardFile = bucket.file(businessCardPath);
+
+      const businessCardBuffer = Buffer.from(businessCardData, 'base64');
+      await businessCardFile.save(businessCardBuffer, {
+        metadata: {
+          contentType: businessCardType || 'application/octet-stream',
+          metadata: {
+            uploadedBy: session.user.id,
+            applicationId,
+            documentType: 'businessCard',
+          },
+        },
+      });
+
+      businessCardUrl = `https://storage.googleapis.com/${bucket.name}/${businessCardPath}`;
+      console.log('[Apply] Business card uploaded:', businessCardUrl);
+    } catch (uploadError) {
+      console.error('[Apply] File upload error:', uploadError);
+      return NextResponse.json(
+        { error: 'ไม่สามารถอัพโหลดไฟล์ได้ กรุณาลองใหม่อีกครั้ง' },
+        { status: 500 }
+      );
+    }
+
     // Create application document in Firestore
-    // Note: Documents (license + business card) will be sent via LINE separately
+    // ✅ NEW: Include document URLs
     const applicationDoc = {
       applicationId,
       ...applicationData,
       lineUserId: session.user.id,
       lineDisplayName: session.user.name || '',
       lineProfilePicture: session.user.image || '',
-      documentStatus: 'pending', // pending = waiting for documents via LINE
+      licenseDocumentUrl, // ✅ NEW: License document URL
+      businessCardUrl, // ✅ NEW: Business card URL
+      documentStatus: 'uploaded', // ✅ CHANGED: Documents are now uploaded directly
       status: 'pending', // pending, approved, rejected
       lineGroupStatus: 'รอนำเข้ากลุ่ม', // Default status
       createdAt: new Date(),
@@ -121,11 +208,14 @@ export async function POST(request: NextRequest) {
     await db.collection('membershipApplications').doc(applicationId).set(applicationDoc);
 
     console.log(`New membership application: ${applicationId} from ${applicationData.nickname} (${applicationData.companyNameEN})`);
+    console.log(`Documents uploaded: license=${licenseDocumentUrl}, businessCard=${businessCardUrl}`);
 
     return NextResponse.json({
       success: true,
       applicationId,
       message: 'ส่งใบสมัครเรียบร้อยแล้ว',
+      licenseDocumentUrl,
+      businessCardUrl,
     });
   } catch (error) {
     console.error('Error processing application:', error);
@@ -166,6 +256,8 @@ export async function GET(request: NextRequest) {
         companyNameEN: appData.companyNameEN,
         nickname: appData.nickname,
         createdAt: appData.createdAt?.toDate?.() || appData.createdAt,
+        licenseDocumentUrl: appData.licenseDocumentUrl, // ✅ NEW
+        businessCardUrl: appData.businessCardUrl, // ✅ NEW
       },
     });
   } catch (error) {

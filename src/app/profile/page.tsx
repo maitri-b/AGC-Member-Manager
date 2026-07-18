@@ -58,6 +58,10 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // ✅ NEW: License document and Lightbox state
+  const [licenseDocumentUrl, setLicenseDocumentUrl] = useState<string | null>(null);
+  const [lightboxImage, setLightboxImage] = useState('');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // Contact info edit (direct edit)
   const [isEditingContact, setIsEditingContact] = useState(false);
@@ -81,6 +85,8 @@ export default function ProfilePage() {
   });
   const [changeReason, setChangeReason] = useState('');
   const [submittingRequest, setSubmittingRequest] = useState(false);
+  // ✅ NEW: License document upload for change request
+  const [newLicenseDocument, setNewLicenseDocument] = useState<File | null>(null);
 
   // Change request history
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
@@ -110,6 +116,7 @@ export default function ProfilePage() {
       const data = await response.json();
       setUser(data.user);
       setMember(data.member);
+      setLicenseDocumentUrl(data.licenseDocumentUrl); // ✅ NEW: Set license document URL
       if (data.member) {
         setContactForm({
           phone: data.member.phone || '',
@@ -203,17 +210,45 @@ export default function ProfilePage() {
     if (changeForm.licenseNumber !== (member?.licenseNumber || '')) changes.licenseNumber = changeForm.licenseNumber;
     if (changeForm.lineId !== (member?.lineId || '')) changes.lineId = changeForm.lineId;
 
-    if (Object.keys(changes).length === 0) {
+    // ✅ NEW: Check if there are changes or a new license document
+    if (Object.keys(changes).length === 0 && !newLicenseDocument) {
       setError('ไม่มีข้อมูลที่เปลี่ยนแปลง');
       setSubmittingRequest(false);
       return;
     }
 
     try {
+      // ✅ NEW: Convert license document to base64 if provided
+      let licenseDocumentData = null;
+      let licenseDocumentName = null;
+      let licenseDocumentType = null;
+
+      if (newLicenseDocument) {
+        licenseDocumentData = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = reader.result as string;
+            const base64Data = base64.split(',')[1];
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(newLicenseDocument);
+        });
+        licenseDocumentName = newLicenseDocument.name;
+        licenseDocumentType = newLicenseDocument.type;
+      }
+
       const response = await fetch('/api/profile/change-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ changes, reason: changeReason }),
+        body: JSON.stringify({
+          changes,
+          reason: changeReason,
+          // ✅ NEW: Include license document data
+          licenseDocumentData,
+          licenseDocumentName,
+          licenseDocumentType,
+        }),
       });
 
       const data = await response.json();
@@ -225,6 +260,7 @@ export default function ProfilePage() {
       toast.success('ส่งคำขอเรียบร้อยแล้ว รอทีมนายทะเบียนตรวจสอบและอนุมัติ');
       setIsRequestingChange(false);
       setChangeReason('');
+      setNewLicenseDocument(null); // ✅ NEW: Reset file
       fetchChangeRequests();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
@@ -552,6 +588,53 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
+                  {/* ✅ NEW: License Document Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      อัพโหลดใบอนุญาตใหม่ (ถ้ามี)
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Validate file type
+                          const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+                          if (!validTypes.includes(file.type)) {
+                            toast.error('กรุณาเลือกไฟล์ภาพ (JPG, PNG, WebP) หรือ PDF เท่านั้น');
+                            return;
+                          }
+
+                          // Validate file size (max 10MB)
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast.error('ขนาดไฟล์ต้องไม่เกิน 10 MB');
+                            return;
+                          }
+
+                          setNewLicenseDocument(file);
+                        }
+                      }}
+                      className="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-orange-50 file:text-orange-700
+                        hover:file:bg-orange-100"
+                    />
+                    {newLicenseDocument && (
+                      <p className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {newLicenseDocument.name} ({(newLicenseDocument.size / 1024).toFixed(0)} KB)
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      รองรับ: JPG, PNG, WebP, PDF (สูงสุด 10 MB) - ถ้าไม่ต้องการเปลี่ยนใบอนุญาตไม่ต้องอัพโหลด
+                    </p>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">เหตุผลในการขอแก้ไข</label>
                     <textarea
@@ -568,6 +651,7 @@ export default function ProfilePage() {
                       onClick={() => {
                         setIsRequestingChange(false);
                         setChangeReason('');
+                        setNewLicenseDocument(null); // ✅ NEW: Reset file
                         // Reset form to original values
                         if (member) {
                           setChangeForm({
@@ -637,6 +721,46 @@ export default function ProfilePage() {
                           <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
                           <dd className="text-gray-900">{formatLicenseDate(member.licenseExpiry)}</dd>
                         </div>
+                        {/* ✅ NEW: Display license document if available */}
+                        {licenseDocumentUrl && (
+                          <div>
+                            <dt className="text-sm text-gray-500 mb-2">เอกสารใบอนุญาต</dt>
+                            <dd>
+                              <div className="relative group inline-block">
+                                <img
+                                  src={licenseDocumentUrl}
+                                  alt="License Document"
+                                  className="w-40 h-24 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => {
+                                    setLightboxImage(licenseDocumentUrl);
+                                    setLightboxOpen(true);
+                                  }}
+                                />
+                                <div
+                                  className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
+                                  onClick={() => {
+                                    setLightboxImage(licenseDocumentUrl);
+                                    setLightboxOpen(true);
+                                  }}>
+                                  <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                  </svg>
+                                </div>
+                              </div>
+                              <a
+                                href={licenseDocumentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1 inline-flex"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                เปิดในแท็บใหม่
+                              </a>
+                            </dd>
+                          </div>
+                        )}
                       </dl>
                     </div>
                   </div>
@@ -820,6 +944,29 @@ export default function ProfilePage() {
           </div>
         )}
       </main>
+
+      {/* ✅ NEW: Lightbox for viewing license document */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black bg-opacity-90 flex items-center justify-center p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={lightboxImage}
+            alt="License Document"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

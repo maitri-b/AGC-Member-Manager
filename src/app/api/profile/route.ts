@@ -24,6 +24,21 @@ export async function GET() {
       memberData = await getMemberByLineUserId(session.user.lineUserId);
     }
 
+    // ✅ NEW: Fetch license document from application (if exists)
+    let licenseDocumentUrl = null;
+    if (session.user.id) {
+      const applicationSnapshot = await db.collection('membershipApplications')
+        .where('lineUserId', '==', session.user.id)
+        .where('status', '==', 'approved')
+        .limit(1)
+        .get();
+
+      if (!applicationSnapshot.empty) {
+        const appData = applicationSnapshot.docs[0].data();
+        licenseDocumentUrl = appData.licenseDocumentUrl || null;
+      }
+    }
+
     return NextResponse.json({
       user: {
         id: session.user.id,
@@ -35,6 +50,7 @@ export async function GET() {
         ...userData,
       },
       member: memberData,
+      licenseDocumentUrl, // ✅ NEW: Include license document URL
     });
   } catch (error) {
     console.error('Error fetching profile:', error);

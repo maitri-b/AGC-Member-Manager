@@ -18,6 +18,7 @@ interface ChangeRequest {
   processedAt?: string;
   processedByName?: string;
   adminNote?: string;
+  newLicenseDocumentUrl?: string; // ✅ NEW: License document URL
 }
 
 export default function AdminProfileChangesPage() {
@@ -32,6 +33,9 @@ export default function AdminProfileChangesPage() {
   const [adminNote, setAdminNote] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalAction, setModalAction] = useState<'approve' | 'reject' | null>(null);
+  // ✅ NEW: Lightbox state for viewing license document
+  const [lightboxImage, setLightboxImage] = useState('');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -277,6 +281,47 @@ export default function AdminProfileChangesPage() {
                     ))}
                   </div>
 
+                  {/* ✅ NEW: Display new license document if uploaded */}
+                  {request.newLicenseDocumentUrl && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">ใบอนุญาตใหม่ที่อัพโหลด:</h4>
+                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="relative group inline-block">
+                          <img
+                            src={request.newLicenseDocumentUrl}
+                            alt="New License Document"
+                            className="w-48 h-32 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => {
+                              setLightboxImage(request.newLicenseDocumentUrl!);
+                              setLightboxOpen(true);
+                            }}
+                          />
+                          <div
+                            className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
+                            onClick={() => {
+                              setLightboxImage(request.newLicenseDocumentUrl!);
+                              setLightboxOpen(true);
+                            }}>
+                            <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                            </svg>
+                          </div>
+                        </div>
+                        <a
+                          href={request.newLicenseDocumentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1 inline-flex"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          เปิดในแท็บใหม่
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
                   {request.reason && (
                     <div className="mt-4">
                       <h4 className="text-sm font-medium text-gray-700 mb-1">เหตุผลในการขอแก้ไข:</h4>
@@ -383,6 +428,29 @@ export default function AdminProfileChangesPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ✅ NEW: Lightbox for viewing license document */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black bg-opacity-90 flex items-center justify-center p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={lightboxImage}
+            alt="License Document"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

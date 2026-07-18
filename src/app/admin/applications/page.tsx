@@ -33,7 +33,7 @@ interface Application {
   lineDisplayName: string;
   lineProfilePicture: string;
   status: 'pending' | 'approved' | 'rejected';
-  documentStatus: 'pending' | 'received';
+  documentStatus: 'pending' | 'received' | 'uploaded'; // ✅ NEW: Add 'uploaded' status
   notes?: string;
   rejectionReason?: string;
   createdAt: string;
@@ -48,6 +48,9 @@ interface Application {
   lockedAt?: string;
   lockedReason?: string;
   searchLogs?: SearchLog[];
+  // ✅ NEW: Document URLs
+  licenseDocumentUrl?: string;
+  businessCardUrl?: string;
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -58,7 +61,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 const DOC_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending: { label: 'รอเอกสาร', color: 'bg-orange-100 text-orange-800' },
-  received: { label: 'ได้รับเอกสารแล้ว', color: 'bg-blue-100 text-blue-800' },
+  uploaded: { label: 'อัพโหลดแล้ว', color: 'bg-blue-100 text-blue-800' }, // ✅ NEW
+  received: { label: 'ได้รับเอกสารแล้ว', color: 'bg-green-100 text-green-800' },
 };
 
 export default function ApplicationsPage() {
@@ -74,6 +78,9 @@ export default function ApplicationsPage() {
   const [updating, setUpdating] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [notes, setNotes] = useState('');
+  // ✅ NEW: Lightbox state for viewing documents
+  const [lightboxImage, setLightboxImage] = useState('');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -151,7 +158,7 @@ export default function ApplicationsPage() {
     }
   };
 
-  const handleUpdateDocStatus = async (docStatus: 'pending' | 'received') => {
+  const handleUpdateDocStatus = async (docStatus: 'pending' | 'uploaded' | 'received') => {
     if (!selectedApp) return;
 
     setUpdating(true);
@@ -503,6 +510,90 @@ export default function ApplicationsPage() {
                 </div>
               </div>
 
+              {/* ✅ NEW: Documents Section */}
+              {(selectedApp.licenseDocumentUrl || selectedApp.businessCardUrl) && (
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-3">เอกสารประกอบการสมัคร</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* License Document */}
+                    {selectedApp.licenseDocumentUrl && (
+                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-2">ใบอนุญาตธุรกิจนำเที่ยว</p>
+                        <div className="relative group">
+                          <img
+                            src={selectedApp.licenseDocumentUrl}
+                            alt="License Document"
+                            className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => {
+                              setLightboxImage(selectedApp.licenseDocumentUrl!);
+                              setLightboxOpen(true);
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
+                            onClick={() => {
+                              setLightboxImage(selectedApp.licenseDocumentUrl!);
+                              setLightboxOpen(true);
+                            }}>
+                            <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                            </svg>
+                          </div>
+                        </div>
+                        <a
+                          href={selectedApp.licenseDocumentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          เปิดในแท็บใหม่
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Business Card */}
+                    {selectedApp.businessCardUrl && (
+                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-2">นามบัตร</p>
+                        <div className="relative group">
+                          <img
+                            src={selectedApp.businessCardUrl}
+                            alt="Business Card"
+                            className="w-full h-32 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => {
+                              setLightboxImage(selectedApp.businessCardUrl!);
+                              setLightboxOpen(true);
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
+                            onClick={() => {
+                              setLightboxImage(selectedApp.businessCardUrl!);
+                              setLightboxOpen(true);
+                            }}>
+                            <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                            </svg>
+                          </div>
+                        </div>
+                        <a
+                          href={selectedApp.businessCardUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          เปิดในแท็บใหม่
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Search Lock Status & Logs */}
               {selectedApp.isSearchLocked && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -551,11 +642,11 @@ export default function ApplicationsPage() {
               {/* Document Status */}
               <div>
                 <h4 className="font-medium text-gray-700 mb-3">สถานะเอกสาร</h4>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => handleUpdateDocStatus('pending')}
                     disabled={updating || selectedApp.documentStatus === 'pending'}
-                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
                       selectedApp.documentStatus === 'pending'
                         ? 'bg-orange-100 text-orange-800 font-medium'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -564,11 +655,22 @@ export default function ApplicationsPage() {
                     รอเอกสาร
                   </button>
                   <button
+                    onClick={() => handleUpdateDocStatus('uploaded')}
+                    disabled={updating || selectedApp.documentStatus === 'uploaded'}
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
+                      selectedApp.documentStatus === 'uploaded'
+                        ? 'bg-blue-100 text-blue-800 font-medium'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    อัพโหลดแล้ว
+                  </button>
+                  <button
                     onClick={() => handleUpdateDocStatus('received')}
                     disabled={updating || selectedApp.documentStatus === 'received'}
-                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
                       selectedApp.documentStatus === 'received'
-                        ? 'bg-blue-100 text-blue-800 font-medium'
+                        ? 'bg-green-100 text-green-800 font-medium'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
@@ -652,6 +754,29 @@ export default function ApplicationsPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ✅ NEW: Lightbox for viewing document images */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black bg-opacity-90 flex items-center justify-center p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Document Preview"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 

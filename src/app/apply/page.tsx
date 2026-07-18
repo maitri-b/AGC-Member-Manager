@@ -95,6 +95,35 @@ export default function ApplyPage() {
   const [licenseDocument, setLicenseDocument] = useState<File | null>(null);
   const [businessCard, setBusinessCard] = useState<File | null>(null);
 
+  // ✅ NEW: Check if user already has an application
+  const [checkingApplication, setCheckingApplication] = useState(true);
+  const [hasExistingApplication, setHasExistingApplication] = useState(false);
+
+  // Check for existing application
+  useEffect(() => {
+    const checkExistingApplication = async () => {
+      if (!session?.user) {
+        setCheckingApplication(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/apply');
+        const data = await response.json();
+
+        if (data.hasApplication) {
+          setHasExistingApplication(true);
+        }
+      } catch (error) {
+        console.error('[Apply] Error checking existing application:', error);
+      } finally {
+        setCheckingApplication(false);
+      }
+    };
+
+    checkExistingApplication();
+  }, [session]);
+
   // Pre-fill LINE name from session
   useEffect(() => {
     if (session?.user) {
@@ -351,8 +380,8 @@ export default function ApplyPage() {
     }
   };
 
-  // Show loading while checking session
-  if (status === 'loading') {
+  // Show loading while checking session or existing application
+  if (status === 'loading' || checkingApplication) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -438,8 +467,8 @@ export default function ApplyPage() {
     );
   }
 
-  // Submitted successfully
-  if (submitted) {
+  // Already has existing application or just submitted
+  if (submitted || hasExistingApplication) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 px-4 py-8">
         <div className="w-full max-w-lg text-center">
@@ -450,7 +479,7 @@ export default function ApplyPage() {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-gray-800 mb-4">
-              ส่งใบสมัครเรียบร้อยแล้ว!
+              {submitted ? 'ส่งใบสมัครเรียบร้อยแล้ว!' : 'คุณได้ส่งใบสมัครแล้ว'}
             </h1>
             <p className="text-gray-600 mb-6">
               ทีมนายทะเบียนจะตรวจสอบข้อมูลและติดต่อกลับภายใน 3-5 วันทำการ

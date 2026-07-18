@@ -35,6 +35,7 @@ interface PaymentSlipUploadModalProps {
   fullPaymentAmountPaid?: number;
   depositAmountPaid?: number;
   remainingAmountPaid?: number;
+  additionalPaymentAmountPaid?: number; // ✅ CRITICAL FIX: Track additional payments
 }
 
 export default function PaymentSlipUploadModal({
@@ -53,6 +54,7 @@ export default function PaymentSlipUploadModal({
   fullPaymentAmountPaid = 0,
   depositAmountPaid = 0,
   remainingAmountPaid = 0,
+  additionalPaymentAmountPaid = 0, // ✅ CRITICAL FIX
 }: PaymentSlipUploadModalProps) {
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);

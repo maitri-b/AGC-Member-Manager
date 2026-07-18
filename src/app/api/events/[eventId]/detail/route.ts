@@ -254,6 +254,7 @@ export async function GET(
               fullPaymentAmountPaid: (latestReg as any).fullPaymentAmountPaid || 0,
               depositAmountPaid: (latestReg as any).depositAmountPaid || 0,
               remainingAmountPaid: (latestReg as any).remainingAmountPaid || 0,
+              additionalPaymentAmountPaid: (latestReg as any).additionalPaymentAmountPaid || 0, // ✅ CRITICAL FIX
               paidAmount: (latestReg as any).paidAmount || 0,
               // Legacy slip URLs - kept for backward compatibility during migration
               depositSlipUrl: latestReg.depositSlipUrl,

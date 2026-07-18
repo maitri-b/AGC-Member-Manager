@@ -230,6 +230,43 @@ export async function PUT(
             updateData.admin_notes = currentNotes + `\n[${paidDate}] ⚠️ ชำระเต็มจำนวนต่ำกว่าที่กำหนด: ยอดต้องชำระเพิ่ม ${additionalRequired.toLocaleString()} บาท`;
           }
         }
+      } else if (paymentType === 'additional') {
+        // ✅ CRITICAL FIX: Handle additional payment
+        // This is cumulative - multiple additional payments can be made
+        if (amount) {
+          // Update additionalPaymentAmountPaid (cumulative)
+          const currentAdditionalPaid = (registration as any).additionalPaymentAmountPaid || 0;
+          updateData.additional_payment_amount_paid = currentAdditionalPaid + amount;
+
+          // Update total paidAmount
+          const currentPaidAmount = registration.paidAmount || 0;
+          updateData.paid_amount = currentPaidAmount + amount;
+
+          console.log('[Update Payment] Additional payment recorded:', {
+            amount,
+            oldAdditionalPaid: currentAdditionalPaid,
+            newAdditionalPaid: updateData.additional_payment_amount_paid,
+            oldPaidAmount: currentPaidAmount,
+            newPaidAmount: updateData.paid_amount,
+          });
+        }
+      } else if (paymentType === 'refund') {
+        // ✅ Handle refund - deduct from paid amounts
+        if (amount) {
+          const currentPaidAmount = registration.paidAmount || 0;
+          updateData.paid_amount = Math.max(0, currentPaidAmount - amount);
+
+          // Track total refunded
+          const currentRefunded = (registration as any).totalRefunded || 0;
+          updateData.total_refunded = currentRefunded + amount;
+
+          console.log('[Update Payment] Refund recorded:', {
+            refundAmount: amount,
+            oldPaidAmount: currentPaidAmount,
+            newPaidAmount: updateData.paid_amount,
+            totalRefunded: updateData.total_refunded,
+          });
+        }
       }
 
       // Recalculate payment status based on actual amounts paid

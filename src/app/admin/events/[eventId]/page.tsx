@@ -158,9 +158,11 @@ function getAdditionalAmount(attendee: Attendee, eventPaymentMode: 'full' | 'dep
   const fullPaymentAmountPaid = (reg as any).fullPaymentAmountPaid || 0;
   const depositAmountPaid = (reg as any).depositAmountPaid || 0;
   const remainingAmountPaid = (reg as any).remainingAmountPaid || 0;
+  const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
 
   // Calculate total paid from actual payment fields only
-  const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+  // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid
+  const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
 
   // Calculate additional required (remaining balance) regardless of payment mode
   return Math.max(0, totalAmount - paidAmount);
@@ -1125,9 +1127,11 @@ export default function EventDetailPage() {
     const fullPaymentAmountPaid = registration.fullPaymentAmountPaid || 0;
     const depositAmountPaid = registration.depositAmountPaid || 0;
     const remainingAmountPaid = registration.remainingAmountPaid || 0;
+    const additionalPaymentAmountPaid = registration.additionalPaymentAmountPaid || 0;
 
     // Calculate total paid from actual payment fields only (don't use paidAmount as it's not reliable)
-    const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+    // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid
+    const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
     const hasPayment = paidAmount > 0;
 
     return { hasPayment, totalPaid: paidAmount };
@@ -3131,7 +3135,9 @@ export default function EventDetailPage() {
                               const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
                               const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
                               const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
-                              const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+                              const additionalPaymentAmountPaid = (attendee.registration as any).additionalPaymentAmountPaid || 0;
+                              // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid
+                              const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
                               const additionalRequired = Math.max(0, totalAmount - paidAmount);
                               // ✅ Calculate overpayment (if paidAmount > totalAmount)
                               const overpayment = paidAmount > totalAmount ? paidAmount - totalAmount : 0;
@@ -3272,7 +3278,9 @@ export default function EventDetailPage() {
                                                 const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
                                                 const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
                                                 const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
-                                                const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+                                                const additionalPaymentAmountPaid = (attendee.registration as any).additionalPaymentAmountPaid || 0;
+                                                // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid
+                                                const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
                                                 const additionalRequired = getAdditionalAmount(attendee, eventData.event.paymentMode || 'deposit');
                                                 return (
                                                   <>
@@ -3355,7 +3363,9 @@ export default function EventDetailPage() {
                                   const fullPaymentAmountPaid = (attendee.registration as any).fullPaymentAmountPaid || 0;
                                   const depositAmountPaid = (attendee.registration as any).depositAmountPaid || 0;
                                   const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
-                                  const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+                                  const additionalPaymentAmountPaid = (attendee.registration as any).additionalPaymentAmountPaid || 0;
+                                  // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid
+                                  const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
                                   const additionalRequired = Math.max(0, totalAmount - paidAmount);
                                   const isFullyPaid = paidAmount >= totalAmount && paidAmount > 0;
                                   const hasPayment = attendee.registration.depositPaid;

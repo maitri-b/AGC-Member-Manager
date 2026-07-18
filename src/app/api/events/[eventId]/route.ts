@@ -153,6 +153,8 @@ export async function GET(
           remainingAmountPaid: Number(attendee.registration.remainingAmountPaid) || 0,
           // Deposit amount paid
           depositAmountPaid: Number(attendee.registration.depositAmountPaid) || 0,
+          // ✅ CRITICAL FIX: Additional payment amount paid (cumulative)
+          additionalPaymentAmountPaid: Number(attendee.registration.additionalPaymentAmountPaid) || 0,
           // General paid amount (fallback)
           paidAmount: Number(attendee.registration.paidAmount) || 0,
           // Payment deadlines

@@ -117,6 +117,7 @@ interface UserRegistration {
   fullPaymentAmountPaid?: number;
   depositAmountPaid?: number;
   remainingAmountPaid?: number;
+  additionalPaymentAmountPaid?: number; // ✅ CRITICAL: Track additional payments
   // Fee breakdown (for display calculations)
   eventFee?: number;
   roomFee?: number;
@@ -1703,7 +1704,9 @@ export default function EventDetailPage() {
                             const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
                             const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
                             const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                            const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+                            const additionalPaymentAmountPaid = (userRegistration as any).additionalPaymentAmountPaid || 0;
+                            // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid in total paid
+                            const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
                             const outstanding = Math.max(0, totalAmount - paidAmount);
                             // ✅ Calculate overpayment (if paidAmount > totalAmount)
                             const overpayment = paidAmount > totalAmount ? paidAmount - totalAmount : 0;
@@ -1747,7 +1750,9 @@ export default function EventDetailPage() {
                         const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
                         const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
                         const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                        const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+                        const additionalPaymentAmountPaid = (userRegistration as any).additionalPaymentAmountPaid || 0;
+                        // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid
+                        const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
 
                         const additionalPayments = userRegistration.additionalPayments
                           ? (() => {
@@ -1954,7 +1959,9 @@ export default function EventDetailPage() {
                         const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
                         const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
                         const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                        const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+                        const additionalPaymentAmountPaid = (userRegistration as any).additionalPaymentAmountPaid || 0;
+                        // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid
+                        const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
 
                         // Fallback to legacy paidAmount if no tracked amounts
                         const paidAmount = actualTotalPaid || userRegistration.paidAmount || 0;
@@ -3077,6 +3084,7 @@ export default function EventDetailPage() {
           fullPaymentAmountPaid={userRegistration.fullPaymentAmountPaid || 0}
           depositAmountPaid={userRegistration.depositAmountPaid || 0}
           remainingAmountPaid={userRegistration.remainingAmountPaid || 0}
+          additionalPaymentAmountPaid={userRegistration.additionalPaymentAmountPaid || 0}
           onSuccess={() => {
             // Refresh event data after successful upload
             fetchEventDetail();

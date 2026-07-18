@@ -60,6 +60,9 @@ export interface EventRegistration {
   depositDeadline: string;          // deposit_deadline - ISO timestamp when deposit is due
   remainingDeadline: string;        // remaining_deadline - ISO timestamp when remaining is due
 
+  // Additional Payments (cumulative amount for payments beyond deposit/remaining)
+  additionalPaymentAmountPaid?: number; // additional_payment_amount_paid - Sum of all approved additional payments
+
   // Payment Status
   paymentStatus: string;            // payment_status - Current computed payment status
 
@@ -454,6 +457,7 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   remainingSlipUrl: 'remaining_slip_url',    // Column X: Google Drive URL for remaining payment slip
   depositDeadline: 'deposit_deadline',       // Column Y: ISO DateTime - deadline for deposit payment
   remainingDeadline: 'remaining_deadline',   // Column Z: ISO DateTime - deadline for remaining payment
+  additionalPaymentAmountPaid: 'additional_payment_amount_paid', // ✅ CRITICAL FIX: Cumulative additional payments
   paymentStatus: 'payment_status',           // Column AA: Current payment status (see PAYMENT_SYSTEM.md for values)
   // End deposit payment fields
   status: 'status',

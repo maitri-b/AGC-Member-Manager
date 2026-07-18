@@ -315,22 +315,28 @@ export function recalculatePaymentStatus(
   const fullPaymentAmountPaid = (registration as any).fullPaymentAmountPaid || 0;
   let actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
 
-  // ✅ CRITICAL: Include payment slips from Payment Slips collection
-  if (approvedSlipsTotal > 0) {
+  // ✅ CRITICAL FIX: Only add approvedSlipsTotal if we don't have tracked amounts
+  // Otherwise we'd be double-counting (the slip approval already sets *AmountPaid fields)
+  const hasTrackedAmounts = fullPaymentAmountPaid > 0 || depositAmountPaid > 0 || remainingAmountPaid > 0;
+
+  if (approvedSlipsTotal > 0 && !hasTrackedAmounts) {
+    // Legacy mode: use slips total for old registrations without tracked amounts
+    console.log(`[recalculatePaymentStatus] Using approvedSlipsTotal for registration ${registration.registrationId}:`, {
+      approvedSlipsTotal,
+      newTotalAmount,
+    });
+    actualTotalPaid = approvedSlipsTotal;
+  } else if (hasTrackedAmounts) {
     console.log(`[recalculatePaymentStatus] Registration ${registration.registrationId}:`, {
       fullPaymentAmountPaid,
       depositAmountPaid,
       remainingAmountPaid,
-      approvedSlipsTotal,
-      totalBeforeSlips: actualTotalPaid,
-      totalAfterSlips: actualTotalPaid + approvedSlipsTotal,
+      actualTotalPaid,
       newTotalAmount,
     });
-
-    actualTotalPaid += approvedSlipsTotal;
   }
 
-  // Fallback to legacy paidAmount if no tracked amounts
+  // Fallback to legacy paidAmount if no tracked amounts and no slips
   const currentPaidAmount = actualTotalPaid || registration.paidAmount || 0;
   const additionalPayments = parseAdditionalPayments(registration.additionalPayments);
   const fullyPaid = isFullyPaid(newTotalAmount, currentPaidAmount, additionalPayments);

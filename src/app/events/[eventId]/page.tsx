@@ -117,6 +117,9 @@ interface UserRegistration {
   fullPaymentAmountPaid?: number;
   depositAmountPaid?: number;
   remainingAmountPaid?: number;
+  // Fee breakdown (for display calculations)
+  eventFee?: number;
+  roomFee?: number;
   // Attendee type selections, room allocations, and special charges (New)
   attendeeTypeSelections?: AttendeeTypeSelection[];
   roomAllocations?: RoomAllocation[];
@@ -1038,18 +1041,9 @@ export default function EventDetailPage() {
                               return null; // Don't show subtotal if there are no additional fees
                             }
 
-                            // Calculate event fee (total - special charges - room fees)
-                            let eventFee = userRegistration.totalAmount || 0;
-                            if (userRegistration.specialCharges && userRegistration.specialCharges.length > 0) {
-                              eventFee -= userRegistration.specialCharges.reduce((sum, c) => sum + c.amount, 0);
-                            }
-                            if (userRegistration.roomAllocations && event.roomTypes) {
-                              const roomFee = userRegistration.roomAllocations.reduce((sum: number, alloc: RoomAllocation) => {
-                                const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
-                                return sum + (roomType?.price || 0) * alloc.roomCount;
-                              }, 0);
-                              eventFee -= roomFee;
-                            }
+                            // ✅ FIXED: Use the actual eventFee field (BEFORE discounts) instead of deriving from totalAmount
+                            // totalAmount already has discounts subtracted, so using it would double-count discounts
+                            const eventFee = userRegistration.eventFee || 0;
 
                             if (eventFee === 0) {
                               return null; // Don't show if event fee is 0

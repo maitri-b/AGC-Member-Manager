@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate payment type
-    const validPaymentTypes: PaymentType[] = ['full', 'deposit', 'remaining', 'additional'];
+    const validPaymentTypes: PaymentType[] = ['full', 'deposit', 'remaining', 'additional', 'refund'];
     if (!validPaymentTypes.includes(paymentType)) {
       return NextResponse.json(
-        { error: 'Invalid payment type. Must be: full, deposit, remaining, or additional' },
+        { error: 'Invalid payment type. Must be: full, deposit, remaining, additional, or refund' },
         { status: 400 }
       );
     }

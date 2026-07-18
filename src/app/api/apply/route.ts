@@ -80,28 +80,62 @@ export async function POST(request: NextRequest) {
     const db = adminDb();
 
     // Check if user has already applied
+    console.log('[Apply API] === DUPLICATE CHECK START ===');
+    console.log('[Apply API] Session user ID:', session.user.id);
+    console.log('[Apply API] Session user object:', JSON.stringify(session.user, null, 2));
+
     const existingApplication = await db.collection('membershipApplications')
       .where('lineUserId', '==', session.user.id)
       .where('status', 'in', ['pending', 'approved'])
       .limit(1)
       .get();
 
+    console.log('[Apply API] Duplicate check query completed');
+    console.log('[Apply API] Query empty?', existingApplication.empty);
+    console.log('[Apply API] Number of docs found:', existingApplication.size);
+
     if (!existingApplication.empty) {
+      const existingDocs = existingApplication.docs.map(doc => ({
+        id: doc.id,
+        lineUserId: doc.data().lineUserId,
+        status: doc.data().status,
+        nickname: doc.data().nickname,
+        createdAt: doc.data().createdAt,
+      }));
+      console.log('[Apply API] ❌ Found existing application(s):', JSON.stringify(existingDocs, null, 2));
       return NextResponse.json({ error: 'คุณได้ส่งใบสมัครแล้ว กรุณารอการพิจารณา' }, { status: 400 });
     }
 
+    console.log('[Apply API] ✅ No duplicate found, proceeding with application');
+
     // Check if license number already exists in applications
+    console.log('[Apply API] === LICENSE NUMBER CHECK START ===');
+    console.log('[Apply API] License number to check:', applicationData.licenseNumber);
+
     const existingLicense = await db.collection('membershipApplications')
       .where('licenseNumber', '==', applicationData.licenseNumber)
       .where('status', 'in', ['pending', 'approved'])
       .limit(1)
       .get();
 
+    console.log('[Apply API] License check query completed');
+    console.log('[Apply API] Query empty?', existingLicense.empty);
+    console.log('[Apply API] Number of docs found:', existingLicense.size);
+
     if (!existingLicense.empty) {
+      const existingLicenseDocs = existingLicense.docs.map(doc => ({
+        id: doc.id,
+        licenseNumber: doc.data().licenseNumber,
+        nickname: doc.data().nickname,
+        status: doc.data().status,
+      }));
+      console.log('[Apply API] ❌ Found existing license:', JSON.stringify(existingLicenseDocs, null, 2));
       return NextResponse.json({
         error: 'มีข้อมูลเลขที่ใบอนุญาตนี้ในระบบการสมัครสมาชิกแล้ว ไม่สามารถลงทะเบียนซ้ำได้ กรุณาติดต่อทีมนายทะเบียน'
       }, { status: 400 });
     }
+
+    console.log('[Apply API] ✅ License number check passed');
 
     // Check if license number already exists in member database
     try {
@@ -234,30 +268,52 @@ export async function GET(request: NextRequest) {
 
     const db = adminDb();
 
-    const applications = await db.collection('membershipApplications')
+    console.log('[Apply API GET] Checking for existing application, userId:', session.user.id);
+
+    // ✅ FIXED: Fetch with where only, then sort in JavaScript (per AGENTS.md rules)
+    const applicationsSnapshot = await db.collection('membershipApplications')
       .where('lineUserId', '==', session.user.id)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
+      .limit(10) // Get more to sort
       .get();
 
-    if (applications.empty) {
+    console.log('[Apply API GET] Found', applicationsSnapshot.size, 'application(s)');
+
+    if (applicationsSnapshot.empty) {
+      console.log('[Apply API GET] No applications found');
       return NextResponse.json({ hasApplication: false });
     }
 
-    const appDoc = applications.docs[0];
-    const appData = appDoc.data();
+    // Map to array with date conversion
+    let applications = applicationsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      data: doc.data(),
+      createdAt: doc.data().createdAt?.toDate?.() || doc.data().createdAt,
+    }));
+
+    // Sort by createdAt descending in JavaScript
+    applications.sort((a, b) => {
+      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt || 0).getTime();
+      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt || 0).getTime();
+      return dateB - dateA; // descending
+    });
+
+    // Get the most recent application
+    const latestApp = applications[0];
+    const appData = latestApp.data;
+
+    console.log('[Apply API GET] Latest application:', latestApp.id, 'status:', appData.status);
 
     return NextResponse.json({
       hasApplication: true,
       application: {
-        id: appDoc.id,
+        id: latestApp.id,
         status: appData.status,
         documentStatus: appData.documentStatus,
         companyNameEN: appData.companyNameEN,
         nickname: appData.nickname,
-        createdAt: appData.createdAt?.toDate?.() || appData.createdAt,
-        licenseDocumentUrl: appData.licenseDocumentUrl, // ✅ NEW
-        businessCardUrl: appData.businessCardUrl, // ✅ NEW
+        createdAt: latestApp.createdAt,
+        licenseDocumentUrl: appData.licenseDocumentUrl,
+        businessCardUrl: appData.businessCardUrl,
       },
     });
   } catch (error) {

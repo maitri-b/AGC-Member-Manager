@@ -76,6 +76,24 @@ export default function PaymentSlipUploadModal({
     }
   }, [isOpen, registrationId]);
 
+  // ✅ CRITICAL FIX: Auto-select correct payment type based on available options
+  useEffect(() => {
+    if (paymentSlips.length > 0) {
+      const availableOptions = getAvailablePaymentTypes();
+
+      // Check if current selectedPaymentType is still available
+      const isCurrentTypeAvailable = availableOptions.some(opt => opt.value === selectedPaymentType);
+
+      if (!isCurrentTypeAvailable && availableOptions.length > 0) {
+        // Auto-select the first available option
+        const firstOption = availableOptions[0];
+        console.log('[PaymentSlipUploadModal] Auto-selecting payment type:', firstOption.value);
+        setSelectedPaymentType(firstOption.value as any);
+        setCustomAmount(firstOption.suggestedAmount > 0 ? firstOption.suggestedAmount.toString() : '0');
+      }
+    }
+  }, [paymentSlips, selectedPaymentType]);
+
   const fetchPaymentSlips = async () => {
     setLoadingSlips(true);
     setFetchError(null);

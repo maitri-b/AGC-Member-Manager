@@ -127,6 +127,16 @@ interface UserRegistration {
     addedBy: string;
     addedAt: string;
   }>;
+  // Discounts (New)
+  discounts?: Array<{
+    discountId: string;
+    description: string;
+    discountType: 'fixed' | 'percentage' | 'free';
+    value: number;
+    calculatedAmount: number;
+    addedBy: string;
+    addedAt: string;
+  }>;
 }
 
 export default function EventDetailPage() {

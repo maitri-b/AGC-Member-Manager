@@ -287,6 +287,83 @@ export async function approvePaymentSlip(
       updateData.additionalPayments = JSON.stringify(additionalPayments);
 
       // Don't update main payment status for additional payments
+    } else if (slip.paymentType === 'refund') {
+      // ✅ REFUND: Deduct from paid amounts (opposite of payment)
+      // Get current paid amounts
+      const currentPaidAmount = registrationData.paidAmount || 0;
+      const fullPaymentAmountPaid = registrationData.fullPaymentAmountPaid || 0;
+      const depositAmountPaid = registrationData.depositAmountPaid || 0;
+      const remainingAmountPaid = registrationData.remainingAmountPaid || 0;
+
+      // Deduct refund amount from total paid
+      const newPaidAmount = Math.max(0, currentPaidAmount - slip.amount);
+      updateData.paidAmount = newPaidAmount;
+
+      // ✅ Track refund in payment history
+      const currentData = registrationDoc.data();
+      let refundHistory: any[] = [];
+
+      try {
+        refundHistory = currentData.refundHistory
+          ? JSON.parse(currentData.refundHistory)
+          : [];
+      } catch (err) {
+        console.error('Error parsing refund history:', err);
+        refundHistory = [];
+      }
+
+      const refundEntry = {
+        refundId: slip.slipId,
+        amount: slip.amount,
+        reason: slip.description || 'คืนเงิน',
+        slipUrl: slip.slipUrl,
+        uploadedAt: slip.uploadedAt,
+        approvedAt: reviewedAt,
+        approvedBy: reviewerId,
+        status: 'อนุมัติแล้ว',
+      };
+
+      refundHistory.push(refundEntry);
+      updateData.refundHistory = JSON.stringify(refundHistory);
+
+      // ✅ Calculate total refunded amount
+      const totalRefunded = (registrationData.totalRefunded || 0) + slip.amount;
+      updateData.totalRefunded = totalRefunded;
+
+      // ✅ Update payment status message
+      updateData.paymentStatus = 'คืนเงินแล้ว';
+
+      // ✅ Proportionally reduce tracked amounts (if using new tracking system)
+      if (fullPaymentAmountPaid > 0 || depositAmountPaid > 0 || remainingAmountPaid > 0) {
+        // Calculate proportion to deduct
+        const totalTracked = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+
+        if (totalTracked > 0) {
+          const refundRatio = slip.amount / totalTracked;
+
+          if (fullPaymentAmountPaid > 0) {
+            const refundFromFull = Math.min(fullPaymentAmountPaid, fullPaymentAmountPaid * refundRatio);
+            updateData.fullPaymentAmountPaid = Math.max(0, fullPaymentAmountPaid - refundFromFull);
+          }
+
+          if (depositAmountPaid > 0) {
+            const refundFromDeposit = Math.min(depositAmountPaid, depositAmountPaid * refundRatio);
+            updateData.depositAmountPaid = Math.max(0, depositAmountPaid - refundFromDeposit);
+          }
+
+          if (remainingAmountPaid > 0) {
+            const refundFromRemaining = Math.min(remainingAmountPaid, remainingAmountPaid * refundRatio);
+            updateData.remainingAmountPaid = Math.max(0, remainingAmountPaid - refundFromRemaining);
+          }
+        }
+      }
+
+      console.log('[Approve Refund] Refund processed:', {
+        refundAmount: slip.amount,
+        oldPaidAmount: currentPaidAmount,
+        newPaidAmount,
+        totalRefunded,
+      });
     }
 
     // ✅ AUTO-UPDATE REGISTRATION STATUS based on payment completion
@@ -302,7 +379,13 @@ export async function approvePaymentSlip(
     const allSlips = await getPaymentSlipsByRegistration(slip.registrationId);
     const approvedSlipsTotal = allSlips
       .filter(s => s.status === 'approved' || s.slipId === slipId) // Include current slip being approved
-      .reduce((sum, s) => sum + (s.amount || 0), 0);
+      .reduce((sum, s) => {
+        // ✅ CRITICAL: Subtract refunds from total (refunds are negative)
+        if (s.paymentType === 'refund') {
+          return sum - (s.amount || 0);
+        }
+        return sum + (s.amount || 0);
+      }, 0);
 
     // ✅ CRITICAL: Recalculate totalAmount from components to include special charges and discounts
     // This handles scenarios where admin added/removed charges or discounts after registration

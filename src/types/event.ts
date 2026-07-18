@@ -109,6 +109,10 @@ export interface EventRegistration {
 
   // Overpayment Tracking (New - for tracking overpayment amount)
   overpaymentAmount?: number;       // overpayment_amount - Amount paid in excess (paidAmount - totalAmount) when paidAmount > totalAmount
+
+  // Refund Tracking (New - for tracking refunds when money is returned to member)
+  refundHistory?: string;           // refund_history - JSON stringified RefundEntry[]
+  totalRefunded?: number;           // total_refunded - Total amount refunded to member
 }
 
 // Event metadata (for managing multiple events)
@@ -403,6 +407,18 @@ export interface AdditionalPayment {
   status: 'รอชำระ' | 'รอตรวจสอบ' | 'อนุมัติแล้ว' | 'ปฏิเสธ'; // Payment status
 }
 
+// Refund Entry (New - for tracking refunds)
+export interface RefundEntry {
+  refundId: string;              // Unique ID for this refund (same as slip ID)
+  amount: number;                // Amount refunded
+  reason: string;                // Reason for refund (e.g., "ยกเลิกการลงทะเบียน", "ชำระเกินจำนวน")
+  slipUrl?: string;              // URL of refund slip (proof of bank transfer back to member)
+  uploadedAt?: string;           // ISO timestamp when slip was uploaded
+  approvedAt?: string;           // ISO timestamp when refund was approved
+  approvedBy?: string;           // Admin user ID who approved refund
+  status: 'รอตรวจสอบ' | 'อนุมัติแล้ว' | 'ปฏิเสธ'; // Refund status
+}
+
 // Google Sheet column mapping for Event Registration
 export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, string> = {
   registrationId: 'registration_id',
@@ -469,6 +485,9 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   paidAmount: 'paid_amount',
   additionalPayments: 'additional_payments',
   overpaymentAmount: 'overpayment_amount',
+  // Refund tracking (New - for refunds)
+  refundHistory: 'refund_history',
+  totalRefunded: 'total_refunded',
   // Full Payment Mode Fields (New)
   fullPaymentDeadline: 'full_payment_deadline',
   fullPaymentPaid: 'full_payment_paid',

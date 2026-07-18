@@ -1,6 +1,6 @@
 // Payment Slip Types for Agents Club Member Manager
 
-export type PaymentType = 'full' | 'deposit' | 'remaining' | 'additional';
+export type PaymentType = 'full' | 'deposit' | 'remaining' | 'additional' | 'refund';
 export type PaymentStatus = 'pending' | 'approved' | 'rejected';
 export type PaymentMethod = 'bank_transfer' | 'cash' | 'credit_card' | 'other';
 
@@ -64,6 +64,7 @@ export const PaymentTypeLabels: Record<PaymentType, string> = {
   deposit: 'ชำระมัดจำ',
   remaining: 'ชำระยอดคงเหลือ',
   additional: 'ชำระเพิ่มเติม',
+  refund: 'โอนเงินคืน (Refund)',
 };
 
 /**

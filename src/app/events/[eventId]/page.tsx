@@ -276,6 +276,7 @@ export default function EventDetailPage() {
       'deposit': 'มัดจำ',
       'remaining': 'ยอดคงเหลือ',
       'additional': 'ชำระเพิ่มเติม',
+      'refund': '💸 โอนเงินคืน',
     };
     return names[type] || type;
   };
@@ -1704,6 +1705,8 @@ export default function EventDetailPage() {
                             const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
                             const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                             const outstanding = Math.max(0, totalAmount - paidAmount);
+                            // ✅ Calculate overpayment (if paidAmount > totalAmount)
+                            const overpayment = paidAmount > totalAmount ? paidAmount - totalAmount : 0;
 
                             return (
                               <div className="text-sm space-y-1">
@@ -1715,12 +1718,20 @@ export default function EventDetailPage() {
                                   <span>ยอดชำระแล้ว:</span>
                                   <span className="font-semibold">฿{paidAmount.toLocaleString()}</span>
                                 </div>
-                                <div className={`flex justify-between border-t pt-1 mt-1 ${
-                                  outstanding === 0 ? 'text-green-700 border-green-300' : 'text-red-700 border-red-300'
-                                }`}>
-                                  <span className="font-bold">ยอดคงเหลือค้างชำระ:</span>
-                                  <span className="font-bold">{outstanding.toLocaleString()} บาท</span>
-                                </div>
+                                {/* Show overpayment OR outstanding */}
+                                {overpayment > 0 ? (
+                                  <div className="flex justify-between border-t pt-1 mt-1 text-blue-700 border-blue-300">
+                                    <span className="font-bold">ชำระไว้เกิน:</span>
+                                    <span className="font-bold">฿{overpayment.toLocaleString()}</span>
+                                  </div>
+                                ) : (
+                                  <div className={`flex justify-between border-t pt-1 mt-1 ${
+                                    outstanding === 0 ? 'text-green-700 border-green-300' : 'text-red-700 border-red-300'
+                                  }`}>
+                                    <span className="font-bold">ยอดคงเหลือค้างชำระ:</span>
+                                    <span className="font-bold">{outstanding.toLocaleString()} บาท</span>
+                                  </div>
+                                )}
                               </div>
                             );
                           })()}
@@ -1766,7 +1777,47 @@ export default function EventDetailPage() {
                         // Only show additional payment notice if user has already paid something
                         const isAdditionalPayment = paidAmount > 0 || approvedAdditional > 0;
 
-                        // Show overpayment alert first
+                        // ✅ Check for refund (show before overpayment)
+                        const totalRefunded = (userRegistration as any).totalRefunded || 0;
+
+                        // Show refund alert first if any
+                        if (totalRefunded > 0) {
+                          return (
+                            <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 mb-4">
+                              <div className="flex items-start gap-3">
+                                <svg className="w-6 h-6 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                </svg>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-purple-900 mb-2">💸 คืนเงินแล้ว</h4>
+                                  <div className="space-y-1 text-sm text-purple-800">
+                                    <div className="flex justify-between">
+                                      <span>ยอดรวมทั้งหมด:</span>
+                                      <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>ยอดชำระแล้ว:</span>
+                                      <span className="font-semibold">฿{(paidAmount + approvedAdditional).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-purple-300 pt-1 mt-1">
+                                      <span className="font-bold text-purple-600">ยอดคืนเงิน:</span>
+                                      <span className="font-bold text-lg text-purple-600">-฿{totalRefunded.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-purple-300 pt-1 mt-1">
+                                      <span className="font-bold">ยอดคงเหลือสุทธิ:</span>
+                                      <span className="font-bold text-lg text-purple-900">฿{(paidAmount + approvedAdditional - totalRefunded).toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-purple-700 mt-2">
+                                    ระบบได้ทำการคืนเงินให้คุณแล้ว หากมีข้อสงสัยกรุณาติดต่อทีมงาน
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // Show overpayment alert
                         if (overpayment > 0) {
                           return (
                             <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
@@ -1883,17 +1934,22 @@ export default function EventDetailPage() {
                                         {`${day}/${month}/${year}`}
                                       </td>
                                       <td className="px-1.5 sm:px-3 py-2 sm:py-3">
-                                        <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                                        <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium whitespace-nowrap ${
+                                          slip.paymentType === 'refund' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                        }`}>
                                           <span className="hidden sm:inline">{getPaymentTypeName(slip.paymentType)}</span>
                                           <span className="sm:hidden">
                                             {slip.paymentType === 'deposit' ? 'มัดจำ' :
                                              slip.paymentType === 'remaining' ? 'คงเหลือ' :
-                                             slip.paymentType === 'full' ? 'เต็ม' : 'เพิ่ม'}
+                                             slip.paymentType === 'full' ? 'เต็ม' :
+                                             slip.paymentType === 'refund' ? '💸คืน' : 'เพิ่ม'}
                                           </span>
                                         </span>
                                       </td>
-                                      <td className="px-1.5 sm:px-3 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-gray-900 whitespace-nowrap">
-                                        ฿{slip.amount.toLocaleString()}
+                                      <td className={`px-1.5 sm:px-3 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold whitespace-nowrap ${
+                                        slip.paymentType === 'refund' ? 'text-red-600' : 'text-gray-900'
+                                      }`}>
+                                        {slip.paymentType === 'refund' ? '-' : ''}฿{slip.amount.toLocaleString()}
                                       </td>
                                       <td className="px-1.5 sm:px-3 py-2 sm:py-3 text-center">
                                         <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>

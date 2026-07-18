@@ -244,6 +244,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
       deposit: 'ชำระมัดจำ',
       remaining: 'ชำระยอดคงเหลือ',
       additional: 'ชำระเพิ่มเติม',
+      refund: '💸 โอนเงินคืน (Refund)',
     };
     return names[type] || type;
   };
@@ -307,17 +308,22 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                       {`${day}/${month}/${year}`}
                     </td>
                     <td className="px-2 py-2">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium whitespace-nowrap ${
+                        slip.paymentType === 'refund' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
                         <span className="hidden sm:inline">{getPaymentTypeName(slip.paymentType)}</span>
                         <span className="sm:hidden">
                           {slip.paymentType === 'deposit' ? 'มัดจำ' :
                            slip.paymentType === 'remaining' ? 'คงเหลือ' :
-                           slip.paymentType === 'full' ? 'เต็ม' : 'เพิ่ม'}
+                           slip.paymentType === 'full' ? 'เต็ม' :
+                           slip.paymentType === 'refund' ? '💸คืน' : 'เพิ่ม'}
                         </span>
                       </span>
                     </td>
-                    <td className="px-2 py-2 text-right text-[10px] sm:text-xs font-semibold text-gray-900 whitespace-nowrap">
-                      ฿{slip.amount.toLocaleString()}
+                    <td className={`px-2 py-2 text-right text-[10px] sm:text-xs font-semibold whitespace-nowrap ${
+                      slip.paymentType === 'refund' ? 'text-red-600' : 'text-gray-900'
+                    }`}>
+                      {slip.paymentType === 'refund' ? '-' : ''}฿{slip.amount.toLocaleString()}
                     </td>
                     <td className="px-2 py-2 text-center">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>
@@ -427,7 +433,7 @@ export default function EventDetailPage() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentFormData, setPaymentFormData] = useState<{
     registrationId: string;
-    paymentType: 'deposit' | 'remaining' | 'full';
+    paymentType: 'deposit' | 'remaining' | 'full' | 'refund';
     amount: number;
     slipUrl: string;
     paidDate: string;
@@ -2992,6 +2998,8 @@ export default function EventDetailPage() {
                               const remainingAmountPaid = (attendee.registration as any).remainingAmountPaid || 0;
                               const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
                               const additionalRequired = Math.max(0, totalAmount - paidAmount);
+                              // ✅ Calculate overpayment (if paidAmount > totalAmount)
+                              const overpayment = paidAmount > totalAmount ? paidAmount - totalAmount : 0;
 
                               // DEBUG: Log payment calculation
                               console.log('Payment Debug [BUILD a0fc466]:', {
@@ -3027,6 +3035,14 @@ export default function EventDetailPage() {
                                     <div className="flex items-center justify-between">
                                       <span className="text-orange-700 font-medium">คงเหลือยอดค้างชำระ:</span>
                                       <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
+                                    </div>
+                                  )}
+
+                                  {/* ✅ Show overpayment if > 0 (paidAmount > totalAmount) */}
+                                  {overpayment > 0 && (
+                                    <div className="flex items-center justify-between border-t border-blue-200 pt-2 mt-2">
+                                      <span className="text-blue-700 font-medium">ชำระไว้เกิน:</span>
+                                      <span className="font-semibold text-blue-600">฿{overpayment.toLocaleString()}</span>
                                     </div>
                                   )}
                                 </>
@@ -3356,7 +3372,7 @@ export default function EventDetailPage() {
                       type="radio"
                       value="deposit"
                       checked={paymentFormData.paymentType === 'deposit'}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' })}
+                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
                       className="w-4 h-4 text-blue-600"
                     />
                     <span className="text-sm">ชำระมัดจำ (งวดที่ 1)</span>
@@ -3366,7 +3382,7 @@ export default function EventDetailPage() {
                       type="radio"
                       value="remaining"
                       checked={paymentFormData.paymentType === 'remaining'}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' })}
+                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
                       className="w-4 h-4 text-blue-600"
                     />
                     <span className="text-sm">ชำระยอดที่เหลือ (งวดที่ 2)</span>
@@ -3376,10 +3392,20 @@ export default function EventDetailPage() {
                       type="radio"
                       value="full"
                       checked={paymentFormData.paymentType === 'full'}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' })}
+                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
                       className="w-4 h-4 text-blue-600"
                     />
                     <span className="text-sm font-semibold text-green-700">ชำระเต็มจำนวน (ทั้งหมด)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer p-2 border border-red-300 rounded hover:bg-red-50">
+                    <input
+                      type="radio"
+                      value="refund"
+                      checked={paymentFormData.paymentType === 'refund'}
+                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentType: e.target.value as 'deposit' | 'remaining' | 'full' | 'refund' })}
+                      className="w-4 h-4 text-red-600"
+                    />
+                    <span className="text-sm font-semibold text-red-700">💸 โอนเงินคืน (Refund)</span>
                   </label>
                 </div>
               </div>

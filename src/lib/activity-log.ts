@@ -204,6 +204,6 @@ export async function logPaymentConfirmation(params: {
     userId,
     userName,
     userRole,
-    notes: `ยืนยันการชำระเงิน ${paymentType}: ฿${amount.toLocaleString()}`,
+    notes: `ยืนยันการชำระเงิน ${paymentType}: ${amount.toLocaleString()} บาท`,
   });
 }

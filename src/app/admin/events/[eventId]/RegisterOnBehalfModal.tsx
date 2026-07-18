@@ -378,7 +378,7 @@ export default function RegisterOnBehalfModal({
                               <span className="text-sm text-gray-600 w-12 text-right">คน</span>
                               {quantity > 0 && (
                                 <span className="text-sm font-semibold text-blue-600 w-24 text-right">
-                                  = {subtotal.toLocaleString()} ฿
+                                  = {subtotal.toLocaleString()} บาท
                                 </span>
                               )}
                             </div>
@@ -454,7 +454,7 @@ export default function RegisterOnBehalfModal({
                               <span className="text-sm text-gray-600 w-12 text-right">ห้อง</span>
                               {roomCount > 0 && (
                                 <span className="text-sm font-semibold text-amber-600 w-24 text-right">
-                                  = {subtotal.toLocaleString()} ฿
+                                  = {subtotal.toLocaleString()} บาท
                                 </span>
                               )}
                             </div>

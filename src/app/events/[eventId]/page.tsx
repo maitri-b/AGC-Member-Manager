@@ -1712,17 +1712,17 @@ export default function EventDetailPage() {
                               <div className="text-sm space-y-1">
                                 <div className="flex justify-between text-gray-700">
                                   <span>ยอดรวมทั้งหมด:</span>
-                                  <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                  <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
                                 </div>
                                 <div className="flex justify-between text-gray-700">
                                   <span>ยอดชำระแล้ว:</span>
-                                  <span className="font-semibold">฿{paidAmount.toLocaleString()}</span>
+                                  <span className="font-semibold">{paidAmount.toLocaleString()} บาท</span>
                                 </div>
                                 {/* Show overpayment OR outstanding */}
                                 {overpayment > 0 ? (
                                   <div className="flex justify-between border-t pt-1 mt-1 text-blue-700 border-blue-300">
                                     <span className="font-bold">ชำระไว้เกิน:</span>
-                                    <span className="font-bold">฿{overpayment.toLocaleString()}</span>
+                                    <span className="font-bold">{overpayment.toLocaleString()} บาท</span>
                                   </div>
                                 ) : (
                                   <div className={`flex justify-between border-t pt-1 mt-1 ${
@@ -1793,19 +1793,19 @@ export default function EventDetailPage() {
                                   <div className="space-y-1 text-sm text-purple-800">
                                     <div className="flex justify-between">
                                       <span>ยอดรวมทั้งหมด:</span>
-                                      <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                      <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span>ยอดชำระแล้ว:</span>
-                                      <span className="font-semibold">฿{(paidAmount + approvedAdditional).toLocaleString()}</span>
+                                      <span className="font-semibold">{(paidAmount + approvedAdditional).toLocaleString()} บาท</span>
                                     </div>
                                     <div className="flex justify-between border-t border-purple-300 pt-1 mt-1">
                                       <span className="font-bold text-purple-600">ยอดคืนเงิน:</span>
-                                      <span className="font-bold text-lg text-purple-600">-฿{totalRefunded.toLocaleString()}</span>
+                                      <span className="font-bold text-lg text-purple-600">-{totalRefunded.toLocaleString()} บาท</span>
                                     </div>
                                     <div className="flex justify-between border-t border-purple-300 pt-1 mt-1">
                                       <span className="font-bold">ยอดคงเหลือสุทธิ:</span>
-                                      <span className="font-bold text-lg text-purple-900">฿{(paidAmount + approvedAdditional - totalRefunded).toLocaleString()}</span>
+                                      <span className="font-bold text-lg text-purple-900">{(paidAmount + approvedAdditional - totalRefunded).toLocaleString()} บาท</span>
                                     </div>
                                   </div>
                                   <p className="text-xs text-purple-700 mt-2">
@@ -1830,15 +1830,15 @@ export default function EventDetailPage() {
                                   <div className="space-y-1 text-sm text-blue-800">
                                     <div className="flex justify-between">
                                       <span>ยอดรวมทั้งหมด:</span>
-                                      <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                      <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span>ยอดชำระแล้ว:</span>
-                                      <span className="font-semibold">฿{(paidAmount + approvedAdditional).toLocaleString()}</span>
+                                      <span className="font-semibold">{(paidAmount + approvedAdditional).toLocaleString()} บาท</span>
                                     </div>
                                     <div className="flex justify-between border-t border-blue-300 pt-1 mt-1">
                                       <span className="font-bold">ชำระเกิน:</span>
-                                      <span className="font-bold text-lg text-blue-600">฿{overpayment.toLocaleString()}</span>
+                                      <span className="font-bold text-lg text-blue-600">{overpayment.toLocaleString()} บาท</span>
                                     </div>
                                   </div>
                                   <p className="text-xs text-blue-700 mt-2">
@@ -1873,15 +1873,15 @@ export default function EventDetailPage() {
                                     <div className="space-y-1 text-sm text-orange-800">
                                       <div className="flex justify-between">
                                         <span>ยอดรวมทั้งหมด:</span>
-                                        <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                        <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
                                       </div>
                                       <div className="flex justify-between">
                                         <span>ยอดชำระแล้ว:</span>
-                                        <span className="font-semibold">฿{(paidAmount + approvedAdditional).toLocaleString()}</span>
+                                        <span className="font-semibold">{(paidAmount + approvedAdditional).toLocaleString()} บาท</span>
                                       </div>
                                       <div className="flex justify-between border-t border-orange-300 pt-1 mt-1">
                                         <span className="font-bold">ยอดชำระเพิ่ม:</span>
-                                        <span className="font-bold text-lg text-orange-600">฿{additionalRequired.toLocaleString()}</span>
+                                        <span className="font-bold text-lg text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
                                       </div>
                                     </div>
                                     <p className="text-xs text-orange-700 mt-2">
@@ -1949,7 +1949,8 @@ export default function EventDetailPage() {
                                       <td className={`px-1.5 sm:px-3 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold whitespace-nowrap ${
                                         slip.paymentType === 'refund' ? 'text-red-600' : 'text-gray-900'
                                       }`}>
-                                        {slip.paymentType === 'refund' ? '-' : ''}฿{slip.amount.toLocaleString()}
+                                        <span className="sm:hidden">{slip.paymentType === 'refund' ? '-' : ''}{slip.amount.toLocaleString()}</span>
+                                        <span className="hidden sm:inline">{slip.paymentType === 'refund' ? '-' : ''}{slip.amount.toLocaleString()} บาท</span>
                                       </td>
                                       <td className="px-1.5 sm:px-3 py-2 sm:py-3 text-center">
                                         <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>
@@ -2964,9 +2965,9 @@ export default function EventDetailPage() {
                           <span className="text-xl font-bold text-orange-600">
                             {event.paymentMode === 'deposit'
                               ? (event.useDepositPercentage
-                                  ? `฿${Math.round((calculateRegistrationFee(event, attendeeCount, true) + calculatedRoomFee) * ((event.depositPercentage || 0) / 100)).toLocaleString()}`
-                                  : `฿${(event.depositAmount || 0).toLocaleString()}`)
-                              : `฿${(calculateRegistrationFee(event, attendeeCount, true) + calculatedRoomFee).toLocaleString()}`
+                                  ? `${Math.round((calculateRegistrationFee(event, attendeeCount, true) + calculatedRoomFee) * ((event.depositPercentage || 0) / 100)).toLocaleString()} บาท`
+                                  : `${(event.depositAmount || 0).toLocaleString()} บาท`)
+                              : `${(calculateRegistrationFee(event, attendeeCount, true) + calculatedRoomFee).toLocaleString()} บาท`
                             }
                           </span>
                         </div>

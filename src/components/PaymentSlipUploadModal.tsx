@@ -294,7 +294,6 @@ export default function PaymentSlipUploadModal({
               {getAvailablePaymentTypes().map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
-                  {option.suggestedAmount > 0 && ` (แนะนำ: ฿${option.suggestedAmount.toLocaleString()})`}
                 </option>
               ))}
             </select>
@@ -306,7 +305,15 @@ export default function PaymentSlipUploadModal({
           {/* Amount Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              จำนวนเงินที่โอน (บาท) <span className="text-red-500">*</span>
+              โปรดระบุยอดเงินที่โอน
+              {(() => {
+                const selectedOption = getAvailablePaymentTypes().find(opt => opt.value === selectedPaymentType);
+                if (selectedOption && selectedOption.suggestedAmount > 0) {
+                  return ` (แนะนำ ${selectedOption.suggestedAmount.toLocaleString()} บาท)`;
+                }
+                return '';
+              })()}
+              <span className="text-red-500"> *</span>
             </label>
             <input
               type="number"

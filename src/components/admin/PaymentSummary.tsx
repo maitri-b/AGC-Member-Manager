@@ -104,14 +104,14 @@ export default function PaymentSummary({ summary, compact = false }: PaymentSumm
         <div className="bg-gray-50 rounded-lg p-3">
           <p className="text-xs text-gray-500 mb-1">ยอดรวมทั้งหมด</p>
           <p className="text-lg font-bold text-gray-900">
-            {formatCurrency(summary.totalAmount)} ฿
+            {formatCurrency(summary.totalAmount)} บาท
           </p>
         </div>
 
         <div className="bg-green-50 rounded-lg p-3">
           <p className="text-xs text-gray-500 mb-1">ชำระแล้ว</p>
           <p className="text-lg font-bold text-green-700">
-            {formatCurrency(summary.totalPaid)} ฿
+            {formatCurrency(summary.totalPaid)} บาท
           </p>
           <p className="text-xs text-gray-500 mt-0.5">
             ({summary.approvedCount} ครั้ง)
@@ -121,7 +121,7 @@ export default function PaymentSummary({ summary, compact = false }: PaymentSumm
         <div className="bg-yellow-50 rounded-lg p-3">
           <p className="text-xs text-gray-500 mb-1">รอตรวจสอบ</p>
           <p className="text-lg font-bold text-yellow-700">
-            {formatCurrency(summary.totalPending)} ฿
+            {formatCurrency(summary.totalPending)} บาท
           </p>
           <p className="text-xs text-gray-500 mt-0.5">
             ({summary.pendingCount} ครั้ง)
@@ -133,7 +133,7 @@ export default function PaymentSummary({ summary, compact = false }: PaymentSumm
             {summary.balance > 0 ? 'ยอดคงเหลือต้องชำระ' : summary.balance < 0 ? 'ชำระเกิน' : 'ชำระครบ'}
           </p>
           <p className={`text-lg font-bold ${summary.balance > 0 ? 'text-red-700' : summary.balance < 0 ? 'text-blue-700' : 'text-green-700'}`}>
-            {formatCurrency(Math.abs(summary.balance))} ฿
+            {formatCurrency(Math.abs(summary.balance))} บาท
           </p>
         </div>
       </div>

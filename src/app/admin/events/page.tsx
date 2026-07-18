@@ -1062,9 +1062,9 @@ export default function AdminEventsPage() {
                           const minPrice = Math.min(...event.attendeeTypes.map(t => t.price));
                           const maxPrice = Math.max(...event.attendeeTypes.map(t => t.price));
                           if (minPrice === maxPrice) {
-                            return minPrice === 0 ? 'ฟรี' : `฿${minPrice.toLocaleString()}`;
+                            return minPrice === 0 ? 'ฟรี' : `${minPrice.toLocaleString()} บาท`;
                           }
-                          return `฿${minPrice.toLocaleString()}-${maxPrice.toLocaleString()}`;
+                          return `${minPrice.toLocaleString()}-${maxPrice.toLocaleString()} บาท`;
                         }
 
                         // New Tier Pricing
@@ -1074,9 +1074,9 @@ export default function AdminEventsPage() {
                             return 'ฟรี';
                           }
                           if (firstTier.priceType === 'total') {
-                            return `${firstTier.upToCount} คนแรก ฿${firstTier.price.toLocaleString()}`;
+                            return `${firstTier.upToCount} คนแรก ${firstTier.price.toLocaleString()} บาท`;
                           }
-                          return `เริ่มต้น ฿${firstTier.price.toLocaleString()}`;
+                          return `เริ่มต้น ${firstTier.price.toLocaleString()} บาท`;
                         }
 
                         // Legacy Tiered Pricing (baseFee + additionalFeePerPerson)
@@ -1084,11 +1084,11 @@ export default function AdminEventsPage() {
                           if (event.baseFee === 0 && event.additionalFeePerPerson === 0) {
                             return 'ฟรี';
                           }
-                          return `เริ่มต้น ฿${(event.baseFee || 0).toLocaleString()}`;
+                          return `เริ่มต้น ${(event.baseFee || 0).toLocaleString()} บาท`;
                         }
 
                         // Fixed Pricing
-                        return event.registrationFee ? `฿${event.registrationFee.toLocaleString()}` : 'ฟรี';
+                        return event.registrationFee ? `${event.registrationFee.toLocaleString()} บาท` : 'ฟรี';
                       })()}
                       {event.maxCapacity > 0 && ` | รับ ${event.maxCapacity} คน`}
                     </span>

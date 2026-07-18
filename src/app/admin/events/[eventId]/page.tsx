@@ -323,7 +323,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                     <td className={`px-2 py-2 text-right text-[10px] sm:text-xs font-semibold whitespace-nowrap ${
                       slip.paymentType === 'refund' ? 'text-red-600' : 'text-gray-900'
                     }`}>
-                      {slip.paymentType === 'refund' ? '-' : ''}฿{slip.amount.toLocaleString()}
+                      {slip.paymentType === 'refund' ? '-' : ''}{slip.amount.toLocaleString()} บาท
                     </td>
                     <td className="px-2 py-2 text-center">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium ${getSlipStatusBadgeClass(slip.status)}`}>
@@ -1924,13 +1924,13 @@ export default function EventDetailPage() {
               <>
                 <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-yellow-200">
                   <p className="text-lg sm:text-2xl font-bold text-yellow-600">
-                    {totalPending.toLocaleString()}
+                    {totalPending.toLocaleString()} บาท
                   </p>
                   <p className="text-[10px] sm:text-xs text-gray-500">รอตรวจสอบ (บาท)</p>
                 </div>
                 <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-emerald-200">
                   <p className="text-lg sm:text-2xl font-bold text-emerald-600">
-                    {totalApproved.toLocaleString()}
+                    {totalApproved.toLocaleString()} บาท
                   </p>
                   <p className="text-[10px] sm:text-xs text-gray-500">ยืนยันแล้ว (บาท)</p>
                 </div>
@@ -2533,7 +2533,7 @@ export default function EventDetailPage() {
                                       <span className="text-xs text-gray-600 w-12 text-right">คน</span>
                                       {quantity > 0 && (
                                         <span className="text-xs font-semibold text-blue-600 w-24 text-right">
-                                          = {subtotal.toLocaleString()} ฿
+                                          = {subtotal.toLocaleString()} บาท
                                         </span>
                                       )}
                                     </div>
@@ -2591,7 +2591,7 @@ export default function EventDetailPage() {
                                       <span className="text-xs text-gray-600 w-12 text-right">ห้อง</span>
                                       {roomCount > 0 && (
                                         <span className="text-xs font-semibold text-amber-600 w-24 text-right">
-                                          = {subtotal.toLocaleString()} ฿
+                                          = {subtotal.toLocaleString()} บาท
                                         </span>
                                       )}
                                     </div>
@@ -2793,30 +2793,30 @@ export default function EventDetailPage() {
                                 {/* ALWAYS show event fee line */}
                                 <div className="flex justify-between">
                                   <span>ค่าเข้าร่วมกิจกรรม:</span>
-                                  <span className="font-semibold">฿{calculatedEventFee.toLocaleString()}</span>
+                                  <span className="font-semibold">{calculatedEventFee.toLocaleString()} บาท</span>
                                 </div>
                                 {/* ALWAYS show room fee line */}
                                 <div className="flex justify-between">
                                   <span>ค่าห้องพัก:</span>
-                                  <span className="font-semibold">฿{calculatedRoomFee.toLocaleString()}</span>
+                                  <span className="font-semibold">{calculatedRoomFee.toLocaleString()} บาท</span>
                                 </div>
                                 {/* Only show special charges if > 0 */}
                                 {specialChargesTotal > 0 && (
                                   <div className="flex justify-between">
                                     <span>ค่าใช้จ่ายเสริม:</span>
-                                    <span className="font-semibold">+฿{specialChargesTotal.toLocaleString()}</span>
+                                    <span className="font-semibold">+{specialChargesTotal.toLocaleString()} บาท</span>
                                   </div>
                                 )}
                                 {/* Only show discounts if > 0 */}
                                 {discountsTotal > 0 && (
                                   <div className="flex justify-between text-green-700">
                                     <span>ส่วนลด:</span>
-                                    <span className="font-semibold">-฿{discountsTotal.toLocaleString()}</span>
+                                    <span className="font-semibold">-{discountsTotal.toLocaleString()} บาท</span>
                                   </div>
                                 )}
                                 <div className="flex justify-between border-t border-green-300 pt-1 mt-1">
                                   <span className="font-bold text-green-900">ยอดรวมทั้งหมด:</span>
-                                  <span className="font-bold text-lg text-green-700">฿{calculatedTotal.toLocaleString()}</span>
+                                  <span className="font-bold text-lg text-green-700">{calculatedTotal.toLocaleString()} บาท</span>
                                 </div>
                               </div>
                               <p className="text-xs text-green-700 mt-2 italic">
@@ -2876,7 +2876,7 @@ export default function EventDetailPage() {
                                     </div>
                                     <div className="flex items-center gap-2 ml-2">
                                       <span className="text-sm font-bold text-purple-700">
-                                        +฿{charge.amount.toLocaleString()}
+                                        +{charge.amount.toLocaleString()} บาท
                                       </span>
                                       <button
                                         onClick={() => handleDeleteSpecialCharge(attendee.registration.registrationId, charge.chargeId)}
@@ -2894,7 +2894,7 @@ export default function EventDetailPage() {
                                   <div className="flex justify-between items-center text-sm">
                                     <span className="font-medium text-gray-600">รวมค่าใช้จ่ายเสริม:</span>
                                     <span className="font-bold text-purple-700">
-                                      +฿{specialCharges.reduce((sum: number, c: any) => sum + c.amount, 0).toLocaleString()}
+                                      +{specialCharges.reduce((sum: number, c: any) => sum + c.amount, 0).toLocaleString()} บาท
                                     </span>
                                   </div>
                                 </div>
@@ -2944,7 +2944,7 @@ export default function EventDetailPage() {
                                     </div>
                                     <div className="flex items-center gap-2 ml-2">
                                       <span className="text-sm font-bold text-green-700">
-                                        -฿{discount.calculatedAmount.toLocaleString()}
+                                        -{discount.calculatedAmount.toLocaleString()} บาท
                                       </span>
                                       <button
                                         onClick={() => handleDeleteDiscount(attendee.registration.registrationId, discount.discountId)}
@@ -2962,7 +2962,7 @@ export default function EventDetailPage() {
                                   <div className="flex justify-between items-center text-sm">
                                     <span className="font-medium text-gray-600">รวมส่วนลด:</span>
                                     <span className="font-bold text-green-700">
-                                      -฿{discounts.reduce((sum: number, d: any) => sum + d.calculatedAmount, 0).toLocaleString()}
+                                      -{discounts.reduce((sum: number, d: any) => sum + d.calculatedAmount, 0).toLocaleString()} บาท
                                     </span>
                                   </div>
                                 </div>
@@ -3019,14 +3019,14 @@ export default function EventDetailPage() {
                                   {/* ALWAYS show total amount */}
                                   <div className="flex items-center justify-between">
                                     <span className="text-gray-600">ยอดรวมทั้งหมด:</span>
-                                    <span className="font-semibold">฿{totalAmount.toLocaleString()}</span>
+                                    <span className="font-semibold">{totalAmount.toLocaleString()} บาท</span>
                                   </div>
 
                                   {/* Show paid amount if > 0 */}
                                   {paidAmount > 0 && (
                                     <div className="flex items-center justify-between">
                                       <span className="text-gray-600">ยอดชำระแล้ว:</span>
-                                      <span className="font-semibold text-blue-600">฿{paidAmount.toLocaleString()}</span>
+                                      <span className="font-semibold text-blue-600">{paidAmount.toLocaleString()} บาท</span>
                                     </div>
                                   )}
 
@@ -3034,7 +3034,7 @@ export default function EventDetailPage() {
                                   {additionalRequired > 0 && (
                                     <div className="flex items-center justify-between">
                                       <span className="text-orange-700 font-medium">คงเหลือยอดค้างชำระ:</span>
-                                      <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
+                                      <span className="font-semibold text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
                                     </div>
                                   )}
 
@@ -3042,7 +3042,7 @@ export default function EventDetailPage() {
                                   {overpayment > 0 && (
                                     <div className="flex items-center justify-between border-t border-blue-200 pt-2 mt-2">
                                       <span className="text-blue-700 font-medium">ชำระไว้เกิน:</span>
-                                      <span className="font-semibold text-blue-600">฿{overpayment.toLocaleString()}</span>
+                                      <span className="font-semibold text-blue-600">{overpayment.toLocaleString()} บาท</span>
                                     </div>
                                   )}
                                 </>
@@ -3055,7 +3055,7 @@ export default function EventDetailPage() {
                                 <div className="border-t pt-2">
                                   <div className="flex items-center justify-between mb-1">
                                     <span className="text-gray-600 font-medium">มัดจำ:</span>
-                                    <span className="font-semibold">฿{attendee.registration.depositAmount.toLocaleString()}</span>
+                                    <span className="font-semibold">{attendee.registration.depositAmount.toLocaleString()} บาท</span>
                                   </div>
                                   {attendee.registration.depositDeadline && (
                                     <div className="text-gray-500 text-xs">
@@ -3107,7 +3107,7 @@ export default function EventDetailPage() {
                                   <div className="border-t pt-2">
                                     <div className="flex items-center justify-between mb-1">
                                       <span className="text-gray-600 font-medium">ยอดคงเหลือ:</span>
-                                      <span className="font-semibold text-orange-600">฿{attendee.registration.remainingAmount.toLocaleString()}</span>
+                                      <span className="font-semibold text-orange-600">{attendee.registration.remainingAmount.toLocaleString()} บาท</span>
                                     </div>
                                     {attendee.registration.remainingDeadline && (
                                       <div className="text-gray-500 text-xs">
@@ -3130,7 +3130,7 @@ export default function EventDetailPage() {
                                             <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs space-y-1">
                                               <div className="flex items-center justify-between">
                                                 <span className="text-gray-700">ยอดรวมทั้งหมด:</span>
-                                                <span className="font-semibold text-gray-900">฿{attendee.registration.totalAmount.toLocaleString()}</span>
+                                                <span className="font-semibold text-gray-900">{attendee.registration.totalAmount.toLocaleString()} บาท</span>
                                               </div>
                                               {(() => {
                                                 // ✅ Calculate paidAmount from actual payment fields only (don't use paidAmount as it's not reliable)
@@ -3143,11 +3143,11 @@ export default function EventDetailPage() {
                                                   <>
                                                     <div className="flex items-center justify-between border-t border-blue-200 pt-1">
                                                       <span className="text-gray-700">ยอดชำระแล้ว:</span>
-                                                      <span className="font-semibold text-blue-600">฿{paidAmount.toLocaleString()}</span>
+                                                      <span className="font-semibold text-blue-600">{paidAmount.toLocaleString()} บาท</span>
                                                     </div>
                                                     <div className="flex items-center justify-between border-t border-blue-200 pt-1">
                                                       <span className="text-orange-700 font-medium">ยอดชำระเพิ่ม:</span>
-                                                      <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
+                                                      <span className="font-semibold text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
                                                     </div>
                                                   </>
                                                 );
@@ -3233,16 +3233,16 @@ export default function EventDetailPage() {
                                           <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs space-y-1">
                                             <div className="flex items-center justify-between">
                                               <span className="text-gray-700">ยอดรวมทั้งหมด:</span>
-                                              <span className="font-semibold text-gray-900">฿{totalAmount.toLocaleString()}</span>
+                                              <span className="font-semibold text-gray-900">{totalAmount.toLocaleString()} บาท</span>
                                             </div>
                                             <div className="flex items-center justify-between border-t border-blue-200 pt-1">
                                               <span className="text-gray-700">ยอดชำระแล้ว:</span>
-                                              <span className="font-semibold text-blue-600">฿{paidAmount.toLocaleString()}</span>
+                                              <span className="font-semibold text-blue-600">{paidAmount.toLocaleString()} บาท</span>
                                             </div>
                                             {additionalRequired > 0 && (
                                               <div className="flex items-center justify-between border-t border-blue-200 pt-1">
                                                 <span className="text-orange-700 font-medium">ยอดชำระเพิ่ม:</span>
-                                                <span className="font-semibold text-orange-600">฿{additionalRequired.toLocaleString()}</span>
+                                                <span className="font-semibold text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
                                               </div>
                                             )}
                                           </div>
@@ -3269,7 +3269,7 @@ export default function EventDetailPage() {
                                                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                                 </svg>
-                                                ต้องชำระเงินเพิ่มเติม ฿{additionalRequired.toLocaleString()}
+                                                ต้องชำระเงินเพิ่มเติม {additionalRequired.toLocaleString()} บาท
                                               </div>
                                               <div className="flex gap-2">
                                                 <button
@@ -3895,7 +3895,7 @@ export default function EventDetailPage() {
                   การลงทะเบียนนี้มียอดชำระเงินที่ได้รับการอนุมัติแล้ว:
                 </p>
                 <p className="text-2xl font-bold text-yellow-900">
-                  ฿{paymentWarningModal.totalPaid.toLocaleString()}
+                  {paymentWarningModal.totalPaid.toLocaleString()} บาท
                 </p>
               </div>
 
@@ -3904,7 +3904,7 @@ export default function EventDetailPage() {
                   <strong>หากยืนยันลบ:</strong>
                 </p>
                 <ul className="list-disc list-inside text-sm text-red-700 mt-2 space-y-1">
-                  <li>ระบบจะไม่คำนวณยอดเงิน ฿{paymentWarningModal.totalPaid.toLocaleString()} นี้ในยอดรับรวม</li>
+                  <li>ระบบจะไม่คำนวณยอดเงิน {paymentWarningModal.totalPaid.toLocaleString()} บาท นี้ในยอดรับรวม</li>
                   <li>การลงทะเบียนจะถูกยกเลิกและไม่สามารถกู้คืนได้</li>
                   <li>คุณอาจต้องติดต่อสมาชิกเพื่อคืนเงิน</li>
                 </ul>

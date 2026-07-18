@@ -1,10 +1,11 @@
 // API Route: POST /api/admin/payments/upload-for-user
 // Admin uploads payment slip on behalf of user
+// ✅ Admin uploads are AUTOMATICALLY APPROVED - no manual approval needed
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminStorage, adminDb } from '@/lib/firebase-admin';
-import { createPaymentSlip, getPaymentSlipsByRegistration, getPaymentTypeLabel } from '@/lib/payment-slips';
+import { createPaymentSlip, getPaymentSlipsByRegistration, getPaymentTypeLabel, approvePaymentSlip } from '@/lib/payment-slips';
 import { getEventRegistrationByRegistrationId } from '@/lib/event-sheets';
 import { PaymentType } from '@/types/payment';
 
@@ -182,7 +183,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[Admin Upload] Creating payment slip in database...');
 
-    // Create payment slip
+    // Create payment slip with 'approved' status (admin uploads are pre-approved)
     let slip;
     try {
       // Build slip data, only include fields that are not undefined
@@ -195,7 +196,11 @@ export async function POST(request: NextRequest) {
         slipUrl,
         uploadedAt: new Date().toISOString(),
         uploadedBy: session.user.lineUserId || session.user.id || 'admin',
-        status: 'pending', // Start as pending, admin can approve immediately after
+        status: 'approved', // ✅ Admin uploads are automatically approved
+        reviewedBy: session.user.id, // ✅ Auto-approved by the admin who uploaded
+        reviewedAt: new Date().toISOString(), // ✅ Reviewed at upload time
+        reviewerEmail: session.user.email,
+        reviewerName: session.user.name || session.user.email,
       };
 
       // Only add optional fields if they have values
@@ -204,9 +209,19 @@ export async function POST(request: NextRequest) {
       if (transferDate) slipData.transferDate = transferDate;
 
       slip = await createPaymentSlip(slipData);
-      console.log('[Admin Upload] ✅ Payment slip created successfully, slipId:', slip.slipId);
+      console.log('[Admin Upload] ✅ Payment slip created with approved status, slipId:', slip.slipId);
+
+      // ✅ CRITICAL: Immediately sync to eventRegistrations (same as manual approval)
+      console.log('[Admin Upload] Syncing payment to eventRegistrations...');
+      const adminNote = `อัพโหลดและอนุมัติโดย Admin: ${session.user.email || session.user.name || 'Unknown'} (${getPaymentTypeLabel(paymentType)}: ${amount.toLocaleString()} บาท)`;
+      await approvePaymentSlip(
+        slip.slipId,
+        session.user.id,
+        adminNote
+      );
+      console.log('[Admin Upload] ✅ Payment synced to eventRegistrations');
     } catch (error) {
-      console.error('[Admin Upload] ❌ Error creating payment slip:', error);
+      console.error('[Admin Upload] ❌ Error creating/approving payment slip:', error);
       throw error; // Re-throw to be caught by outer try-catch
     }
 
@@ -237,7 +252,7 @@ export async function POST(request: NextRequest) {
       success: true,
       slip,
       slipUrl,
-      message: 'Payment slip uploaded successfully by admin',
+      message: 'Payment slip uploaded and approved successfully by admin',
     });
   } catch (error) {
     console.error('[Admin Upload] ❌ FATAL ERROR:', error);

@@ -1348,6 +1348,71 @@ export default function EventDetailPage() {
           ...prev,
           amount: suggestedAmount
         }));
+
+        // ✅ CRITICAL FIX: Auto-select available payment type if current selection is invalid
+        // This happens AFTER slips are fetched, so we can check availability accurately
+        const activeSlips = fetchedSlips.filter((slip: any) =>
+          (slip.status === 'approved' || slip.status === 'pending') &&
+          slip.paymentType !== 'refund'
+        );
+
+        const hasActiveFull = activeSlips.some((s: any) => s.paymentType === 'full');
+        const hasActiveDeposit = activeSlips.some((s: any) => s.paymentType === 'deposit');
+        const hasActiveRemaining = activeSlips.some((s: any) => s.paymentType === 'remaining');
+
+        let isCurrentTypeAvailable = false;
+        switch (finalPaymentType) {
+          case 'deposit':
+            isCurrentTypeAvailable = !hasActiveFull && !hasActiveDeposit;
+            break;
+          case 'remaining':
+            isCurrentTypeAvailable = !hasActiveFull && !hasActiveRemaining && hasActiveDeposit;
+            break;
+          case 'full':
+            isCurrentTypeAvailable = !hasActiveFull;
+            break;
+        }
+
+        // If current type is NOT available, auto-select the first available option
+        if (!isCurrentTypeAvailable) {
+          let newType: 'deposit' | 'remaining' | 'full' | 'additional' | 'refund' | null = null;
+
+          // Priority: additional > full > remaining > deposit
+          if (!hasActiveFull) {
+            newType = 'full';
+          } else if (!hasActiveRemaining && hasActiveDeposit) {
+            newType = 'remaining';
+          } else if (!hasActiveDeposit && !hasActiveFull) {
+            newType = 'deposit';
+          } else {
+            newType = 'additional'; // Fallback
+          }
+
+          if (newType) {
+            console.log('[Admin Modal] Auto-selecting available payment type:', newType, '(was:', finalPaymentType, ')');
+
+            // Calculate suggested amount for the new type
+            let newSuggestedAmount = 0;
+            switch (newType) {
+              case 'deposit':
+                newSuggestedAmount = Math.max(0, depositAmount - totalPaid);
+                break;
+              case 'remaining':
+              case 'full':
+                newSuggestedAmount = Math.max(0, totalAmount - totalPaid);
+                break;
+              case 'additional':
+                newSuggestedAmount = 0;
+                break;
+            }
+
+            setPaymentFormData(prev => ({
+              ...prev,
+              paymentType: newType!,
+              amount: newSuggestedAmount
+            }));
+          }
+        }
       }
     } catch (error) {
       console.error('[Admin Modal] Failed to fetch payment slips:', error);
@@ -1472,6 +1537,12 @@ export default function EventDetailPage() {
 
     if (paymentFormData.amount <= 0) {
       setActionMessage({ type: 'error', text: 'กรุณาระบุจำนวนเงินที่ชำระ' });
+      return;
+    }
+
+    // ✅ CRITICAL FIX: Refund MUST have slip attached
+    if (paymentFormData.paymentType === 'refund' && !paymentFormData.slipFile && !paymentFormData.slipUrl) {
+      setActionMessage({ type: 'error', text: 'กรุณาแนบสลิปการโอนเงินคืนสำหรับ Refund' });
       return;
     }
 

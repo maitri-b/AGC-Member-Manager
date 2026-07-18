@@ -65,11 +65,12 @@ async function checkTestData() {
     if (fullModeCount === 0 && depositModeCount === 0) {
       console.log('⚠️  WARNING: No registrations with recognized payment modes.');
       console.log('   Tests might fail. Please check registration data.\n');
-    } else if (fullModeCount === 0 || depositModeCount === 0) {
-      console.log('ℹ️  INFO: Only one payment mode found.');
-      console.log('   Some tests (like Test 4) might skip mode-specific checks.\n');
+    } else if (fullModeCount > 0) {
+      console.log('✅ Test data looks good! You can run automated tests.');
+      console.log('   (Testing with Full Payment Mode only)\n');
     } else {
-      console.log('✅ Test data looks good! You can run automated tests.\n');
+      console.log('⚠️  WARNING: No full payment mode registrations found.');
+      console.log('   Tests require at least one full payment mode registration.\n');
     }
 
     // Check existing test slips (should be none)

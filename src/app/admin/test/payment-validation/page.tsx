@@ -221,7 +221,7 @@ export default function PaymentValidationTestPage() {
             <li className="flex items-start gap-2">
               <span className="text-blue-600 mt-0.5">•</span>
               <div>
-                <strong>Payment Mode Validation:</strong> Checks that both full and deposit payment modes are configured correctly
+                <strong>Payment Mode Validation:</strong> Checks that full payment mode is configured correctly (test event uses full payment only)
               </div>
             </li>
             <li className="flex items-start gap-2">

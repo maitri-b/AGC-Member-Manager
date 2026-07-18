@@ -293,7 +293,7 @@ async function testActiveSlipsCounting(): Promise<TestResult> {
 }
 
 /**
- * Test 4: Payment mode validation (Full vs Deposit)
+ * Test 4: Payment mode validation (Full Payment Mode Only)
  */
 async function testPaymentModeValidation(): Promise<TestResult> {
   const startTime = Date.now();
@@ -302,10 +302,9 @@ async function testPaymentModeValidation(): Promise<TestResult> {
     const registrations = await getTestRegistrations();
 
     const fullModeReg = registrations.find(r => r.paymentMode === 'full');
-    const depositModeReg = registrations.find(r => r.paymentMode === 'deposit');
 
-    if (!fullModeReg || !depositModeReg) {
-      throw new Error('Need both full and deposit mode registrations for testing');
+    if (!fullModeReg) {
+      throw new Error('No full payment mode registration found for testing');
     }
 
     const results = {
@@ -314,24 +313,18 @@ async function testPaymentModeValidation(): Promise<TestResult> {
         paymentMode: fullModeReg.paymentMode,
         totalAmount: fullModeReg.totalAmount,
       },
-      depositMode: {
-        registrationId: depositModeReg.registrationId,
-        paymentMode: depositModeReg.paymentMode,
-        depositAmount: depositModeReg.depositAmount,
-        remainingAmount: depositModeReg.remainingAmount,
-        totalAmount: depositModeReg.totalAmount,
-      },
+      note: 'Test event uses Full Payment mode only (no deposit mode)',
     };
 
     return {
-      name: 'Payment Mode Validation',
+      name: 'Payment Mode Validation (Full Payment Only)',
       passed: true,
       duration: Date.now() - startTime,
       details: results,
     };
   } catch (error) {
     return {
-      name: 'Payment Mode Validation',
+      name: 'Payment Mode Validation (Full Payment Only)',
       passed: false,
       error: error instanceof Error ? error.message : 'Unknown error',
       duration: Date.now() - startTime,

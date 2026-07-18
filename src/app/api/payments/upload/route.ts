@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminStorage, adminDb } from '@/lib/firebase-admin';
-import { createPaymentSlip } from '@/lib/payment-slips';
+import { createPaymentSlip, getPaymentSlipsByRegistration, getPaymentTypeLabel } from '@/lib/payment-slips';
 import { getEventRegistrationByRegistrationId } from '@/lib/event-sheets';
 import { PaymentType } from '@/types/payment';
 
@@ -75,7 +75,61 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[Member Upload] ✅ Validation passed');
+    console.log('[Member Upload] ✅ Basic validation passed');
+
+    // ========== SERVER-SIDE PAYMENT VALIDATION ==========
+
+    // 1. Block member from uploading refund
+    if (paymentType === 'refund') {
+      const userRole = session.user.role || 'member';
+
+      if (userRole !== 'admin') {
+        console.log('[Member Upload] ❌ Member attempted to upload refund');
+        return NextResponse.json({
+          error: 'เฉพาะ Admin เท่านั้นที่สามารถสร้าง refund ได้'
+        }, { status: 403 });
+      }
+    }
+
+    // 2. Fetch existing slips for validation
+    console.log('[Member Upload] Fetching existing slips for validation...');
+    const existingSlips = await getPaymentSlipsByRegistration(registrationId);
+    console.log('[Member Upload] Found', existingSlips.length, 'existing slip(s)');
+
+    // 3. Filter active slips (exclude refund)
+    const activeSlips = existingSlips.filter(slip =>
+      (slip.status === 'approved' || slip.status === 'pending') &&
+      slip.paymentType !== 'refund'
+    );
+    console.log('[Member Upload] Active slips (approved + pending, excluding refund):', activeSlips.length);
+
+    // 4. Check for duplicate payment type (except 'additional')
+    if (paymentType !== 'additional') {
+      const hasDuplicate = activeSlips.some(slip => slip.paymentType === paymentType);
+
+      if (hasDuplicate) {
+        console.log('[Member Upload] ❌ Duplicate payment type detected:', paymentType);
+        return NextResponse.json({
+          error: `ไม่สามารถอัพโหลดสลิปประเภท "${getPaymentTypeLabel(paymentType)}" ได้`,
+          details: 'มีสลิปประเภทนี้รออนุมัติหรืออนุมัติแล้ว กรุณารอการตรวจสอบก่อน'
+        }, { status: 400 });
+      }
+    }
+
+    // 5. Block refund if there are pending slips (only for admin creating refund)
+    if (paymentType === 'refund') {
+      const hasPendingSlips = existingSlips.some(slip => slip.status === 'pending');
+
+      if (hasPendingSlips) {
+        console.log('[Member Upload] ❌ Cannot create refund - pending slips exist');
+        return NextResponse.json({
+          error: 'ไม่สามารถสร้าง refund ได้',
+          details: 'มีสลิปที่รออนุมัติอยู่ กรุณาดำเนินการอนุมัติหรือปฏิเสธสลิปก่อน'
+        }, { status: 400 });
+      }
+    }
+
+    console.log('[Member Upload] ✅ Payment validation passed - proceeding with upload');
 
     // Upload file to Firebase Storage
     const storage = adminStorage();

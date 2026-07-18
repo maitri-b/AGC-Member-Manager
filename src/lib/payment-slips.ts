@@ -861,3 +861,24 @@ export async function getPendingSlipsInfo(
     count: pendingSlips.length
   };
 }
+
+/**
+ * Get Thai label for payment type
+ * Helper function for user-facing error messages
+ */
+export function getPaymentTypeLabel(type: PaymentType): string {
+  switch (type) {
+    case 'full':
+      return 'เต็มจำนวน';
+    case 'deposit':
+      return 'มัดจำ';
+    case 'remaining':
+      return 'ยอดคงเหลือ';
+    case 'additional':
+      return 'ค่าใช้จ่ายเพิ่มเติม';
+    case 'refund':
+      return 'คืนเงิน';
+    default:
+      return type;
+  }
+}

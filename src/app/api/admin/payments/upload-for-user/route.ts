@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminStorage, adminDb } from '@/lib/firebase-admin';
-import { createPaymentSlip } from '@/lib/payment-slips';
+import { createPaymentSlip, getPaymentSlipsByRegistration, getPaymentTypeLabel } from '@/lib/payment-slips';
 import { getEventRegistrationByRegistrationId } from '@/lib/event-sheets';
 import { PaymentType } from '@/types/payment';
 
@@ -49,10 +49,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate payment type
-    const validPaymentTypes: PaymentType[] = ['full', 'deposit', 'remaining', 'additional'];
+    const validPaymentTypes: PaymentType[] = ['full', 'deposit', 'remaining', 'additional', 'refund'];
     if (!validPaymentTypes.includes(paymentType)) {
       return NextResponse.json(
-        { error: 'Invalid payment type. Must be: full, deposit, remaining, or additional' },
+        { error: 'Invalid payment type. Must be: full, deposit, remaining, additional, or refund' },
         { status: 400 }
       );
     }
@@ -95,6 +95,49 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Admin Upload] ✅ Event ID validation passed');
+
+    // ========== SERVER-SIDE PAYMENT VALIDATION ==========
+    // Same validation as member upload to prevent duplicates and enforce rules
+
+    // 1. Fetch existing slips for validation
+    console.log('[Admin Upload] Fetching existing slips for validation...');
+    const existingSlips = await getPaymentSlipsByRegistration(registrationId);
+    console.log('[Admin Upload] Found', existingSlips.length, 'existing slip(s)');
+
+    // 2. Filter active slips (exclude refund)
+    const activeSlips = existingSlips.filter(slip =>
+      (slip.status === 'approved' || slip.status === 'pending') &&
+      slip.paymentType !== 'refund'
+    );
+    console.log('[Admin Upload] Active slips (approved + pending, excluding refund):', activeSlips.length);
+
+    // 3. Check for duplicate payment type (except 'additional' and 'refund')
+    // Note: Admin can override by approving/rejecting existing slip first
+    if (paymentType !== 'additional' && paymentType !== 'refund') {
+      const hasDuplicate = activeSlips.some(slip => slip.paymentType === paymentType);
+
+      if (hasDuplicate) {
+        console.log('[Admin Upload] ⚠️ Warning: Duplicate payment type detected:', paymentType);
+        console.log('[Admin Upload] Admin can proceed, but should verify this is intentional');
+        // ⚠️ For admin, we just log a warning but don't block
+        // Admin might intentionally upload a replacement slip
+      }
+    }
+
+    // 4. Block refund if there are pending slips
+    if (paymentType === 'refund') {
+      const hasPendingSlips = existingSlips.some(slip => slip.status === 'pending');
+
+      if (hasPendingSlips) {
+        console.log('[Admin Upload] ❌ Cannot create refund - pending slips exist');
+        return NextResponse.json({
+          error: 'ไม่สามารถสร้าง refund ได้',
+          details: 'มีสลิปที่รออนุมัติอยู่ กรุณาดำเนินการอนุมัติหรือปฏิเสธสลิปก่อน'
+        }, { status: 400 });
+      }
+    }
+
+    console.log('[Admin Upload] ✅ Payment validation passed - proceeding with upload');
 
     // Upload file to Firebase Storage
     const storage = adminStorage();

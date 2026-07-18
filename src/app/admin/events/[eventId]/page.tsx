@@ -3518,28 +3518,6 @@ export default function EventDetailPage() {
                   </label>
                 </div>
 
-                {/* OR Divider */}
-                <div className="flex items-center">
-                  <div className="flex-1 border-t border-gray-300"></div>
-                  <span className="px-3 text-xs text-gray-500">หรือ</span>
-                  <div className="flex-1 border-t border-gray-300"></div>
-                </div>
-
-                {/* URL Input Option */}
-                <div>
-                  <input
-                    type="text"
-                    value={paymentFormData.slipUrl}
-                    onChange={(e) => setPaymentFormData({ ...paymentFormData, slipUrl: e.target.value, slipFile: null })}
-                    placeholder="ใส่ URL สลิปที่อัพโหลดไว้แล้ว (https://...)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={!!paymentFormData.slipFile}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    สำหรับสลิปที่อัพโหลดไปยัง Cloud Storage แล้ว
-                  </p>
-                </div>
-
                 {paymentFormData.uploadingFile && (
                   <div className="bg-blue-50 border border-blue-200 rounded p-3 flex items-center gap-2">
                     <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

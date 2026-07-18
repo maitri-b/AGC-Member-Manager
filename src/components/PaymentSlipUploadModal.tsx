@@ -1,7 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+
+// ✅ PaymentSlip type definition
+interface PaymentSlip {
+  slipId: string;
+  registrationId: string;
+  eventId: string;
+  paymentType: 'deposit' | 'remaining' | 'full' | 'additional' | 'refund';
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected';
+  uploadedAt: string;
+  uploadedBy: string;
+  slipUrl?: string;
+  description?: string;
+}
 
 interface PaymentSlipUploadModalProps {
   isOpen: boolean;
@@ -48,6 +62,44 @@ export default function PaymentSlipUploadModal({
   const [selectedPaymentType, setSelectedPaymentType] = useState<'deposit' | 'remaining' | 'full' | 'additional'>(initialPaymentType);
   const [customAmount, setCustomAmount] = useState<string>(initialAmount.toString());
 
+  // ✅ NEW: State for fetching payment slips
+  const [paymentSlips, setPaymentSlips] = useState<PaymentSlip[]>([]);
+  const [loadingSlips, setLoadingSlips] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // ✅ NEW: Fetch payment slips when modal opens
+  useEffect(() => {
+    if (isOpen && registrationId) {
+      fetchPaymentSlips();
+    }
+  }, [isOpen, registrationId]);
+
+  const fetchPaymentSlips = async () => {
+    setLoadingSlips(true);
+    setFetchError(null);
+
+    try {
+      console.log('[PaymentSlipUploadModal] Fetching slips for registrationId:', registrationId);
+
+      const response = await fetch(`/api/payments/slips?registrationId=${registrationId}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('[PaymentSlipUploadModal] Fetched', data.slips?.length || 0, 'slip(s)');
+
+      setPaymentSlips(data.slips || []);
+    } catch (error) {
+      console.error('[PaymentSlipUploadModal] Fetch error:', error);
+      setFetchError('ไม่สามารถโหลดข้อมูลสลิปได้');
+      toast.error('ไม่สามารถโหลดข้อมูลสลิปได้ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setLoadingSlips(false);
+    }
+  };
+
   // Reset form when modal opens
   if (!isOpen) {
     // Reset state when closed
@@ -57,6 +109,8 @@ export default function PaymentSlipUploadModal({
         setDescription('');
         setSelectedPaymentType(initialPaymentType);
         setCustomAmount(initialAmount.toString());
+        setPaymentSlips([]);
+        setFetchError(null);
       }, 300);
     }
     return null;
@@ -189,15 +243,44 @@ export default function PaymentSlipUploadModal({
     }
   };
 
-  // ✅ Determine available payment type options based on payment mode and status
+  // ✅ NEW: Determine available payment type options based on active slips
   const getAvailablePaymentTypes = (): Array<{ value: string; label: string; suggestedAmount: number }> => {
     const options: Array<{ value: string; label: string; suggestedAmount: number }> = [];
 
+    // Filter active slips (approved + pending, excluding refund)
+    const activeSlips = paymentSlips.filter(slip =>
+      (slip.status === 'approved' || slip.status === 'pending') &&
+      slip.paymentType !== 'refund'
+    );
+
+    console.log('[getAvailablePaymentTypes] Active slips:', activeSlips.length);
+
+    // Check which payment types are already active
+    const hasActiveFull = activeSlips.some(s => s.paymentType === 'full');
+    const hasActiveDeposit = activeSlips.some(s => s.paymentType === 'deposit');
+    const hasActiveRemaining = activeSlips.some(s => s.paymentType === 'remaining');
+
     if (paymentMode === 'deposit') {
       // Deposit payment mode
-      if (!depositPaid) {
-        // Deposit not yet paid - can pay deposit or full
-        // Calculate remaining amount needed for deposit (in case partial payment was made)
+      if (hasActiveFull) {
+        // Path B: Already paid full (or slip pending)
+        // Only allow additional payments
+        console.log('[getAvailablePaymentTypes] Deposit mode - has active full slip');
+      } else if (hasActiveDeposit && hasActiveRemaining) {
+        // Path A: Paid deposit + remaining
+        // Only allow additional payments
+        console.log('[getAvailablePaymentTypes] Deposit mode - has active deposit + remaining slips');
+      } else if (hasActiveDeposit) {
+        // Path A: Paid deposit only
+        // Allow remaining and additional
+        const remainingNeeded = Math.max(0, remainingAmount - remainingAmountPaid);
+        options.push(
+          { value: 'remaining', label: 'ยอดคงเหลือ', suggestedAmount: remainingNeeded }
+        );
+        console.log('[getAvailablePaymentTypes] Deposit mode - has active deposit slip only');
+      } else {
+        // No payment yet
+        // Allow deposit, full, additional
         const depositRemaining = Math.max(0, depositAmount - depositAmountPaid);
         const totalRemaining = Math.max(0, totalAmount - depositAmountPaid - remainingAmountPaid);
 
@@ -205,31 +288,24 @@ export default function PaymentSlipUploadModal({
           { value: 'deposit', label: 'มัดจำ', suggestedAmount: depositRemaining },
           { value: 'full', label: 'เต็มจำนวน (ชำระทั้งหมด)', suggestedAmount: totalRemaining }
         );
-      } else {
-        // Deposit already paid - can pay remaining
-        // Calculate remaining amount needed (subtract what's already been paid for remaining)
-        const remainingNeeded = Math.max(0, remainingAmount - remainingAmountPaid);
-        options.push(
-          { value: 'remaining', label: 'ยอดคงเหลือ', suggestedAmount: remainingNeeded }
-        );
+        console.log('[getAvailablePaymentTypes] Deposit mode - no active slips');
       }
     } else {
       // Full payment mode
-      // Calculate remaining amount needed (subtract what's already been paid)
-      const fullPaymentRemaining = Math.max(0, totalAmount - fullPaymentAmountPaid);
+      if (hasActiveFull) {
+        // Already has active full payment slip
+        // Only allow additional payments
+        console.log('[getAvailablePaymentTypes] Full mode - has active full slip');
+      } else {
+        // No full payment slip yet
+        // Allow full and additional
+        const fullPaymentRemaining = Math.max(0, totalAmount - fullPaymentAmountPaid);
 
-      // ✅ FIXED: Determine correct label based on payment status
-      // If already paid some amount (fullPaymentAmountPaid > 0), this is "additional" payment
-      // If never paid anything, this is "full" payment
-      let label = 'เต็มจำนวน';
-      if (fullPaymentAmountPaid > 0) {
-        // Already paid something - this is additional/remaining payment
-        label = 'ยอดคงเหลือ';
+        options.push(
+          { value: 'full', label: 'เต็มจำนวน', suggestedAmount: fullPaymentRemaining }
+        );
+        console.log('[getAvailablePaymentTypes] Full mode - no active full slip');
       }
-
-      options.push(
-        { value: 'full', label: label, suggestedAmount: fullPaymentRemaining }
-      );
     }
 
     // Additional payment option - always available
@@ -237,6 +313,7 @@ export default function PaymentSlipUploadModal({
       { value: 'additional', label: 'ค่าใช้จ่ายเพิ่มเติม', suggestedAmount: 0 }
     );
 
+    console.log('[getAvailablePaymentTypes] Available options:', options);
     return options;
   };
 
@@ -260,14 +337,37 @@ export default function PaymentSlipUploadModal({
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Registration ID - Read only */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <div className="flex justify-between">
-              <span className="text-xs text-gray-500">Registration ID:</span>
-              <span className="text-xs font-mono text-gray-900">{registrationId}</span>
+        {loadingSlips ? (
+          <div className="p-6">
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-sm text-gray-500 mt-4">กำลังตรวจสอบประวัติการชำระเงิน...</p>
             </div>
           </div>
+        ) : fetchError ? (
+          <div className="p-6">
+            <div className="text-center py-12">
+              <svg className="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-red-600 mb-4">{fetchError}</p>
+              <button
+                onClick={fetchPaymentSlips}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                ลองใหม่อีกครั้ง
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Registration ID - Read only */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <div className="flex justify-between">
+                <span className="text-xs text-gray-500">Registration ID:</span>
+                <span className="text-xs font-mono text-gray-900">{registrationId}</span>
+              </div>
+            </div>
 
           {/* Payment Type Selection */}
           <div>
@@ -393,6 +493,7 @@ export default function PaymentSlipUploadModal({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

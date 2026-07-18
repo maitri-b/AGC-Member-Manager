@@ -1,10 +1,9 @@
-// API Route to get payment slips for a registration
+// API Route: GET /api/payments/slips - Fetch payment slips for a registration
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 
-// GET - Get payment slips for a registration
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,45 +15,66 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const registrationId = searchParams.get('registrationId');
 
+    console.log('[Fetch Slips] === INCOMING REQUEST ===');
+    console.log('[Fetch Slips] registrationId:', registrationId);
+    console.log('[Fetch Slips] userId:', session.user.id);
+
+    // Validation
     if (!registrationId) {
       return NextResponse.json(
-        { error: 'registrationId is required' },
+        { error: 'Missing required parameter: registrationId' },
         { status: 400 }
       );
     }
 
     const db = adminDb();
 
-    // Get all payment slips for this registration
-    // Fetch with where clause only, then sort in JavaScript to avoid composite index requirement
-    const slipsSnapshot = await db
-      .collection('paymentSlips')
+    // Fetch payment slips for this registration
+    console.log('[Fetch Slips] Querying paymentSlips collection...');
+    const slipsSnapshot = await db.collection('paymentSlips')
       .where('registrationId', '==', registrationId)
       .get();
 
-    let slips = slipsSnapshot.docs.map(doc => ({
-      slipId: doc.id,
-      ...doc.data(),
-    }));
+    console.log('[Fetch Slips] Found', slipsSnapshot.size, 'slip(s)');
 
-    // Sort by uploadedAt or createdAt in JavaScript
-    slips.sort((a: any, b: any) => {
-      const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
-      const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
-      return dateB - dateA; // descending
+    // Map slips to array
+    const slips = slipsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        slipId: doc.id,
+        registrationId: data.registrationId,
+        eventId: data.eventId,
+        paymentType: data.paymentType,
+        amount: data.amount,
+        status: data.status,
+        uploadedAt: data.uploadedAt,
+        uploadedBy: data.uploadedBy,
+        slipUrl: data.slipUrl,
+        description: data.description,
+        approvedAt: data.approvedAt,
+        approvedBy: data.approvedBy,
+        rejectedAt: data.rejectedAt,
+        rejectedBy: data.rejectedBy,
+        rejectionReason: data.rejectionReason,
+      };
     });
+
+    console.log('[Fetch Slips] Returning slips:', slips.map(s => ({
+      slipId: s.slipId,
+      paymentType: s.paymentType,
+      amount: s.amount,
+      status: s.status,
+    })));
 
     return NextResponse.json({
       success: true,
       slips,
     });
   } catch (error) {
-    console.error('[Get Payment Slips] Error:', error);
+    console.error('[Fetch Slips] ❌ FATAL ERROR:', error);
+    console.error('[Fetch Slips] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: 'Failed to fetch payment slips', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

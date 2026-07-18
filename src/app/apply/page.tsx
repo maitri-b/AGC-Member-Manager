@@ -280,7 +280,10 @@ export default function ApplyPage() {
     setSubmitting(true);
 
     try {
+      console.log('[Apply Form] Starting submission...');
+
       // ✅ NEW: Convert files to base64
+      console.log('[Apply Form] Converting license document to base64...');
       const licenseDocumentBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -288,10 +291,14 @@ export default function ApplyPage() {
           const base64Data = base64.split(',')[1];
           resolve(base64Data);
         };
-        reader.onerror = reject;
+        reader.onerror = (error) => {
+          console.error('[Apply Form] License document read error:', error);
+          reject(error);
+        };
         reader.readAsDataURL(licenseDocument!);
       });
 
+      console.log('[Apply Form] Converting business card to base64...');
       const businessCardBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -299,10 +306,14 @@ export default function ApplyPage() {
           const base64Data = base64.split(',')[1];
           resolve(base64Data);
         };
-        reader.onerror = reject;
+        reader.onerror = (error) => {
+          console.error('[Apply Form] Business card read error:', error);
+          reject(error);
+        };
         reader.readAsDataURL(businessCard!);
       });
 
+      console.log('[Apply Form] Sending request to API...');
       const response = await fetch('/api/apply', {
         method: 'POST',
         headers: {
@@ -320,15 +331,20 @@ export default function ApplyPage() {
         }),
       });
 
+      console.log('[Apply Form] API response status:', response.status);
       const data = await response.json();
+      console.log('[Apply Form] API response data:', data);
 
       if (!response.ok) {
+        console.error('[Apply Form] API error:', data);
         throw new Error(data.error || 'เกิดข้อผิดพลาดในการส่งใบสมัคร');
       }
 
+      console.log('[Apply Form] ✅ Submission successful!');
       setSubmitted(true);
       toast.success('ส่งใบสมัครเรียบร้อยแล้ว');
     } catch (err) {
+      console.error('[Apply Form] ❌ Submission error:', err);
       toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
     } finally {
       setSubmitting(false);

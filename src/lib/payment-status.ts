@@ -351,12 +351,11 @@ export function recalculatePaymentStatus(
     result.payment_status = 'ชำระเกินจำนวน';
     result.status = 'ยืนยันแล้ว'; // Still confirmed, just overpaid
     result.overpayment_amount = overpayment; // ✅ Store overpayment amount
-  } else {
-    // Clear overpayment if not overpaying
-    result.overpayment_amount = 0;
   } else if (!fullyPaid && currentPaidAmount > 0) {
     // Was fully paid before, but not anymore due to totalAmount increase
     // Update paymentStatus to indicate additional payment needed
+    result.overpayment_amount = 0; // Clear overpayment
+
     if (paymentMode === 'deposit') {
       // Deposit mode: check what's been paid
       if (registration.depositPaid && !(registration as any).remainingPaid) {
@@ -383,6 +382,7 @@ export function recalculatePaymentStatus(
     // Still fully paid after recalculation
     result.payment_status = 'ชำระเต็มจำนวนแล้ว';
     result.status = 'ยืนยันแล้ว';
+    result.overpayment_amount = 0; // Clear overpayment - exactly paid
   }
 
   return result;

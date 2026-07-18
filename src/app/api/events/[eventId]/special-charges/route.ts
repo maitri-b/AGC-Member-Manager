@@ -86,8 +86,8 @@ export async function POST(
     const pendingInfo = await getPendingSlipsInfo(registrationId);
     if (pendingInfo.hasPending) {
       return NextResponse.json({
-        error: 'ไม่สามารถเพิ่มค่าใช้จ่ายเสริมได้',
-        details: `มีสลิป ${pendingInfo.count} รายการที่รออนุมัติ กรุณาอนุมัติหรือปฏิเสธสลิปก่อนเพิ่มค่าใช้จ่ายเสริม`
+        error: 'ไม่สามารถเพิ่มค่าใช้จ่ายเสริมได้ในขณะนี้',
+        details: `พบสลิปการชำระเงิน ${pendingInfo.count} รายการที่รอการอนุมัติ\n\nกรุณาอนุมัติหรือปฏิเสธสลิปที่รออนุมัติทั้งหมดก่อน จึงจะสามารถเพิ่มค่าใช้จ่ายเสริมได้\n\nเหตุผล: การอนุมัติสลิปจะส่งผลต่อยอดเงินที่ชำระแล้ว ซึ่งต้องคำนวณใหม่ก่อนปรับยอดรวมทั้งหมด`
       }, { status: 400 });
     }
 
@@ -179,6 +179,8 @@ export async function POST(
       newPaymentStatus: updateData.payment_status,
       oldStatus: registration.status,
       newStatus: updateData.status,
+      overpaymentAmount: paymentStatusUpdate.overpayment_amount,
+      paidAmount: approvedSlipsTotal,
     });
 
     // Update admin notes

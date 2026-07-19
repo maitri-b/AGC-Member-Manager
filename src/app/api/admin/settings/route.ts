@@ -68,6 +68,7 @@ export async function PUT(request: NextRequest) {
       enableEmailNotifications: body.enableEmailNotifications ?? false,
       enableLineNotifications: body.enableLineNotifications ?? true,
       enableSmsNotifications: body.enableSmsNotifications ?? false,
+      messageTemplates: body.messageTemplates,
     };
 
     const settings = await updateSystemSettings(input, session.user.id);

@@ -35,6 +35,9 @@ export interface SystemSettings {
   enableLineNotifications?: boolean;
   enableSmsNotifications?: boolean;
 
+  // Message Templates (for LINE notifications)
+  messageTemplates?: Record<string, string>;  // Custom templates, keyed by template type
+
   // Metadata
   updatedAt: string;
   updatedBy: string;
@@ -54,6 +57,7 @@ export interface SystemSettingsInput {
   enableEmailNotifications?: boolean;
   enableLineNotifications?: boolean;
   enableSmsNotifications?: boolean;
+  messageTemplates?: Record<string, string>;
 }
 
 // Default settings

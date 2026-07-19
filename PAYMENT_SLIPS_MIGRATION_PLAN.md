@@ -1,4 +1,4 @@
-# 💳 Payment Slips Migration Plan
+ต่อเPayment Slips Migration Plan
 
 **Project:** Agents Club Member Manager
 **Phase:** Payment Slips Refactoring & Migration

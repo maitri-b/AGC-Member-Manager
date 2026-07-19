@@ -31,22 +31,24 @@ export default function MessageTemplateModal({
   const [isSending, setIsSending] = useState(false);
   const [previewRecipient, setPreviewRecipient] = useState(0);
   const [baseUrl, setBaseUrl] = useState('https://agc-member-manager.vercel.app');
+  const [customTemplates, setCustomTemplates] = useState<Record<string, string>>({});
 
-  // Fetch base URL from settings on mount
+  // Fetch base URL and custom templates from settings on mount
   useEffect(() => {
-    const fetchBaseUrl = async () => {
+    const fetchSettings = async () => {
       try {
         const response = await fetch('/api/admin/settings');
         if (response.ok) {
           const settings = await response.json();
           setBaseUrl(settings.baseUrl || 'https://agc-member-manager.vercel.app');
+          setCustomTemplates(settings.messageTemplates || {});
         }
       } catch (error) {
-        console.error('Failed to fetch base URL from settings:', error);
-        // Keep default value
+        console.error('Failed to fetch settings:', error);
+        // Keep default values
       }
     };
-    fetchBaseUrl();
+    fetchSettings();
   }, []);
 
   // Auto-suggest template when modal opens
@@ -69,7 +71,9 @@ export default function MessageTemplateModal({
     if (selectedRegistrations.length === 0) return;
 
     const registration = selectedRegistrations[previewRecipient].registration;
-    const message = personalizeMessage(templateType, registration, event, undefined, baseUrl);
+    // Use custom template if available, otherwise use default
+    const template = customTemplates[templateType];
+    const message = personalizeMessage(templateType, registration, event, template, baseUrl);
     setCustomMessage(message);
   };
 
@@ -96,6 +100,7 @@ export default function MessageTemplateModal({
       const results = await Promise.allSettled(
         selectedRegistrations.map(async ({ registration, lineUserId }) => {
           // Personalize message for this recipient
+          // Note: customMessage is already personalized from updateMessageFromTemplate
           const personalizedMsg = selectedTemplate
             ? personalizeMessage(selectedTemplate, registration, event, customMessage, baseUrl)
             : customMessage;
@@ -236,7 +241,7 @@ export default function MessageTemplateModal({
               </div>
               <div className="bg-white border border-gray-300 rounded-lg p-3 text-sm whitespace-pre-wrap font-sans">
                 {selectedTemplate
-                  ? personalizeMessage(selectedTemplate, currentRecipient.registration, event, customMessage, baseUrl)
+                  ? personalizeMessage(selectedTemplate, currentRecipient.registration, event, customTemplates[selectedTemplate] || undefined, baseUrl)
                   : customMessage}
               </div>
             </div>

@@ -123,7 +123,8 @@ export interface Event {
   eventId: string;                  // Unique event identifier (auto-generated or custom)
   eventName: string;                // ชื่อกิจกรรม
   eventNameEN: string;              // Event name in English
-  eventDate: string;                // วันที่จัดกิจกรรม (DD/MM/YYYY or year)
+  eventDate: string;                // วันที่เริ่มกิจกรรม (DD/MM/YYYY or year) - used as start date
+  eventEndDate?: string;            // วันที่สิ้นสุดกิจกรรม (DD/MM/YYYY) - optional, for multi-day events
   location: string;                 // สถานที่จัดกิจกรรม
   description: string;              // รายละเอียด
   sheetName: string;                // Google Sheet name for registration data
@@ -202,6 +203,7 @@ export interface EventInput {
   eventName: string;
   eventNameEN: string;
   eventDate: string;
+  eventEndDate?: string;            // วันที่สิ้นสุดกิจกรรม (DD/MM/YYYY) - optional
   location: string;
   description: string;
   sheetName: string;

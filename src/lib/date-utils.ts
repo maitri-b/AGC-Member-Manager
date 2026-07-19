@@ -111,3 +111,92 @@ export function formatThaiDateFull(dateInput: string | Date | { _seconds: number
 
   return `${day} ${month} ${year}`;
 }
+
+/**
+ * Format event date range (for events with start and end dates)
+ * @param startDate Start date string (DD/MM/YYYY or YYYY)
+ * @param endDate End date string (DD/MM/YYYY) - optional
+ * @returns Formatted string like "17-19 กรกฎาคม 2569" or "17 กรกฎาคม - 2 สิงหาคม 2569"
+ */
+export function formatEventDateRange(startDate: string, endDate?: string): string {
+  if (!startDate) return '-';
+
+  // Parse start date
+  const startParsed = parseThaiDate(startDate);
+  if (!startParsed) return startDate; // Return original if can't parse
+
+  // No end date - single day event
+  if (!endDate) {
+    return formatThaiDateFromParsed(startParsed);
+  }
+
+  // Parse end date
+  const endParsed = parseThaiDate(endDate);
+  if (!endParsed) {
+    return formatThaiDateFromParsed(startParsed); // Return start date only if end date invalid
+  }
+
+  const thaiMonthsFull = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+
+  // Same month and year - show as "17-19 กรกฎาคม 2569"
+  if (startParsed.month === endParsed.month && startParsed.year === endParsed.year) {
+    return `${startParsed.day}-${endParsed.day} ${thaiMonthsFull[startParsed.month]} ${startParsed.year + 543}`;
+  }
+
+  // Same year, different months - show as "30 กรกฎาคม - 2 สิงหาคม 2569"
+  if (startParsed.year === endParsed.year) {
+    return `${startParsed.day} ${thaiMonthsFull[startParsed.month]} - ${endParsed.day} ${thaiMonthsFull[endParsed.month]} ${startParsed.year + 543}`;
+  }
+
+  // Different years - show full dates "30 ธันวาคม 2568 - 2 มกราคม 2569"
+  return `${startParsed.day} ${thaiMonthsFull[startParsed.month]} ${startParsed.year + 543} - ${endParsed.day} ${thaiMonthsFull[endParsed.month]} ${endParsed.year + 543}`;
+}
+
+/**
+ * Parse Thai date string (DD/MM/YYYY or YYYY) to components
+ */
+function parseThaiDate(dateStr: string): { day: number; month: number; year: number } | null {
+  if (!dateStr) return null;
+
+  // Try DD/MM/YYYY format (พ.ศ.)
+  const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const day = parseInt(ddmmyyyyMatch[1]);
+    const month = parseInt(ddmmyyyyMatch[2]) - 1; // 0-indexed
+    let year = parseInt(ddmmyyyyMatch[3]);
+
+    // Convert Buddhist year to Gregorian if year > 2500
+    if (year > 2500) {
+      year = year - 543;
+    }
+
+    return { day, month, year };
+  }
+
+  // Try YYYY format (year only - assume Jan 1)
+  const yearMatch = dateStr.match(/^(\d{4})$/);
+  if (yearMatch) {
+    let year = parseInt(yearMatch[1]);
+    if (year > 2500) {
+      year = year - 543;
+    }
+    return { day: 1, month: 0, year };
+  }
+
+  return null;
+}
+
+/**
+ * Format date from parsed components
+ */
+function formatThaiDateFromParsed(parsed: { day: number; month: number; year: number }): string {
+  const thaiMonthsFull = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+
+  return `${parsed.day} ${thaiMonthsFull[parsed.month]} ${parsed.year + 543}`;
+}

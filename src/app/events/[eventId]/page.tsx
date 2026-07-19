@@ -1265,12 +1265,13 @@ export default function EventDetailPage() {
                             setTempAttendeeNames([...attendeeNames]);
                             setTempSpecialRequests(specialRequests || '');
                           }}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="flex items-center gap-1.5 p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title={(event.allowMemberEdit ?? true) ? "แก้ไขรายชื่อและความต้องการพิเศษ" : "แก้ไขความต้องการพิเศษ"}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
+                          <span className="hidden sm:inline text-sm font-medium">แก้ไข</span>
                         </button>
                       )}
                     </div>
@@ -3162,8 +3163,8 @@ export default function EventDetailPage() {
           onClose={() => setShowReceiptModal(false)}
           eventId={event.eventId}
           initialData={{
-            companyName: companyName || '',
-            memberName: session?.user?.name || '',
+            companyName: guestCompanyName || '',
+            memberName: guestContactName || '',
             memberPosition: 'กรรมการผู้จัดการ',
           }}
         />

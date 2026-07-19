@@ -29,14 +29,19 @@ export default function ReceiptCertificateModal({
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      // Build URL with query parameters for customized data
-      const params = new URLSearchParams({
-        companyName,
-        memberName,
-        memberPosition,
+      // Use POST to avoid URL encoding issues with Thai eventId
+      const response = await fetch(`/api/events/receipt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId,
+          companyName,
+          memberName,
+          memberPosition,
+        }),
       });
-
-      const response = await fetch(`/api/events/${eventId}/receipt?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error('Failed to generate receipt');
@@ -49,7 +54,7 @@ export default function ReceiptCertificateModal({
       // Create a temporary link and trigger download
       const a = document.createElement('a');
       a.href = url;
-      a.download = `receipt-certificate-${eventId}.pdf`;
+      a.download = `receipt-certificate.pdf`;
       document.body.appendChild(a);
       a.click();
 

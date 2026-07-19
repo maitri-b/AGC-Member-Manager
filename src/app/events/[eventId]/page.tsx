@@ -1669,18 +1669,48 @@ export default function EventDetailPage() {
                   )}
 
                   {/* Payment Breakdown (for both full and deposit mode) */}
-                  {userRegistration.totalAmount && userRegistration.totalAmount > 0 && (
+                  {/* ✅ Show payment section if: totalAmount > 0 OR has discounts OR has base amounts */}
+                  {(() => {
+                    const hasDiscounts = userRegistration.discounts && userRegistration.discounts.length > 0;
+                    const hasBaseAmounts = (userRegistration.eventFee && userRegistration.eventFee > 0) ||
+                                          (userRegistration.roomFee && userRegistration.roomFee > 0);
+                    const showPaymentSection = (userRegistration.totalAmount && userRegistration.totalAmount > 0) ||
+                                               hasDiscounts ||
+                                               hasBaseAmounts;
+
+                    if (!showPaymentSection) return null;
+
+                    const isFreeWithDiscount = userRegistration.totalAmount === 0 && hasDiscounts;
+
+                    return (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                       <h3 className="font-semibold text-blue-900 mb-4">รายละเอียดการชำระเงิน</h3>
 
-                      {/* 1. Total Amount Summary */}
-                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
-                        <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-3xl font-bold">{userRegistration.totalAmount.toLocaleString()} บาท</span>
-                          <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
+                      {/* ✅ Show free with discount notice */}
+                      {isFreeWithDiscount && (
+                        <div className="bg-green-100 border-2 border-green-400 rounded-lg p-4 mb-4">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div>
+                              <div className="text-base font-bold text-green-800">🎉 ได้รับส่วนลด 100%</div>
+                              <div className="text-sm text-green-700 mt-1">คุณไม่ต้องชำระเงินสำหรับกิจกรรมนี้</div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
+
+                      {/* 1. Total Amount Summary */}
+                      {!isFreeWithDiscount && (
+                        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-4 mb-4">
+                          <div className="text-sm opacity-90 mb-1">สรุปค่าใช้จ่ายทั้งหมด</div>
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-3xl font-bold">{(userRegistration.totalAmount ?? 0).toLocaleString()} บาท</span>
+                            <span className="text-sm opacity-90">({userRegistration.attendeeCount || 1} คน)</span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* 2. Payment Status - Large and Clear */}
                       {userRegistration.paymentStatus && (
@@ -1950,7 +1980,7 @@ export default function EventDetailPage() {
                       {/* 3. Payment Submission Section - Show Upload Button/Instructions */}
                       {(() => {
                         const hasPaymentAccount = !!event.paymentAccountNumber;
-                        const hasTotalAmount = userRegistration.totalAmount > 0;
+                        const hasTotalAmount = (userRegistration.totalAmount ?? 0) > 0;
 
                         // Calculate if fully paid (including additional payments)
                         const totalAmount = userRegistration.totalAmount || 0;
@@ -2177,7 +2207,8 @@ export default function EventDetailPage() {
                         );
                       })()}
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Payment Information - Show after registration for payment reference */}
                   {userRegistration.totalAmount && userRegistration.totalAmount > 0 && (event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (

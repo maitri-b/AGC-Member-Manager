@@ -230,7 +230,7 @@ export async function approvePaymentSlip(
       const additionalPayments = parseAdditionalPayments(registrationData.additionalPayments);
 
       if (isFullyPaid(totalAmount, slip.amount, additionalPayments)) {
-        updateData.paymentStatus = 'ชำระเต็มจำนวนแล้ว';
+        updateData.paymentStatus = 'ชำระครบแล้ว';
       } else {
         // ✅ Use 'รอชำระเงินเพิ่มเติม' to indicate additional payment needed
         updateData.paymentStatus = 'รอชำระเงินเพิ่มเติม';

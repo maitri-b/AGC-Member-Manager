@@ -382,7 +382,7 @@ export function recalculatePaymentStatus(
     }
   } else if (fullyPaid) {
     // Still fully paid after recalculation
-    result.payment_status = 'ชำระเต็มจำนวนแล้ว';
+    result.payment_status = 'ชำระครบแล้ว';
     result.status = 'ยืนยันแล้ว';
     result.overpayment_amount = 0; // Clear overpayment - exactly paid
   }

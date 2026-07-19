@@ -72,12 +72,11 @@ export async function POST(request: NextRequest) {
     console.log('[Receipt PDF] session.user.memberId:', session.user.memberId);
     console.log('[Receipt PDF] ===========================');
 
-    // Get ALL registrations and filter in JavaScript (avoid Firestore type mismatch issues)
-    console.log('[Receipt PDF] Fetching registrations from path: events/' + eventId + '/registrations');
+    // Get ALL registrations from eventRegistrations collection (not subcollection!)
+    console.log('[Receipt PDF] Fetching registrations from eventRegistrations collection where eventId =', eventId);
     const allRegistrations = await db
-      .collection('events')
-      .doc(eventId)
-      .collection('registrations')
+      .collection('eventRegistrations')
+      .where('eventId', '==', eventId)
       .get();
 
     console.log('[Receipt PDF] Total registrations in event:', allRegistrations.size);
@@ -144,9 +143,8 @@ export async function POST(request: NextRequest) {
 
       // Debug: Get first registration from this event to see structure
       const debugSnapshot = await db
-        .collection('events')
-        .doc(eventId)
-        .collection('registrations')
+        .collection('eventRegistrations')
+        .where('eventId', '==', eventId)
         .limit(1)
         .get();
 

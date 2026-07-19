@@ -82,11 +82,28 @@ export async function POST(request: NextRequest) {
 
     for (const doc of allRegistrations.docs) {
       const data = doc.data();
-      const userIdMatch = data.userId === session.user.id || data.userId === String(session.user.id);
-      const memberIdMatch = session.user.memberId &&
-        (data.memberId === session.user.memberId || data.memberId === String(session.user.memberId));
-      const lineUserIdMatch = session.user.lineUserId &&
-        (data.lineUserId === session.user.lineUserId || data.lineUserId === String(session.user.lineUserId));
+
+      // Convert both sides to strings for comparison to handle type mismatches
+      const sessionUserId = String(session.user.id || '');
+      const sessionMemberId = String(session.user.memberId || '');
+      const sessionLineUserId = String(session.user.lineUserId || '');
+
+      const dataUserId = String(data.userId || '');
+      const dataMemberId = String(data.memberId || '');
+      const dataLineUserId = String(data.lineUserId || '');
+
+      const userIdMatch = sessionUserId && dataUserId === sessionUserId;
+      const memberIdMatch = sessionMemberId && dataMemberId === sessionMemberId;
+      const lineUserIdMatch = sessionLineUserId && dataLineUserId === sessionLineUserId;
+
+      console.log('[Receipt PDF] Comparing registration doc:', doc.id, {
+        sessionUserId,
+        sessionMemberId,
+        dataUserId,
+        dataMemberId,
+        userIdMatch,
+        memberIdMatch,
+      });
 
       if (userIdMatch || memberIdMatch || lineUserIdMatch) {
         console.log('[Receipt PDF] ✅ Found registration!', {

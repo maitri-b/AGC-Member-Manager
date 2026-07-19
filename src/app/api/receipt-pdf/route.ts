@@ -95,6 +95,26 @@ export async function POST(request: NextRequest) {
 
     if (registrationsSnapshot.empty) {
       console.log('[Receipt PDF] ❌ Registration not found');
+
+      // Debug: Get first registration from this event to see structure
+      const debugSnapshot = await db
+        .collection('events')
+        .doc(eventId)
+        .collection('registrations')
+        .limit(1)
+        .get();
+
+      if (!debugSnapshot.empty) {
+        const sampleReg = debugSnapshot.docs[0].data();
+        console.log('[Receipt PDF] Sample registration from this event:', {
+          id: debugSnapshot.docs[0].id,
+          userId: sampleReg.userId,
+          memberId: sampleReg.memberId,
+          contactName: sampleReg.contactName,
+          hasAllFields: Object.keys(sampleReg),
+        });
+      }
+
       return NextResponse.json({
         error: 'Registration not found',
         message: 'ไม่พบการลงทะเบียนของคุณในกิจกรรมนี้'

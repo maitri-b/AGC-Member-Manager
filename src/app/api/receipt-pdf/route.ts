@@ -263,8 +263,8 @@ export async function POST(request: NextRequest) {
       eventEndDate: eventEndDateISO,
     };
 
-    // Generate PDF using pdfmake (dates are now properly parsed!)
-    console.log('[Receipt PDF] Creating PDF with pdfMake');
+    // Generate HTML receipt (pdfmake hangs with Thai text)
+    console.log('[Receipt PDF] Generating HTML receipt for client-side PDF conversion');
     console.log('[Receipt PDF] Date parsing results:', {
       originalSlipDate: slipUploadDate,
       parsedSlipDate: parsedSlipDate?.toISOString(),
@@ -272,43 +272,71 @@ export async function POST(request: NextRequest) {
       parsedEventDate: parsedEventStartDate?.toISOString(),
     });
 
-    // Generate PDF document definition
-    const docDefinition = generateReceiptPDF(receiptData);
-
-    // Initialize pdfMake
-    const pdf = await initPdfMake();
-
-    // Use Courier font (built-in PDF font that doesn't require Thai font files)
-    const fontsConfig = {
-      Courier: {
-        normal: 'Courier',
-        bold: 'Courier-Bold',
-        italics: 'Courier-Oblique',
-        bolditalics: 'Courier-BoldOblique'
-      }
+    // Format dates for display
+    const formatThaiDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
     };
 
-    // Create PDF
-    const pdfDocGenerator = pdf.createPdf(docDefinition, {}, fontsConfig, null);
+    const slipDateFormatted = formatThaiDate(receiptData.slipUploadDate);
+    const eventStartFormatted = formatThaiDate(receiptData.eventStartDate);
+    const eventEndFormatted = receiptData.eventEndDate ? formatThaiDate(receiptData.eventEndDate) : null;
 
-    // Generate PDF buffer
-    return new Promise<NextResponse>((resolve, reject) => {
-      pdfDocGenerator.getBuffer((buffer: Buffer) => {
-        try {
-          console.log('[Receipt PDF] ✅ PDF generated successfully');
-          const response = new NextResponse(new Uint8Array(buffer), {
-            status: 200,
-            headers: {
-              'Content-Type': 'application/pdf',
-              'Content-Disposition': `attachment; filename="receipt-certificate.pdf"`,
-            },
-          });
-          resolve(response);
-        } catch (error) {
-          console.error('[Receipt PDF] Error creating response:', error);
-          reject(error);
-        }
-      });
+    // Return HTML that client can convert to PDF using browser's print-to-PDF
+    const html = `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ใบรับรองแทนใบเสร็จรับเงิน</title>
+  <style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: 'Sarabun', 'TH Sarabun New', sans-serif; font-size: 16px; line-height: 1.6; }
+    .header { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px; }
+    .field { margin-bottom: 15px; }
+    .field strong { display: inline-block; min-width: 150px; }
+    .signature { margin-top: 60px; text-align: right; }
+    .note { margin-top: 40px; text-align: center; font-style: italic; color: #666; }
+  </style>
+  <script>
+    window.onload = function() {
+      window.print();
+    };
+  </script>
+</head>
+<body>
+  <div class="header">ใบรับรองแทนใบเสร็จรับเงิน</div>
+
+  <div class="field"><strong>ชื่อผู้จ่ายเงิน:</strong> ${receiptData.companyName}</div>
+  <div class="field"><strong>รายการจ่าย:</strong> ค่าเข้าร่วมกิจกรรม ${receiptData.eventName}</div>
+  <div class="field"><strong>วันที่จ่าย:</strong> ${slipDateFormatted}</div>
+  <div class="field"><strong>จำนวนเงิน:</strong> ${receiptData.totalAmount.toLocaleString('th-TH')} บาท</div>
+  <div class="field"><strong>วันที่จัดงาน:</strong> ${eventStartFormatted}${eventEndFormatted ? ' - ' + eventEndFormatted : ''}</div>
+
+  <div style="margin-top: 40px;">
+    <p>ข้าพเจ้า ${receiptData.memberName} ตำแหน่ง ${receiptData.memberPosition}</p>
+    <p>ขอรับรองว่า รายจ่ายข้างต้นนี้ไม่อาจเรียกเก็บใบเสร็จรับเงินจากผู้รับได้ และข้าพเจ้าได้จ่ายไปในงานของทางชมรมเอเจ้นท์คลับ โดยแท้</p>
+  </div>
+
+  <div class="signature">
+    <div>(ลงชื่อ)...................................................</div>
+    <div>(${receiptData.memberName})</div>
+    <div>ผู้เบิกจ่าย</div>
+  </div>
+
+  <div class="note">หมายเหตุ: ใบรับรองนี้ออกโดยระบบอัตโนมัติของชมรมเอเจ้นท์คลับ</div>
+</body>
+</html>`;
+
+    return new NextResponse(html, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+      },
     });
   } catch (error) {
     console.error('Error generating receipt PDF:', error);

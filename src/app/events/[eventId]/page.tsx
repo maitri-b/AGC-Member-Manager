@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Toast, useToast } from '@/components/Toast';
 import PaymentSlipUploadModal from '@/components/PaymentSlipUploadModal';
+import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier } from '@/types/event';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass, isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
@@ -209,6 +210,9 @@ export default function EventDetailPage() {
 
   // Registration form visibility state
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+
+  // Receipt certificate modal state
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   // Copy to clipboard helper
   const copyToClipboard = async (text: string, label: string) => {
@@ -1773,6 +1777,32 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
+                      {/* Download Receipt Certificate Button */}
+                      {userRegistration.paymentStatus === 'ชำระครบแล้ว' && (
+                        <div className="bg-white rounded-lg p-4 mb-4 border-2 border-green-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <svg className="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <div>
+                                <p className="font-semibold text-gray-900">ใบรับรองแทนใบเสร็จ</p>
+                                <p className="text-sm text-gray-600">ดาวน์โหลดใบรับรองแทนใบเสร็จสำหรับการชำระเงินของคุณ</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setShowReceiptModal(true)}
+                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              ดาวน์โหลด PDF
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {/* 2.5. Additional Payment Required Notice - Moved here */}
                       {(() => {
                         // Calculate if additional payment is required
@@ -3121,6 +3151,20 @@ export default function EventDetailPage() {
           onSuccess={() => {
             // Refresh event data after successful upload
             fetchEventDetail();
+          }}
+        />
+      )}
+
+      {/* Receipt Certificate Modal */}
+      {showReceiptModal && userRegistration && (
+        <ReceiptCertificateModal
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          eventId={event.eventId}
+          initialData={{
+            companyName: companyName || '',
+            memberName: session?.user?.name || '',
+            memberPosition: 'กรรมการผู้จัดการ',
           }}
         />
       )}

@@ -13,6 +13,7 @@ import { formatThaiDateTime } from '@/lib/date-utils';
 import RegisterOnBehalfModal from './RegisterOnBehalfModal';
 import PaymentDetailsModal from '@/components/admin/PaymentDetailsModal';
 import PromoteEventModal from '@/components/admin/PromoteEventModal';
+import MessageTemplateModal from '@/components/admin/MessageTemplateModal';
 
 interface Event {
   eventId: string;
@@ -557,6 +558,10 @@ export default function EventDetailPage() {
     companyName: string;
     contactName: string;
   } | null>(null);
+
+  // Message template modal state
+  const [messageTemplateModalOpen, setMessageTemplateModalOpen] = useState(false);
+  const [selectedRegistrationsForMessage, setSelectedRegistrationsForMessage] = useState<Set<string>>(new Set());
   const [cancellationFormData, setCancellationFormData] = useState<{
     registrationId: string;
     reason: string;
@@ -577,6 +582,45 @@ export default function EventDetailPage() {
       }
       return newSet;
     });
+  };
+
+  // Toggle registration selection for message sending
+  const toggleRegistrationSelection = (registrationId: string) => {
+    setSelectedRegistrationsForMessage(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(registrationId)) {
+        newSet.delete(registrationId);
+      } else {
+        newSet.add(registrationId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select/deselect all registrations with LINE profiles
+  const toggleSelectAll = () => {
+    if (!eventData) return;
+
+    const registrationsWithLine = filteredAttendees
+      .filter(a => a.registration.lineUserId && a.registration.lineUserId.trim() !== '')
+      .map(a => a.registration.registrationId);
+
+    if (selectedRegistrationsForMessage.size === registrationsWithLine.length) {
+      // Deselect all
+      setSelectedRegistrationsForMessage(new Set());
+    } else {
+      // Select all
+      setSelectedRegistrationsForMessage(new Set(registrationsWithLine));
+    }
+  };
+
+  // Open message template modal with selected registrations
+  const handleOpenMessageModal = () => {
+    if (selectedRegistrationsForMessage.size === 0) {
+      setActionMessage({ type: 'error', text: 'กรุณาเลือกผู้รับอย่างน้อย 1 คน' });
+      return;
+    }
+    setMessageTemplateModalOpen(true);
   };
 
   useEffect(() => {
@@ -2090,6 +2134,21 @@ export default function EventDetailPage() {
                 <span className="hidden sm:inline">Copy รายงาน</span>
               </button>
 
+              {/* Send Payment Reminder Button */}
+              <button
+                onClick={handleOpenMessageModal}
+                disabled={selectedRegistrationsForMessage.size === 0}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title={selectedRegistrationsForMessage.size === 0 ? 'กรุณาเลือกผู้รับก่อน' : 'ส่งข้อความแจ้งชำระเงิน'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="hidden sm:inline">
+                  แจ้งชำระเงิน ({selectedRegistrationsForMessage.size})
+                </span>
+              </button>
+
               {/* Send LINE Message Button */}
               <button
                 onClick={() => setShowPromoteModal(true)}
@@ -2317,9 +2376,22 @@ export default function EventDetailPage() {
         {/* Attendees List */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
-              รายชื่อผู้เข้าร่วม ({filteredAttendees.length} รายการ)
-            </h2>
+            <div className="flex items-center gap-3">
+              {/* Select All Checkbox */}
+              <input
+                type="checkbox"
+                checked={
+                  filteredAttendees.filter(a => a.registration.lineUserId).length > 0 &&
+                  selectedRegistrationsForMessage.size === filteredAttendees.filter(a => a.registration.lineUserId).length
+                }
+                onChange={toggleSelectAll}
+                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                title="เลือก/ยกเลิก ทั้งหมด (เฉพาะที่มี LINE)"
+              />
+              <h2 className="text-lg font-semibold text-gray-900">
+                รายชื่อผู้เข้าร่วม ({filteredAttendees.length} รายการ)
+              </h2>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleExportExcel}
@@ -2405,6 +2477,19 @@ export default function EventDetailPage() {
                 >
                   {/* Header Section with LINE Profile - Horizontal Layout */}
                   <div className="flex items-start gap-4 mb-3">
+                    {/* Selection Checkbox (only if has LINE user ID) */}
+                    {attendee.registration.lineUserId && attendee.registration.lineUserId.trim() !== '' && (
+                      <div className="flex-shrink-0 pt-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedRegistrationsForMessage.has(attendee.registration.registrationId)}
+                          onChange={() => toggleRegistrationSelection(attendee.registration.registrationId)}
+                          className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                          title="เลือกเพื่อส่งข้อความแจ้งชำระเงิน"
+                        />
+                      </div>
+                    )}
+
                     {/* LINE Profile Picture */}
                     <div className="flex-shrink-0">
                       {attendee.lineProfile?.lineProfilePicture ? (
@@ -4333,6 +4418,26 @@ export default function EventDetailPage() {
           contactName={selectedRegistrationForPayment.contactName}
           onClose={handleClosePaymentDetailsModal}
           onUpdate={handlePaymentDetailsUpdate}
+        />
+      )}
+
+      {/* Message Template Modal */}
+      {messageTemplateModalOpen && eventData && (
+        <MessageTemplateModal
+          isOpen={messageTemplateModalOpen}
+          onClose={() => {
+            setMessageTemplateModalOpen(false);
+            setSelectedRegistrationsForMessage(new Set()); // Clear selection after sending
+          }}
+          selectedRegistrations={
+            filteredAttendees
+              .filter(a => selectedRegistrationsForMessage.has(a.registration.registrationId))
+              .map(a => ({
+                registration: a.registration as any, // Cast to EventRegistration type
+                lineUserId: a.registration.lineUserId,
+              }))
+          }
+          event={eventData.event as any} // Cast to Event type
         />
       )}
 

@@ -41,10 +41,11 @@ export default function MyRegistrationsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user && registrations.length === 0 && !error) {
       fetchMyRegistrations();
     }
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
   const fetchMyRegistrations = async () => {
     try {

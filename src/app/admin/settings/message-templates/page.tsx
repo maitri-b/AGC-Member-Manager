@@ -29,10 +29,11 @@ export default function MessageTemplatesPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session?.user?.role === 'admin') {
+    if (session?.user?.role === 'admin' && Object.keys(templates).length === 0) {
       fetchTemplates();
     }
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.role]);
 
   const fetchTemplates = async () => {
     try {

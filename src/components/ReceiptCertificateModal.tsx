@@ -29,6 +29,8 @@ export default function ReceiptCertificateModal({
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
+      console.log('[Receipt Modal] Starting download for eventId:', eventId);
+
       // Use POST to avoid URL encoding issues with Thai eventId
       const response = await fetch(`/api/receipt-pdf`, {
         method: 'POST',
@@ -43,8 +45,13 @@ export default function ReceiptCertificateModal({
         }),
       });
 
+      console.log('[Receipt Modal] Response status:', response.status);
+      console.log('[Receipt Modal] Response content-type:', response.headers.get('content-type'));
+
       if (!response.ok) {
-        throw new Error('Failed to generate receipt');
+        const errorText = await response.text();
+        console.error('[Receipt Modal] Error response:', errorText);
+        throw new Error(`Failed to generate receipt: ${response.status} - ${errorText}`);
       }
 
       // Create a blob from the response

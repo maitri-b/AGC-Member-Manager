@@ -17,12 +17,24 @@ export async function GET() {
     const userDoc = await db.collection('users').doc(session.user.id).get();
     const firestoreData = userDoc.exists ? userDoc.data() : null;
 
+    // Check admin access specifically
+    const hasAdminAccessPermission = session.user.permissions?.includes('admin:access') || false;
+
     return NextResponse.json({
       session: {
         user: session.user,
       },
       firestore: firestoreData,
-      message: 'If firestore.role is "admin" but session.user.permissions is empty, please logout and login again.',
+      adminMenuCheck: {
+        hasAdminAccess: hasAdminAccessPermission,
+        role: session.user.role,
+        permissionsArray: session.user.permissions || [],
+        permissionsCount: session.user.permissions?.length || 0,
+        shouldSeeAdminMenu: hasAdminAccessPermission,
+      },
+      message: hasAdminAccessPermission
+        ? 'Admin menu should be visible in navbar'
+        : 'Admin menu NOT visible - need admin:access permission. If firestore.role is "admin" but session.user.permissions is empty, please logout and login again.',
     });
   } catch (error) {
     console.error('Debug error:', error);

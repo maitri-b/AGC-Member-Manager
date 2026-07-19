@@ -25,14 +25,14 @@ let pdfFonts: any;
 async function initPdfMake() {
   if (!pdfMake) {
     const pdfMakeModule = await import('pdfmake/build/pdfmake');
-    const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
+    const pdfFontsModule = await import('pdfmake/build/vfs_fonts') as any;
 
     pdfMake = pdfMakeModule.default;
 
     // Set vfs from fonts module
-    if (pdfFontsModule.default && pdfFontsModule.default.pdfMake && pdfFontsModule.default.pdfMake.vfs) {
+    if (pdfFontsModule.default?.pdfMake?.vfs) {
       pdfMake.vfs = pdfFontsModule.default.pdfMake.vfs;
-    } else if (pdfFontsModule.pdfMake && pdfFontsModule.pdfMake.vfs) {
+    } else if (pdfFontsModule.pdfMake?.vfs) {
       pdfMake.vfs = pdfFontsModule.pdfMake.vfs;
     } else {
       console.error('[Receipt PDF] Could not find vfs in pdfFonts module:', Object.keys(pdfFontsModule));

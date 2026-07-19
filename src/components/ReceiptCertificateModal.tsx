@@ -30,7 +30,7 @@ export default function ReceiptCertificateModal({
     setIsDownloading(true);
     try {
       // Use POST to avoid URL encoding issues with Thai eventId
-      const response = await fetch(`/api/events/receipt`, {
+      const response = await fetch(`/api/events/generate-receipt`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

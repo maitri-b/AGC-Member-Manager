@@ -9,6 +9,15 @@ import { generateReceiptPDF, ReceiptData } from '@/lib/receipt-pdf';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Add GET endpoint for testing route availability
+export async function GET() {
+  return NextResponse.json({
+    message: 'Receipt PDF endpoint is available. Use POST method with eventId in body.',
+    method: 'POST',
+    endpoint: '/api/receipt-pdf',
+  });
+}
+
 // Dynamic imports for pdfmake to avoid TypeScript issues
 let pdfMake: any;
 let pdfFonts: any;

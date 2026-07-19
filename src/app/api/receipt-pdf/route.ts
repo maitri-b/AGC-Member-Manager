@@ -233,8 +233,18 @@ export async function POST(request: NextRequest) {
     // Initialize pdfMake
     const pdf = await initPdfMake();
 
-    // Create PDF
-    const pdfDocGenerator = pdf.createPdf(docDefinition);
+    // Override fonts to use courier (built-in font that doesn't need vfs)
+    const fontsConfig = {
+      Courier: {
+        normal: 'Courier',
+        bold: 'Courier-Bold',
+        italics: 'Courier-Oblique',
+        bolditalics: 'Courier-BoldOblique'
+      }
+    };
+
+    // Create PDF with simple font config
+    const pdfDocGenerator = pdf.createPdf(docDefinition, null, fontsConfig);
 
     // Generate PDF buffer
     return new Promise<NextResponse>((resolve, reject) => {

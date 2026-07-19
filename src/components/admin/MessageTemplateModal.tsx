@@ -30,6 +30,24 @@ export default function MessageTemplateModal({
   const [customMessage, setCustomMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [previewRecipient, setPreviewRecipient] = useState(0);
+  const [baseUrl, setBaseUrl] = useState('https://agc-member-manager.vercel.app');
+
+  // Fetch base URL from settings on mount
+  useEffect(() => {
+    const fetchBaseUrl = async () => {
+      try {
+        const response = await fetch('/api/admin/settings');
+        if (response.ok) {
+          const settings = await response.json();
+          setBaseUrl(settings.baseUrl || 'https://agc-member-manager.vercel.app');
+        }
+      } catch (error) {
+        console.error('Failed to fetch base URL from settings:', error);
+        // Keep default value
+      }
+    };
+    fetchBaseUrl();
+  }, []);
 
   // Auto-suggest template when modal opens
   useEffect(() => {
@@ -38,20 +56,20 @@ export default function MessageTemplateModal({
       setSelectedTemplate(suggested);
       updateMessageFromTemplate(suggested);
     }
-  }, [isOpen, selectedRegistrations]);
+  }, [isOpen, selectedRegistrations, baseUrl]);
 
   // Update message when template or preview recipient changes
   useEffect(() => {
     if (selectedTemplate && selectedRegistrations.length > 0) {
       updateMessageFromTemplate(selectedTemplate);
     }
-  }, [selectedTemplate, previewRecipient]);
+  }, [selectedTemplate, previewRecipient, baseUrl]);
 
   const updateMessageFromTemplate = (templateType: MessageTemplateType) => {
     if (selectedRegistrations.length === 0) return;
 
     const registration = selectedRegistrations[previewRecipient].registration;
-    const message = personalizeMessage(templateType, registration, event);
+    const message = personalizeMessage(templateType, registration, event, undefined, baseUrl);
     setCustomMessage(message);
   };
 
@@ -79,7 +97,7 @@ export default function MessageTemplateModal({
         selectedRegistrations.map(async ({ registration, lineUserId }) => {
           // Personalize message for this recipient
           const personalizedMsg = selectedTemplate
-            ? personalizeMessage(selectedTemplate, registration, event, customMessage)
+            ? personalizeMessage(selectedTemplate, registration, event, customMessage, baseUrl)
             : customMessage;
 
           // Send via LINE API
@@ -218,7 +236,7 @@ export default function MessageTemplateModal({
               </div>
               <div className="bg-white border border-gray-300 rounded-lg p-3 text-sm whitespace-pre-wrap font-sans">
                 {selectedTemplate
-                  ? personalizeMessage(selectedTemplate, currentRecipient.registration, event, customMessage)
+                  ? personalizeMessage(selectedTemplate, currentRecipient.registration, event, customMessage, baseUrl)
                   : customMessage}
               </div>
             </div>

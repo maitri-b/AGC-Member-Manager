@@ -202,12 +202,14 @@ export function determinePaymentType(
 
 /**
  * Personalize message template with registration data
+ * @param baseUrl Base URL of the application (from settings)
  */
 export function personalizeMessage(
   templateType: MessageTemplateType,
   registration: EventRegistration,
   event: Event,
-  customTemplate?: string
+  customTemplate?: string,
+  baseUrl?: string
 ): string {
   const template = customTemplate || DEFAULT_TEMPLATES[templateType].template;
   const paymentInfo = determinePaymentType(registration, event);
@@ -225,6 +227,9 @@ export function personalizeMessage(
   // Calculate days overdue (if applicable)
   const daysOverdue = deadline ? Math.abs(Math.min(0, calculateDaysUntilDeadline(deadline))) : 0;
 
+  // Use provided baseUrl or fallback to env variable or default
+  const appBaseUrl = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || 'https://agc-member-manager.vercel.app';
+
   // Build data object
   const data: PersonalizedMessageData = {
     memberName: registration.contactName || 'คุณสมาชิก',
@@ -237,7 +242,7 @@ export function personalizeMessage(
     deadlineText: formatDeadlineText(deadline),
     daysOverdue,
     registrationId: registration.registrationId,
-    eventLink: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://member.agentsclub.co'}/events/${event.eventId}`,
+    eventLink: `${appBaseUrl}/events/${event.eventId}`,
   };
 
   // Replace all variables in template

@@ -56,6 +56,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Get current settings to preserve messageTemplates
+    const currentSettings = await getSystemSettings();
+
     const input: SystemSettingsInput = {
       baseUrl: body.baseUrl.trim().replace(/\/$/, ''), // Remove trailing slash
       websiteName: body.websiteName,
@@ -68,7 +71,8 @@ export async function PUT(request: NextRequest) {
       enableEmailNotifications: body.enableEmailNotifications ?? false,
       enableLineNotifications: body.enableLineNotifications ?? true,
       enableSmsNotifications: body.enableSmsNotifications ?? false,
-      messageTemplates: body.messageTemplates,
+      // Preserve existing messageTemplates unless explicitly provided
+      messageTemplates: body.messageTemplates ?? currentSettings.messageTemplates ?? {},
     };
 
     const settings = await updateSystemSettings(input, session.user.id);

@@ -61,12 +61,12 @@ export async function POST(request: NextRequest) {
     const event = { eventId: eventDoc.id, ...eventDoc.data() } as any;
 
     // Get user's registration for this event
-    console.log('[Receipt PDF] Searching registration with:', {
-      eventId,
-      userId: session.user.id,
-      memberId: session.user.memberId,
-      lineUserId: session.user.lineUserId,
-    });
+    console.log('[Receipt PDF] ===== SEARCH PARAMETERS =====');
+    console.log('[Receipt PDF] eventId:', eventId);
+    console.log('[Receipt PDF] session.user.id:', session.user.id);
+    console.log('[Receipt PDF] session.user.lineUserId:', session.user.lineUserId);
+    console.log('[Receipt PDF] session.user.memberId:', session.user.memberId);
+    console.log('[Receipt PDF] ===========================');
 
     // Try userId first (most common)
     let registrationsSnapshot = await db

@@ -204,6 +204,17 @@ export async function POST(request: NextRequest) {
 
     // TEMPORARY: Skip pdfmake due to timeout issues - use text format instead
     console.log('[Receipt PDF] Generating receipt as text (temporary solution)');
+    console.log('[Receipt PDF] Receipt data:', {
+      companyName: receiptData.companyName,
+      eventName: receiptData.eventName,
+      totalAmount: receiptData.totalAmount,
+      memberName: receiptData.memberName,
+      memberPosition: receiptData.memberPosition,
+      slipUploadDateType: typeof receiptData.slipUploadDate,
+      slipUploadDateValue: receiptData.slipUploadDate,
+      eventStartDateType: typeof receiptData.eventStartDate,
+      eventStartDateValue: receiptData.eventStartDate,
+    });
 
     // Format dates
     const formatDate = (dateInput: any) => {

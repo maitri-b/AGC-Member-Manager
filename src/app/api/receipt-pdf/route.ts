@@ -159,9 +159,6 @@ export async function POST(request: NextRequest) {
 
     const registration = registrationsSnapshot.docs[0].data();
 
-    // DEBUG: Log all registration fields to see what date fields are available
-    console.log('[Receipt PDF] Full registration data:', JSON.stringify(registration, null, 2));
-
     // Check payment status - must be "ชำระครบแล้ว"
     if (registration.paymentStatus !== 'ชำระครบแล้ว') {
       return NextResponse.json(
@@ -174,6 +171,41 @@ export async function POST(request: NextRequest) {
     const userDoc = await db.collection('users').doc(session.user.id).get();
     const userData = userDoc.data();
 
+    // Helper function to parse Thai date format "dd/mm/yyyy" (Buddhist year) or Firestore Timestamp
+    const parseDate = (dateInput: any): Date | null => {
+      if (!dateInput) return null;
+
+      // Handle Firestore Timestamp
+      if (typeof dateInput === 'object' && 'toDate' in dateInput) {
+        return dateInput.toDate();
+      }
+
+      // Handle string in "dd/mm/yyyy" format (Buddhist year)
+      if (typeof dateInput === 'string') {
+        const match = dateInput.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (match) {
+          const day = parseInt(match[1]);
+          const month = parseInt(match[2]) - 1; // 0-indexed
+          let year = parseInt(match[3]);
+
+          // Convert Buddhist year to Gregorian if year > 2500
+          if (year > 2500) {
+            year = year - 543;
+          }
+
+          return new Date(year, month, day);
+        }
+
+        // Try parsing as ISO string or other standard formats
+        const parsed = new Date(dateInput);
+        if (!isNaN(parsed.getTime())) {
+          return parsed;
+        }
+      }
+
+      return null;
+    };
+
     // Determine slip upload date (use most recent payment date)
     let slipUploadDate = registration.depositPaidDate || registration.fullPaymentPaidDate || registration.registrationDate;
 
@@ -182,10 +214,9 @@ export async function POST(request: NextRequest) {
       slipUploadDate = registration.remainingPaidDate;
     }
 
-    // Format slip upload date to ISO string if it's a Firestore timestamp
-    if (slipUploadDate && typeof slipUploadDate === 'object' && 'toDate' in slipUploadDate) {
-      slipUploadDate = slipUploadDate.toDate().toISOString();
-    }
+    // Parse the date (handles both Firestore Timestamp and Thai date string "dd/mm/yyyy")
+    const parsedSlipDate = parseDate(slipUploadDate);
+    const slipUploadDateISO = parsedSlipDate ? parsedSlipDate.toISOString() : new Date().toISOString();
 
     // Get default values
     const defaultMemberPosition = userData?.position || 'กรรมการผู้จัดการ';
@@ -193,30 +224,41 @@ export async function POST(request: NextRequest) {
     // Use contactName (full name) instead of LINE display name
     const defaultMemberName = registration.contactName || userData?.name || '';
 
+    // Parse event dates (also in dd/mm/yyyy format)
+    const parsedEventStartDate = parseDate(event.eventDate);
+    const eventStartDateISO = parsedEventStartDate ? parsedEventStartDate.toISOString() : new Date().toISOString();
+
+    const parsedEventEndDate = event.eventEndDate ? parseDate(event.eventEndDate) : null;
+    const eventEndDateISO = parsedEventEndDate ? parsedEventEndDate.toISOString() : undefined;
+
     // Prepare receipt data (use custom values from request if provided, otherwise use defaults)
     const receiptData: ReceiptData = {
       companyName: companyName || defaultCompanyName,
       eventName: event.eventName,
-      slipUploadDate: slipUploadDate,
+      slipUploadDate: slipUploadDateISO,
       totalAmount: registration.totalAmount || 0,
       memberName: memberName || defaultMemberName,
       memberPosition: memberPosition || defaultMemberPosition,
-      eventStartDate: event.eventDate,
-      eventEndDate: event.eventEndDate,
+      eventStartDate: eventStartDateISO,
+      eventEndDate: eventEndDateISO,
     };
 
     // TEMPORARY: Skip pdfmake due to timeout issues - use text format instead
     console.log('[Receipt PDF] Generating receipt as text (temporary solution)');
+    console.log('[Receipt PDF] Date parsing results:', {
+      originalSlipDate: slipUploadDate,
+      parsedSlipDate: parsedSlipDate?.toISOString(),
+      originalEventDate: event.eventDate,
+      parsedEventDate: parsedEventStartDate?.toISOString(),
+    });
     console.log('[Receipt PDF] Receipt data:', {
       companyName: receiptData.companyName,
       eventName: receiptData.eventName,
       totalAmount: receiptData.totalAmount,
       memberName: receiptData.memberName,
       memberPosition: receiptData.memberPosition,
-      slipUploadDateType: typeof receiptData.slipUploadDate,
-      slipUploadDateValue: receiptData.slipUploadDate,
-      eventStartDateType: typeof receiptData.eventStartDate,
-      eventStartDateValue: receiptData.eventStartDate,
+      slipUploadDate: receiptData.slipUploadDate,
+      eventStartDate: receiptData.eventStartDate,
     });
 
     // Format dates

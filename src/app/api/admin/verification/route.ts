@@ -6,6 +6,8 @@ import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { updateMember, getAllMembers, getMemberById } from '@/lib/google-sheets';
 import { ROLE_PERMISSIONS } from '@/types/next-auth.d';
+import { getSystemSettings } from '@/lib/settings';
+import { generateWelcomeMessage, generateRejectionMessage } from '@/lib/member-welcome-template';
 
 // GET: List all verification requests
 export async function GET() {
@@ -221,6 +223,42 @@ export async function PUT(request: NextRequest) {
         updatedBy: session.user.name || session.user.id,
       });
 
+      // Send LINE notification to newly approved member
+      try {
+        const settings = await getSystemSettings();
+        const welcomeMessage = generateWelcomeMessage({
+          memberName: lineDisplayName || '',
+          companyName: memberData?.companyNameTH || memberData?.companyNameEN || '',
+          memberId: requestData.memberId,
+          licenseNumber: memberData?.licenseNumber || '',
+          status: 'ปกติ',
+          baseUrl: settings.baseUrl,
+        });
+
+        // Send notification via LINE API
+        const lineApiUrl = process.env.NEXT_PUBLIC_BASE_URL
+          ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/line/send-notification`
+          : '/api/line/send-notification';
+
+        const lineResponse = await fetch(lineApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lineUserIds: [lineUserId],
+            message: welcomeMessage,
+          }),
+        });
+
+        if (lineResponse.ok) {
+          console.log('✅ Welcome notification sent to member:', requestData.memberId);
+        } else {
+          console.error('⚠️ Failed to send welcome notification:', await lineResponse.text());
+        }
+      } catch (error) {
+        console.error('⚠️ Error sending welcome notification (non-critical):', error);
+        // Don't fail approval if notification fails
+      }
+
       // Auto-reject other pending requests for the same memberId
       const duplicateRequests = await db.collection('verificationRequests')
         .where('memberId', '==', requestData.memberId)
@@ -278,10 +316,49 @@ export async function PUT(request: NextRequest) {
 
       // Update user status
       const userRef = db.collection('users').doc(requestData.userId);
+      const userDoc = await userRef.get();
+      const userData = userDoc.data();
+
       await userRef.update({
         verificationStatus: 'rejected',
         updatedAt: now,
       });
+
+      // Send LINE notification for rejection
+      try {
+        const settings = await getSystemSettings();
+        const lineUserId = requestData.lineUserId || userData?.lineUserId || requestData.userId;
+        const lineDisplayName = requestData.lineDisplayName || userData?.lineDisplayName || userData?.displayName || userData?.name;
+
+        const rejectionMessage = generateRejectionMessage({
+          memberName: lineDisplayName,
+          reason: rejectionReason || 'ไม่ผ่านการตรวจสอบ',
+          baseUrl: settings.baseUrl,
+        });
+
+        // Send notification via LINE API
+        const lineApiUrl = process.env.NEXT_PUBLIC_BASE_URL
+          ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/line/send-notification`
+          : '/api/line/send-notification';
+
+        const lineResponse = await fetch(lineApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lineUserIds: [lineUserId],
+            message: rejectionMessage,
+          }),
+        });
+
+        if (lineResponse.ok) {
+          console.log('✅ Rejection notification sent to user:', requestData.userId);
+        } else {
+          console.error('⚠️ Failed to send rejection notification:', await lineResponse.text());
+        }
+      } catch (error) {
+        console.error('⚠️ Error sending rejection notification (non-critical):', error);
+        // Don't fail rejection if notification fails
+      }
 
       return NextResponse.json({
         success: true,

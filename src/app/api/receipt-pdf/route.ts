@@ -159,6 +159,9 @@ export async function POST(request: NextRequest) {
 
     const registration = registrationsSnapshot.docs[0].data();
 
+    // DEBUG: Log all registration fields to see what date fields are available
+    console.log('[Receipt PDF] Full registration data:', JSON.stringify(registration, null, 2));
+
     // Check payment status - must be "ชำระครบแล้ว"
     if (registration.paymentStatus !== 'ชำระครบแล้ว') {
       return NextResponse.json(

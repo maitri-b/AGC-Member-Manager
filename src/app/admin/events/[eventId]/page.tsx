@@ -20,6 +20,7 @@ interface Event {
   eventName: string;
   eventNameEN: string;
   eventDate: string;
+  eventEndDate?: string;
   location: string;
   description: string;
   year: number;

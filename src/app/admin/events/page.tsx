@@ -12,6 +12,7 @@ interface Event {
   eventName: string;
   eventNameEN: string;
   eventDate: string;
+  eventEndDate?: string;
   location: string;
   description: string;
   sheetName: string;
@@ -75,6 +76,7 @@ interface EventFormData {
   eventName: string;
   eventNameEN: string;
   eventDate: string;
+  eventEndDate: string;
   location: string;
   description: string;
   sheetName: string;
@@ -135,6 +137,7 @@ const initialFormData: EventFormData = {
   eventName: '',
   eventNameEN: '',
   eventDate: '',
+  eventEndDate: '',
   location: '',
   description: '',
   sheetName: '',
@@ -361,6 +364,7 @@ export default function AdminEventsPage() {
         eventName: event.eventName,
         eventNameEN: event.eventNameEN,
         eventDate: event.eventDate,
+        eventEndDate: event.eventEndDate ?? '',
         location: event.location,
         description: event.description,
         sheetName: event.sheetName,
@@ -1305,7 +1309,7 @@ export default function AdminEventsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    วันที่จัดกิจกรรม
+                    วันที่เริ่มกิจกรรม
                   </label>
                   <input
                     type="text"
@@ -1314,6 +1318,22 @@ export default function AdminEventsPage() {
                     placeholder="เช่น 15/03/2568 หรือ 2025"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    วันที่สิ้นสุดกิจกรรม
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.eventEndDate}
+                    onChange={(e) => setFormData({ ...formData, eventEndDate: e.target.value })}
+                    placeholder="เช่น 17/03/2568 (ถ้ากิจกรรมหลายวัน)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    ไม่ต้องระบุถ้าเป็นกิจกรรมวันเดียว
+                  </p>
                 </div>
 
                 <div className="md:col-span-2">

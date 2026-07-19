@@ -10,12 +10,14 @@ import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeType
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass, isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
+import { formatEventDateRange } from '@/lib/date-utils';
 
 interface Event {
   eventId: string;
   eventName: string;
   eventNameEN: string;
   eventDate: string;
+  eventEndDate?: string;
   location: string;
   description: string;
   sheetName: string;
@@ -742,7 +744,7 @@ export default function EventDetailPage() {
                   </svg>
                   <div>
                     <p className="text-sm text-gray-500">วันที่จัดกิจกรรม</p>
-                    <p className="font-medium">{formatDate(event.eventDate)}</p>
+                    <p className="font-medium">{formatEventDateRange(event.eventDate, event.eventEndDate)}</p>
                   </div>
                 </div>
 

@@ -34,10 +34,11 @@ export default function SettingsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session?.user?.role === 'admin') {
+    if (session?.user?.role === 'admin' && !settings) {
       fetchSettings();
     }
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.role]);
 
   const fetchSettings = async () => {
     try {

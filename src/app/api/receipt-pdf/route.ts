@@ -4,8 +4,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { generateReceiptPDF, ReceiptData } from '@/lib/receipt-pdf';
-import pdfMakeBuild from 'pdfmake/build/pdfmake';
-import pdfFontsBuild from 'pdfmake/build/vfs_fonts';
 
 // Ensure route is registered correctly
 export const runtime = 'nodejs';
@@ -20,9 +18,18 @@ export async function GET() {
   });
 }
 
-// Initialize pdfMake with fonts
-const pdfMake = pdfMakeBuild;
-(pdfMake as any).vfs = pdfFontsBuild.pdfMake.vfs;
+// Dynamic imports for pdfmake
+let pdfMake: any;
+let pdfFonts: any;
+
+async function initPdfMake() {
+  if (!pdfMake) {
+    pdfMake = (await import('pdfmake/build/pdfmake')).default;
+    pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
+    pdfMake.vfs = pdfFonts.pdfMake.vfs;
+  }
+  return pdfMake;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -132,8 +139,11 @@ export async function POST(request: NextRequest) {
 
     console.log('[Receipt PDF] Creating PDF with pdfMake');
 
+    // Initialize pdfMake
+    const pdf = await initPdfMake();
+
     // Create PDF
-    const pdfDocGenerator = (pdfMake as any).createPdf(docDefinition);
+    const pdfDocGenerator = pdf.createPdf(docDefinition);
 
     // Generate PDF buffer
     return new Promise<NextResponse>((resolve, reject) => {

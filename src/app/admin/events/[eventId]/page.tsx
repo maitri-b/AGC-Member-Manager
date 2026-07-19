@@ -2494,15 +2494,6 @@ export default function EventDetailPage() {
                           </span>
                         )}
 
-                        {/* Status badge */}
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          attendee.isConfirmed
-                            ? 'bg-teal-100 text-teal-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {attendee.isConfirmed ? 'ยืนยันเข้าร่วม' : 'รอดำเนินการ'}
-                        </span>
-
                         {/* Payment Status badge */}
                         {attendee.registration.paymentStatus && (
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeClass(attendee.registration.paymentStatus)}`}>
@@ -2599,6 +2590,142 @@ export default function EventDetailPage() {
                               )}
                             </div>
                           </div>
+
+                          {/* Price Breakdown Section */}
+                          {attendee.registration.totalAmount !== undefined && (
+                            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                              <p className="text-xs font-semibold text-green-900 mb-2">รายละเอียดค่าใช้จ่าย:</p>
+                              <div className="space-y-1 text-xs">
+                                {/* Event Fee */}
+                                {(attendee.registration.eventFee ?? 0) > 0 && (
+                                  <div className="flex justify-between text-gray-700">
+                                    <span>ค่าเข้าร่วมกิจกรรม:</span>
+                                    <span>{(attendee.registration.eventFee ?? 0).toLocaleString()} บาท</span>
+                                  </div>
+                                )}
+
+                                {/* Attendee Types Breakdown */}
+                                {(() => {
+                                  try {
+                                    if (attendee.registration.attendeeTypeSelections) {
+                                      const selections = JSON.parse(attendee.registration.attendeeTypeSelections);
+                                      if (selections && selections.length > 0) {
+                                        return selections.map((sel: any, idx: number) => {
+                                          const type = eventData?.event?.attendeeTypes?.find((t: any) => t.typeId === sel.typeId);
+                                          if (!type) return null;
+                                          const subtotal = type.price * sel.quantity;
+                                          return (
+                                            <div key={idx} className="flex justify-between text-gray-600 ml-3">
+                                              <span>→ {type.typeName} {type.price.toLocaleString()} บาท × {sel.quantity} คน</span>
+                                              <span>{subtotal.toLocaleString()} บาท</span>
+                                            </div>
+                                          );
+                                        });
+                                      }
+                                    }
+                                  } catch (e) {
+                                    console.error('Error parsing attendee types for price:', e);
+                                  }
+                                  return null;
+                                })()}
+
+                                {/* Room Fee */}
+                                {(attendee.registration.roomFee ?? 0) > 0 && (
+                                  <div className="flex justify-between text-gray-700 mt-1">
+                                    <span>ค่าห้องพัก:</span>
+                                    <span>{(attendee.registration.roomFee ?? 0).toLocaleString()} บาท</span>
+                                  </div>
+                                )}
+
+                                {/* Room Allocations Breakdown */}
+                                {(() => {
+                                  try {
+                                    if (attendee.registration.roomAllocations) {
+                                      const allocations = JSON.parse(attendee.registration.roomAllocations);
+                                      if (allocations && allocations.length > 0) {
+                                        return allocations.map((alloc: any, idx: number) => {
+                                          const roomType = eventData?.event?.roomTypes?.find((rt: any) => rt.typeId === alloc.roomTypeId);
+                                          if (!roomType) return null;
+                                          const subtotal = roomType.price * alloc.roomCount;
+                                          return (
+                                            <div key={idx} className="flex justify-between text-gray-600 ml-3">
+                                              <span>→ {roomType.typeName} {roomType.price.toLocaleString()} บาท × {alloc.roomCount} ห้อง</span>
+                                              <span>{subtotal.toLocaleString()} บาท</span>
+                                            </div>
+                                          );
+                                        });
+                                      }
+                                    }
+                                  } catch (e) {
+                                    console.error('Error parsing room allocations for price:', e);
+                                  }
+                                  return null;
+                                })()}
+
+                                {/* Special Charges */}
+                                {(() => {
+                                  try {
+                                    if (attendee.registration.specialCharges) {
+                                      const charges = JSON.parse(attendee.registration.specialCharges);
+                                      if (charges && charges.length > 0) {
+                                        return (
+                                          <>
+                                            <div className="border-t border-green-300 mt-1 pt-1"></div>
+                                            <div className="text-purple-700 font-medium">ค่าใช้จ่ายเสริม:</div>
+                                            {charges.map((charge: any) => (
+                                              <div key={charge.chargeId} className="flex justify-between text-purple-600 ml-3">
+                                                <span>→ {charge.description}</span>
+                                                <span>+{charge.amount.toLocaleString()} บาท</span>
+                                              </div>
+                                            ))}
+                                          </>
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    console.error('Error parsing special charges:', e);
+                                  }
+                                  return null;
+                                })()}
+
+                                {/* Discounts */}
+                                {(() => {
+                                  try {
+                                    if (attendee.registration.discounts) {
+                                      const discounts = JSON.parse(attendee.registration.discounts);
+                                      if (discounts && discounts.length > 0) {
+                                        return (
+                                          <>
+                                            <div className="border-t border-green-300 mt-1 pt-1"></div>
+                                            <div className="text-orange-700 font-medium">ส่วนลด:</div>
+                                            {discounts.map((discount: any) => (
+                                              <div key={discount.discountId} className="flex justify-between text-orange-600 ml-3">
+                                                <span>
+                                                  → {discount.description}
+                                                  {discount.discountType === 'percentage' && ` (${discount.value}%)`}
+                                                  {discount.discountType === 'free' && ' (ฟรี)'}
+                                                </span>
+                                                <span>-{discount.calculatedAmount.toLocaleString()} บาท</span>
+                                              </div>
+                                            ))}
+                                          </>
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    console.error('Error parsing discounts:', e);
+                                  }
+                                  return null;
+                                })()}
+
+                                {/* Total */}
+                                <div className="flex justify-between font-bold border-t-2 border-green-400 pt-1 mt-1 text-green-900">
+                                  <span>ยอดรวมทั้งหมด:</span>
+                                  <span>{attendee.registration.totalAmount.toLocaleString()} บาท</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Attendee Type Selections Display */}
                         {(() => {

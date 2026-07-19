@@ -313,11 +313,12 @@ export function recalculatePaymentStatus(
   const depositAmountPaid = (registration as any).depositAmountPaid || 0;
   const remainingAmountPaid = (registration as any).remainingAmountPaid || 0;
   const fullPaymentAmountPaid = (registration as any).fullPaymentAmountPaid || 0;
-  let actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid;
+  const additionalPaymentAmountPaid = (registration as any).additionalPaymentAmountPaid || 0;
+  let actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
 
   // ✅ CRITICAL FIX: Only add approvedSlipsTotal if we don't have tracked amounts
   // Otherwise we'd be double-counting (the slip approval already sets *AmountPaid fields)
-  const hasTrackedAmounts = fullPaymentAmountPaid > 0 || depositAmountPaid > 0 || remainingAmountPaid > 0;
+  const hasTrackedAmounts = fullPaymentAmountPaid > 0 || depositAmountPaid > 0 || remainingAmountPaid > 0 || additionalPaymentAmountPaid > 0;
 
   if (approvedSlipsTotal > 0 && !hasTrackedAmounts) {
     // Legacy mode: use slips total for old registrations without tracked amounts
@@ -331,6 +332,7 @@ export function recalculatePaymentStatus(
       fullPaymentAmountPaid,
       depositAmountPaid,
       remainingAmountPaid,
+      additionalPaymentAmountPaid,
       actualTotalPaid,
       newTotalAmount,
     });

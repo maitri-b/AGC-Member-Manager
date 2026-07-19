@@ -13,9 +13,14 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Check if user is admin
-    if (!session?.user || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 });
+    // Check if user has permission to upload on behalf of user (admin, committee, event-co)
+    const userRole = session?.user?.role || 'member';
+    const allowedRoles = ['admin', 'committee', 'event-co'];
+
+    if (!session?.user || !allowedRoles.includes(userRole)) {
+      return NextResponse.json({
+        error: 'Unauthorized - Admin, Committee, or Event Coordinator access required'
+      }, { status: 403 });
     }
 
     const body = await request.json();

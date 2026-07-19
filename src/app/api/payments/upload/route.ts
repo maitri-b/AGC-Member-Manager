@@ -79,14 +79,15 @@ export async function POST(request: NextRequest) {
 
     // ========== SERVER-SIDE PAYMENT VALIDATION ==========
 
-    // 1. Block member from uploading refund
+    // 1. Block member from uploading refund - allow admin, committee, event-co
     if (paymentType === 'refund') {
       const userRole = session.user.role || 'member';
+      const allowedRoles = ['admin', 'committee', 'event-co'];
 
-      if (userRole !== 'admin') {
-        console.log('[Member Upload] ❌ Member attempted to upload refund');
+      if (!allowedRoles.includes(userRole)) {
+        console.log('[Member Upload] ❌ Unauthorized role attempted to upload refund:', userRole);
         return NextResponse.json({
-          error: 'เฉพาะ Admin เท่านั้นที่สามารถสร้าง refund ได้'
+          error: 'เฉพาะ Admin, Committee, และ Event Coordinator เท่านั้นที่สามารถสร้าง refund ได้'
         }, { status: 403 });
       }
     }

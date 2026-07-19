@@ -68,30 +68,40 @@ export async function POST(request: NextRequest) {
     console.log('[Receipt PDF] session.user.memberId:', session.user.memberId);
     console.log('[Receipt PDF] ===========================');
 
-    // Try userId first (most common)
-    let registrationsSnapshot = await db
+    // Get ALL registrations and filter in JavaScript (avoid Firestore type mismatch issues)
+    const allRegistrations = await db
       .collection('events')
       .doc(eventId)
       .collection('registrations')
-      .where('userId', '==', session.user.id)
-      .limit(1)
       .get();
 
-    console.log('[Receipt PDF] Query (userId) result:', registrationsSnapshot.empty ? 'empty' : 'found');
+    console.log('[Receipt PDF] Total registrations in event:', allRegistrations.size);
 
-    // If not found and user has memberId, try that
-    if (registrationsSnapshot.empty && session.user.memberId) {
-      console.log('[Receipt PDF] Trying memberId query...');
-      registrationsSnapshot = await db
-        .collection('events')
-        .doc(eventId)
-        .collection('registrations')
-        .where('memberId', '==', session.user.memberId)
-        .limit(1)
-        .get();
+    // Find registration manually
+    let registrationsSnapshot: any = { empty: true, docs: [] };
 
-      console.log('[Receipt PDF] Query (memberId) result:', registrationsSnapshot.empty ? 'empty' : 'found');
+    for (const doc of allRegistrations.docs) {
+      const data = doc.data();
+      const userIdMatch = data.userId === session.user.id || data.userId === String(session.user.id);
+      const memberIdMatch = session.user.memberId &&
+        (data.memberId === session.user.memberId || data.memberId === String(session.user.memberId));
+      const lineUserIdMatch = session.user.lineUserId &&
+        (data.lineUserId === session.user.lineUserId || data.lineUserId === String(session.user.lineUserId));
+
+      if (userIdMatch || memberIdMatch || lineUserIdMatch) {
+        console.log('[Receipt PDF] ✅ Found registration!', {
+          matchedBy: userIdMatch ? 'userId' : (memberIdMatch ? 'memberId' : 'lineUserId'),
+          docId: doc.id,
+        });
+        registrationsSnapshot = {
+          empty: false,
+          docs: [doc],
+        };
+        break;
+      }
     }
+
+    console.log('[Receipt PDF] Manual search result:', registrationsSnapshot.empty ? 'empty' : 'found');
 
     if (registrationsSnapshot.empty) {
       console.log('[Receipt PDF] ❌ Registration not found');

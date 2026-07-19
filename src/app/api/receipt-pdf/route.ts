@@ -54,11 +54,15 @@ export async function POST(request: NextRequest) {
     const db = adminDb();
 
     // Get event data
+    console.log('[Receipt PDF] Fetching event document:', eventId);
     const eventDoc = await db.collection('events').doc(eventId).get();
+    console.log('[Receipt PDF] Event exists:', eventDoc.exists);
+
     if (!eventDoc.exists) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
     const event = { eventId: eventDoc.id, ...eventDoc.data() } as any;
+    console.log('[Receipt PDF] Event data loaded:', { eventId: event.eventId, eventName: event.eventName });
 
     // Get user's registration for this event
     console.log('[Receipt PDF] ===== SEARCH PARAMETERS =====');
@@ -69,6 +73,7 @@ export async function POST(request: NextRequest) {
     console.log('[Receipt PDF] ===========================');
 
     // Get ALL registrations and filter in JavaScript (avoid Firestore type mismatch issues)
+    console.log('[Receipt PDF] Fetching registrations from path: events/' + eventId + '/registrations');
     const allRegistrations = await db
       .collection('events')
       .doc(eventId)
@@ -76,6 +81,20 @@ export async function POST(request: NextRequest) {
       .get();
 
     console.log('[Receipt PDF] Total registrations in event:', allRegistrations.size);
+
+    // Debug: Show all registration IDs and their userId/memberId
+    if (allRegistrations.size > 0) {
+      console.log('[Receipt PDF] All registration docs in event:');
+      allRegistrations.docs.forEach(doc => {
+        const data = doc.data();
+        console.log('[Receipt PDF]   -', doc.id, {
+          userId: data.userId,
+          memberId: data.memberId,
+          contactName: data.contactName,
+          paymentStatus: data.paymentStatus,
+        });
+      });
+    }
 
     // Find registration manually
     let registrationsSnapshot: any = { empty: true, docs: [] };

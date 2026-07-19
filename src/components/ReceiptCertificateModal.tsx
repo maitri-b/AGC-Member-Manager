@@ -46,7 +46,8 @@ export default function ReceiptCertificateModal({
       });
 
       console.log('[Receipt Modal] Response status:', response.status);
-      console.log('[Receipt Modal] Response content-type:', response.headers.get('content-type'));
+      const contentType = response.headers.get('content-type');
+      console.log('[Receipt Modal] Response content-type:', contentType);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -54,20 +55,31 @@ export default function ReceiptCertificateModal({
         throw new Error(`Failed to generate receipt: ${response.status} - ${errorText}`);
       }
 
-      // Create a blob from the response
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Check if response is HTML (new format) or PDF (legacy)
+      if (contentType?.includes('text/html')) {
+        // New HTML format - open in new window for printing
+        const html = await response.text();
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+        } else {
+          alert('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ (popup) เพื่อแสดงใบรับรอง');
+        }
+      } else {
+        // Legacy PDF format
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
 
-      // Create a temporary link and trigger download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `receipt-certificate.pdf`;
-      document.body.appendChild(a);
-      a.click();
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `receipt-certificate.pdf`;
+        document.body.appendChild(a);
+        a.click();
 
-      // Cleanup
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
 
       // Close modal after successful download
       setTimeout(() => {

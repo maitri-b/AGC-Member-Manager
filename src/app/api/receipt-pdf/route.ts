@@ -5,6 +5,10 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { generateReceiptPDF, ReceiptData } from '@/lib/receipt-pdf';
 
+// Ensure route is registered correctly
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // Dynamic imports for pdfmake to avoid TypeScript issues
 let pdfMake: any;
 let pdfFonts: any;
@@ -21,15 +25,19 @@ async function getPdfMake() {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[Receipt PDF] POST request received');
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
+      console.log('[Receipt PDF] Unauthorized - no session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get request body
     const body = await request.json();
     const { eventId, companyName, memberName, memberPosition } = body;
+
+    console.log('[Receipt PDF] Request for eventId:', eventId, 'userId:', session.user.id);
 
     if (!eventId) {
       return NextResponse.json({ error: 'Missing eventId' }, { status: 400 });

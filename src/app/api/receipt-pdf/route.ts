@@ -24,9 +24,20 @@ let pdfFonts: any;
 
 async function initPdfMake() {
   if (!pdfMake) {
-    pdfMake = (await import('pdfmake/build/pdfmake')).default;
-    pdfFonts = (await import('pdfmake/build/vfs_fonts')).default;
-    pdfMake.vfs = pdfFonts.pdfMake.vfs;
+    const pdfMakeModule = await import('pdfmake/build/pdfmake');
+    const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
+
+    pdfMake = pdfMakeModule.default;
+
+    // Set vfs from fonts module
+    if (pdfFontsModule.default && pdfFontsModule.default.pdfMake && pdfFontsModule.default.pdfMake.vfs) {
+      pdfMake.vfs = pdfFontsModule.default.pdfMake.vfs;
+    } else if (pdfFontsModule.pdfMake && pdfFontsModule.pdfMake.vfs) {
+      pdfMake.vfs = pdfFontsModule.pdfMake.vfs;
+    } else {
+      console.error('[Receipt PDF] Could not find vfs in pdfFonts module:', Object.keys(pdfFontsModule));
+      throw new Error('Failed to load PDF fonts');
+    }
   }
   return pdfMake;
 }

@@ -61,6 +61,12 @@ export async function POST(request: NextRequest) {
     const event = { eventId: eventDoc.id, ...eventDoc.data() } as any;
 
     // Get user's registration for this event
+    console.log('[Receipt PDF] Searching registration with:', {
+      eventId,
+      userId: session.user.id,
+      lineUserId: session.user.lineUserId,
+    });
+
     // Try userId first
     let registrationsSnapshot = await db
       .collection('events')
@@ -70,9 +76,11 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .get();
 
+    console.log('[Receipt PDF] First query (userId) result:', registrationsSnapshot.empty ? 'empty' : 'found');
+
     // If not found, try lineUserId
     if (registrationsSnapshot.empty && session.user.lineUserId) {
-      console.log('[Receipt PDF] userId not found, trying lineUserId:', session.user.lineUserId);
+      console.log('[Receipt PDF] Trying lineUserId query...');
       registrationsSnapshot = await db
         .collection('events')
         .doc(eventId)
@@ -80,14 +88,40 @@ export async function POST(request: NextRequest) {
         .where('lineUserId', '==', session.user.lineUserId)
         .limit(1)
         .get();
+
+      console.log('[Receipt PDF] Second query (lineUserId) result:', registrationsSnapshot.empty ? 'empty' : 'found');
     }
 
     if (registrationsSnapshot.empty) {
-      console.log('[Receipt PDF] Registration not found for userId:', session.user.id, 'lineUserId:', session.user.lineUserId);
-      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+      console.log('[Receipt PDF] ❌ Registration not found after trying both fields');
+
+      // Debug: List all registrations for this event
+      const allRegs = await db
+        .collection('events')
+        .doc(eventId)
+        .collection('registrations')
+        .limit(5)
+        .get();
+
+      console.log('[Receipt PDF] Total registrations in event:', allRegs.size);
+      if (allRegs.size > 0) {
+        const sample = allRegs.docs[0].data();
+        console.log('[Receipt PDF] Sample registration fields:', Object.keys(sample));
+        console.log('[Receipt PDF] Sample userId field:', sample.userId);
+        console.log('[Receipt PDF] Sample lineUserId field:', sample.lineUserId);
+      }
+
+      return NextResponse.json({
+        error: 'Registration not found',
+        debug: {
+          searchedUserId: session.user.id,
+          searchedLineUserId: session.user.lineUserId,
+          totalRegistrations: allRegs.size,
+        }
+      }, { status: 404 });
     }
 
-    console.log('[Receipt PDF] Registration found');
+    console.log('[Receipt PDF] ✅ Registration found');
 
     const registration = registrationsSnapshot.docs[0].data();
 

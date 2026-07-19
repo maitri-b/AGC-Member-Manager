@@ -438,7 +438,10 @@ export async function POST(request: NextRequest) {
 
     console.log('[Receipt PDF] ✅ PDF generated successfully');
 
-    return new NextResponse(pdfBytes, {
+    // Convert Uint8Array to Buffer for NextResponse
+    const buffer = Buffer.from(pdfBytes);
+
+    return new NextResponse(buffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

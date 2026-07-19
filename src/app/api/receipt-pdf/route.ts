@@ -244,7 +244,8 @@ export async function POST(request: NextRequest) {
     };
 
     // Create PDF with simple font config
-    const pdfDocGenerator = pdf.createPdf(docDefinition, null, fontsConfig);
+    // createPdf(docDefinition, tableLayouts, fonts, vfs)
+    const pdfDocGenerator = pdf.createPdf(docDefinition, {}, fontsConfig, null);
 
     // Generate PDF buffer
     return new Promise<NextResponse>((resolve, reject) => {

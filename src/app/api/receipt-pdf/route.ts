@@ -29,15 +29,17 @@ async function initPdfMake() {
 
     pdfMake = pdfMakeModule.default;
 
-    // Set vfs from fonts module
-    if (pdfFontsModule.default?.pdfMake?.vfs) {
-      pdfMake.vfs = pdfFontsModule.default.pdfMake.vfs;
-    } else if (pdfFontsModule.pdfMake?.vfs) {
-      pdfMake.vfs = pdfFontsModule.pdfMake.vfs;
-    } else {
-      console.error('[Receipt PDF] Could not find vfs in pdfFonts module:', Object.keys(pdfFontsModule));
-      throw new Error('Failed to load PDF fonts');
+    // The vfs_fonts module exports the font files directly
+    // We need to use the whole module as vfs (excluding 'default' key)
+    const vfs: any = {};
+    for (const key in pdfFontsModule) {
+      if (key !== 'default') {
+        vfs[key] = pdfFontsModule[key];
+      }
     }
+
+    pdfMake.vfs = vfs;
+    console.log('[Receipt PDF] Loaded vfs with fonts:', Object.keys(vfs));
   }
   return pdfMake;
 }

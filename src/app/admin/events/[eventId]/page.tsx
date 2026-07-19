@@ -3456,7 +3456,10 @@ export default function EventDetailPage() {
                     })()}
 
                     {/* Payment Status & Actions - Moved AFTER Special Charges */}
-                    {attendee.registration.totalAmount > 0 && (
+                    {/* ✅ Show payment section if has totalAmount OR base fees - handles discounted-to-free cases */}
+                    {((attendee.registration.totalAmount ?? 0) > 0 ||
+                      (attendee.registration.eventFee ?? 0) > 0 ||
+                      (attendee.registration.roomFee ?? 0) > 0) && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="text-xs font-semibold text-gray-700">สถานะการชำระเงิน</h4>

@@ -72,7 +72,12 @@ export default function TestMessageModal({
 
     // Filter by role
     if (roleFilter !== 'all') {
-      filtered = filtered.filter(u => u.role === roleFilter);
+      if (roleFilter === 'event-team') {
+        // Filter for Event-Co or Event-Staff
+        filtered = filtered.filter(u => u.role === 'event-co' || u.role === 'event-staff');
+      } else {
+        filtered = filtered.filter(u => u.role === roleFilter);
+      }
     }
 
     // Filter by search query
@@ -156,6 +161,7 @@ export default function TestMessageModal({
                 <option value="all">ทั้งหมด</option>
                 <option value="admin">Admin</option>
                 <option value="member">Member</option>
+                <option value="event-team">Event Team (Event-Co + Event-Staff)</option>
                 <option value="guest">Guest</option>
               </select>
             </div>
@@ -195,9 +201,21 @@ export default function TestMessageModal({
                               ? 'bg-purple-100 text-purple-800'
                               : user.role === 'member'
                               ? 'bg-green-100 text-green-800'
+                              : user.role === 'event-co'
+                              ? 'bg-blue-100 text-blue-800'
+                              : user.role === 'event-staff'
+                              ? 'bg-cyan-100 text-cyan-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {user.role === 'admin' ? 'Admin' : user.role === 'member' ? 'Member' : 'Guest'}
+                            {user.role === 'admin'
+                              ? 'Admin'
+                              : user.role === 'member'
+                              ? 'Member'
+                              : user.role === 'event-co'
+                              ? 'Event-Co'
+                              : user.role === 'event-staff'
+                              ? 'Event-Staff'
+                              : 'Guest'}
                           </span>
                         </div>
                         <div className="mt-1 space-y-0.5">

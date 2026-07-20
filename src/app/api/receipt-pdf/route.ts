@@ -18,8 +18,12 @@ export async function GET() {
   });
 }
 
-// pdf-lib for generating PDF with Thai text support
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+// Puppeteer for HTML to PDF conversion with Thai font support
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
+
+// Remove pdf-lib imports - no longer needed
+// Using Puppeteer for better Thai language support
 
 export async function POST(request: NextRequest) {
   try {
@@ -267,179 +271,217 @@ export async function POST(request: NextRequest) {
     const eventEndFormatted = receiptData.eventEndDate ? formatThaiDate(receiptData.eventEndDate) : null;
     const eventDateDisplay = eventEndFormatted ? `${eventStartFormatted} - ${eventEndFormatted}` : eventStartFormatted;
 
-    // Create PDF document
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595, 842]); // A4 size
-    const { width, height } = page.getSize();
+    // Convert amount to Thai text
+    const { numberToThaiText } = await import('@/lib/thai-baht-text');
+    const amountText = numberToThaiText(receiptData.totalAmount);
 
-    // Use Helvetica for Thai text (will show as boxes but structure will be correct)
-    // Note: For proper Thai rendering, we'd need to embed a Thai font file
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    // Create HTML template with Google Fonts Sarabun for Thai text
+    const html = `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm;
+    }
 
-    const fontSize = 12;
-    const titleSize = 18;
-    const margin = 60;
-    let y = height - margin;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-    // Draw border
-    page.drawRectangle({
-      x: margin - 10,
-      y: margin - 10,
-      width: width - 2 * margin + 20,
-      height: height - 2 * margin + 20,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 2,
+    body {
+      font-family: 'Sarabun', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #000;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      border: 2px solid #000;
+      padding: 30px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 16px;
+      color: #666;
+    }
+
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+
+    .info-table td {
+      border: 1px solid #000;
+      padding: 10px 15px;
+      vertical-align: top;
+    }
+
+    .info-table td.label {
+      width: 200px;
+      font-weight: 700;
+      background-color: #f5f5f5;
+    }
+
+    .info-table td.value {
+      background-color: #fff;
+    }
+
+    .certification {
+      margin: 30px 0;
+      line-height: 2;
+    }
+
+    .certification p {
+      margin-bottom: 10px;
+    }
+
+    .underline {
+      text-decoration: underline;
+      font-weight: 700;
+    }
+
+    .signature-section {
+      margin-top: 50px;
+      text-align: right;
+    }
+
+    .signature-line {
+      display: inline-block;
+      margin-top: 20px;
+    }
+
+    .signature-line p {
+      margin: 5px 0;
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>ใบรับรองแทนใบเสร็จรับเงิน</h1>
+      <p>Receipt Certificate</p>
+    </div>
+
+    <!-- Information Table -->
+    <table class="info-table">
+      <tr>
+        <td class="label">ชื่อผู้จ่ายเงิน</td>
+        <td class="value">${receiptData.companyName}</td>
+      </tr>
+      <tr>
+        <td class="label">รายการจ่าย</td>
+        <td class="value">ค่าเข้าร่วมกิจกรรม ${receiptData.eventName}</td>
+      </tr>
+      <tr>
+        <td class="label">วันที่จ่าย</td>
+        <td class="value">${slipDateFormatted}</td>
+      </tr>
+      <tr>
+        <td class="label">จำนวนเงิน</td>
+        <td class="value">${receiptData.totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
+      </tr>
+      <tr>
+        <td class="label">จำนวนเงิน (ตัวอักษร)</td>
+        <td class="value">${amountText}</td>
+      </tr>
+      <tr>
+        <td class="label">วันที่จัดกิจกรรม</td>
+        <td class="value">${eventDateDisplay}</td>
+      </tr>
+    </table>
+
+    <!-- Certification Text -->
+    <div class="certification">
+      <p>
+        ข้าพเจ้า <span class="underline">${receiptData.memberName}</span> (ผู้เบิกจ่าย)
+        ตำแหน่ง <span class="underline">${receiptData.memberPosition}</span>
+      </p>
+      <p>
+        ขอรับรองว่า รายจ่ายข้างต้นนี้ไม่อาจเรียกเก็บใบเสร็จรับเงินจากผู้รับได้
+        และข้าพเจ้าได้จ่ายไปในงานของทางชมรมเอเจ้นท์คลับ โดยแท้
+      </p>
+      <p>
+        ตั้งแต่วันที่ <span class="underline">${eventDateDisplay}</span>
+      </p>
+    </div>
+
+    <!-- Signature Section -->
+    <div class="signature-section">
+      <div class="signature-line">
+        <p>(ลงชื่อ)...................................................</p>
+        <p>(${receiptData.memberName})</p>
+        <p>ผู้เบิกจ่าย</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>หมายเหตุ: ใบรับรองนี้ออกโดยระบบอัตโนมัติของชมรมเอเจ้นท์คลับ</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    console.log('[Receipt PDF] Generating PDF with Puppeteer + Chromium');
+
+    // Launch Puppeteer with Chromium for serverless environment
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true,
     });
 
-    // Title
-    const title = 'Receipt Certificate';
-    const titleWidth = fontBold.widthOfTextAtSize(title, titleSize);
-    page.drawText(title, {
-      x: width / 2 - titleWidth / 2,
-      y: y,
-      size: titleSize,
-      font: fontBold,
-      color: rgb(0, 0, 0),
-    });
-    y -= 40;
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'load' });
 
-    // Subtitle in Thai (will show as Latin transliteration)
-    const subtitle = 'Bairubrongaetanbaisercchrubreuengern';
-    const subtitleWidth = font.widthOfTextAtSize(subtitle, fontSize);
-    page.drawText(subtitle, {
-      x: width / 2 - subtitleWidth / 2,
-      y: y,
-      size: fontSize,
-      font: font,
-      color: rgb(0.3, 0.3, 0.3),
-    });
-    y -= 40;
-
-    // Draw table
-    const tableX = margin + 10;
-    const tableWidth = width - 2 * margin - 20;
-    const rowHeight = 30;
-    const labelWidth = 150;
-
-    // Helper function to draw table row
-    const drawRow = (label: string, value: string, yPos: number) => {
-      // Draw row border
-      page.drawRectangle({
-        x: tableX,
-        y: yPos - rowHeight,
-        width: tableWidth,
-        height: rowHeight,
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1,
-      });
-
-      // Draw divider line
-      page.drawLine({
-        start: { x: tableX + labelWidth, y: yPos },
-        end: { x: tableX + labelWidth, y: yPos - rowHeight },
-        color: rgb(0, 0, 0),
-        thickness: 1,
-      });
-
-      // Label
-      page.drawText(label, {
-        x: tableX + 10,
-        y: yPos - 18,
-        size: fontSize,
-        font: fontBold,
-      });
-
-      // Value
-      page.drawText(value, {
-        x: tableX + labelWidth + 10,
-        y: yPos - 18,
-        size: fontSize,
-        font: font,
-      });
-
-      return yPos - rowHeight;
-    };
-
-    // Company name
-    y = drawRow('Payer:', receiptData.companyName, y);
-
-    // Event name
-    y = drawRow('Event:', receiptData.eventName, y);
-
-    // Payment date
-    y = drawRow('Payment Date:', slipDateFormatted, y);
-
-    // Amount
-    y = drawRow('Amount:', `${receiptData.totalAmount.toLocaleString('th-TH')} Baht`, y);
-
-    // Event date
-    y = drawRow('Event Date:', eventDateDisplay, y);
-
-    y -= 30;
-
-    // Certification text
-    const certText = `I, ${receiptData.memberName}, ${receiptData.memberPosition},`;
-    page.drawText(certText, {
-      x: margin + 10,
-      y: y,
-      size: fontSize,
-      font: font,
-    });
-    y -= 20;
-
-    const certText2 = 'hereby certify that the above payment has been received in full.';
-    page.drawText(certText2, {
-      x: margin + 10,
-      y: y,
-      size: fontSize,
-      font: font,
-    });
-    y -= 60;
-
-    // Signature line
-    const sigX = width - margin - 200;
-    page.drawText('Signature: _______________________', {
-      x: sigX,
-      y: y,
-      size: fontSize,
-      font: font,
-    });
-    y -= 25;
-
-    page.drawText(`(${receiptData.memberName})`, {
-      x: sigX + 50,
-      y: y,
-      size: fontSize,
-      font: font,
-    });
-    y -= 20;
-
-    page.drawText('Payee', {
-      x: sigX + 80,
-      y: y,
-      size: fontSize - 2,
-      font: font,
+    // Generate PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '1cm',
+        right: '1cm',
+        bottom: '1cm',
+        left: '1cm',
+      },
     });
 
-    // Footer note
-    const footerText = 'This certificate is automatically generated by Agents Club system.';
-    const footerWidth = font.widthOfTextAtSize(footerText, fontSize - 2);
-    page.drawText(footerText, {
-      x: width / 2 - footerWidth / 2,
-      y: margin + 20,
-      size: fontSize - 2,
-      font: font,
-      color: rgb(0.5, 0.5, 0.5),
-    });
+    await browser.close();
 
-    // Serialize PDF to bytes
-    const pdfBytes = await pdfDoc.save();
-
-    console.log('[Receipt PDF] ✅ PDF generated successfully');
+    console.log('[Receipt PDF] ✅ PDF generated successfully with Thai text support');
 
     // Convert Uint8Array to Buffer for NextResponse
-    const buffer = Buffer.from(pdfBytes);
+    const buffer = Buffer.from(pdfBuffer);
 
     return new NextResponse(buffer, {
       status: 200,

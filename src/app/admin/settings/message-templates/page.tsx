@@ -34,6 +34,7 @@ export default function MessageTemplatesPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [testModalOpen, setTestModalOpen] = useState(false);
   const [testTemplateType, setTestTemplateType] = useState<MessageTemplateType | null>(null);
+  const [expandedTemplate, setExpandedTemplate] = useState<MessageTemplateType | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -137,6 +138,16 @@ export default function MessageTemplatesPage() {
     setEditingTemplate(null);
     setEditValue('');
     setShowPreview(false);
+  };
+
+  const toggleTemplate = (templateType: MessageTemplateType) => {
+    if (expandedTemplate === templateType) {
+      setExpandedTemplate(null);
+      setEditingTemplate(null);
+      setShowPreview(false);
+    } else {
+      setExpandedTemplate(templateType);
+    }
   };
 
   const handleOpenTestModal = (templateType: MessageTemplateType) => {
@@ -267,33 +278,48 @@ export default function MessageTemplatesPage() {
         </div>
 
         {/* Templates List */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {Object.keys(DEFAULT_TEMPLATES).map((key) => {
             const templateType = key as MessageTemplateType;
             const templateInfo = DEFAULT_TEMPLATES[templateType];
             const templateData = templates[key];
             const isEditing = editingTemplate === templateType;
             const isCustomized = !!templateData?.custom;
+            const isExpanded = expandedTemplate === templateType;
 
             return (
-              <div key={key} className="bg-white rounded-lg shadow-md overflow-hidden">
-                {/* Template Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4">
+              <div key={key} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+                {/* Template Header - Clickable to expand/collapse */}
+                <button
+                  onClick={() => toggleTemplate(templateType)}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 p-4 hover:from-blue-700 hover:to-blue-800 transition-colors"
+                >
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h2 className="text-lg font-bold text-white">{templateInfo.name}</h2>
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-3">
+                        <h2 className="text-lg font-bold text-white">{templateInfo.name}</h2>
+                        {isCustomized && (
+                          <span className="px-2 py-0.5 bg-yellow-500 text-white text-xs font-medium rounded-full">
+                            กำหนดเอง
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-blue-100 mt-1">{templateInfo.description}</p>
                     </div>
-                    {isCustomized && !isEditing && (
-                      <span className="px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-full">
-                        กำหนดเอง
-                      </span>
-                    )}
+                    <svg
+                      className={`w-6 h-6 text-white transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                </div>
+                </button>
 
-                {/* Template Body */}
-                <div className="p-6">
+                {/* Template Body - Collapsible */}
+                {isExpanded && (
+                  <div className="p-6 border-t border-gray-200">
                   {isEditing ? (
                     <div className="space-y-4">
                       <div>
@@ -412,7 +438,8 @@ export default function MessageTemplatesPage() {
                       </div>
                     </div>
                   )}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}

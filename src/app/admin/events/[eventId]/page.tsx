@@ -1982,9 +1982,8 @@ export default function EventDetailPage() {
       // Only show cancelled registrations
       if (!isCancelled) return false;
     } else if (filter === 'all') {
-      // 'all' filter should exclude cancelled by default
-      // (if you want to show cancelled in 'all', remove this condition)
-      // For now, keeping cancelled separate
+      // Exclude cancelled from 'all' filter
+      if (isCancelled) return false;
     }
 
     // Filter by payment status
@@ -2287,7 +2286,7 @@ export default function EventDetailPage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     filter === 'all'
                       ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                   }`}
                 >
                   ทั้งหมด ({eventData.attendees.length})
@@ -2297,7 +2296,7 @@ export default function EventDetailPage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     filter === 'confirmed'
                       ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                   }`}
                 >
                   ยืนยันแล้ว ({eventData.summary.confirmedCount})
@@ -2307,7 +2306,7 @@ export default function EventDetailPage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     filter === 'pending'
                       ? 'bg-orange-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                   }`}
                 >
                   รอดำเนินการ ({eventData.attendees.length - eventData.summary.confirmedCount})
@@ -2317,7 +2316,7 @@ export default function EventDetailPage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     filter === 'cancelled'
                       ? 'bg-red-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                   }`}
                 >
                   ยกเลิก ({eventData.attendees.filter(a => {
@@ -2337,7 +2336,7 @@ export default function EventDetailPage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     paymentFilter === 'all'
                       ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                   }`}
                 >
                   ทั้งหมด
@@ -2361,7 +2360,7 @@ export default function EventDetailPage() {
                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                           paymentFilter === status
                             ? getStatusBadgeClass(status).replace('bg-', 'bg-opacity-100 bg-').replace('text-', 'text-white border-2 border-')
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                         }`}
                       >
                         {status} ({count})
@@ -2586,6 +2585,17 @@ export default function EventDetailPage() {
                             {attendee.registration.paymentStatus}
                           </span>
                         )}
+
+                        {/* Cancelled Status badge */}
+                        {(() => {
+                          const status = String(attendee.registration.status || '').toLowerCase();
+                          const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
+                          return isCancelled ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                              ยกเลิก
+                            </span>
+                          ) : null;
+                        })()}
                       </div>
 
                       {/* Company info */}

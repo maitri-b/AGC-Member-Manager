@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb, adminStorage } from '@/lib/firebase-admin';
 import { getAllMembers } from '@/lib/google-sheets';
+import { sendPushMessage } from '@/lib/line-messaging';
 
 export async function POST(request: NextRequest) {
   try {
@@ -254,6 +255,38 @@ export async function POST(request: NextRequest) {
 
     console.log(`New membership application: ${applicationId} from ${applicationData.nickname} (${applicationData.companyNameEN})`);
     console.log(`Documents uploaded: license=${licenseDocumentUrl}, businessCard=${businessCardUrl}`);
+
+    // Send LINE notification to all admins
+    try {
+      const usersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
+      const adminUsers = usersSnapshot.docs
+        .map(doc => doc.data())
+        .filter(user => user.lineUserId); // Only users with LINE
+
+      const message = `📋 มีใบสมัครสมาชิกใหม่!\n\n` +
+        `ชื่อบริษัท: ${applicationData.companyNameTH}\n` +
+        `(${applicationData.companyNameEN})\n\n` +
+        `ชื่อผู้สมัคร: ${applicationData.nickname}\n` +
+        `ตำแหน่ง: ${applicationData.positionCompany}\n` +
+        `เลขใบอนุญาต: ${applicationData.licenseNumber}\n\n` +
+        `📞 ติดต่อ:\n` +
+        `Email: ${applicationData.email || '-'}\n` +
+        `โทร: ${applicationData.phone || '-'}\n` +
+        `มือถือ: ${applicationData.mobile || '-'}\n\n` +
+        `กรุณาตรวจสอบและอนุมัติใบสมัครที่หน้า Admin`;
+
+      // Send to all admins
+      const sendPromises = adminUsers.map((admin: any) =>
+        sendPushMessage(admin.lineUserId, [{ type: 'text', text: message }])
+          .catch(err => console.error(`Failed to send to admin ${admin.lineUserId}:`, err))
+      );
+
+      await Promise.all(sendPromises);
+      console.log(`Sent new application notification to ${adminUsers.length} admin(s)`);
+    } catch (notificationError) {
+      console.error('Error sending admin notifications:', notificationError);
+      // Don't fail the application submission if notification fails
+    }
 
     return NextResponse.json({
       success: true,

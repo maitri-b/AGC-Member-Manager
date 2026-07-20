@@ -42,6 +42,39 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Fetch current member data for comparison
+    for (const request of requests) {
+      const memberId = (request as { memberId?: string }).memberId;
+      if (memberId) {
+        try {
+          const memberData = await getMemberById(memberId);
+
+          if (memberData) {
+            // Add current member data for comparison
+            (request as Record<string, string>).currentCompanyName = memberData.companyNameEN || '';
+            (request as Record<string, string>).currentLicenseNumber = memberData.licenseNumber || '';
+            (request as Record<string, string>).currentLicenseDocumentUrl = memberData.licenseDocumentUrl || '';
+          } else {
+            // Member not found, set empty strings
+            (request as Record<string, string>).currentCompanyName = '';
+            (request as Record<string, string>).currentLicenseNumber = '';
+            (request as Record<string, string>).currentLicenseDocumentUrl = '';
+          }
+        } catch (error) {
+          // Error fetching member data, set empty strings
+          console.error(`Error fetching member data for request ${(request as { id?: string }).id}:`, error);
+          (request as Record<string, string>).currentCompanyName = '';
+          (request as Record<string, string>).currentLicenseNumber = '';
+          (request as Record<string, string>).currentLicenseDocumentUrl = '';
+        }
+      } else {
+        // No memberId, set empty strings
+        (request as Record<string, string>).currentCompanyName = '';
+        (request as Record<string, string>).currentLicenseNumber = '';
+        (request as Record<string, string>).currentLicenseDocumentUrl = '';
+      }
+    }
+
     // Filter by status in JavaScript
     if (status !== 'all') {
       requests = requests.filter(r => (r as { status?: string }).status === status);

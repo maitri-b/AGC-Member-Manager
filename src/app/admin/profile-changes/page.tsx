@@ -19,6 +19,9 @@ interface ChangeRequest {
   processedByName?: string;
   adminNote?: string;
   newLicenseDocumentUrl?: string; // ✅ NEW: License document URL
+  currentCompanyName?: string;
+  currentLicenseNumber?: string;
+  currentLicenseDocumentUrl?: string;
 }
 
 export default function AdminProfileChangesPage() {
@@ -281,11 +284,94 @@ export default function AdminProfileChangesPage() {
                     ))}
                   </div>
 
+                  {/* ✅ Current license information for comparison */}
+                  {request.newLicenseDocumentUrl && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-3">ข้อมูลใบอนุญาตปัจจุบัน (เพื่อเปรียบเทียบ)</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">บริษัท:</span>
+                          <p className="font-medium text-gray-900">{request.currentCompanyName || 'ไม่มีข้อมูล'}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">เลขที่ใบอนุญาต:</span>
+                          <p className="font-medium text-gray-900">{request.currentLicenseNumber || 'ไม่มีข้อมูล'}</p>
+                        </div>
+                      </div>
+
+                      {request.currentLicenseDocumentUrl && (
+                        <div className="mt-3">
+                          <span className="text-gray-600 text-sm block mb-2">ไฟล์ใบอนุญาตปัจจุบัน:</span>
+                          <div className="relative group inline-block">
+                            {(() => {
+                              const url = request.currentLicenseDocumentUrl!;
+                              const isPDF = url.toLowerCase().includes('.pdf') || url.includes('application/pdf');
+
+                              if (isPDF) {
+                                return (
+                                  <div
+                                    className="w-48 h-32 bg-blue-100 border-2 border-blue-300 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-blue-200 transition-colors"
+                                    onClick={() => window.open(url, '_blank')}
+                                  >
+                                    <svg className="w-16 h-16 text-blue-600 mb-2" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                                      <path fill="#fff" d="M14 2v6h6" />
+                                      <text x="50%" y="60%" textAnchor="middle" fill="#fff" fontSize="6" fontWeight="bold">PDF</text>
+                                    </svg>
+                                    <span className="text-xs text-blue-700 font-medium">คลิกเพื่อดู PDF</span>
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <>
+                                    <img
+                                      src={url}
+                                      alt="Current License Document"
+                                      className="w-48 h-32 object-cover rounded border border-blue-300 cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => {
+                                        setLightboxImage(url);
+                                        setLightboxOpen(true);
+                                      }}
+                                    />
+                                    <div
+                                      className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
+                                      onClick={() => {
+                                        setLightboxImage(url);
+                                        setLightboxOpen(true);
+                                      }}>
+                                      <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                      </svg>
+                                    </div>
+                                    <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-medium">
+                                      รูปภาพ
+                                    </div>
+                                  </>
+                                );
+                              }
+                            })()}
+                          </div>
+                          <a
+                            href={request.currentLicenseDocumentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1 inline-flex"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            เปิดในแท็บใหม่
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* ✅ NEW: Display new license document if uploaded */}
                   {request.newLicenseDocumentUrl && (
                     <div className="mt-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">ใบอนุญาตใหม่ที่อัพโหลด:</h4>
-                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-amber-900 mb-2">ใบอนุญาตใหม่ที่ขอเปลี่ยน:</h4>
+                      <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
                         <div className="relative group inline-block">
                           {(() => {
                             const url = request.newLicenseDocumentUrl!;
@@ -295,15 +381,15 @@ export default function AdminProfileChangesPage() {
                               // PDF Icon
                               return (
                                 <div
-                                  className="w-48 h-32 bg-red-50 border-2 border-red-200 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-colors"
+                                  className="w-48 h-32 bg-amber-100 border-2 border-amber-300 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-amber-200 transition-colors"
                                   onClick={() => window.open(url, '_blank')}
                                 >
-                                  <svg className="w-16 h-16 text-red-600 mb-2" fill="currentColor" viewBox="0 0 24 24">
+                                  <svg className="w-16 h-16 text-amber-600 mb-2" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
                                     <path fill="#fff" d="M14 2v6h6" />
                                     <text x="50%" y="60%" textAnchor="middle" fill="#fff" fontSize="6" fontWeight="bold">PDF</text>
                                   </svg>
-                                  <span className="text-xs text-red-700 font-medium">คลิกเพื่อดู PDF</span>
+                                  <span className="text-xs text-amber-700 font-medium">คลิกเพื่อดู PDF</span>
                                 </div>
                               );
                             } else {
@@ -313,7 +399,7 @@ export default function AdminProfileChangesPage() {
                                   <img
                                     src={url}
                                     alt="New License Document"
-                                    className="w-48 h-32 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                    className="w-48 h-32 object-cover rounded border border-amber-300 cursor-pointer hover:opacity-90 transition-opacity"
                                     onClick={() => {
                                       setLightboxImage(url);
                                       setLightboxOpen(true);
@@ -330,8 +416,8 @@ export default function AdminProfileChangesPage() {
                                     </svg>
                                   </div>
                                   {/* Image badge */}
-                                  <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-medium">
-                                    รูปภาพ
+                                  <div className="absolute top-2 right-2 bg-amber-500 text-white px-2 py-0.5 rounded text-xs font-medium">
+                                    ใหม่
                                   </div>
                                 </>
                               );

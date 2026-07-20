@@ -454,6 +454,23 @@ export async function POST(request: NextRequest) {
 
     console.log('[Receipt PDF] Generating PDF with Puppeteer + Chromium');
 
+    // Get Chromium executable path - handles both local and serverless
+    let executablePath: string;
+    if (process.env.CHROME_EXECUTABLE_PATH) {
+      executablePath = process.env.CHROME_EXECUTABLE_PATH;
+    } else if (process.env.AWS_EXECUTION_ENV || process.env.VERCEL) {
+      executablePath = await chromium.executablePath();
+    } else {
+      // Local development - use system Chrome
+      executablePath = process.platform === 'win32'
+        ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+        : process.platform === 'darwin'
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        : '/usr/bin/google-chrome';
+    }
+
+    console.log('[Receipt PDF] Using Chrome executable:', executablePath);
+
     // Launch Puppeteer with Chromium for serverless environment
     const browser = await puppeteer.launch({
       args: [
@@ -465,7 +482,7 @@ export async function POST(request: NextRequest) {
         '--single-process',
         '--no-zygote',
       ],
-      executablePath: await chromium.executablePath(),
+      executablePath,
       headless: true,
     });
 

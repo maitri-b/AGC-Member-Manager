@@ -500,6 +500,56 @@ export default function MemberDetailPage() {
                 <dd className="text-gray-900">{formatThaiDate(member.licenseExpiry)}</dd>
               </div>
             </dl>
+
+            {/* License Document Display */}
+            {member.licenseDocumentUrl && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">ไฟล์ใบอนุญาต</label>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div className="relative group inline-block">
+                    {(() => {
+                      const url = member.licenseDocumentUrl;
+                      const isPDF = url.toLowerCase().includes('.pdf') || url.includes('application/pdf');
+
+                      if (isPDF) {
+                        return (
+                          <div
+                            className="w-32 h-24 bg-red-50 border-2 border-red-200 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-colors"
+                            onClick={() => window.open(url, '_blank')}
+                          >
+                            <svg className="w-12 h-12 text-red-600 mb-1" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                              <path fill="#fff" d="M14 2v6h6" />
+                            </svg>
+                            <span className="text-xs text-red-700 font-medium">PDF</span>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <img
+                            src={url}
+                            alt="License Document"
+                            className="w-32 h-24 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(url, '_blank')}
+                          />
+                        );
+                      }
+                    })()}
+                  </div>
+                  <a
+                    href={member.licenseDocumentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1 inline-flex"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    เปิดในแท็บใหม่
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

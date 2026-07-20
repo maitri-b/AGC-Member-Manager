@@ -721,58 +721,56 @@ export default function ProfilePage() {
                           <dt className="text-sm text-gray-500">วันหมดอายุใบอนุญาต</dt>
                           <dd className="text-gray-900">{formatLicenseDate(member.licenseExpiry)}</dd>
                         </div>
-                        {/* ✅ NEW: Display license document if available */}
-                        {licenseDocumentUrl && (() => {
-                          const isPDF = licenseDocumentUrl.toLowerCase().endsWith('.pdf');
-
-                          return (
-                            <div>
-                              <dt className="text-sm text-gray-500 mb-2">เอกสารใบอนุญาต</dt>
-                              <dd>
-                                <a
-                                  href={licenseDocumentUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={`inline-flex flex-col items-center justify-center w-40 h-24 rounded border transition-colors ${
-                                    isPDF
-                                      ? 'bg-red-50 border-red-200 hover:bg-red-100'
-                                      : 'bg-blue-50 border-blue-200 hover:bg-blue-100'
-                                  }`}
-                                >
-                                  {isPDF ? (
-                                    // PDF Icon
-                                    <>
-                                      <svg className="w-12 h-12 text-red-600 mb-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M4 18h12a2 2 0 002-2V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H7a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2zm2-14h8v2H6V4z" />
-                                      </svg>
-                                      <span className="text-xs font-medium text-red-700">PDF</span>
-                                    </>
-                                  ) : (
-                                    // Image Icon
-                                    <>
-                                      <svg className="w-12 h-12 text-blue-600 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                      </svg>
-                                      <span className="text-xs font-medium text-blue-700">Image</span>
-                                    </>
-                                  )}
-                                </a>
-                                <a
-                                  href={licenseDocumentUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1 inline-flex"
-                                >
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                  </svg>
-                                  เปิดในแท็บใหม่
-                                </a>
-                              </dd>
-                            </div>
-                          );
-                        })()}
                       </dl>
+                      {/* License Document Display */}
+                      {member?.licenseDocumentUrl && (
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">ไฟล์ใบอนุญาตปัจจุบัน</label>
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <div className="relative group inline-block">
+                              {(() => {
+                                const url = member.licenseDocumentUrl;
+                                const isPDF = url.toLowerCase().includes('.pdf') || url.includes('application/pdf');
+
+                                if (isPDF) {
+                                  return (
+                                    <div
+                                      className="w-32 h-24 bg-red-50 border-2 border-red-200 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-colors"
+                                      onClick={() => window.open(url, '_blank')}
+                                    >
+                                      <svg className="w-12 h-12 text-red-600 mb-1" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                                        <path fill="#fff" d="M14 2v6h6" />
+                                      </svg>
+                                      <span className="text-xs text-red-700 font-medium">PDF</span>
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <img
+                                      src={url}
+                                      alt="License Document"
+                                      className="w-32 h-24 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => window.open(url, '_blank')}
+                                    />
+                                  );
+                                }
+                              })()}
+                            </div>
+                            <a
+                              href={member.licenseDocumentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1 inline-flex"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                              เปิดในแท็บใหม่
+                            </a>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

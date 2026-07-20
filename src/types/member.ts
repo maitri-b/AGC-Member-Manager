@@ -26,6 +26,7 @@ export interface Member {
   // License Info (ใบอนุญาตนำเที่ยว)
   licenseNumber: string; // ใบอนุญาตนำเที่ยวเลขที่
   licenseExpiry: string; // วันหมดอายุใบอนุญาต (Column S - mm/dd/yyyy ค.ศ.)
+  licenseDocumentUrl?: string; // URL ไฟล์ใบอนุญาต
 
   // Position
   positionCompany: string; // ตำแหน่งในบริษัท
@@ -119,6 +120,7 @@ export const SHEET_COLUMN_MAP: Record<keyof Member, string> = {
   website: 'เว็บไซต์',
   email: 'อีเมล',
   licenseExpiry: 'วันหมดอายุใบอนุญาต', // Column S - mm/dd/yyyy (ค.ศ.)
+  licenseDocumentUrl: 'ไฟล์ใบอนุญาต',
   positionCompany: 'ตำแหน่งในบริษัท',
   sponsor1: 'ผู้รับรองสมาชิก ท่านที่ 1',
   sponsor2: 'ผู้รับรองสมาชิก ท่านที่ 2',

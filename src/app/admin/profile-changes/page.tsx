@@ -287,25 +287,56 @@ export default function AdminProfileChangesPage() {
                       <h4 className="text-sm font-medium text-gray-700 mb-2">ใบอนุญาตใหม่ที่อัพโหลด:</h4>
                       <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                         <div className="relative group inline-block">
-                          <img
-                            src={request.newLicenseDocumentUrl}
-                            alt="New License Document"
-                            className="w-48 h-32 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => {
-                              setLightboxImage(request.newLicenseDocumentUrl!);
-                              setLightboxOpen(true);
-                            }}
-                          />
-                          <div
-                            className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
-                            onClick={() => {
-                              setLightboxImage(request.newLicenseDocumentUrl!);
-                              setLightboxOpen(true);
-                            }}>
-                            <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                            </svg>
-                          </div>
+                          {(() => {
+                            const url = request.newLicenseDocumentUrl!;
+                            const isPDF = url.toLowerCase().includes('.pdf') || url.includes('application/pdf');
+
+                            if (isPDF) {
+                              // PDF Icon
+                              return (
+                                <div
+                                  className="w-48 h-32 bg-red-50 border-2 border-red-200 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-colors"
+                                  onClick={() => window.open(url, '_blank')}
+                                >
+                                  <svg className="w-16 h-16 text-red-600 mb-2" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                                    <path fill="#fff" d="M14 2v6h6" />
+                                    <text x="50%" y="60%" textAnchor="middle" fill="#fff" fontSize="6" fontWeight="bold">PDF</text>
+                                  </svg>
+                                  <span className="text-xs text-red-700 font-medium">คลิกเพื่อดู PDF</span>
+                                </div>
+                              );
+                            } else {
+                              // Image thumbnail
+                              return (
+                                <>
+                                  <img
+                                    src={url}
+                                    alt="New License Document"
+                                    className="w-48 h-32 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => {
+                                      setLightboxImage(url);
+                                      setLightboxOpen(true);
+                                    }}
+                                  />
+                                  <div
+                                    className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded flex items-center justify-center cursor-pointer"
+                                    onClick={() => {
+                                      setLightboxImage(url);
+                                      setLightboxOpen(true);
+                                    }}>
+                                    <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                    </svg>
+                                  </div>
+                                  {/* Image badge */}
+                                  <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-medium">
+                                    รูปภาพ
+                                  </div>
+                                </>
+                              );
+                            }
+                          })()}
                         </div>
                         <a
                           href={request.newLicenseDocumentUrl}

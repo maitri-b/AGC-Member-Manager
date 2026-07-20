@@ -99,6 +99,11 @@ export async function PUT(request: NextRequest) {
         updates[field] = values.newValue;
       }
 
+      // ✅ If new license document uploaded, add to updates
+      if (changeRequest.newLicenseDocumentUrl) {
+        updates['licenseDocumentUrl'] = changeRequest.newLicenseDocumentUrl;
+      }
+
       // Update Google Sheet
       const updateSuccess = await updateMember(changeRequest.memberId, updates);
 

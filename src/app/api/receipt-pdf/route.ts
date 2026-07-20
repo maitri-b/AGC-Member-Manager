@@ -20,7 +20,7 @@ export async function GET() {
 
 // Puppeteer for HTML to PDF conversion with Thai font support
 import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+import chromium from '@sparticuz/chromium-min';
 
 // Remove pdf-lib imports - no longer needed
 // Using Puppeteer for better Thai language support
@@ -456,7 +456,15 @@ export async function POST(request: NextRequest) {
 
     // Launch Puppeteer with Chromium for serverless environment
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [
+        ...chromium.args,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote',
+      ],
       executablePath: await chromium.executablePath(),
       headless: true,
     });

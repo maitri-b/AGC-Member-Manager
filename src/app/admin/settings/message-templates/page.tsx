@@ -6,10 +6,21 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { DEFAULT_TEMPLATES, MessageTemplateType, MessageTemplate } from '@/lib/message-templates';
+import TestMessageModal from '@/components/admin/TestMessageModal';
 
 interface TemplateData {
   default: string;
   custom?: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  lineUserId: string;
+  lineDisplayName?: string;
+  role: string;
+  memberId?: string;
+  companyNameEN?: string;
 }
 
 export default function MessageTemplatesPage() {
@@ -21,6 +32,8 @@ export default function MessageTemplatesPage() {
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplateType | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [testTemplateType, setTestTemplateType] = useState<MessageTemplateType | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -126,6 +139,38 @@ export default function MessageTemplatesPage() {
     setShowPreview(false);
   };
 
+  const handleOpenTestModal = (templateType: MessageTemplateType) => {
+    setTestTemplateType(templateType);
+    setTestModalOpen(true);
+  };
+
+  const handleSendTestMessage = async (lineUserId: string, userData: User) => {
+    if (!testTemplateType) return;
+
+    try {
+      const response = await fetch('/api/admin/settings/message-templates/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateType: testTemplateType,
+          lineUserId,
+          userData,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send test message');
+      }
+
+      toast.success(`ส่งข้อความทดสอบให้ ${userData.lineDisplayName || userData.name} เรียบร้อย`);
+    } catch (error) {
+      console.error('Error sending test message:', error);
+      toast.error(error instanceof Error ? error.message : 'ไม่สามารถส่งข้อความทดสอบได้');
+      throw error;
+    }
+  };
+
   const renderPreview = (template: string) => {
     // Replace variables with example data
     const previewText = template
@@ -136,7 +181,14 @@ export default function MessageTemplatesPage() {
       .replace(/\{\{paymentTypeLabel\}\}/g, 'มัดจำ')
       .replace(/\{\{daysOverdue\}\}/g, '2')
       .replace(/\{\{registrationId\}\}/g, 'REG-2024-001')
-      .replace(/\{\{eventLink\}\}/g, 'https://agc-member-manager.vercel.app/events/event123');
+      .replace(/\{\{eventLink\}\}/g, 'https://agc-member-manager.vercel.app/events/event123')
+      .replace(/\{\{memberId\}\}/g, 'M-2024-001')
+      .replace(/\{\{fullName\}\}/g, 'สมชาย ใจดี')
+      .replace(/\{\{companyName\}\}/g, 'ABC Company Limited')
+      .replace(/\{\{memberStatus\}\}/g, 'Active Member')
+      .replace(/\{\{profileLink\}\}/g, 'https://agc-member-manager.vercel.app/profile')
+      .replace(/\{\{rejectionReason\}\}/g, 'ข้อมูลยังไม่ครบถ้วน')
+      .replace(/\{\{lineOfficialAccount\}\}/g, 'https://lin.ee/nzAjXXq');
 
     return previewText;
   };
@@ -193,12 +245,23 @@ export default function MessageTemplatesPage() {
             </svg>
             <div className="text-sm text-blue-800">
               <p className="font-semibold mb-1">เกี่ยวกับ Message Templates:</p>
-              <p>
-                คุณสามารถปรับแต่งข้อความแจ้งเตือนที่ส่งผ่าน LINE ได้ตามต้องการ โดยใช้ตัวแปรเหล่านี้:
-                <code className="ml-2 px-2 py-1 bg-white rounded text-xs">
-                  {'{{memberName}}'} {'{{eventName}}'} {'{{amountText}}'} {'{{deadlineText}}'} {'{{eventLink}}'} {'{{registrationId}}'}
-                </code>
+              <p className="mb-2">
+                คุณสามารถปรับแต่งข้อความแจ้งเตือนที่ส่งผ่าน LINE ได้ตามต้องการ โดยใช้ตัวแปรต่างๆ แล้วแต่ประเภทข้อความ
               </p>
+              <div className="space-y-1">
+                <p className="text-xs">
+                  <strong>สำหรับข้อความชำระเงิน:</strong>
+                  <code className="ml-2 px-1.5 py-0.5 bg-white rounded text-xs">
+                    {'{{memberName}}'} {'{{eventName}}'} {'{{amountText}}'} {'{{deadlineText}}'} {'{{eventLink}}'} {'{{registrationId}}'}
+                  </code>
+                </p>
+                <p className="text-xs">
+                  <strong>สำหรับข้อความสมัครสมาชิก:</strong>
+                  <code className="ml-2 px-1.5 py-0.5 bg-white rounded text-xs">
+                    {'{{memberName}}'} {'{{memberId}}'} {'{{fullName}}'} {'{{companyName}}'} {'{{memberStatus}}'} {'{{profileLink}}'} {'{{rejectionReason}}'}
+                  </code>
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -328,6 +391,15 @@ export default function MessageTemplatesPage() {
                           </svg>
                           <span>แก้ไข</span>
                         </button>
+                        <button
+                          onClick={() => handleOpenTestModal(templateType)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                          <span>ทดสอบส่ง</span>
+                        </button>
                         {isCustomized && (
                           <button
                             onClick={() => handleReset(templateType)}
@@ -346,6 +418,17 @@ export default function MessageTemplatesPage() {
           })}
         </div>
       </main>
+
+      {/* Test Message Modal */}
+      {testTemplateType && (
+        <TestMessageModal
+          isOpen={testModalOpen}
+          onClose={() => setTestModalOpen(false)}
+          templateType={testTemplateType}
+          templateName={DEFAULT_TEMPLATES[testTemplateType].name}
+          onSendTest={handleSendTestMessage}
+        />
+      )}
     </div>
   );
 }

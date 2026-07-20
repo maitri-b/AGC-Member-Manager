@@ -1986,8 +1986,10 @@ export default function EventDetailPage() {
       if (isCancelled) return false;
     }
 
-    // Filter by payment status
+    // Filter by payment status - exclude cancelled registrations from payment filters
     if (paymentFilter !== 'all') {
+      // Cancelled registrations should NOT appear in any payment filter
+      if (isCancelled) return false;
       if (attendee.registration.paymentStatus !== paymentFilter) return false;
     }
 
@@ -2342,17 +2344,23 @@ export default function EventDetailPage() {
                   ทั้งหมด
                 </button>
                 {(() => {
-                  // Get unique payment statuses from attendees
+                  // Get unique payment statuses from attendees (exclude cancelled registrations)
+                  const nonCancelledAttendees = eventData.attendees.filter(a => {
+                    const status = String(a.registration.status || '').toLowerCase();
+                    const isCancelled = status === 'cancelled' || a.registration.status?.includes('ยกเลิก');
+                    return !isCancelled;
+                  });
+
                   const paymentStatuses = Array.from(
                     new Set(
-                      eventData.attendees
+                      nonCancelledAttendees
                         .map(a => a.registration.paymentStatus)
                         .filter(Boolean)
                     )
                   ).sort();
 
                   return paymentStatuses.map(status => {
-                    const count = eventData.attendees.filter(a => a.registration.paymentStatus === status).length;
+                    const count = nonCancelledAttendees.filter(a => a.registration.paymentStatus === status).length;
                     return (
                       <button
                         key={status}

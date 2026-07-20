@@ -1641,14 +1641,14 @@ export default function AdminEventsPage() {
                       {/* Dynamic attendee types list */}
                       <div className="space-y-3">
                         {formData.attendeeTypes?.map((type, index) => (
-                          <div key={type.typeId} className="flex items-center gap-3 bg-white p-3 rounded border">
+                          <div key={type.typeId} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded border">
                             <button
                               type="button"
                               onClick={() => {
                                 const newTypes = formData.attendeeTypes.filter(at => at.typeId !== type.typeId);
                                 setFormData({ ...formData, attendeeTypes: newTypes });
                               }}
-                              className="text-red-500 hover:text-red-700"
+                              className="text-red-500 hover:text-red-700 self-start sm:self-center"
                               title="ลบประเภทนี้"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1665,7 +1665,7 @@ export default function AdminEventsPage() {
                                 newTypes[index].typeName = e.target.value;
                                 setFormData({ ...formData, attendeeTypes: newTypes });
                               }}
-                              className="flex-1 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
+                              className="w-full sm:flex-1 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
                             />
 
                             <div className="flex items-center gap-2">
@@ -1734,14 +1734,14 @@ export default function AdminEventsPage() {
                     {formData.roomTypes?.map((room, index) => (
                       <div key={room.typeId} className="bg-white p-3 rounded border space-y-2">
                         {/* First row: Main info */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                           <button
                             type="button"
                             onClick={() => {
                               const newRooms = formData.roomTypes.filter(rt => rt.typeId !== room.typeId);
                               setFormData({ ...formData, roomTypes: newRooms });
                             }}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-red-500 hover:text-red-700 self-start sm:self-center"
                             title="ลบประเภทห้องนี้"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1758,7 +1758,7 @@ export default function AdminEventsPage() {
                               newRooms[index].typeName = e.target.value;
                               setFormData({ ...formData, roomTypes: newRooms });
                             }}
-                            className="w-40 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
+                            className="w-full sm:w-40 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
                           />
 
                           <div className="flex items-center gap-2">
@@ -1778,7 +1778,7 @@ export default function AdminEventsPage() {
                             <span className="text-sm text-gray-600">คน</span>
                           </div>
 
-                          <div className="flex items-center gap-2 ml-auto">
+                          <div className="flex items-center gap-2 sm:ml-auto">
                             <span className="text-sm text-gray-600">ราคาเพิ่ม:</span>
                             <input
                               type="number"
@@ -1797,7 +1797,7 @@ export default function AdminEventsPage() {
                         </div>
 
                         {/* Second row: Note field */}
-                        <div className="flex items-center gap-2 pl-8">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:pl-8">
                           <span className="text-xs text-gray-600">หมายเหตุ:</span>
                           <input
                             type="text"
@@ -1808,7 +1808,7 @@ export default function AdminEventsPage() {
                               newRooms[index].note = e.target.value;
                               setFormData({ ...formData, roomTypes: newRooms });
                             }}
-                            className="flex-1 px-3 py-1 border border-gray-300 rounded-md text-xs"
+                            className="w-full sm:flex-1 px-3 py-1 border border-gray-300 rounded-md text-xs"
                           />
                         </div>
                       </div>

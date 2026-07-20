@@ -527,6 +527,118 @@ Helping & Sharing`;
   ]);
 }
 
+// Send Membership Application Approved Notification
+export async function sendApplicationApprovedNotification(
+  lineUserId: string,
+  applicationData: {
+    memberName: string;
+    memberId: string;
+    fullName: string;
+    companyName: string;
+    memberStatus: string;
+  },
+  customTemplate?: string
+): Promise<boolean> {
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://agentsclub.vercel.app';
+  const profileLink = `${baseUrl}/profile`;
+
+  // Use custom template or default
+  const template = customTemplate || `🎉 ยินดีต้อนรับสู่ Agents Club!
+
+สวัสดีครับคุณ {{memberName}} 🙏
+
+ขอแสดงความยินดี! ใบสมัครสมาชิกของคุณได้รับการอนุมัติแล้ว
+
+👤 ข้อมูลสมาชิก
+• รหัสสมาชิก: {{memberId}}
+• ชื่อ: {{fullName}}
+• บริษัท: {{companyName}}
+
+✅ สถานะ: {{memberStatus}}
+
+📱 ขั้นตอนถัดไป
+1. ตรวจสอบข้อมูลสมาชิกของคุณ
+2. เข้ากลุ่ม LINE Agents Club (รอคำเชิญ)
+3. เริ่มเข้าร่วมกิจกรรมได้ทันที!
+
+🔗 ดูข้อมูลสมาชิกของคุณ: {{profileLink}}
+
+ขอบคุณที่เป็นส่วนหนึ่งของครอบครัว Agents Club
+Helping & Sharing 💚`;
+
+  // Replace variables
+  let message = template;
+  const variables: Record<string, string> = {
+    memberName: applicationData.memberName,
+    memberId: applicationData.memberId,
+    fullName: applicationData.fullName,
+    companyName: applicationData.companyName,
+    memberStatus: applicationData.memberStatus,
+    profileLink,
+  };
+
+  Object.entries(variables).forEach(([key, value]) => {
+    const placeholder = `{{${key}}}`;
+    message = message.replace(new RegExp(placeholder, 'g'), value);
+  });
+
+  return sendPushMessage(lineUserId, [
+    {
+      type: 'text',
+      text: message,
+    },
+  ]);
+}
+
+// Send Membership Application Rejected Notification
+export async function sendApplicationRejectedNotification(
+  lineUserId: string,
+  applicationData: {
+    memberName: string;
+    rejectionReason: string;
+  },
+  customTemplate?: string
+): Promise<boolean> {
+  const lineOfficialAccount = process.env.LINE_OFFICIAL_ACCOUNT_URL || 'https://lin.ee/nzAjXXq';
+
+  // Use custom template or default
+  const template = customTemplate || `📋 แจ้งผลการพิจารณาใบสมัครสมาชิก
+
+สวัสดีครับคุณ {{memberName}} 🙏
+
+ขออภัยค่ะ ใบสมัครสมาชิกของคุณยังไม่ได้รับการอนุมัติในครั้งนี้
+
+⚠️ เหตุผล:
+{{rejectionReason}}
+
+📞 ติดต่อสอบถาม
+หากมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม
+กรุณาติดต่อทีมงาน Agents Club
+LINE: {{lineOfficialAccount}}
+
+ขอบคุณที่สนใจเข้าร่วม Agents Club ค่ะ 🙏`;
+
+  // Replace variables
+  let message = template;
+  const variables: Record<string, string> = {
+    memberName: applicationData.memberName,
+    rejectionReason: applicationData.rejectionReason,
+    lineOfficialAccount,
+  };
+
+  Object.entries(variables).forEach(([key, value]) => {
+    const placeholder = `{{${key}}}`;
+    message = message.replace(new RegExp(placeholder, 'g'), value);
+  });
+
+  return sendPushMessage(lineUserId, [
+    {
+      type: 'text',
+      text: message,
+    },
+  ]);
+}
+
 // Send Event Registration Confirmation (Admin-Assisted Registration)
 export async function sendEventRegistrationConfirmationOnBehalf(
   lineUserId: string,

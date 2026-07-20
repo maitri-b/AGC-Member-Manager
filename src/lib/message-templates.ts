@@ -11,7 +11,9 @@ export type MessageTemplateType =
   | 'remaining_payment'    // แจ้งชำระยอดคงเหลือ
   | 'full_payment'         // แจ้งชำระเต็มจำนวน
   | 'deadline_warning'     // แจ้งเตือนใกล้ครบกำหนด
-  | 'overdue_notice';      // แจ้งเตือนพ้นกำหนด
+  | 'overdue_notice'       // แจ้งเตือนพ้นกำหนด
+  | 'application_approved' // แจ้งใบสมัครได้รับการอนุมัติ
+  | 'application_rejected';// แจ้งใบสมัครไม่ได้รับการอนุมัติ
 
 export interface MessageTemplate {
   id: MessageTemplateType;
@@ -128,6 +130,57 @@ export const DEFAULT_TEMPLATES: Record<MessageTemplateType, MessageTemplate> = {
 
 ขอบคุณครับ 😊`,
     variables: ['memberName', 'eventName', 'amountText', 'deadlineText', 'daysOverdue', 'eventLink', 'registrationId'],
+  },
+
+  application_approved: {
+    id: 'application_approved',
+    name: 'แจ้งใบสมัครได้รับการอนุมัติ',
+    description: 'ส่งแจ้งเมื่อใบสมัครสมาชิกได้รับการอนุมัติ',
+    template: `🎉 ยินดีต้อนรับสู่ Agents Club!
+
+สวัสดีครับคุณ {{memberName}} 🙏
+
+ขอแสดงความยินดี! ใบสมัครสมาชิกของคุณได้รับการอนุมัติแล้ว
+
+👤 ข้อมูลสมาชิก
+• รหัสสมาชิก: {{memberId}}
+• ชื่อ: {{fullName}}
+• บริษัท: {{companyName}}
+
+✅ สถานะ: {{memberStatus}}
+
+📱 ขั้นตอนถัดไป
+1. ตรวจสอบข้อมูลสมาชิกของคุณ
+2. เข้ากลุ่ม LINE Agents Club (รอคำเชิญ)
+3. เริ่มเข้าร่วมกิจกรรมได้ทันที!
+
+🔗 ดูข้อมูลสมาชิกของคุณ: {{profileLink}}
+
+ขอบคุณที่เป็นส่วนหนึ่งของครอบครัว Agents Club
+Helping & Sharing 💚`,
+    variables: ['memberName', 'memberId', 'fullName', 'companyName', 'memberStatus', 'profileLink'],
+  },
+
+  application_rejected: {
+    id: 'application_rejected',
+    name: 'แจ้งใบสมัครไม่ได้รับการอนุมัติ',
+    description: 'ส่งแจ้งเมื่อใบสมัครสมาชิกไม่ได้รับการอนุมัติ',
+    template: `📋 แจ้งผลการพิจารณาใบสมัครสมาชิก
+
+สวัสดีครับคุณ {{memberName}} 🙏
+
+ขออภัยค่ะ ใบสมัครสมาชิกของคุณยังไม่ได้รับการอนุมัติในครั้งนี้
+
+⚠️ เหตุผล:
+{{rejectionReason}}
+
+📞 ติดต่อสอบถาม
+หากมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม
+กรุณาติดต่อทีมงาน Agents Club
+LINE: {{lineOfficialAccount}}
+
+ขอบคุณที่สนใจเข้าร่วม Agents Club ค่ะ 🙏`,
+    variables: ['memberName', 'rejectionReason', 'lineOfficialAccount'],
   },
 };
 

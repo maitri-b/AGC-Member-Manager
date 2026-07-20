@@ -6,6 +6,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { addMember, getNextRunningMemberId } from '@/lib/google-sheets';
 import { Member } from '@/types/member';
+import { sendApplicationApprovedNotification, sendApplicationRejectedNotification } from '@/lib/line-messaging';
 
 // GET - List all membership applications
 export async function GET(request: NextRequest) {
@@ -274,6 +275,33 @@ export async function PUT(request: NextRequest) {
               console.error('Error creating user in Firestore:', firestoreError);
               // Don't fail the approval, just log the error
             }
+
+            // Send LINE notification for approved application
+            if (applicationData?.lineUserId && savedMemberId) {
+              try {
+                // Get custom template from settings if available
+                const settingsDoc = await db.collection('settings').doc('system').get();
+                const customTemplate = settingsDoc.exists
+                  ? settingsDoc.data()?.messageTemplates?.application_approved
+                  : undefined;
+
+                await sendApplicationApprovedNotification(
+                  applicationData.lineUserId,
+                  {
+                    memberName: applicationData.nickname || applicationData.companyNameTH || 'สมาชิก',
+                    memberId: savedMemberId,
+                    fullName: applicationData.companyNameTH || '', // This is actually fullName
+                    companyName: applicationData.companyNameEN || '',
+                    memberStatus: newMember.status || 'รอตรวจสอบ',
+                  },
+                  customTemplate
+                );
+                console.log(`Sent LINE notification to ${applicationData.lineUserId} for approved application`);
+              } catch (lineError) {
+                console.error('Error sending LINE notification:', lineError);
+                // Don't fail the approval if LINE notification fails
+              }
+            }
           } else {
             console.error(`Failed to save member to Google Sheet for application ${applicationId}`);
           }
@@ -287,6 +315,31 @@ export async function PUT(request: NextRequest) {
         updateData.rejectedByName = session.user.name || '';
         if (rejectionReason) {
           updateData.rejectionReason = rejectionReason;
+        }
+
+        // Send LINE notification for rejected application
+        const applicationData = doc.data();
+        if (applicationData?.lineUserId && rejectionReason) {
+          try {
+            // Get custom template from settings if available
+            const settingsDoc = await db.collection('settings').doc('system').get();
+            const customTemplate = settingsDoc.exists
+              ? settingsDoc.data()?.messageTemplates?.application_rejected
+              : undefined;
+
+            await sendApplicationRejectedNotification(
+              applicationData.lineUserId,
+              {
+                memberName: applicationData.nickname || applicationData.companyNameTH || 'สมาชิก',
+                rejectionReason,
+              },
+              customTemplate
+            );
+            console.log(`Sent LINE notification to ${applicationData.lineUserId} for rejected application`);
+          } catch (lineError) {
+            console.error('Error sending LINE notification:', lineError);
+            // Don't fail the rejection if LINE notification fails
+          }
         }
       }
     }

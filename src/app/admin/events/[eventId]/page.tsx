@@ -2311,7 +2311,13 @@ export default function EventDetailPage() {
                       : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                   }`}
                 >
-                  รอดำเนินการ ({eventData.attendees.length - eventData.summary.confirmedCount})
+                  รอดำเนินการ ({(() => {
+                    const cancelledCount = eventData.attendees.filter(a => {
+                      const status = String(a.registration.status || '').toLowerCase();
+                      return status === 'cancelled' || a.registration.status?.includes('ยกเลิก');
+                    }).length;
+                    return eventData.attendees.length - eventData.summary.confirmedCount - cancelledCount;
+                  })()})
                 </button>
                 <button
                   onClick={() => setFilter('cancelled')}
@@ -2474,6 +2480,9 @@ export default function EventDetailPage() {
 
                 const isExpanded = expandedRegistrations.has(attendee.registration.registrationId);
 
+                const status = String(attendee.registration.status || '').toLowerCase();
+                const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
+
                 return (
                 <div
                   key={attendee.registration.registrationId || index}
@@ -2595,15 +2604,11 @@ export default function EventDetailPage() {
                         )}
 
                         {/* Cancelled Status badge */}
-                        {(() => {
-                          const status = String(attendee.registration.status || '').toLowerCase();
-                          const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
-                          return isCancelled ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                              ยกเลิก
-                            </span>
-                          ) : null;
-                        })()}
+                        {isCancelled && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                            ยกเลิก
+                          </span>
+                        )}
                       </div>
 
                       {/* Company info */}
@@ -3574,7 +3579,7 @@ export default function EventDetailPage() {
                                         ชำระแล้ว {attendee.registration.depositPaidDate && `(${formatDeadline(attendee.registration.depositPaidDate)})`}
                                       </div>
                                       {/* Show delete button if no remaining amount or remaining not yet paid */}
-                                      {(!attendee.registration.remainingAmount || attendee.registration.remainingAmount === 0 || !attendee.registration.remainingSlipUrl) && (
+                                      {!isCancelled && (!attendee.registration.remainingAmount || attendee.registration.remainingAmount === 0 || !attendee.registration.remainingSlipUrl) && (
                                         <button
                                           onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                           className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
@@ -3592,13 +3597,15 @@ export default function EventDetailPage() {
                                       >
                                         📤 อัพโหลดสลิป
                                       </button>
-                                      <button
-                                        onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                        className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                        title="ลบการลงทะเบียน"
-                                      >
-                                        ❌ ลบการลงทะเบียน
-                                      </button>
+                                      {!isCancelled && (
+                                        <button
+                                          onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                          className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                          title="ลบการลงทะเบียน"
+                                        >
+                                          ❌ ลบการลงทะเบียน
+                                        </button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -3673,16 +3680,18 @@ export default function EventDetailPage() {
                                               >
                                                 📤 อัพโหลดสลิป
                                               </button>
-                                              <button
-                                                onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                                className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                                title="ลบการลงทะเบียน"
-                                              >
-                                                ❌ ลบการลงทะเบียน
-                                              </button>
+                                              {!isCancelled && (
+                                                <button
+                                                  onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                                  className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                                  title="ลบการลงทะเบียน"
+                                                >
+                                                  ❌ ลบการลงทะเบียน
+                                                </button>
+                                              )}
                                             </div>
                                           </div>
-                                        ) : (
+                                        ) : !isCancelled ? (
                                           <button
                                             onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
                                             className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
@@ -3690,7 +3699,7 @@ export default function EventDetailPage() {
                                           >
                                             ❌ ลบการลงทะเบียน
                                           </button>
-                                        )}
+                                        ) : null}
                                       </div>
                                     ) : (
                                       <div className="mt-2 flex gap-2">
@@ -3700,13 +3709,15 @@ export default function EventDetailPage() {
                                         >
                                           📤 อัพโหลดสลิป
                                         </button>
-                                        <button
-                                          onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                          className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                          title="ลบการลงทะเบียน"
-                                        >
-                                          ❌ ลบการลงทะเบียน
-                                        </button>
+                                        {!isCancelled && (
+                                          <button
+                                            onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                            className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                            title="ลบการลงทะเบียน"
+                                          >
+                                            ❌ ลบการลงทะเบียน
+                                          </button>
+                                        )}
                                       </div>
                                     )}
                                   </div>
@@ -3760,13 +3771,15 @@ export default function EventDetailPage() {
                                                 </svg>
                                                 ชำระครบแล้ว {attendee.registration.depositPaidDate && `(${formatDeadline(attendee.registration.depositPaidDate)})`}
                                               </div>
-                                              <button
-                                                onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                                className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                                title="ลบการลงทะเบียน"
-                                              >
-                                                ❌ ลบการลงทะเบียน
-                                              </button>
+                                              {!isCancelled && (
+                                                <button
+                                                  onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                                  className="w-full px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                                  title="ลบการลงทะเบียน"
+                                                >
+                                                  ❌ ลบการลงทะเบียน
+                                                </button>
+                                              )}
                                             </>
                                           ) : (
                                             <>
@@ -3792,13 +3805,15 @@ export default function EventDetailPage() {
                                                 >
                                                   📤 อัพโหลดสลิปเพิ่ม
                                                 </button>
-                                                <button
-                                                  onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                                  className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                                  title="ลบการลงทะเบียน"
-                                                >
-                                                  ❌ ลบการลงทะเบียน
-                                                </button>
+                                                {!isCancelled && (
+                                                  <button
+                                                    onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                                    className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                                    title="ลบการลงทะเบียน"
+                                                  >
+                                                    ❌ ลบการลงทะเบียน
+                                                  </button>
+                                                )}
                                               </div>
                                             </>
                                           )}
@@ -3811,13 +3826,15 @@ export default function EventDetailPage() {
                                           >
                                             📤 อัพโหลดสลิป
                                           </button>
-                                          <button
-                                            onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
-                                            className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
-                                            title="ลบการลงทะเบียน"
-                                          >
-                                            ❌ ลบการลงทะเบียน
-                                          </button>
+                                          {!isCancelled && (
+                                            <button
+                                              onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}
+                                              className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                                              title="ลบการลงทะเบียน"
+                                            >
+                                              ❌ ลบการลงทะเบียน
+                                            </button>
+                                          )}
                                         </div>
                                       )}
                                     </>
@@ -3836,7 +3853,7 @@ export default function EventDetailPage() {
                       )}
 
                     {/* Delete button for free events (no payment required) */}
-                    {(!attendee.registration.totalAmount || attendee.registration.totalAmount === 0) && (
+                    {!isCancelled && (!attendee.registration.totalAmount || attendee.registration.totalAmount === 0) && (
                       <div className="mt-3">
                         <button
                           onClick={() => handleOpenCancellationModal(attendee.registration.registrationId)}

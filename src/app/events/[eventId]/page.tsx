@@ -6,7 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Toast, useToast } from '@/components/Toast';
 import PaymentSlipUploadModal from '@/components/PaymentSlipUploadModal';
-import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
+// TEMP: Hidden until PDF generation is fixed on Vercel
+// import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier } from '@/types/event';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass, isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
@@ -211,8 +212,9 @@ export default function EventDetailPage() {
   // Registration form visibility state
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
 
+  // TEMP: Hidden until PDF generation is fixed on Vercel
   // Receipt certificate modal state
-  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  // const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   // Copy to clipboard helper
   const copyToClipboard = async (text: string, label: string) => {
@@ -1778,8 +1780,9 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
+                      {/* TEMP: Hidden until PDF generation is fixed on Vercel */}
                       {/* Download Receipt Certificate Button */}
-                      {userRegistration.paymentStatus === 'ชำระครบแล้ว' && (
+                      {/* {userRegistration.paymentStatus === 'ชำระครบแล้ว' && (
                         <div className="bg-white rounded-lg p-4 mb-4 border-2 border-green-200">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
@@ -1802,7 +1805,7 @@ export default function EventDetailPage() {
                             </button>
                           </div>
                         </div>
-                      )}
+                      )} */}
 
                       {/* 2.5. Additional Payment Required Notice - Moved here */}
                       {(() => {
@@ -3156,8 +3159,9 @@ export default function EventDetailPage() {
         />
       )}
 
+      {/* TEMP: Hidden until PDF generation is fixed on Vercel */}
       {/* Receipt Certificate Modal */}
-      {showReceiptModal && userRegistration && (
+      {/* {showReceiptModal && userRegistration && (
         <ReceiptCertificateModal
           isOpen={showReceiptModal}
           onClose={() => setShowReceiptModal(false)}
@@ -3168,7 +3172,7 @@ export default function EventDetailPage() {
             memberPosition: 'กรรมการผู้จัดการ',
           }}
         />
-      )}
+      )} */}
     </div>
   );
 }

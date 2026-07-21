@@ -21,13 +21,13 @@ export async function GET() {
     }
 
     const db = adminDb();
+    // Fetch all bank accounts (avoid composite index requirement)
     const accountsSnapshot = await db
       .collection('bankAccounts')
-      .orderBy('isDefault', 'desc')
-      .orderBy('createdAt', 'desc')
       .get();
 
-    const accounts: BankAccount[] = accountsSnapshot.docs.map(doc => {
+    // Map to array
+    let accounts: BankAccount[] = accountsSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -42,6 +42,18 @@ export async function GET() {
         createdBy: data.createdBy,
         updatedBy: data.updatedBy,
       };
+    });
+
+    // Sort in JavaScript: default first, then by createdAt descending
+    accounts.sort((a, b) => {
+      // First sort by isDefault (true first)
+      if (a.isDefault !== b.isDefault) {
+        return a.isDefault ? -1 : 1;
+      }
+      // Then sort by createdAt (newest first)
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA;
     });
 
     return NextResponse.json({ accounts });

@@ -123,11 +123,11 @@ export interface Event {
   eventId: string;                  // Unique event identifier (auto-generated or custom)
   eventName: string;                // ชื่อกิจกรรม
   eventNameEN: string;              // Event name in English
-  eventDate: string;                // วันที่เริ่มกิจกรรม (DD/MM/YYYY or year) - used as start date
-  eventEndDate?: string;            // วันที่สิ้นสุดกิจกรรม (DD/MM/YYYY) - optional, for multi-day events
+  eventDate: string;                // วันที่เริ่มกิจกรรม (YYYY-MM-DD or YYYY-MM-DDTHH:mm) - ISO 8601 format
+  eventEndDate?: string;            // วันที่สิ้นสุดกิจกรรม (YYYY-MM-DD or YYYY-MM-DDTHH:mm) - optional, for multi-day events
   location: string;                 // สถานที่จัดกิจกรรม
   description: string;              // รายละเอียด
-  sheetName: string;                // Google Sheet name for registration data
+  sheetName?: string;               // Google Sheet name for registration data (DEPRECATED - no longer used)
   year: number;                     // ปีของกิจกรรม (พ.ศ.)
   isActive: boolean;                // กิจกรรมที่กำลังดำเนินการ
   isPublished: boolean;             // แสดงในหน้าสมาชิก (เปิด/ปิด)
@@ -144,10 +144,13 @@ export interface Event {
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
   documentUrl?: string;             // Link download เอกสาร
   mainImageUrl?: string;            // Link รูป Main Image (header)
-  paymentBankName?: string;         // ชื่อธนาคาร
-  paymentAccountName?: string;      // ชื่อบัญชีธนาคาร
-  paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
-  paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
+  // Bank Account (New - replaces individual payment fields)
+  bankAccountId?: string;           // ID of bank account from bankAccounts collection (preferred method)
+  // Legacy payment fields (kept for backward compatibility)
+  paymentBankName?: string;         // ชื่อธนาคาร (DEPRECATED - use bankAccountId)
+  paymentAccountName?: string;      // ชื่อบัญชีธนาคาร (DEPRECATED - use bankAccountId)
+  paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร (DEPRECATED - use bankAccountId)
+  paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน (DEPRECATED - use bankAccountId)
   paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
   paymentSlipSubmissionUrl?: string; // URL สำหรับส่งหลักฐานการชำระเงิน (Google Form / ฟอร์มอื่นๆ)
   paymentSlipButtonText?: string;   // ข้อความปุ่มส่งหลักฐานการชำระเงิน (Default: "ส่งหลักฐานการชำระเงิน")
@@ -206,7 +209,7 @@ export interface EventInput {
   eventEndDate?: string;            // วันที่สิ้นสุดกิจกรรม (DD/MM/YYYY) - optional
   location: string;
   description: string;
-  sheetName: string;
+  sheetName?: string;               // DEPRECATED - no longer used with Firestore-only approach
   year: number;
   isActive: boolean;
   isPublished: boolean;             // แสดงในหน้าสมาชิก
@@ -223,10 +226,13 @@ export interface EventInput {
   documentName?: string;            // ชื่อเอกสารเพิ่มเติม
   documentUrl?: string;             // Link download เอกสาร
   mainImageUrl?: string;            // Link รูป Main Image (header)
-  paymentBankName?: string;         // ชื่อธนาคาร
-  paymentAccountName?: string;      // ชื่อบัญชีธนาคาร
-  paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร
-  paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน
+  // Bank Account (New - replaces individual payment fields)
+  bankAccountId?: string;           // ID of bank account from bankAccounts collection (preferred method)
+  // Legacy payment fields (kept for backward compatibility)
+  paymentBankName?: string;         // ชื่อธนาคาร (DEPRECATED - use bankAccountId)
+  paymentAccountName?: string;      // ชื่อบัญชีธนาคาร (DEPRECATED - use bankAccountId)
+  paymentAccountNumber?: string;    // เลขที่บัญชีธนาคาร (DEPRECATED - use bankAccountId)
+  paymentQrCodeUrl?: string;        // Link รูป QR Code สำหรับสแกนจ่ายเงิน (DEPRECATED - use bankAccountId)
   paymentTerms?: string;            // เงื่อนไขการชำระเงิน (รองรับ markdown/plain text)
   paymentSlipSubmissionUrl?: string; // URL สำหรับส่งหลักฐานการชำระเงิน (Google Form / ฟอร์มอื่นๆ)
   paymentSlipButtonText?: string;   // ข้อความปุ่มส่งหลักฐานการชำระเงิน (Default: "ส่งหลักฐานการชำระเงิน")

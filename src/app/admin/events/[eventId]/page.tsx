@@ -2437,13 +2437,48 @@ export default function EventDetailPage() {
 
                   return paymentStatuses.map(status => {
                     const count = nonCancelledAttendees.filter(a => a.registration.paymentStatus === status).length;
+
+                    // Get darker color for selected filter button
+                    const getFilterButtonClass = (status: string) => {
+                      // Success states - dark green
+                      if (status === 'ชำระครบแล้ว' || status === 'ชำระเต็มจำนวนแล้ว' || status.includes('ยืนยัน')) {
+                        return 'bg-green-600 text-white border-2 border-green-700';
+                      }
+                      // Overpayment - dark cyan
+                      if (status === 'ชำระเกินจำนวน') {
+                        return 'bg-cyan-600 text-white border-2 border-cyan-700';
+                      }
+                      // Pending verification - dark purple
+                      if (status === 'รอตรวจสอบสลิป' || status === 'รอตรวจสอบ' || status === 'รอตรวจสอบมัดจำ' || status === 'รอตรวจสอบยอดคงเหลือ') {
+                        return 'bg-purple-600 text-white border-2 border-purple-700';
+                      }
+                      // Rejected/Overdue - dark red
+                      if (status.includes('ปฏิเสธ') || status === 'พ้นกำหนด') {
+                        return 'bg-red-600 text-white border-2 border-red-700';
+                      }
+                      // Waiting for payment - dark yellow
+                      if (status === 'รอชำระมัดจำ' || status === 'รอชำระเงิน' || status === 'รอชำระเงินเพิ่มเติม') {
+                        return 'bg-yellow-600 text-white border-2 border-yellow-700';
+                      }
+                      // Partial payment - dark blue
+                      if (status === 'รอชำระยอดที่เหลือ') {
+                        return 'bg-blue-600 text-white border-2 border-blue-700';
+                      }
+                      // Additional payment pending - dark purple
+                      if (status === 'รอตรวจสอบเงินเพิ่มเติม') {
+                        return 'bg-purple-600 text-white border-2 border-purple-700';
+                      }
+                      // Default - dark gray
+                      return 'bg-gray-600 text-white border-2 border-gray-700';
+                    };
+
                     return (
                       <button
                         key={status}
                         onClick={() => setPaymentFilter(status)}
                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                           paymentFilter === status
-                            ? getStatusBadgeClass(status).replace('bg-', 'bg-opacity-100 bg-').replace('text-', 'text-white border-2 border-')
+                            ? getFilterButtonClass(status)
                             : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                         }`}
                       >

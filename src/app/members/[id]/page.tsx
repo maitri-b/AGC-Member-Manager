@@ -100,6 +100,8 @@ export default function MemberDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
+  const [licenseFilePreview, setLicenseFilePreview] = useState<string | null>(null);
 
   // Check if user can edit members
   const canEdit = session?.user?.permissions?.includes('admin:users') ||
@@ -139,7 +141,41 @@ export default function MemberDetailPage() {
       }
     });
     setEditData(data);
+    setLicenseFile(null);
+    setLicenseFilePreview(null);
     setShowEditModal(true);
+  };
+
+  // Handle license file selection
+  const handleLicenseFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('กรุณาเลือกไฟล์ประเภท JPG, PNG หรือ PDF เท่านั้น');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('ไฟล์มีขนาดใหญ่เกิน 5MB');
+        return;
+      }
+
+      setLicenseFile(file);
+
+      // Create preview
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLicenseFilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setLicenseFilePreview('pdf');
+      }
+    }
   };
 
   // Save edited data
@@ -154,6 +190,26 @@ export default function MemberDetailPage() {
           dataToSave[field.key] = toGoogleSheetFormat(dataToSave[field.key]);
         }
       });
+
+      // Upload license file if selected
+      if (licenseFile) {
+        const formData = new FormData();
+        formData.append('file', licenseFile);
+        formData.append('memberId', memberId);
+
+        const uploadResponse = await fetch('/api/members/upload-license', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          const uploadData = await uploadResponse.json();
+          throw new Error(uploadData.error || 'Failed to upload license file');
+        }
+
+        const uploadData = await uploadResponse.json();
+        dataToSave.licenseDocumentUrl = uploadData.url;
+      }
 
       const response = await fetch(`/api/members/${memberId}`, {
         method: 'PUT',
@@ -676,6 +732,102 @@ export default function MemberDetailPage() {
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* License Document Upload Section */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-2">ไฟล์ใบอนุญาต</label>
+
+                {/* Current license document */}
+                {member?.licenseDocumentUrl && !licenseFile && (
+                  <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const url = member.licenseDocumentUrl;
+                        const isPDF = url.toLowerCase().includes('.pdf') || url.includes('application/pdf');
+
+                        if (isPDF) {
+                          return (
+                            <div className="w-16 h-16 bg-red-50 border-2 border-red-200 rounded flex flex-col items-center justify-center flex-shrink-0">
+                              <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                                <path fill="#fff" d="M14 2v6h6" />
+                              </svg>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <img
+                              src={url}
+                              alt="License Document"
+                              className="w-16 h-16 object-cover rounded border border-gray-200 flex-shrink-0"
+                            />
+                          );
+                        }
+                      })()}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-600">ไฟล์ปัจจุบัน</p>
+                        <a
+                          href={member.licenseDocumentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline truncate block"
+                        >
+                          เปิดดูไฟล์
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* File upload */}
+                <div className="space-y-3">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,application/pdf"
+                    onChange={handleLicenseFileChange}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  <p className="text-xs text-gray-500">รองรับไฟล์ JPG, PNG หรือ PDF (ขนาดไม่เกิน 5MB)</p>
+
+                  {/* Preview new file */}
+                  {licenseFilePreview && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-3">
+                        {licenseFilePreview === 'pdf' ? (
+                          <div className="w-16 h-16 bg-red-50 border-2 border-red-200 rounded flex flex-col items-center justify-center flex-shrink-0">
+                            <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                              <path fill="#fff" d="M14 2v6h6" />
+                            </svg>
+                          </div>
+                        ) : (
+                          <img
+                            src={licenseFilePreview}
+                            alt="Preview"
+                            className="w-16 h-16 object-cover rounded border border-gray-200 flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">ไฟล์ใหม่ที่เลือก</p>
+                          <p className="text-xs text-gray-600 truncate">{licenseFile?.name}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLicenseFile(null);
+                            setLicenseFilePreview(null);
+                          }}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -9,6 +9,15 @@ export async function uploadFileToStorage(
   fileBuffer: Buffer,
   mimeType: string
 ): Promise<string> {
+  if (!BUCKET_NAME) {
+    throw new Error('Firebase Storage bucket name is not configured. Please set FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET environment variable.');
+  }
+
+  console.log(`[Firebase Storage] Uploading to bucket: ${BUCKET_NAME}`);
+  console.log(`[Firebase Storage] File path: ${filePath}`);
+  console.log(`[Firebase Storage] MIME type: ${mimeType}`);
+  console.log(`[Firebase Storage] Buffer size: ${fileBuffer.length} bytes`);
+
   const storage = adminStorage();
   const bucket = storage.bucket(BUCKET_NAME);
   const file = bucket.file(filePath);
@@ -20,8 +29,12 @@ export async function uploadFileToStorage(
     },
   });
 
+  console.log(`[Firebase Storage] File saved successfully: ${filePath}`);
+
   // Make the file publicly accessible
   await file.makePublic();
+
+  console.log(`[Firebase Storage] File made public: ${filePath}`);
 
   // Return the public URL
   const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${filePath}`;

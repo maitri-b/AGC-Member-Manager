@@ -193,6 +193,13 @@ export default function MemberDetailPage() {
 
       // Upload license file if selected
       if (licenseFile) {
+        console.log('[Upload] Starting file upload:', {
+          fileName: licenseFile.name,
+          fileType: licenseFile.type,
+          fileSize: licenseFile.size,
+          memberId: memberId,
+        });
+
         const formData = new FormData();
         formData.append('file', licenseFile);
         formData.append('memberId', memberId);
@@ -204,10 +211,12 @@ export default function MemberDetailPage() {
 
         if (!uploadResponse.ok) {
           const uploadData = await uploadResponse.json();
-          throw new Error(uploadData.error || 'Failed to upload license file');
+          console.error('[Upload] Upload failed:', uploadData);
+          throw new Error(uploadData.details || uploadData.error || 'Failed to upload license file');
         }
 
         const uploadData = await uploadResponse.json();
+        console.log('[Upload] Upload successful:', uploadData);
         dataToSave.licenseDocumentUrl = uploadData.url;
       }
 

@@ -10,6 +10,7 @@ export default function BankAccountsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
@@ -30,9 +31,10 @@ export default function BankAccountsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user && accounts.length === 0 && !loading) {
       fetchAccounts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   const fetchAccounts = async () => {
@@ -103,6 +105,7 @@ export default function BankAccountsPage() {
     }
 
     try {
+      setSaving(true);
       const url = '/api/admin/bank-accounts';
       const method = editingAccount ? 'PUT' : 'POST';
       const body = editingAccount
@@ -122,10 +125,12 @@ export default function BankAccountsPage() {
 
       showMessage('success', editingAccount ? 'บันทึกข้อมูลเรียบร้อย' : 'เพิ่มบัญชีใหม่เรียบร้อย');
       handleCloseModal();
-      fetchAccounts();
+      await fetchAccounts();
     } catch (error) {
       console.error('Error saving account:', error);
       showMessage('error', error instanceof Error ? error.message : 'ไม่สามารถบันทึกข้อมูลได้');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -379,15 +384,20 @@ export default function BankAccountsPage() {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  disabled={saving}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingAccount ? 'บันทึก' : 'เพิ่มบัญชี'}
+                  {saving && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  )}
+                  <span>{saving ? 'กำลังบันทึก...' : (editingAccount ? 'บันทึก' : 'เพิ่มบัญชี')}</span>
                 </button>
               </div>
             </form>

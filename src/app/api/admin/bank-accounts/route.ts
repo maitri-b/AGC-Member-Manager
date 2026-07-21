@@ -70,6 +70,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    console.log('[Bank Account POST] Session:', session?.user?.id);
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: BankAccountInput = await request.json();
+    console.log('[Bank Account POST] Body:', JSON.stringify(body));
 
     // Validation
     if (!body.bankName || !body.accountName || !body.accountNumber) {
@@ -108,11 +110,10 @@ export async function POST(request: NextRequest) {
 
     // Create new account
     const accountRef = db.collection('bankAccounts').doc();
-    const newAccount: Omit<BankAccount, 'id'> = {
+    const newAccount: any = {
       bankName: body.bankName.trim(),
       accountName: body.accountName.trim(),
       accountNumber: body.accountNumber.trim(),
-      qrCodeUrl: body.qrCodeUrl?.trim() || undefined,
       isActive: body.isActive ?? true,
       isDefault: body.isDefault ?? false,
       createdAt: new Date().toISOString(),
@@ -120,16 +121,24 @@ export async function POST(request: NextRequest) {
       createdBy: session.user.id,
     };
 
+    // Only add qrCodeUrl if it exists (Firestore doesn't allow undefined)
+    if (body.qrCodeUrl?.trim()) {
+      newAccount.qrCodeUrl = body.qrCodeUrl.trim();
+    }
+
+    console.log('[Bank Account POST] Creating account:', newAccount);
     await accountRef.set(newAccount);
+    console.log('[Bank Account POST] Account created successfully');
 
     return NextResponse.json({
       success: true,
       account: { id: accountRef.id, ...newAccount },
     });
   } catch (error) {
-    console.error('Error creating bank account:', error);
+    console.error('[Bank Account POST] Error creating bank account:', error);
+    console.error('[Bank Account POST] Error stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json(
-      { error: 'Failed to create bank account' },
+      { error: 'Failed to create bank account', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

@@ -338,7 +338,8 @@ export const authOptions: NextAuthOptions = {
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.sub!;
+        // Use lineUserId as the primary user ID (token.sub may be undefined in some cases)
+        session.user.id = (token.lineUserId || token.sub) as string;
         session.user.lineUserId = token.lineUserId;
         session.user.role = token.role;
         session.user.memberId = token.memberId;

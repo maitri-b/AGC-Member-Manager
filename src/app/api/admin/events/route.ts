@@ -93,7 +93,8 @@ export async function GET() {
         eventEndDate: data.eventEndDate || undefined,
         location: data.location || '',
         description: data.description || '',
-        sheetName: data.sheetName || '',
+        sheetName: data.sheetName || '',  // DEPRECATED - kept for backward compatibility
+        bankAccountId: data.bankAccountId || undefined,  // NEW - preferred method
         year: data.year || 0,
         isActive: data.isActive ?? true,
         isPublished: data.isPublished ?? false,
@@ -176,8 +177,9 @@ export async function POST(request: NextRequest) {
     const body: EventInput = await request.json();
 
     // Validate required fields
-    if (!body.eventName || !body.sheetName || !body.year) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    // Note: sheetName is now optional (deprecated), but kept for backward compatibility
+    if (!body.eventName || !body.year) {
+      return NextResponse.json({ error: 'Missing required fields: eventName, year' }, { status: 400 });
     }
 
     const db = adminDb();
@@ -199,7 +201,8 @@ export async function POST(request: NextRequest) {
       eventEndDate: body.eventEndDate || undefined,
       location: body.location || '',
       description: body.description || '',
-      sheetName: body.sheetName,
+      sheetName: body.sheetName || '',  // DEPRECATED - optional, kept for backward compatibility
+      bankAccountId: body.bankAccountId || undefined,  // NEW - preferred method
       year: body.year,
       isActive: body.isActive ?? true,
       isPublished: body.isPublished ?? false,

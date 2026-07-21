@@ -59,7 +59,10 @@
       "Bash(npx tsc --noEmit)",
       "Bash(git push)",
       "Bash(timeout 300 bash:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nImprove discount and special charge management with pending slips confirmation\n\nChanged the logic for adding/deleting discounts and special charges when pending payment slips exist. Instead of blocking the action with error messages, now shows a detailed confirmation dialog that allows admin to choose whether to proceed.\n\nChanges:\n- API routes now accept ignorePendingSlips parameter to bypass validation\n- Error responses include hasPendingSlips flag for frontend detection\n- Frontend handlers show confirm dialog with detailed explanation\n- Admin can choose to proceed or cancel when pending slips exist\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nImprove discount and special charge management with pending slips confirmation\n\nChanged the logic for adding/deleting discounts and special charges when pending payment slips exist. Instead of blocking the action with error messages, now shows a detailed confirmation dialog that allows admin to choose whether to proceed.\n\nChanges:\n- API routes now accept ignorePendingSlips parameter to bypass validation\n- Error responses include hasPendingSlips flag for frontend detection\n- Frontend handlers show confirm dialog with detailed explanation\n- Admin can choose to proceed or cancel when pending slips exist\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(while ! test -f \".next/BUILD_ID\")",
+      "Bash(do sleep 2)",
+      "Bash(done)"
     ]
   }
 }

@@ -114,6 +114,11 @@ export default function PromoteEventModal({
     }
   };
 
+  // Create set of registered member line user IDs for badge display
+  const registeredLineUserIds = useMemo(() => {
+    return new Set(registeredMembers.map(m => m.lineUserId));
+  }, [registeredMembers]);
+
   // Filter and sort members
   const filteredMembers = useMemo(() => {
     let filtered = [...members];
@@ -121,7 +126,6 @@ export default function PromoteEventModal({
     // Filter by message mode
     if (messageMode === 'custom') {
       // Custom mode: Only show registered members
-      const registeredLineUserIds = new Set(registeredMembers.map(m => m.lineUserId));
       filtered = filtered.filter(member => registeredLineUserIds.has(member.lineUserId || ''));
     }
     // Promote mode: Show all club members (default behavior)
@@ -152,7 +156,7 @@ export default function PromoteEventModal({
     });
 
     return filtered;
-  }, [members, searchTerm, messageMode, registeredMembers]);
+  }, [members, searchTerm, messageMode, registeredLineUserIds]);
 
   const handleToggleSelect = (lineUserId: string) => {
     setSelectedMemberIds((prev) => {
@@ -551,6 +555,12 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
                           {member.memberId && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                               ID: {member.memberId}
+                            </span>
+                          )}
+
+                          {registeredLineUserIds.has(member.lineUserId!) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                              📋 สมัครแล้ว
                             </span>
                           )}
 

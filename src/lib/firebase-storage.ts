@@ -22,22 +22,22 @@ export async function uploadFileToStorage(
   const bucket = storage.bucket(BUCKET_NAME);
   const file = bucket.file(filePath);
 
-  // Upload the file
+  // Upload the file (without makePublic to support uniform bucket-level access)
   await file.save(fileBuffer, {
     metadata: {
       contentType: mimeType,
+      cacheControl: 'public, max-age=31536000',
     },
   });
 
   console.log(`[Firebase Storage] File saved successfully: ${filePath}`);
 
-  // Make the file publicly accessible
-  await file.makePublic();
-
-  console.log(`[Firebase Storage] File made public: ${filePath}`);
-
-  // Return the public URL
+  // Generate public URL using the same format as apply page
+  // This format works with uniform bucket-level access (no makePublic needed)
   const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${filePath}`;
+
+  console.log(`[Firebase Storage] Public URL generated: ${publicUrl}`);
+
   return publicUrl;
 }
 

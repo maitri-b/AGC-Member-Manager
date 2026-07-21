@@ -1820,7 +1820,12 @@ export default function EventDetailPage() {
     });
   };
 
-  const handleAddSpecialCharge = async () => {
+  const handleAddSpecialCharge = async (e?: React.MouseEvent | boolean, ignorePendingSlips = false) => {
+    // Handle event parameter if it's an event (not a boolean)
+    if (typeof e === 'boolean') {
+      ignorePendingSlips = e;
+    }
+
     if (!specialChargeFormData.description || specialChargeFormData.amount <= 0) {
       setActionMessage({ type: 'error', text: 'กรุณากรอกรายละเอียดและจำนวนเงิน' });
       return;
@@ -1833,13 +1838,31 @@ export default function EventDetailPage() {
       const response = await fetch(`/api/events/${eventId}/special-charges`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(specialChargeFormData),
+        body: JSON.stringify({ ...specialChargeFormData, ignorePendingSlips }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'ไม่สามารถเพิ่มค่าใช้จ่ายได้');
+        // If there are pending slips and user hasn't confirmed yet, show confirm dialog
+        if (data.hasPendingSlips && !ignorePendingSlips) {
+          const confirmMessage = `${data.error}\n\n${data.details}\n\nคุณต้องการดำเนินการต่อหรือไม่?`;
+          if (confirm(confirmMessage)) {
+            // Retry with ignorePendingSlips=true
+            setAddingCharge(false);
+            await handleAddSpecialCharge(true, true);
+            return;
+          } else {
+            setAddingCharge(false);
+            return;
+          }
+        }
+
+        // Show other errors normally
+        const errorMessage = data.details
+          ? `${data.error}\n\n${data.details}`
+          : data.error || 'ไม่สามารถเพิ่มค่าใช้จ่ายได้';
+        throw new Error(errorMessage);
       }
 
       setActionMessage({ type: 'success', text: data.message || 'เพิ่มค่าใช้จ่ายเสริมเรียบร้อยแล้ว' });
@@ -1856,21 +1879,35 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleDeleteSpecialCharge = async (registrationId: string, chargeId: string) => {
-    if (!confirm('ยืนยันการลบค่าใช้จ่ายเสริมนี้?')) return;
+  const handleDeleteSpecialCharge = async (registrationId: string, chargeId: string, ignorePendingSlips = false) => {
+    if (!ignorePendingSlips && !confirm('ยืนยันการลบค่าใช้จ่ายเสริมนี้?')) return;
 
     setActionMessage(null);
 
     try {
-      const response = await fetch(
-        `/api/events/${eventId}/special-charges?registrationId=${registrationId}&chargeId=${chargeId}`,
-        { method: 'DELETE' }
-      );
+      const url = `/api/events/${eventId}/special-charges?registrationId=${registrationId}&chargeId=${chargeId}${ignorePendingSlips ? '&ignorePendingSlips=true' : ''}`;
+      const response = await fetch(url, { method: 'DELETE' });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'ไม่สามารถลบค่าใช้จ่ายได้');
+        // If there are pending slips and user hasn't confirmed yet, show confirm dialog
+        if (data.hasPendingSlips && !ignorePendingSlips) {
+          const confirmMessage = `${data.error}\n\n${data.details}\n\nคุณต้องการดำเนินการลบต่อหรือไม่?`;
+          if (confirm(confirmMessage)) {
+            // Retry with ignorePendingSlips=true
+            await handleDeleteSpecialCharge(registrationId, chargeId, true);
+            return;
+          } else {
+            return;
+          }
+        }
+
+        // Show other errors normally
+        const errorMessage = data.details
+          ? `${data.error}\n\n${data.details}`
+          : data.error || 'ไม่สามารถลบค่าใช้จ่ายได้';
+        throw new Error(errorMessage);
       }
 
       setActionMessage({ type: 'success', text: data.message || 'ลบค่าใช้จ่ายเสริมเรียบร้อยแล้ว' });
@@ -1905,8 +1942,8 @@ export default function EventDetailPage() {
     });
   };
 
-  const handleAddDiscount = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddDiscount = async (e?: React.FormEvent, ignorePendingSlips = false) => {
+    if (e) e.preventDefault();
 
     setAddingDiscount(true);
     setActionMessage(null);
@@ -1915,13 +1952,31 @@ export default function EventDetailPage() {
       const response = await fetch(`/api/events/${eventId}/discounts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(discountFormData),
+        body: JSON.stringify({ ...discountFormData, ignorePendingSlips }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'ไม่สามารถเพิ่มส่วนลดได้');
+        // If there are pending slips and user hasn't confirmed yet, show confirm dialog
+        if (data.hasPendingSlips && !ignorePendingSlips) {
+          const confirmMessage = `${data.error}\n\n${data.details}\n\nคุณต้องการดำเนินการต่อหรือไม่?`;
+          if (confirm(confirmMessage)) {
+            // Retry with ignorePendingSlips=true
+            setAddingDiscount(false);
+            await handleAddDiscount(undefined, true);
+            return;
+          } else {
+            setAddingDiscount(false);
+            return;
+          }
+        }
+
+        // Show other errors normally
+        const errorMessage = data.details
+          ? `${data.error}\n\n${data.details}`
+          : data.error || 'ไม่สามารถเพิ่มส่วนลดได้';
+        throw new Error(errorMessage);
       }
 
       setActionMessage({ type: 'success', text: data.message || 'เพิ่มส่วนลดเรียบร้อยแล้ว' });
@@ -1938,21 +1993,36 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleDeleteDiscount = async (registrationId: string, discountId: string) => {
-    if (!confirm('ยืนยันการลบส่วนลดนี้?')) return;
+  const handleDeleteDiscount = async (registrationId: string, discountId: string, ignorePendingSlips = false) => {
+    // First confirmation - standard delete confirmation
+    if (!ignorePendingSlips && !confirm('ยืนยันการลบส่วนลดนี้?')) return;
 
     setActionMessage(null);
 
     try {
-      const response = await fetch(
-        `/api/events/${eventId}/discounts?registrationId=${registrationId}&discountId=${discountId}`,
-        { method: 'DELETE' }
-      );
+      const url = `/api/events/${eventId}/discounts?registrationId=${registrationId}&discountId=${discountId}${ignorePendingSlips ? '&ignorePendingSlips=true' : ''}`;
+      const response = await fetch(url, { method: 'DELETE' });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'ไม่สามารถลบส่วนลดได้');
+        // If there are pending slips and user hasn't confirmed yet, show confirm dialog
+        if (data.hasPendingSlips && !ignorePendingSlips) {
+          const confirmMessage = `${data.error}\n\n${data.details}\n\nคุณต้องการดำเนินการต่อหรือไม่?`;
+          if (confirm(confirmMessage)) {
+            // Retry with ignorePendingSlips=true
+            await handleDeleteDiscount(registrationId, discountId, true);
+            return;
+          } else {
+            return;
+          }
+        }
+
+        // Show detailed error message if available
+        const errorMessage = data.details
+          ? `${data.error}\n\n${data.details}`
+          : data.error || 'ไม่สามารถลบส่วนลดได้';
+        throw new Error(errorMessage);
       }
 
       setActionMessage({ type: 'success', text: data.message || 'ลบส่วนลดเรียบร้อยแล้ว' });

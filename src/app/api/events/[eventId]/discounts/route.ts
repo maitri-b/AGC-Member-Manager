@@ -43,7 +43,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { registrationId, description, discountType, value } = body;
+    const { registrationId, description, discountType, value, ignorePendingSlips } = body;
 
     if (!registrationId || !description || !discountType || value === undefined) {
       return NextResponse.json({
@@ -89,13 +89,17 @@ export async function POST(
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
-    // ✅ VALIDATION: Check for pending payment slips
-    const pendingInfo = await getPendingSlipsInfo(registrationId);
-    if (pendingInfo.hasPending) {
-      return NextResponse.json({
-        error: 'ไม่สามารถเพิ่มส่วนลดได้ในขณะนี้',
-        details: `พบสลิปการชำระเงิน ${pendingInfo.count} รายการที่รอการอนุมัติ\n\nกรุณาอนุมัติหรือปฏิเสธสลิปที่รออนุมัติทั้งหมดก่อน จึงจะสามารถเพิ่มส่วนลดได้\n\nเหตุผล: การอนุมัติสลิปจะส่งผลต่อยอดเงินที่ชำระแล้ว ซึ่งต้องคำนวณใหม่ก่อนปรับยอดรวมทั้งหมด`
-      }, { status: 400 });
+    // ✅ VALIDATION: Check for pending payment slips (unless explicitly ignored)
+    if (!ignorePendingSlips) {
+      const pendingInfo = await getPendingSlipsInfo(registrationId);
+      if (pendingInfo.hasPending) {
+        return NextResponse.json({
+          error: 'ไม่สามารถเพิ่มส่วนลดได้ในขณะนี้',
+          details: `พบสลิปการชำระเงิน ${pendingInfo.count} รายการที่รอการอนุมัติ\n\nกรุณาอนุมัติหรือปฏิเสธสลิปที่รออนุมัติทั้งหมดก่อน จึงจะสามารถเพิ่มส่วนลดได้\n\nเหตุผล: การอนุมัติสลิปจะส่งผลต่อยอดเงินที่ชำระแล้ว ซึ่งต้องคำนวณใหม่ก่อนปรับยอดรวมทั้งหมด`,
+          hasPendingSlips: true,
+          pendingSlipsCount: pendingInfo.count
+        }, { status: 400 });
+      }
     }
 
     // Parse existing discounts
@@ -296,6 +300,7 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const registrationId = searchParams.get('registrationId');
     const discountId = searchParams.get('discountId');
+    const ignorePendingSlips = searchParams.get('ignorePendingSlips') === 'true';
 
     if (!registrationId || !discountId) {
       return NextResponse.json({
@@ -334,13 +339,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
 
-    // ✅ VALIDATION: Check for pending payment slips
-    const pendingInfo = await getPendingSlipsInfo(registrationId);
-    if (pendingInfo.hasPending) {
-      return NextResponse.json({
-        error: 'ไม่สามารถลบส่วนลดได้',
-        details: `มีสลิป ${pendingInfo.count} รายการที่รออนุมัติ กรุณาอนุมัติหรือปฏิเสธสลิปก่อนลบส่วนลด`
-      }, { status: 400 });
+    // ✅ VALIDATION: Check for pending payment slips (unless explicitly ignored)
+    if (!ignorePendingSlips) {
+      const pendingInfo = await getPendingSlipsInfo(registrationId);
+      if (pendingInfo.hasPending) {
+        return NextResponse.json({
+          error: 'ไม่สามารถลบส่วนลดได้ในขณะนี้',
+          details: `พบสลิปการชำระเงิน ${pendingInfo.count} รายการที่รอการอนุมัติ\n\nกรุณาอนุมัติหรือปฏิเสธสลิปที่รออนุมัติทั้งหมดก่อน จึงจะสามารถลบส่วนลดได้\n\nเหตุผล: การอนุมัติสลิปจะส่งผลต่อยอดเงินที่ชำระแล้ว ซึ่งต้องคำนวณใหม่ก่อนปรับยอดรวมทั้งหมด`,
+          hasPendingSlips: true,
+          pendingSlipsCount: pendingInfo.count
+        }, { status: 400 });
+      }
     }
 
     // Parse existing discounts

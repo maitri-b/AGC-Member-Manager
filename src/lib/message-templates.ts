@@ -13,7 +13,8 @@ export type MessageTemplateType =
   | 'deadline_warning'     // แจ้งเตือนใกล้ครบกำหนด
   | 'overdue_notice'       // แจ้งเตือนพ้นกำหนด
   | 'application_approved' // แจ้งใบสมัครได้รับการอนุมัติ
-  | 'application_rejected';// แจ้งใบสมัครไม่ได้รับการอนุมัติ
+  | 'application_rejected' // แจ้งใบสมัครไม่ได้รับการอนุมัติ
+  | 'verification_reminder';// แจ้งเตือนให้ยืนยันตัวตน
 
 export interface MessageTemplate {
   id: MessageTemplateType;
@@ -181,6 +182,37 @@ LINE: {{lineOfficialAccount}}
 
 ขอบคุณที่สนใจเข้าร่วม Agents Club ค่ะ 🙏`,
     variables: ['memberName', 'rejectionReason', 'lineOfficialAccount'],
+  },
+
+  verification_reminder: {
+    id: 'verification_reminder',
+    name: 'แจ้งเตือนให้ยืนยันตัวตน',
+    description: 'ส่งแจ้งให้สมาชิกที่ยังไม่ได้ยืนยันตัวตนดำเนินการยืนยัน',
+    template: `สวัสดีครับ 🙏
+
+ทางทีมทะเบียนชมรม Agents Club ตรวจพบว่า
+คุณเป็นสมาชิกในระบบของเราแล้ว แต่ยังไม่ได้ทำการยืนยันตัวตน
+
+📋 เพื่อให้สามารถใช้งานระบบได้เต็มรูปแบบ
+กรุณายืนยันตัวตนผ่านลิงก์ด้านล่างนี้
+
+🔗 ยืนยันตัวตนที่นี่: {{verificationLink}}
+
+ระบุข้อมูลดังนี้:
+• เลขที่ใบอนุญาตนำเที่ยว
+• ชื่อบริษัท
+• เบอร์โทรศัพท์
+
+✅ หลังจากยืนยันตัวตนแล้ว คุณจะสามารถ:
+• ดูข้อมูลสมาชิกของคุณ
+• ลงทะเบียนเข้าร่วมกิจกรรม
+• ตรวจสอบประวัติการเข้าร่วมกิจกรรม
+
+หากมีข้อสงสัย กรุณาติดต่อทีมงาน
+ขอบคุณครับ 😊
+
+ทีมทะเบียนชมรม Agents Club`,
+    variables: ['verificationLink'],
   },
 };
 

@@ -36,6 +36,10 @@ interface User {
   lockedAt?: { _seconds: number };
   lockedReason?: string;
   lineHistory?: LineHistoryEntry[];
+  adminNote?: string;
+  adminNoteUpdatedAt?: { _seconds: number } | string;
+  adminNoteUpdatedBy?: string;
+  adminNoteUpdatedByName?: string;
 }
 
 interface SearchLog {
@@ -81,6 +85,17 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [userSearchQuery, setUserSearchQuery] = useState('');
+
+  // Admin note states
+  const [editingNoteUser, setEditingNoteUser] = useState<User | null>(null);
+  const [adminNoteText, setAdminNoteText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+
+  // Send message states
+  const [sendMessageUser, setSendMessageUser] = useState<User | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [messageTemplate, setMessageTemplate] = useState<string>('');
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   // Member search states
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
@@ -438,6 +453,67 @@ export default function AdminPage() {
     return new Date(timestamp._seconds * 1000).toLocaleString('th-TH');
   };
 
+  // Handle admin note save
+  const handleSaveAdminNote = async () => {
+    if (!editingNoteUser) return;
+    setSavingNote(true);
+    try {
+      const response = await fetch('/api/admin/users/note', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: editingNoteUser.id,
+          adminNote: adminNoteText
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to save note');
+      }
+
+      setSuccess('บันทึกหมายเหตุเรียบร้อยแล้ว');
+      setEditingNoteUser(null);
+      setAdminNoteText('');
+      fetchUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  // Handle send LINE message
+  const handleSendMessage = async () => {
+    if (!sendMessageUser) return;
+    setSendingMessage(true);
+    try {
+      const response = await fetch('/api/admin/users/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lineUserId: sendMessageUser.lineUserId,
+          message: messageText,
+          templateType: messageTemplate || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to send message');
+      }
+
+      setSuccess('ส่งข้อความเรียบร้อยแล้ว');
+      setSendMessageUser(null);
+      setMessageText('');
+      setMessageTemplate('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
   const handleSaveUser = async () => {
     if (!editingUser) return;
 
@@ -751,6 +827,9 @@ export default function AdminPage() {
                     เข้าใช้ล่าสุด
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    หมายเหตุ
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -918,13 +997,69 @@ export default function AdminPage() {
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(user.lastLoginAt)}
                     </td>
+                    <td className="px-4 py-4 text-sm">
+                      {user.adminNote ? (
+                        <div className="relative group inline-block">
+                          <button
+                            onClick={() => {
+                              setEditingNoteUser(user);
+                              setAdminNoteText(user.adminNote || '');
+                            }}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="ดูหมายเหตุ"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                          </button>
+                          <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 bg-gray-900 text-white text-xs rounded-lg p-3 z-10 shadow-lg">
+                            <div className="font-semibold mb-1">หมายเหตุจาก Admin:</div>
+                            <div className="whitespace-pre-wrap break-words">{user.adminNote}</div>
+                            {user.adminNoteUpdatedByName && (
+                              <div className="text-gray-400 mt-2 text-xs">
+                                โดย {user.adminNoteUpdatedByName}
+                              </div>
+                            )}
+                            <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setEditingNoteUser(user);
+                            setAdminNoteText('');
+                          }}
+                          className="text-gray-400 hover:text-gray-600"
+                          title="เพิ่มหมายเหตุ"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                        </button>
+                      )}
+                    </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => handleEditUser(user)}
-                        className="text-red-600 hover:text-red-800 font-medium"
-                      >
-                        แก้ไข
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditUser(user)}
+                          className="text-red-600 hover:text-red-800 font-medium"
+                        >
+                          แก้ไข
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSendMessageUser(user);
+                            setMessageText('');
+                            setMessageTemplate('');
+                          }}
+                          className="text-green-600 hover:text-green-800"
+                          title="ส่งข้อความ LINE"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                     );
@@ -1334,6 +1469,147 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* Admin Note Modal */}
+      {editingNoteUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">หมายเหตุจาก Admin</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                User: {editingNoteUser.lineDisplayName || 'Unknown'}
+              </p>
+            </div>
+            <div className="p-6">
+              <textarea
+                value={adminNoteText}
+                onChange={(e) => setAdminNoteText(e.target.value)}
+                placeholder="เพิ่มหมายเหตุเกี่ยวกับ user นี้..."
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                หมายเหตุนี้จะแสดงเฉพาะ Admin เท่านั้น
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setEditingNoteUser(null);
+                  setAdminNoteText('');
+                }}
+                disabled={savingNote}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleSaveAdminNote}
+                disabled={savingNote}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {savingNote ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send LINE Message Modal */}
+      {sendMessageUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 bg-green-50">
+              <h3 className="text-lg font-semibold text-green-900 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                ส่งข้อความ LINE
+              </h3>
+              <p className="text-sm text-green-700 mt-1">
+                ถึง: {sendMessageUser.lineDisplayName || 'Unknown'}
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Template Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  เลือก Template (ไม่บังคับ)
+                </label>
+                <select
+                  value={messageTemplate}
+                  onChange={(e) => setMessageTemplate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="">-- เขียนข้อความเอง --</option>
+                  <option value="verification_reminder">แจ้งเตือนให้ยืนยันตัวตน</option>
+                  <option value="application_approved">แจ้งใบสมัครได้รับการอนุมัติ</option>
+                  <option value="application_rejected">แจ้งใบสมัครไม่ได้รับการอนุมัติ</option>
+                </select>
+                {messageTemplate === 'verification_reminder' && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    ส่งข้อความแจ้งให้สมาชิกที่ยังไม่ได้ยืนยันตัวตนดำเนินการยืนยัน พร้อมลิงก์
+                  </p>
+                )}
+              </div>
+
+              {/* Custom Message */}
+              {!messageTemplate && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ข้อความ
+                  </label>
+                  <textarea
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    placeholder="พิมพ์ข้อความที่ต้องการส่ง..."
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              )}
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs text-yellow-800">
+                  ⚠️ ข้อความจะถูกส่งทันทีหลังกดปุ่ม "ส่งข้อความ" และไม่สามารถยกเลิกได้
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setSendMessageUser(null);
+                  setMessageText('');
+                  setMessageTemplate('');
+                }}
+                disabled={sendingMessage}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleSendMessage}
+                disabled={sendingMessage || (!messageTemplate && !messageText.trim())}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {sendingMessage ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    กำลังส่ง...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    ส่งข้อความ
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reset LINE Connection Confirmation Modal */}
       {showResetLineModal && editingUser && (

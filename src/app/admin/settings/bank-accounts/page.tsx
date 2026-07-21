@@ -31,7 +31,7 @@ export default function BankAccountsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session?.user && accounts.length === 0 && !loading) {
+    if (session?.user && accounts.length === 0) {
       fetchAccounts();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

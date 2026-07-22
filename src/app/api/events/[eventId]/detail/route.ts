@@ -49,6 +49,20 @@ export async function GET(
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
+    // Fetch bank account data if bankAccountId exists
+    let bankAccountData = null;
+    if (eventData?.bankAccountId) {
+      try {
+        const bankAccountDoc = await db.collection('bankAccounts').doc(eventData.bankAccountId).get();
+        if (bankAccountDoc.exists) {
+          bankAccountData = bankAccountDoc.data();
+        }
+      } catch (error) {
+        console.error('Error fetching bank account:', error);
+        // Continue without bank account data
+      }
+    }
+
     const event = {
       eventId: eventDoc.id,
       eventName: eventData?.eventName || '',
@@ -73,10 +87,11 @@ export async function GET(
       documentName: eventData?.documentName || '',
       documentUrl: eventData?.documentUrl || '',
       mainImageUrl: eventData?.mainImageUrl || '',
-      paymentBankName: eventData?.paymentBankName || '',
-      paymentAccountName: eventData?.paymentAccountName || '',
-      paymentAccountNumber: eventData?.paymentAccountNumber || '',
-      paymentQrCodeUrl: eventData?.paymentQrCodeUrl || '',
+      // Payment info: Use bank account data if available, fallback to event's legacy fields
+      paymentBankName: bankAccountData?.bankName || eventData?.paymentBankName || '',
+      paymentAccountName: bankAccountData?.accountName || eventData?.paymentAccountName || '',
+      paymentAccountNumber: bankAccountData?.accountNumber || eventData?.paymentAccountNumber || '',
+      paymentQrCodeUrl: bankAccountData?.qrCodeUrl || eventData?.paymentQrCodeUrl || '',
       paymentTerms: eventData?.paymentTerms || '',
       paymentSlipSubmissionUrl: eventData?.paymentSlipSubmissionUrl || '',
       paymentSlipButtonText: eventData?.paymentSlipButtonText || '',

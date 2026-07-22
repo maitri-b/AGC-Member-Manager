@@ -127,14 +127,18 @@ export async function GET(
 
     let userRegistration = null;
 
-    if (eventData?.sheetName) {
-      try {
-        // Fetch registrations from Firestore
-        // This ensures real-time data for registration changes
-        const registrations = await getEventRegistrationsByEventId(eventId);
+    console.log(`[Event Detail] Event ${eventId} - Fetching registrations from Firestore`);
+
+    // ✅ Always fetch from Firestore (no longer dependent on sheetName)
+    try {
+      // Fetch registrations from Firestore
+      // This ensures real-time data for registration changes
+      const registrations = await getEventRegistrationsByEventId(eventId);
+        console.log(`[Event Detail] Total registrations for ${eventId}:`, registrations.length);
 
         // Filter out cancelled registrations for summary
         const activeRegistrations = registrations.filter(r => !isRegistrationCancelled(r));
+        console.log(`[Event Detail] Active registrations:`, activeRegistrations.length);
 
         // Calculate summary (excluding cancelled)
         summary.totalRegistrations = activeRegistrations.length;
@@ -143,12 +147,20 @@ export async function GET(
         // Check if current user has registered (by LINE user ID or member ID)
         // Search ONLY in active registrations and get the LATEST one if multiple exist
         if (session.user.id || session.user.memberId) {
+          console.log(`[Event Detail] Looking for registration - userId: ${session.user.id}, memberId: ${session.user.memberId}`);
+
           const userRegs = activeRegistrations.filter(r => {
-            return (
+            const matches = (
               (session.user.id && r.lineUserId === session.user.id) ||
               (session.user.memberId && r.memberId === session.user.memberId)
             );
+            if (matches) {
+              console.log(`[Event Detail] Found matching registration:`, r.registrationId, 'status:', r.status, 'lineUserId:', r.lineUserId, 'memberId:', r.memberId);
+            }
+            return matches;
           });
+
+          console.log(`[Event Detail] Found ${userRegs.length} user registration(s)`);
 
           // If user has multiple active registrations, use the latest one by registration date
           if (userRegs.length > 0) {
@@ -157,6 +169,8 @@ export async function GET(
               const dateB = b.registrationDate || '';
               return dateB > dateA ? 1 : -1; // descending order
             })[0];
+
+            console.log(`[Event Detail] Using latest registration:`, latestReg.registrationId);
 
             // Parse attendee type selections, room allocations, special charges, and discounts from JSON strings
             let attendeeTypeSelections = [];
@@ -291,11 +305,12 @@ export async function GET(
               paymentSummary,
             };
           }
+        } else {
+          console.log(`[Event Detail] No user registrations found`);
         }
-      } catch (err) {
-        console.error('Error fetching registrations:', err);
-        // Continue without registration data
-      }
+    } catch (err) {
+      console.error('Error fetching registrations:', err);
+      // Continue without registration data
     }
 
     // Get member name and contact info for pre-filling registration form and contact card

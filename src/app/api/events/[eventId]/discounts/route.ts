@@ -228,7 +228,6 @@ export async function POST(
     console.log('[Discounts] Adding discount:', {
       registrationId,
       newDiscount,
-      sheetName: eventData.sheetName,
       updateData,
     });
 
@@ -444,7 +443,6 @@ export async function DELETE(
     console.log('[Discounts] Removing discount:', {
       registrationId,
       discountId,
-      sheetName: eventData.sheetName,
       updateData,
     });
 

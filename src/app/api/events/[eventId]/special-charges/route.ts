@@ -193,7 +193,6 @@ export async function POST(
     console.log('[Special Charges] Adding charge:', {
       registrationId,
       newCharge,
-      sheetName: eventData.sheetName,
       updateData,
     });
 
@@ -407,7 +406,6 @@ export async function DELETE(
     console.log('[Special Charges] Removing charge:', {
       registrationId,
       chargeId,
-      sheetName: eventData.sheetName,
       updateData,
     });
 

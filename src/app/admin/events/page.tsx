@@ -7,6 +7,16 @@ import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { AttendeeType, RoomType, PriceTier } from '@/types/event';
 
+interface BankAccount {
+  id: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  qrCodeUrl?: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
 interface Event {
   eventId: string;
   eventName: string;
@@ -15,7 +25,8 @@ interface Event {
   eventEndDate?: string;
   location: string;
   description: string;
-  sheetName: string;
+  sheetName?: string;  // DEPRECATED - optional for backward compatibility
+  bankAccountId?: string;  // NEW - preferred method
   year: number;
   isActive: boolean;
   isPublished: boolean;
@@ -79,7 +90,8 @@ interface EventFormData {
   eventEndDate: string;
   location: string;
   description: string;
-  sheetName: string;
+  sheetName: string;  // DEPRECATED - kept for backward compatibility but hidden in UI
+  bankAccountId: string;  // NEW - preferred method
   year: number;
   isActive: boolean;
   isPublished: boolean;
@@ -140,7 +152,8 @@ const initialFormData: EventFormData = {
   eventEndDate: '',
   location: '',
   description: '',
-  sheetName: '',
+  sheetName: '',  // DEPRECATED - empty by default
+  bankAccountId: '',  // NEW - will be populated from bank account dropdown
   year: new Date().getFullYear() + 543,
   isActive: true,
   isPublished: false,
@@ -245,8 +258,10 @@ export default function AdminEventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [summaries, setSummaries] = useState<Map<string, EventSummary>>(new Map());
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingSummaries, setLoadingSummaries] = useState(false);
+  const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -311,6 +326,7 @@ export default function AdminEventsPage() {
   useEffect(() => {
     fetchEvents();
     fetchSummaries();
+    fetchBankAccounts();
   }, []);
 
   const fetchEvents = async () => {
@@ -335,6 +351,21 @@ export default function AdminEventsPage() {
       setError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBankAccounts = async () => {
+    setLoadingBankAccounts(true);
+    try {
+      const response = await fetch('/api/admin/bank-accounts');
+      if (response.ok) {
+        const data = await response.json();
+        setBankAccounts(data.accounts || []);
+      }
+    } catch (err) {
+      console.error('Error fetching bank accounts:', err);
+    } finally {
+      setLoadingBankAccounts(false);
     }
   };
 
@@ -367,7 +398,8 @@ export default function AdminEventsPage() {
         eventEndDate: event.eventEndDate ?? '',
         location: event.location,
         description: event.description,
-        sheetName: event.sheetName,
+        sheetName: event.sheetName ?? '',  // DEPRECATED - optional
+        bankAccountId: event.bankAccountId ?? '',  // NEW - preferred method
         year: event.year,
         isActive: event.isActive,
         isPublished: event.isPublished ?? false,
@@ -960,9 +992,16 @@ export default function AdminEventsPage() {
                     </div>
                   </div>
 
-                  {/* Sheet Name & Statistics */}
+                  {/* Bank Account & Statistics */}
                   <div className="flex flex-wrap items-center gap-3 mb-3 pb-3 border-b border-gray-200">
-                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">{event.sheetName}</code>
+                    {event.bankAccountId ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">บัญชี:</span>
+                        <code className="text-xs bg-blue-50 border border-blue-200 px-2 py-1 rounded">{event.bankAccountId}</code>
+                      </div>
+                    ) : event.sheetName ? (
+                      <code className="text-xs bg-gray-100 px-2 py-1 rounded">{event.sheetName}</code>
+                    ) : null}
                     <div className="flex items-center gap-2 text-sm">
                       {loadingSummaries ? (
                         <span className="text-gray-400 text-xs">กำลังโหลด...</span>
@@ -1312,12 +1351,14 @@ export default function AdminEventsPage() {
                     วันที่เริ่มกิจกรรม
                   </label>
                   <input
-                    type="text"
+                    type="date"
                     value={formData.eventDate}
                     onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                    placeholder="เช่น 15/03/2568 หรือ 2025"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    รูปแบบ: YYYY-MM-DD (เช่น 2025-03-15)
+                  </p>
                 </div>
 
                 <div>
@@ -1325,10 +1366,9 @@ export default function AdminEventsPage() {
                     วันที่สิ้นสุดกิจกรรม
                   </label>
                   <input
-                    type="text"
+                    type="date"
                     value={formData.eventEndDate}
                     onChange={(e) => setFormData({ ...formData, eventEndDate: e.target.value })}
-                    placeholder="เช่น 17/03/2568 (ถ้ากิจกรรมหลายวัน)"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -1338,19 +1378,39 @@ export default function AdminEventsPage() {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ชื่อ Sheet ใน Google Sheets <span className="text-red-500">*</span>
+                    บัญชีธนาคารสำหรับรับชำระเงิน
                   </label>
-                  <input
-                    type="text"
-                    value={formData.sheetName}
-                    onChange={(e) => setFormData({ ...formData, sheetName: e.target.value })}
-                    placeholder="เช่น AGM 2026 Registration"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    ต้องตรงกับชื่อ Sheet ที่สร้างไว้ใน Google Spreadsheet
-                  </p>
+                  {loadingBankAccounts ? (
+                    <div className="text-sm text-gray-500">กำลังโหลดบัญชีธนาคาร...</div>
+                  ) : bankAccounts.length === 0 ? (
+                    <div className="text-sm text-gray-500">
+                      ยังไม่มีบัญชีธนาคาร กรุณา
+                      <Link href="/admin/settings/bank-accounts" className="text-blue-600 hover:underline ml-1">
+                        เพิ่มบัญชีธนาคาร
+                      </Link>
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={formData.bankAccountId}
+                        onChange={(e) => setFormData({ ...formData, bankAccountId: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">-- ไม่ระบุบัญชี (ใช้ข้อมูลเดิม) --</option>
+                        {bankAccounts
+                          .filter(account => account.isActive)
+                          .map(account => (
+                            <option key={account.id} value={account.id}>
+                              {account.bankName} - {account.accountName} ({account.accountNumber})
+                              {account.isDefault ? ' (ค่าเริ่มต้น)' : ''}
+                            </option>
+                          ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        เลือกบัญชีธนาคารจากระบบ หรือไม่ระบุเพื่อใช้ข้อมูลที่กรอกด้านล่าง
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">

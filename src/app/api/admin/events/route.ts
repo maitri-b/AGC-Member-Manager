@@ -5,46 +5,6 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { Event, EventInput, DEFAULT_EVENTS } from '@/types/event';
-import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
-
-/**
- * Sync event mapping to Google Apps Script
- * This allows GAS to dynamically load event mappings without hardcoding
- */
-async function syncEventToGAS(eventId: string, sheetName: string) {
-  try {
-    const gasUrl = process.env.NEXT_PUBLIC_GAS_UPLOAD_SLIP_URL;
-
-    if (!gasUrl) {
-      console.warn('GAS_UPLOAD_SLIP_URL not configured, skipping sync');
-      return { success: false, error: 'GAS URL not configured' };
-    }
-
-    const response = await fetch(gasUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'sync_event',
-        eventId,
-        sheetName,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`GAS sync failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log(`✅ Synced event to GAS: ${eventId} -> ${sheetName}`, result);
-    return result;
-  } catch (error) {
-    console.error('Error syncing event to GAS:', error);
-    // Don't fail the main operation if sync fails
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
 
 // GET - List all events
 export async function GET() {
@@ -193,16 +153,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event with this ID already exists' }, { status: 409 });
     }
 
-    const newEvent: Event = {
+    // Build event data object, conditionally adding optional fields to avoid Firestore undefined errors
+    const newEvent: any = {
       eventId,
       eventName: body.eventName,
       eventNameEN: body.eventNameEN || '',
       eventDate: body.eventDate || String(body.year - 543),
-      eventEndDate: body.eventEndDate || undefined,
       location: body.location || '',
       description: body.description || '',
-      sheetName: body.sheetName || '',  // DEPRECATED - optional, kept for backward compatibility
-      bankAccountId: body.bankAccountId || undefined,  // NEW - preferred method
       year: body.year,
       isActive: body.isActive ?? true,
       isPublished: body.isPublished ?? false,
@@ -213,7 +171,6 @@ export async function POST(request: NextRequest) {
       pricingType: body.pricingType || 'fixed',
       baseFee: body.baseFee ?? 0,
       additionalFeePerPerson: body.additionalFeePerPerson ?? 0,
-      priceTiers: body.priceTiers || undefined,
       memberDiscount: body.memberDiscount ?? 0,
       registrationOpen: body.registrationOpen ?? false,
       documentName: body.documentName || '',
@@ -259,17 +216,26 @@ export async function POST(request: NextRequest) {
       createdBy: session.user.id,
     };
 
-    await db.collection('events').doc(eventId).set(newEvent);
-
-    // Invalidate cache to ensure new event appears immediately
-    sheetsCache.invalidatePattern('events:');
-
-    // Sync event mapping to GAS (non-blocking)
-    if (newEvent.sheetName) {
-      syncEventToGAS(eventId, newEvent.sheetName).catch(err => {
-        console.error('GAS sync error (non-critical):', err);
-      });
+    // Conditionally add optional fields (Firestore doesn't accept undefined)
+    if (body.eventEndDate) {
+      newEvent.eventEndDate = body.eventEndDate;
     }
+
+    // DEPRECATED - sheetName kept for backward compatibility, but optional
+    if (body.sheetName) {
+      newEvent.sheetName = body.sheetName;
+    }
+
+    // NEW - bankAccountId is the preferred method for payment info
+    if (body.bankAccountId) {
+      newEvent.bankAccountId = body.bankAccountId;
+    }
+
+    if (body.priceTiers && body.priceTiers.length > 0) {
+      newEvent.priceTiers = body.priceTiers;
+    }
+
+    await db.collection('events').doc(eventId).set(newEvent);
 
     return NextResponse.json({ success: true, event: newEvent }, { status: 201 });
   } catch (error) {
@@ -325,16 +291,6 @@ export async function PUT(request: NextRequest) {
     };
 
     await eventRef.update(updateData);
-
-    // Invalidate cache to ensure updated event data appears immediately
-    sheetsCache.invalidatePattern('events:');
-
-    // Sync to GAS if sheetName was updated (non-blocking)
-    if (updates.sheetName) {
-      syncEventToGAS(eventId, updates.sheetName).catch(err => {
-        console.error('GAS sync error (non-critical):', err);
-      });
-    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

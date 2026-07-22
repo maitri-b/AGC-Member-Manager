@@ -85,9 +85,7 @@ export async function PUT(
 
     const eventData = eventDoc.data();
 
-    if (!eventData?.sheetName) {
-      return NextResponse.json({ error: 'Event sheet not configured' }, { status: 400 });
-    }
+    // ✅ Removed sheetName dependency - all events use Firestore now
 
     // Get existing registrations
     let existingRegistrations;

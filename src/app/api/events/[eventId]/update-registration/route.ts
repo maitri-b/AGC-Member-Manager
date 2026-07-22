@@ -45,9 +45,7 @@ export async function PUT(
 
     const eventData = eventDoc.data();
 
-    if (!eventData?.sheetName) {
-      return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่พร้อมรับการแก้ไข' }, { status: 400 });
-    }
+    // ✅ Removed sheetName dependency - all events use Firestore now
 
     // Get existing registrations
     let existingRegistrations: EventRegistration[] = [];

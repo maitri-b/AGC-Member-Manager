@@ -60,9 +60,7 @@ export async function PUT(
 
     const eventData = eventDoc.data();
 
-    if (!eventData?.sheetName) {
-      return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่พร้อมรับการแก้ไข' }, { status: 400 });
-    }
+    // ✅ Removed sheetName dependency - all events use Firestore now
 
     // Get current registration data to retrieve existing special charges
     const registrations = await getEventRegistrationsByEventId(eventId);
@@ -392,9 +390,7 @@ export async function DELETE(
 
     const eventData = eventDoc.data();
 
-    if (!eventData?.sheetName) {
-      return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่พร้อมรับการแก้ไข' }, { status: 400 });
-    }
+    // ✅ Removed sheetName dependency - all events use Firestore now
 
     // ✅ Update status to 'ยกเลิก' (cancelled) instead of deleting
     // This ensures cancelled registrations are excluded from payment summaries and reports

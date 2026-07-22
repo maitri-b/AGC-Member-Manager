@@ -67,6 +67,8 @@ export async function POST(
     const contentType = request.headers.get('content-type') || '';
     const isFormData = contentType.includes('multipart/form-data');
 
+    console.log(`[Member Register] Request type: ${isFormData ? 'FormData' : 'JSON'}`);
+
     let body: any = {};
     let slipFile: File | null = null;
 
@@ -77,6 +79,9 @@ export async function POST(
       const fileEntry = formData.get('slipFile');
       if (fileEntry && fileEntry instanceof File) {
         slipFile = fileEntry;
+        console.log(`[Member Register] SlipFile received: ${slipFile.name}, size: ${slipFile.size} bytes`);
+      } else {
+        console.log(`[Member Register] No slipFile in FormData`);
       }
 
       // Parse JSON fields from FormData
@@ -299,6 +304,8 @@ export async function POST(
     const paymentTiming = eventData.paymentTiming || 'deferred';
     const isImmediatePayment = paymentTiming === 'immediate';
 
+    console.log(`[Member Register] Payment timing: ${paymentTiming}, isImmediate: ${isImmediatePayment}, totalFee: ${totalFee}, hasSlipFile: ${!!slipFile}`);
+
     // Validate slip upload for immediate payment
     if (isImmediatePayment && totalFee > 0 && !slipFile) {
       return NextResponse.json({
@@ -391,7 +398,10 @@ export async function POST(
 
     // ✅ Handle immediate payment slip upload
     let slipUrl = '';
+    console.log(`[Member Register] Checking immediate payment conditions - isImmediate: ${isImmediatePayment}, hasSlipFile: ${!!slipFile}, totalFee: ${totalFee}`);
+
     if (isImmediatePayment && slipFile && totalFee > 0) {
+      console.log(`[Member Register] ✅ Starting immediate payment slip upload process`);
       try {
         // Upload slip to Firebase Storage
         slipUrl = await uploadPaymentSlipToStorage(slipFile, eventId, registrationId);
@@ -401,7 +411,7 @@ export async function POST(
         const paymentType = eventData.paymentMode === 'deposit' ? 'deposit' : 'full';
         const paymentAmount = eventData.paymentMode === 'deposit' ? depositAmount : totalFee;
 
-        console.log(`[Immediate Payment] Creating payment slip - Type: ${paymentType}, Amount: ${paymentAmount}`);
+        console.log(`[Immediate Payment] Creating payment slip - Type: ${paymentType}, Amount: ${paymentAmount}, registrationDocId: ${registrationDocId}`);
 
         // Create payment slip record in paymentSlips collection
         // Pass registrationDocId to update registration directly without querying
@@ -416,12 +426,14 @@ export async function POST(
           status: 'pending',
         }, registrationDocId); // ✅ Pass document ID for direct update
 
-        console.log(`[Immediate Payment] Slip created successfully for registration ${registrationId}`);
+        console.log(`[Immediate Payment] ✅ Slip created successfully for registration ${registrationId}`);
       } catch (uploadError) {
-        console.error('[Immediate Payment] Failed to upload/create slip:', uploadError);
+        console.error('[Immediate Payment] ❌ Failed to upload/create slip:', uploadError);
         // Don't fail the registration if slip upload fails
         // User can re-upload later
       }
+    } else {
+      console.log(`[Member Register] ⚠️ Skipping immediate payment slip upload - conditions not met`);
     }
 
     // ✅ Invalidate caches for this event (so next request gets fresh data)

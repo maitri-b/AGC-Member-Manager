@@ -42,11 +42,44 @@ async function uploadPaymentSlipToStorage(
     },
   });
 
-  // Make file publicly readable
-  await blob.makePublic();
+  console.log(`[uploadPaymentSlipToStorage] File saved: ${fileName}`);
 
-  // Return public URL
-  return `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+  // Try to get bucket metadata to check if bucket is public
+  try {
+    const [metadata] = await bucket.getMetadata();
+    const iamConfiguration = metadata?.iamConfiguration;
+
+    // Check if uniform bucket-level access is enabled
+    if (iamConfiguration?.uniformBucketLevelAccess?.enabled) {
+      console.log(`[uploadPaymentSlipToStorage] Uniform bucket-level access enabled, using signed URL`);
+
+      // Generate a long-lived signed URL (10 years for payment records)
+      const [signedUrl] = await blob.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
+      });
+
+      return signedUrl;
+    } else {
+      console.log(`[uploadPaymentSlipToStorage] Using makePublic() for file-level access`);
+
+      // Make file publicly readable (old method)
+      await blob.makePublic();
+
+      // Return public URL
+      return `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+    }
+  } catch (error) {
+    console.error(`[uploadPaymentSlipToStorage] Error checking bucket metadata, defaulting to signed URL:`, error);
+
+    // Default to signed URL if we can't determine bucket settings
+    const [signedUrl] = await blob.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
+    });
+
+    return signedUrl;
+  }
 }
 
 // POST - Register for event

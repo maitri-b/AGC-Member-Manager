@@ -103,7 +103,7 @@ export async function PUT(
     // Check if trying to change attendee count
     if (attendeeCount !== undefined && attendeeCount !== userReg.attendeeCount) {
       // Validate against maxCapacity
-      if (eventData.maxCapacity > 0) {
+      if (eventData?.maxCapacity && eventData.maxCapacity > 0) {
         // Calculate current total excluding cancelled registrations
         const activeRegistrations = existingRegistrations.filter(r => !isRegistrationCancelled(r));
         const currentTotal = activeRegistrations.reduce((sum, r) => sum + (r.attendeeCount || 1), 0);
@@ -119,7 +119,7 @@ export async function PUT(
       }
 
       // Validate against maxPerCompany
-      if (eventData.maxPerCompany > 0 && attendeeCount > eventData.maxPerCompany) {
+      if (eventData?.maxPerCompany && eventData.maxPerCompany > 0 && attendeeCount > eventData.maxPerCompany) {
         return NextResponse.json({
           error: `ไม่สามารถเพิ่มจำนวนผู้เข้าร่วมได้ เนื่องจากจำกัด ${eventData.maxPerCompany} คนต่อ 1 บริษัท`
         }, { status: 400 });
@@ -133,7 +133,7 @@ export async function PUT(
       const changeRequestData = {
         type: 'event_registration_name_change',
         eventId,
-        eventName: eventData.eventName,
+        eventName: eventData?.eventName || '',
         registrationId: userReg.registrationId,
         memberId: session.user.memberId,
         currentNames: currentAttendeeNames,
@@ -167,7 +167,7 @@ export async function PUT(
 
       // Calculate total amount
       let totalFee = 0;
-      if (eventData.useAttendeeTypePricing && eventData.attendeeTypes) {
+      if (eventData?.useAttendeeTypePricing && eventData?.attendeeTypes) {
         // Calculate fee based on attendee types
         const selections = attendeeTypeSelections || [];
         if (selections.length === 0) {
@@ -182,7 +182,7 @@ export async function PUT(
 
         // Calculate fee from attendee types
         totalFee = selections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
-          const type = eventData.attendeeTypes.find((t: { typeId: string; price: number }) => t.typeId === s.typeId);
+          const type = eventData?.attendeeTypes?.find((t: { typeId: string; price: number }) => t.typeId === s.typeId);
           if (!type) {
             return sum;
           }
@@ -192,7 +192,7 @@ export async function PUT(
         updateData.attendee_type_selections = JSON.stringify(attendeeTypeSelections);
 
         // Validate and calculate room allocation fees (if room types are configured)
-        if (eventData.roomTypes && eventData.roomTypes.length > 0) {
+        if (eventData?.roomTypes && eventData.roomTypes.length > 0) {
           const allocations = roomAllocations || [];
           if (allocations.length === 0) {
             return NextResponse.json({ error: 'กรุณาเลือกประเภทห้องพัก' }, { status: 400 });
@@ -202,7 +202,7 @@ export async function PUT(
           let totalRoomCapacity = 0;
           let roomFee = 0;
           for (const alloc of allocations) {
-            const roomType = eventData.roomTypes.find((rt: { typeId: string; capacity: number; price: number }) => rt.typeId === alloc.roomTypeId);
+            const roomType = eventData?.roomTypes?.find((rt: { typeId: string; capacity: number; price: number }) => rt.typeId === alloc.roomTypeId);
             if (!roomType) {
               return NextResponse.json({ error: `ไม่พบประเภทห้อง: ${alloc.roomTypeId}` }, { status: 400 });
             }
@@ -256,7 +256,6 @@ export async function PUT(
 
       console.log('[Update Registration] Attempting update with data:', {
         registrationId: userReg.registrationId,
-        sheetName: eventData.sheetName,
         updateData,
       });
 

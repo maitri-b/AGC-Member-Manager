@@ -181,7 +181,7 @@ export async function PUT(
           }
 
           // Calculate remaining deadline if event has remaining deadline configuration
-          if (eventData.remainingDeadlineType && eventData.remainingDeadlineType !== 'none') {
+          if (eventData?.remainingDeadlineType && eventData.remainingDeadlineType !== 'none') {
             const remainingDeadline = calculateRemainingDeadline(eventData as Event, paidDate);
             updateData.remaining_deadline = remainingDeadline;
           }
@@ -292,7 +292,6 @@ export async function PUT(
       registrationId,
       paymentType,
       action: paymentAction,
-      sheetName: eventData.sheetName,
       updateData,
     });
 

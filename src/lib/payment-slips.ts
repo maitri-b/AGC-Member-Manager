@@ -674,6 +674,142 @@ export async function deletePaymentSlip(
 }
 
 /**
+ * Hard delete a payment slip (permanent deletion for admin use)
+ * This will completely remove the slip and recalculate payment status
+ */
+export async function hardDeletePaymentSlip(
+  slipId: string,
+  adminId: string,
+  reason: string
+): Promise<void> {
+  const db = adminDb();
+  const deletedAt = new Date().toISOString();
+
+  // 1. Get slip details first
+  const slipDoc = await db.collection('paymentSlips').doc(slipId).get();
+  if (!slipDoc.exists) {
+    throw new Error('Payment slip not found');
+  }
+  const slip = slipDoc.data() as PaymentSlip;
+
+  // 2. Log deletion for audit trail
+  console.log(`[Hard Delete Slip] Admin ${adminId} is deleting slip ${slipId}`, {
+    registrationId: slip.registrationId,
+    amount: slip.amount,
+    paymentType: slip.paymentType,
+    status: slip.status,
+    reason,
+  });
+
+  // 3. Update eventRegistrations record to recalculate payment status
+  const registrationsRef = db.collection('eventRegistrations');
+  const snapshot = await registrationsRef
+    .where('registrationId', '==', slip.registrationId)
+    .limit(1)
+    .get();
+
+  if (!snapshot.empty) {
+    const registrationDoc = snapshot.docs[0];
+    const registrationData = registrationDoc.data();
+    const updateData: Record<string, any> = {
+      updatedAt: deletedAt,
+    };
+
+    // Subtract the slip amount from paidAmount
+    const currentPaid = registrationData.paidAmount || 0;
+    const slipAmount = slip.amount || 0;
+    updateData.paidAmount = Math.max(0, currentPaid - slipAmount);
+
+    // Clear slip-specific fields based on payment type
+    if (slip.paymentType === 'deposit') {
+      updateData.depositSlipUrl = '';
+      updateData.depositPaidDate = null;
+      updateData.depositPaid = false;
+      updateData.paymentStatus = 'รอชำระมัดจำ';
+      updateData.remainingDeadline = null;
+    } else if (slip.paymentType === 'remaining') {
+      updateData.remainingSlipUrl = '';
+      updateData.remainingPaidDate = null;
+      updateData.remainingPaid = false;
+      updateData.paymentStatus = 'รอชำระยอดคงเหลือ';
+    } else if (slip.paymentType === 'full') {
+      updateData.fullPaymentSlipUrl = '';
+      updateData.fullPaymentPaidDate = null;
+      updateData.fullPaymentPaid = false;
+      updateData.paidAmount = 0;
+      updateData.paymentStatus = 'รอชำระเงิน';
+
+      // Clear deposit/remaining fields
+      updateData.depositAmount = 0;
+      updateData.remainingAmount = 0;
+      updateData.depositSlipUrl = '';
+      updateData.remainingSlipUrl = '';
+      updateData.depositPaidDate = null;
+      updateData.remainingPaidDate = null;
+      updateData.depositPaid = false;
+      updateData.remainingPaid = false;
+      updateData.depositDeadline = null;
+      updateData.remainingDeadline = null;
+    } else if (slip.paymentType === 'additional') {
+      // Remove from additional payments list
+      const currentData = registrationDoc.data();
+      let additionalPayments: any[] = [];
+
+      try {
+        additionalPayments = currentData.additionalPayments
+          ? JSON.parse(currentData.additionalPayments)
+          : [];
+      } catch (err) {
+        console.error('Error parsing additional payments:', err);
+        additionalPayments = [];
+      }
+
+      // Remove this payment from the list
+      additionalPayments = additionalPayments.filter(
+        (p: any) => p.paymentId !== slip.slipId
+      );
+
+      updateData.additionalPayments = JSON.stringify(additionalPayments);
+    }
+
+    // Recalculate registration status based on remaining payment
+    const totalAmount = registrationData.totalAmount || 0;
+    const newPaidAmount = updateData.paidAmount !== undefined ? updateData.paidAmount : (registrationData.paidAmount || 0);
+
+    // Parse additional payments
+    const additionalPaymentsJson = slip.paymentType === 'additional'
+      ? updateData.additionalPayments
+      : registrationData.additionalPayments;
+    const additionalPayments = parseAdditionalPayments(additionalPaymentsJson);
+
+    // Check if still fully paid
+    const fullyPaid = isFullyPaid(totalAmount, newPaidAmount, additionalPayments);
+
+    // Update status based on payment completion
+    if (fullyPaid) {
+      updateData.status = 'ยืนยันแล้ว';
+    } else {
+      updateData.status = 'รอดำเนินการ';
+    }
+
+    await registrationDoc.ref.update(updateData);
+
+    console.log(`[Hard Delete Slip] Updated eventRegistrations for ${slip.registrationId}:`, {
+      paymentType: slip.paymentType,
+      paymentStatus: updateData.paymentStatus,
+      status: updateData.status,
+      paidAmount: updateData.paidAmount,
+      fullyPaid,
+    });
+  }
+
+  // 4. Delete the slip document permanently
+  await db.collection('paymentSlips').doc(slipId).delete();
+
+  console.log(`[Hard Delete Slip] Slip ${slipId} permanently deleted by admin ${adminId}`);
+}
+
+/**
  * Calculate payment summary for a registration
  * Gets all slips and calculates totals, balance, etc.
  */

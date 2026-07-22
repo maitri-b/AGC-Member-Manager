@@ -242,6 +242,35 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
     }
   };
 
+  const handleHardDelete = async (slipId: string, slipStatus: string) => {
+    const confirmMessage = slipStatus === 'approved'
+      ? 'คุณต้องการลบสลิปที่อนุมัติแล้วใช่หรือไม่? สถานะการชำระเงินจะถูกอัพเดทใหม่'
+      : 'คุณต้องการลบสลิปนี้ใช่หรือไม่?';
+
+    if (!confirm(confirmMessage)) return;
+
+    const reason = prompt('กรุณาระบุเหตุผลในการลบสลิป:');
+    if (!reason) return;
+
+    try {
+      const response = await fetch(`/api/payments/${slipId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete payment slip');
+      }
+      alert('ลบสลิปเรียบร้อยแล้ว');
+      await fetchPaymentSlips();
+      onUpdate();
+    } catch (error) {
+      console.error('Error deleting payment slip:', error);
+      alert(error instanceof Error ? error.message : 'ไม่สามารถลบสลิปได้');
+    }
+  };
+
   const getPaymentTypeName = (type: string) => {
     const names: Record<string, string> = {
       full: 'ชำระเต็มจำนวน',
@@ -361,13 +390,21 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                             </button>
                             <button
                               onClick={() => handleReject(slip.slipId)}
-                              className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                              title="ลบ"
+                              className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
+                              title="ปฏิเสธ"
                             >
-                              ✗ ลบ
+                              ✗ ปฏิเสธ
                             </button>
                           </>
                         )}
+                        {/* Admin can delete any slip regardless of status */}
+                        <button
+                          onClick={() => handleHardDelete(slip.slipId, slip.status)}
+                          className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                          title="ลบสลิปถาวร (Admin เท่านั้น)"
+                        >
+                          🗑️ ลบ
+                        </button>
                       </div>
                     </td>
                   </tr>

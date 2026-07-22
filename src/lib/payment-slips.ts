@@ -770,6 +770,18 @@ export async function hardDeletePaymentSlip(
       );
 
       updateData.additionalPayments = JSON.stringify(additionalPayments);
+
+      // Clear additionalPaymentAmountPaid if this was the slip that was approved
+      // Subtract the deleted slip amount from additionalPaymentAmountPaid
+      const currentAdditionalPaid = currentData.additionalPaymentAmountPaid || 0;
+      const newAdditionalPaid = Math.max(0, currentAdditionalPaid - slipAmount);
+      updateData.additionalPaymentAmountPaid = newAdditionalPaid;
+
+      console.log(`[Hard Delete Slip] Clearing additional payment tracking:`, {
+        slipAmount,
+        oldAdditionalPaid: currentAdditionalPaid,
+        newAdditionalPaid,
+      });
     }
 
     // Recalculate registration status based on remaining payment
@@ -785,11 +797,44 @@ export async function hardDeletePaymentSlip(
     // Check if still fully paid
     const fullyPaid = isFullyPaid(totalAmount, newPaidAmount, additionalPayments);
 
-    // Update status based on payment completion
-    if (fullyPaid) {
+    // Recalculate overpayment amount after deletion
+    // Need to check actual total paid including all tracking fields
+    const depositAmountPaid = (slip.paymentType === 'deposit' && updateData.depositPaid === false)
+      ? 0
+      : (registrationData.depositAmountPaid || 0);
+    const remainingAmountPaid = (slip.paymentType === 'remaining' && updateData.remainingPaid === false)
+      ? 0
+      : (registrationData.remainingAmountPaid || 0);
+    const fullPaymentAmountPaid = (slip.paymentType === 'full' && updateData.fullPaymentPaid === false)
+      ? 0
+      : (registrationData.fullPaymentAmountPaid || 0);
+    const additionalPaymentAmountPaid = updateData.additionalPaymentAmountPaid !== undefined
+      ? updateData.additionalPaymentAmountPaid
+      : (registrationData.additionalPaymentAmountPaid || 0);
+
+    const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
+
+    // Check for overpayment
+    if (actualTotalPaid > totalAmount && actualTotalPaid > 0) {
+      const overpayment = actualTotalPaid - totalAmount;
+      updateData.paymentStatus = 'ชำระเกินจำนวน';
+      updateData.status = 'ยืนยันแล้ว'; // Still confirmed, just overpaid
+      updateData.overpayment_amount = overpayment;
+      console.log(`[Hard Delete Slip] Still overpaid after deletion:`, {
+        actualTotalPaid,
+        totalAmount,
+        overpayment,
+      });
+    } else if (fullyPaid) {
+      // Exactly paid or using legacy additional payments
       updateData.status = 'ยืนยันแล้ว';
+      updateData.paymentStatus = 'ชำระครบแล้ว';
+      updateData.overpayment_amount = 0; // Clear overpayment
     } else {
+      // Not fully paid anymore
       updateData.status = 'รอดำเนินการ';
+      updateData.overpayment_amount = 0; // Clear overpayment
+      // paymentStatus already set based on payment type above
     }
 
     await registrationDoc.ref.update(updateData);
@@ -799,7 +844,11 @@ export async function hardDeletePaymentSlip(
       paymentStatus: updateData.paymentStatus,
       status: updateData.status,
       paidAmount: updateData.paidAmount,
+      additionalPaymentAmountPaid: updateData.additionalPaymentAmountPaid,
+      overpayment_amount: updateData.overpayment_amount,
       fullyPaid,
+      actualTotalPaid: actualTotalPaid || 'not calculated',
+      totalAmount,
     });
   }
 

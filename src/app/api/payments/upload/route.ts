@@ -167,9 +167,43 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Use direct public URL
-    const slipUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
-    console.log('[Member Upload] File uploaded, public URL:', slipUrl);
+    console.log('[Member Upload] File saved to storage:', storagePath);
+
+    // Generate URL based on bucket configuration
+    let slipUrl: string;
+    try {
+      const [metadata] = await bucket.getMetadata();
+      const iamConfiguration = metadata?.iamConfiguration;
+
+      // Check if uniform bucket-level access is enabled
+      if (iamConfiguration?.uniformBucketLevelAccess?.enabled) {
+        console.log('[Member Upload] Uniform bucket-level access enabled, using signed URL');
+
+        // Generate a long-lived signed URL (10 years for payment records)
+        const [signedUrl] = await file.getSignedUrl({
+          action: 'read',
+          expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
+        });
+
+        slipUrl = signedUrl;
+      } else {
+        console.log('[Member Upload] Using direct public URL');
+        // Use direct public URL if bucket is publicly accessible
+        slipUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+      }
+    } catch (error) {
+      console.error('[Member Upload] Error checking bucket metadata, defaulting to signed URL:', error);
+
+      // Default to signed URL if we can't determine bucket settings
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
+      });
+
+      slipUrl = signedUrl;
+    }
+
+    console.log('[Member Upload] Slip URL generated:', slipUrl);
 
     console.log('[Member Upload] Creating payment slip in database...');
 

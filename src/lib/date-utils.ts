@@ -156,10 +156,19 @@ export function formatEventDateRange(startDate: string, endDate?: string): strin
 }
 
 /**
- * Parse Thai date string (DD/MM/YYYY or YYYY) to components
+ * Parse Thai date string (DD/MM/YYYY, YYYY-MM-DD, or YYYY) to components
  */
 function parseThaiDate(dateStr: string): { day: number; month: number; year: number } | null {
   if (!dateStr) return null;
+
+  // Try YYYY-MM-DD format (ISO format - new preferred format)
+  const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1]);
+    const month = parseInt(isoMatch[2]) - 1; // 0-indexed
+    const day = parseInt(isoMatch[3]);
+    return { day, month, year };
+  }
 
   // Try DD/MM/YYYY format (พ.ศ.)
   const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);

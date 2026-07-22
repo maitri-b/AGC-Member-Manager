@@ -141,7 +141,7 @@ export async function PUT(
       if (paymentType === 'deposit') {
         // ✅ FIX: Check if event is in Full Payment Mode
         // If so, treat 'deposit' paymentType as 'full' payment
-        if (eventData.paymentMode === 'full') {
+        if (eventData?.paymentMode === 'full') {
           // Full Payment Mode: Use full payment fields
           updateData.full_payment_paid = true;
           updateData.full_payment_paid_date = paidDate;

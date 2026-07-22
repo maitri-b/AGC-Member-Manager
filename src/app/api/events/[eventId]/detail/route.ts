@@ -211,10 +211,10 @@ export async function GET(
             let recalculatedTotal = latestReg.totalAmount || 0;
 
             // If we have attendee type selections, recalculate from scratch
-            if (attendeeTypeSelections.length > 0 && eventData.attendeeTypes) {
+            if (attendeeTypeSelections.length > 0 && eventData?.attendeeTypes) {
               let eventFee = 0;
               attendeeTypeSelections.forEach((sel: { typeId: string; quantity: number }) => {
-                const type = eventData.attendeeTypes.find((t: { typeId: string; price: number }) => t.typeId === sel.typeId);
+                const type = eventData?.attendeeTypes?.find((t: { typeId: string; price: number }) => t.typeId === sel.typeId);
                 if (type) {
                   eventFee += type.price * sel.quantity;
                 }
@@ -222,9 +222,9 @@ export async function GET(
 
               // Add room fees
               let roomFee = 0;
-              if (roomAllocations.length > 0 && eventData.roomTypes) {
+              if (roomAllocations.length > 0 && eventData?.roomTypes) {
                 roomAllocations.forEach((alloc: { roomTypeId: string; roomCount: number }) => {
-                  const roomType = eventData.roomTypes.find((rt: { typeId: string; price: number }) => rt.typeId === alloc.roomTypeId);
+                  const roomType = eventData?.roomTypes?.find((rt: { typeId: string; price: number }) => rt.typeId === alloc.roomTypeId);
                   if (roomType) {
                     roomFee += roomType.price * alloc.roomCount;
                   }

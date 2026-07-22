@@ -100,9 +100,12 @@ export async function POST(
 
     const eventData = eventDoc.data();
 
-    if (!eventData?.sheetName) {
-      return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่พร้อมรับลงทะเบียน' }, { status: 400 });
+    if (!eventData) {
+      return NextResponse.json({ error: 'ไม่พบข้อมูลกิจกรรม' }, { status: 404 });
     }
+
+    // DEPRECATED: sheetName check removed - now using Firestore only
+    // Events no longer require sheetName since we migrated to Firestore-only approach
 
     // Get member details if target is a member
     let member = null;

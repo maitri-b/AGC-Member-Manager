@@ -82,7 +82,8 @@ export async function getPaymentSlipById(
  * Create a new payment slip
  */
 export async function createPaymentSlip(
-  slip: Omit<PaymentSlip, 'slipId' | 'createdAt'>
+  slip: Omit<PaymentSlip, 'slipId' | 'createdAt'>,
+  registrationDocId?: string // Optional: direct document ID for immediate payment during registration
 ): Promise<PaymentSlip> {
   const db = adminDb();
   const slipId = generateSlipId();
@@ -97,15 +98,42 @@ export async function createPaymentSlip(
   // 1. Create the payment slip document
   await db.collection('paymentSlips').doc(slipId).set(newSlip);
 
+  console.log(`[createPaymentSlip] Created slip ${slipId} for registration ${slip.registrationId}, paymentType: ${slip.paymentType}, amount: ${slip.amount}`);
+
   // 2. Update the registration record to store slip URL (for pending status tracking)
   const registrationsRef = db.collection('eventRegistrations');
-  const snapshot = await registrationsRef
-    .where('registrationId', '==', slip.registrationId)
-    .limit(1)
-    .get();
 
-  if (!snapshot.empty) {
-    const registrationDoc = snapshot.docs[0];
+  let registrationDoc;
+
+  // If we have the direct document ID (from immediate payment during registration), use it
+  if (registrationDocId) {
+    console.log(`[createPaymentSlip] Using direct document ID: ${registrationDocId}`);
+    const docRef = registrationsRef.doc(registrationDocId);
+    const docSnapshot = await docRef.get();
+    if (docSnapshot.exists) {
+      registrationDoc = docRef;
+    } else {
+      console.error(`[createPaymentSlip] Document ID ${registrationDocId} not found!`);
+    }
+  }
+
+  // Fallback to query if no document ID provided or document not found
+  if (!registrationDoc) {
+    console.log(`[createPaymentSlip] Querying for registration ${slip.registrationId}`);
+    const snapshot = await registrationsRef
+      .where('registrationId', '==', slip.registrationId)
+      .limit(1)
+      .get();
+
+    if (!snapshot.empty) {
+      registrationDoc = snapshot.docs[0].ref;
+      console.log(`[createPaymentSlip] Found registration doc via query: ${snapshot.docs[0].id}`);
+    } else {
+      console.error(`[createPaymentSlip] No registration found with registrationId: ${slip.registrationId}`);
+    }
+  }
+
+  if (registrationDoc) {
     const updateData: Record<string, any> = {
       updatedAt: createdAt,
     };
@@ -123,7 +151,10 @@ export async function createPaymentSlip(
     }
     // Note: 'additional' type doesn't need to update main slip URLs
 
-    await registrationDoc.ref.update(updateData);
+    await registrationDoc.update(updateData);
+    console.log(`[createPaymentSlip] Updated registration with slip URL, paymentStatus: ${updateData.paymentStatus}`);
+  } else {
+    console.warn(`[createPaymentSlip] Could not update registration ${slip.registrationId} - document not found`);
   }
 
   return newSlip;

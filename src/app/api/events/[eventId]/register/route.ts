@@ -385,8 +385,9 @@ export async function POST(
       registeredAt: new Date().toISOString(),
     };
 
-    // Add to Firestore
-    await addEventRegistrationToFirestore(eventId, registrationData);
+    // Add to Firestore and get the document ID
+    const registrationDocId = await addEventRegistrationToFirestore(eventId, registrationData);
+    console.log(`[Registration] Created registration ${registrationId} with doc ID: ${registrationDocId}`);
 
     // ✅ Handle immediate payment slip upload
     let slipUrl = '';
@@ -394,12 +395,16 @@ export async function POST(
       try {
         // Upload slip to Firebase Storage
         slipUrl = await uploadPaymentSlipToStorage(slipFile, eventId, registrationId);
+        console.log(`[Immediate Payment] Uploaded slip to: ${slipUrl}`);
 
         // Determine payment type based on payment mode
         const paymentType = eventData.paymentMode === 'deposit' ? 'deposit' : 'full';
         const paymentAmount = eventData.paymentMode === 'deposit' ? depositAmount : totalFee;
 
+        console.log(`[Immediate Payment] Creating payment slip - Type: ${paymentType}, Amount: ${paymentAmount}`);
+
         // Create payment slip record in paymentSlips collection
+        // Pass registrationDocId to update registration directly without querying
         await createPaymentSlip({
           registrationId,
           eventId,
@@ -409,11 +414,11 @@ export async function POST(
           uploadedBy: session.user.id || '',
           uploadedAt: new Date().toISOString(),
           status: 'pending',
-        });
+        }, registrationDocId); // ✅ Pass document ID for direct update
 
-        console.log(`[Immediate Payment] Slip uploaded for registration ${registrationId}: ${slipUrl}`);
+        console.log(`[Immediate Payment] Slip created successfully for registration ${registrationId}`);
       } catch (uploadError) {
-        console.error('[Immediate Payment] Failed to upload slip:', uploadError);
+        console.error('[Immediate Payment] Failed to upload/create slip:', uploadError);
         // Don't fail the registration if slip upload fails
         // User can re-upload later
       }

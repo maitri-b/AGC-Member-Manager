@@ -357,7 +357,8 @@ export async function POST(
       registeredAt: new Date().toISOString(),
     };
 
-    await addEventRegistrationToFirestore(eventId, firestoreData);
+    const registrationDocId = await addEventRegistrationToFirestore(eventId, firestoreData);
+    console.log(`[Register On Behalf] Created registration ${registrationId} with doc ID: ${registrationDocId}`);
 
     // Invalidate caches for this event
     sheetsCache.invalidate(CacheKeys.eventAttendees(eventId));

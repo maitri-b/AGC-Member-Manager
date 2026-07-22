@@ -399,7 +399,7 @@ export async function getEventRegistrations(sheetName: string): Promise<EventReg
 export async function addEventRegistrationToFirestore(
   eventId: string,
   registrationData: Record<string, unknown>
-): Promise<boolean> {
+): Promise<string> {
   try {
     const db = adminDb();
 
@@ -412,7 +412,7 @@ export async function addEventRegistrationToFirestore(
     });
 
     console.log(`[addEventRegistrationToFirestore] Added registration ${registrationData.registrationId} to Firestore with doc ID ${docRef.id}`);
-    return true;
+    return docRef.id; // Return document ID for immediate payment slip upload
   } catch (error) {
     console.error(`[addEventRegistrationToFirestore] Error adding registration:`, error);
     throw error;

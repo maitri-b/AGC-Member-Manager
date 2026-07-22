@@ -141,9 +141,8 @@ export async function POST(
       return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่เปิดรับสมัคร' }, { status: 400 });
     }
 
-    if (!eventData?.sheetName) {
-      return NextResponse.json({ error: 'กิจกรรมนี้ยังไม่พร้อมรับลงทะเบียน' }, { status: 400 });
-    }
+    // DEPRECATED: sheetName check removed - now using Firestore only
+    // Events no longer require sheetName since we migrated to Firestore-only approach
 
     // Helper function to check if registration is cancelled
     function isRegistrationCancelled(registration: EventRegistration): boolean {

@@ -76,7 +76,7 @@ export async function PUT(
     let shouldRecalculate = false;
 
     // Determine if we need to recalculate
-    if (eventData.useAttendeeTypePricing) {
+    if (eventData?.useAttendeeTypePricing) {
       // Attendee Type Pricing: recalculate if attendee_type_selections is provided
       shouldRecalculate = updateData.attendee_type_selections !== undefined;
     } else {
@@ -90,7 +90,7 @@ export async function PUT(
     }
 
     if (shouldRecalculate) {
-      if (eventData.useAttendeeTypePricing) {
+      if (eventData?.useAttendeeTypePricing) {
         // Attendee Type Pricing
         let attendeeTypeSelections = [];
         try {
@@ -102,9 +102,9 @@ export async function PUT(
         }
 
         // Calculate event fee from attendee types
-        if (eventData.attendeeTypes) {
+        if (eventData?.attendeeTypes) {
           calculatedEventFee = attendeeTypeSelections.reduce((sum: number, s: { typeId: string; quantity: number }) => {
-            const type = eventData.attendeeTypes.find((t: AttendeeType) => t.typeId === s.typeId);
+            const type = eventData?.attendeeTypes?.find((t: AttendeeType) => t.typeId === s.typeId);
             if (!type) return sum;
             return sum + (type.price * s.quantity);
           }, 0);
@@ -137,9 +137,9 @@ export async function PUT(
         }
       }
 
-      if (eventData.roomTypes && eventData.roomTypes.length > 0 && roomAllocations.length > 0) {
+      if (eventData?.roomTypes && eventData.roomTypes.length > 0 && roomAllocations.length > 0) {
         calculatedRoomFee = roomAllocations.reduce((sum: number, alloc: { roomTypeId: string; roomCount: number }) => {
-          const roomType = eventData.roomTypes.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+          const roomType = eventData?.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
           if (!roomType) return sum;
           return sum + (roomType.price * alloc.roomCount);
         }, 0);
@@ -182,7 +182,7 @@ export async function PUT(
       finalUpdateData.total_amount = newTotalAmount;
 
       // Recalculate deposit and remaining amounts if event uses deposit payment mode
-      if (eventData.paymentMode === 'deposit' && newTotalAmount > 0) {
+      if (eventData?.paymentMode === 'deposit' && newTotalAmount > 0) {
         // Get updated attendee count (use updated value if provided, otherwise use current)
         const updatedAttendeeCount = updateData.attendee_count !== undefined
           ? updateData.attendee_count
@@ -235,7 +235,7 @@ export async function PUT(
       const paymentStatusUpdate = recalculatePaymentStatus(
         currentRegistration,
         newTotalAmount,
-        eventData.paymentMode || 'full',
+        eventData?.paymentMode || 'full',
         approvedSlipsTotal
       );
 

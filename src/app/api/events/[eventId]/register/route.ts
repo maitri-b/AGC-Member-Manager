@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, adminStorage } from '@/lib/firebase-admin';
 import { getMemberById } from '@/lib/google-sheets';
 import { getEventRegistrationsByEventId, addEventRegistrationToFirestore } from '@/lib/event-sheets';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
@@ -11,7 +11,7 @@ import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDead
 import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
 import { createPaymentSlip } from '@/lib/payment-slips';
-import { getStorage } from 'firebase-admin/storage';
+// Removed - using adminStorage() from @/lib/firebase-admin instead
 
 // Generate a unique 6-character registration ID
 function generateRegistrationId(): string {
@@ -29,7 +29,14 @@ async function uploadPaymentSlipToStorage(
   eventId: string,
   registrationId: string
 ): Promise<string> {
-  const bucket = getStorage().bucket();
+  const storage = adminStorage();
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+  if (!bucketName) {
+    throw new Error('Firebase Storage bucket name is not configured');
+  }
+
+  const bucket = storage.bucket(bucketName);
   const timestamp = Date.now();
   const fileName = `payment-slips/${eventId}/${registrationId}_${timestamp}.${file.name.split('.').pop()}`;
 
@@ -413,6 +420,7 @@ export async function POST(
       remainingDeadline: remainingDeadline,
       fullPaymentDeadline: fullPaymentDeadline,
       paymentStatus: paymentStatus,
+      paymentTiming: paymentTiming, // ✅ Save payment timing flag
       attendeeTypeSelections: JSON.stringify(attendeeTypeSelections),
       roomAllocations: JSON.stringify(roomAllocations),
       status: paymentStatus,

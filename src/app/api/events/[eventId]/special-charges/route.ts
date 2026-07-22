@@ -164,7 +164,7 @@ export async function POST(
       .reduce((sum, slip) => sum + (slip.amount || 0), 0);
 
     // ✅ CRITICAL: Recalculate payment status when totalAmount changes
-    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full', approvedSlipsTotal);
+    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData?.paymentMode || 'full', approvedSlipsTotal);
     updateData.payment_status = paymentStatusUpdate.payment_status;
     if (paymentStatusUpdate.status) {
       updateData.status = paymentStatusUpdate.status;
@@ -380,7 +380,7 @@ export async function DELETE(
       .reduce((sum, slip) => sum + (slip.amount || 0), 0);
 
     // ✅ CRITICAL: Recalculate payment status when totalAmount changes
-    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData.paymentMode || 'full', approvedSlipsTotal);
+    const paymentStatusUpdate = recalculatePaymentStatus(registration, newTotalAmount, eventData?.paymentMode || 'full', approvedSlipsTotal);
     updateData.payment_status = paymentStatusUpdate.payment_status;
     if (paymentStatusUpdate.status) {
       updateData.status = paymentStatusUpdate.status;

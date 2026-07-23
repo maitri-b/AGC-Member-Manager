@@ -3709,6 +3709,17 @@ export default function EventDetailPage() {
                                           deadline = attendee.registration.fullPaymentDeadline || '';
                                         }
 
+                                        // Debug log
+                                        console.log('[Deadline Debug]', {
+                                          registrationId: attendee.registration.registrationId,
+                                          depositMode,
+                                          depositPaid: attendee.registration.depositPaid,
+                                          depositDeadline: attendee.registration.depositDeadline,
+                                          remainingDeadline: attendee.registration.remainingDeadline,
+                                          fullPaymentDeadline: attendee.registration.fullPaymentDeadline,
+                                          selectedDeadline: deadline
+                                        });
+
                                         if (deadline) {
                                           return (
                                             <div className="text-gray-500 text-xs mt-1">

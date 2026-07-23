@@ -3689,10 +3689,38 @@ export default function EventDetailPage() {
 
                                   {/* Show outstanding if > 0 */}
                                   {additionalRequired > 0 && (
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-orange-700 font-medium">คงเหลือยอดค้างชำระ:</span>
-                                      <span className="font-semibold text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
-                                    </div>
+                                    <>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-orange-700 font-medium">คงเหลือยอดค้างชำระ:</span>
+                                        <span className="font-semibold text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
+                                      </div>
+                                      {/* Show deadline based on payment mode */}
+                                      {(() => {
+                                        const depositMode = attendee.registration.depositAmount > 0;
+                                        let deadline = '';
+
+                                        if (depositMode) {
+                                          // Deposit mode: show remaining deadline if deposit paid, otherwise deposit deadline
+                                          deadline = attendee.registration.depositPaid
+                                            ? attendee.registration.remainingDeadline
+                                            : attendee.registration.depositDeadline;
+                                        } else {
+                                          // Full payment mode: show full payment deadline
+                                          deadline = attendee.registration.fullPaymentDeadline || '';
+                                        }
+
+                                        if (deadline) {
+                                          return (
+                                            <div className="text-gray-500 text-xs mt-1">
+                                              กำหนดชำระ: {formatDeadline(deadline)}
+                                              <br />
+                                              <span className="text-orange-600">{getTimeRemaining(deadline)}</span>
+                                            </div>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
+                                    </>
                                   )}
 
                                   {/* ✅ Show overpayment if > 0 (paidAmount > totalAmount) */}
@@ -3810,6 +3838,24 @@ export default function EventDetailPage() {
                                                       <span className="text-orange-700 font-medium">ยอดชำระเพิ่ม:</span>
                                                       <span className="font-semibold text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
                                                     </div>
+                                                    {/* Show deadline for additional payment */}
+                                                    {(() => {
+                                                      // Additional payment uses remaining deadline (as it's after deposit is paid)
+                                                      const deadline = attendee.registration.remainingDeadline || attendee.registration.fullPaymentDeadline || '';
+                                                      if (deadline) {
+                                                        return (
+                                                          <div className="border-t border-blue-200 pt-1">
+                                                            <div className="text-gray-600 text-xs">
+                                                              กำหนดชำระ: {formatDeadline(deadline)}
+                                                            </div>
+                                                            <div className="text-orange-600 text-xs">
+                                                              {getTimeRemaining(deadline)}
+                                                            </div>
+                                                          </div>
+                                                        );
+                                                      }
+                                                      return null;
+                                                    })()}
                                                   </>
                                                 );
                                               })()}

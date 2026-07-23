@@ -18,8 +18,8 @@ export function calculateFullPaymentDeadline(
   }
 
   if (event.paymentDeadlineType === 'fixed' && event.paymentDeadlineFixed) {
-    // Convert YYYY-MM-DD to midnight (00:00) in Bangkok timezone
-    const deadlineDate = new Date(event.paymentDeadlineFixed + 'T00:00:00+07:00');
+    // Convert YYYY-MM-DD to end of day (23:59:59) in Bangkok timezone
+    const deadlineDate = new Date(event.paymentDeadlineFixed + 'T23:59:59+07:00');
     return deadlineDate.toISOString();
   }
 
@@ -47,8 +47,8 @@ export function calculateDepositDeadline(
   }
 
   if (event.depositDeadlineType === 'fixed' && event.depositDeadlineFixed) {
-    // Convert YYYY-MM-DD to midnight (00:00) in Bangkok timezone
-    const deadlineDate = new Date(event.depositDeadlineFixed + 'T00:00:00+07:00');
+    // Convert YYYY-MM-DD to end of day (23:59:59) in Bangkok timezone
+    const deadlineDate = new Date(event.depositDeadlineFixed + 'T23:59:59+07:00');
     return deadlineDate.toISOString();
   }
 
@@ -76,7 +76,8 @@ export function calculateRemainingDeadline(
   }
 
   if (event.remainingDeadlineType === 'fixed' && event.remainingDeadlineFixed) {
-    const deadlineDate = new Date(event.remainingDeadlineFixed + 'T00:00:00+07:00');
+    // Convert YYYY-MM-DD to end of day (23:59:59) in Bangkok timezone
+    const deadlineDate = new Date(event.remainingDeadlineFixed + 'T23:59:59+07:00');
     return deadlineDate.toISOString();
   }
 

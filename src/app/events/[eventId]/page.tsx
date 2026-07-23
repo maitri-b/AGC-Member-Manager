@@ -1767,12 +1767,20 @@ export default function EventDetailPage() {
                                     <span className="font-bold">{overpayment.toLocaleString()} บาท</span>
                                   </div>
                                 ) : (
-                                  <div className={`flex justify-between border-t pt-1 mt-1 ${
-                                    outstanding === 0 ? 'text-green-700 border-green-300' : 'text-red-700 border-red-300'
-                                  }`}>
-                                    <span className="font-bold">ยอดคงเหลือค้างชำระ:</span>
-                                    <span className="font-bold">{outstanding.toLocaleString()} บาท</span>
-                                  </div>
+                                  <>
+                                    <div className={`flex justify-between border-t pt-1 mt-1 ${
+                                      outstanding === 0 ? 'text-green-700 border-green-300' : 'text-red-700 border-red-300'
+                                    }`}>
+                                      <span className="font-bold">ยอดคงเหลือค้างชำระ:</span>
+                                      <span className="font-bold">{outstanding.toLocaleString()} บาท</span>
+                                    </div>
+                                    {/* Show pending slip notice if there are pending slips */}
+                                    {outstanding > 0 && paymentSlips.some(slip => slip.status === 'pending') && (
+                                      <div className="text-xs text-green-600 mt-1 ml-1">
+                                        (รอตรวจสอบสลิป)
+                                      </div>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             );

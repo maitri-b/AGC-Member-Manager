@@ -160,6 +160,7 @@ export async function GET(
           // Payment deadlines
           depositDeadline: String(attendee.registration.depositDeadline || ''),
           remainingDeadline: String(attendee.registration.remainingDeadline || ''),
+          fullPaymentDeadline: String(attendee.registration.fullPaymentDeadline || ''),
           paymentStatus: String(attendee.registration.paymentStatus || status),
           // Attendee type pricing and room allocation
           attendeeTypeSelections: String(attendee.registration.attendeeTypeSelections || ''),

@@ -981,8 +981,8 @@ export default function EventDetailPage() {
 
                       {/* Fee Breakdown */}
                       <div className="mt-3 pt-3 border-t border-green-200">
-                        <p className="text-xs font-semibold text-green-800 mb-2">รายละเอียดค่าใช้จ่าย:</p>
-                        <div className="text-xs text-green-700 space-y-1">
+                        <p className="text-sm font-semibold text-green-800 mb-2">รายละเอียดค่าใช้จ่าย:</p>
+                        <div className="text-sm text-green-700 space-y-1">
                           {event.useAttendeeTypePricing ? (
                             // Attendee Type Pricing Breakdown
                             <>
@@ -1140,7 +1140,7 @@ export default function EventDetailPage() {
                           {/* Special charges breakdown */}
                           {userRegistration.specialCharges && userRegistration.specialCharges.length > 0 && (
                             <div className="mt-2 pt-2 border-t border-green-300">
-                              <p className="text-xs font-semibold text-purple-700 mb-1">ค่าใช้จ่ายเสริม:</p>
+                              <p className="text-sm font-semibold text-purple-700 mb-1">ค่าใช้จ่ายเสริม:</p>
                               {userRegistration.specialCharges.map((charge) => (
                                 <div key={charge.chargeId} className="flex justify-between text-purple-700">
                                   <span>{charge.description}</span>
@@ -1157,7 +1157,7 @@ export default function EventDetailPage() {
                           {/* Discounts breakdown */}
                           {userRegistration.discounts && userRegistration.discounts.length > 0 && (
                             <div className="mt-2 pt-2 border-t border-green-300">
-                              <p className="text-xs font-semibold text-orange-700 mb-1">ส่วนลด:</p>
+                              <p className="text-sm font-semibold text-orange-700 mb-1">ส่วนลด:</p>
                               {userRegistration.discounts.map((discount) => (
                                 <div key={discount.discountId} className="flex justify-between text-orange-700">
                                   <span>
@@ -2308,7 +2308,7 @@ export default function EventDetailPage() {
                         {event.paymentTerms && (
                           <div>
                             <h4 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h4>
-                            <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
+                            <div className="text-xs text-blue-800 whitespace-pre-wrap">
                               {event.paymentTerms}
                             </div>
                           </div>
@@ -3127,7 +3127,7 @@ export default function EventDetailPage() {
                         {event.paymentTerms && (
                           <div>
                             <h4 className="text-sm font-semibold text-blue-900 mb-2">เงื่อนไขการชำระเงิน</h4>
-                            <div className="prose prose-sm max-w-none text-blue-800 whitespace-pre-wrap">
+                            <div className="text-xs text-blue-800 whitespace-pre-wrap">
                               {event.paymentTerms}
                             </div>
                           </div>

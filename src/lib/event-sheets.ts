@@ -304,6 +304,7 @@ async function getEventRegistrationsFromFirestore(eventId: string): Promise<Even
         fullPaymentPaid: data.fullPaymentPaid || false,
         fullPaymentPaidDate: data.fullPaymentPaidDate || '',
         fullPaymentAmountPaid: data.fullPaymentAmountPaid || 0,
+        fullPaymentDeadline: data.fullPaymentDeadline || '', // ✅ CRITICAL FIX: Full payment deadline
         remainingPaid: data.remainingPaid || false,
         remainingAmountPaid: data.remainingAmountPaid || 0,
         depositAmountPaid: data.depositAmountPaid || 0,

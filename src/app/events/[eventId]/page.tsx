@@ -2044,7 +2044,7 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* 4a. Full Payment Mode - Show deadline (hide if fully paid) */}
+                      {/* 4a. Full Payment Mode - Show deadline (hide if fully paid or has payment slips) */}
                       {(() => {
                         const totalAmount = userRegistration.totalAmount || 0;
                         const paidAmount = userRegistration.paidAmount || 0;
@@ -2053,6 +2053,10 @@ export default function EventDetailPage() {
 
                         // Hide deadline if fully paid
                         if (fullyPaid) return null;
+
+                        // ✅ Hide deadline if user has uploaded any payment slip (pending/approved/rejected)
+                        // User has started payment process, no need to show deadline anymore
+                        if (paymentSlips.length > 0) return null;
 
                         // ✅ Use fullPaymentDeadline for full payment mode (not remainingDeadline)
                         const deadline = userRegistration.fullPaymentDeadline;
@@ -2111,6 +2115,10 @@ export default function EventDetailPage() {
 
                                 {/* Show deadline with warning if past deadline */}
                                 {!fullyPaid && userRegistration.depositDeadline && !userRegistration.depositPaid && (() => {
+                                  // ✅ Hide deadline if user has uploaded deposit slip (any status)
+                                  const hasDepositSlip = paymentSlips.some(slip => slip.paymentType === 'deposit');
+                                  if (hasDepositSlip) return null;
+
                                   const isPastDepositDeadline = isDeadlinePassed(userRegistration.depositDeadline);
                                   return (
                                     <div className={`text-sm mb-2 ${isPastDepositDeadline ? 'text-red-600' : 'text-gray-600'}`}>
@@ -2165,6 +2173,10 @@ export default function EventDetailPage() {
 
                                 {/* Show deadline with warning if past deadline */}
                                 {!fullyPaid && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl && (() => {
+                                  // ✅ Hide deadline if user has uploaded remaining slip (any status)
+                                  const hasRemainingSlip = paymentSlips.some(slip => slip.paymentType === 'remaining');
+                                  if (hasRemainingSlip) return null;
+
                                   const isPastRemainingDeadline = isDeadlinePassed(userRegistration.remainingDeadline);
                                   return (
                                     <div className={`text-sm mb-2 ${isPastRemainingDeadline ? 'text-red-600' : 'text-gray-600'}`}>

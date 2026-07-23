@@ -13,6 +13,9 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [cacheLoading, setCacheLoading] = useState(false);
+  const [cacheMessage, setCacheMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [cacheMonths, setCacheMonths] = useState(12);
   const [formData, setFormData] = useState({
     baseUrl: '',
     websiteName: '',
@@ -66,6 +69,43 @@ export default function SettingsPage() {
       toast.error('ไม่สามารถโหลดข้อมูลการตั้งค่าได้');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRebuildCache = async () => {
+    setCacheLoading(true);
+    setCacheMessage(null);
+    try {
+      const response = await fetch('/api/admin/attendance-cache', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ months: cacheMonths }),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setCacheMessage({
+          type: 'success',
+          text: `สำเร็จ: ${data.memberCount} สมาชิก, ${data.eventCount} กิจกรรม`,
+        });
+        toast.success(`Rebuild Cache สำเร็จ: ${data.memberCount} สมาชิก, ${data.eventCount} กิจกรรม`);
+        // Clear message after 5 seconds
+        setTimeout(() => setCacheMessage(null), 5000);
+      } else {
+        setCacheMessage({
+          type: 'error',
+          text: data.error || 'ไม่สามารถสร้าง Cache ได้',
+        });
+        toast.error(data.error || 'ไม่สามารถสร้าง Cache ได้');
+      }
+    } catch (err) {
+      setCacheMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setCacheLoading(false);
     }
   };
 
@@ -291,9 +331,57 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Message Templates Link */}
+          {/* System Tools */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">การตั้งค่าขั้นสูง</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">เครื่องมือระบบ</h2>
+
+            {/* Attendance Cache */}
+            <div className="border border-gray-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1">Attendance Cache</h3>
+                  <p className="text-sm text-gray-500">อัพเดทไอคอนกิจกรรมสมาชิก - สร้าง cache ข้อมูลการเข้าร่วมกิจกรรมของสมาชิก</p>
+                </div>
+                <button
+                  onClick={handleRebuildCache}
+                  disabled={cacheLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-4"
+                >
+                  {cacheLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      กำลังสร้าง...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Rebuild Cache
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-gray-600">ย้อนหลัง</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={cacheMonths}
+                  onChange={(e) => setCacheMonths(Math.max(1, Math.min(60, parseInt(e.target.value) || 12)))}
+                  className="w-20 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-600">เดือน</span>
+              </div>
+              {cacheMessage && (
+                <div className={`mt-3 text-sm p-3 rounded-lg ${cacheMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                  {cacheMessage.text}
+                </div>
+              )}
+            </div>
+
+            {/* Message Templates Link */}
             <Link
               href="/admin/settings/message-templates"
               className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group"

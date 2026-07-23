@@ -10,10 +10,6 @@ export default function Navbar() {
   const { data: session } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [cacheLoading, setCacheLoading] = useState(false);
-  const [cacheMessage, setCacheMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [cacheMonths, setCacheMonths] = useState(12);
 
   if (!session) return null;
 
@@ -55,40 +51,6 @@ export default function Navbar() {
     }
   };
 
-  const handleRebuildCache = async () => {
-    setCacheLoading(true);
-    setCacheMessage(null);
-    try {
-      const response = await fetch('/api/admin/attendance-cache', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ months: cacheMonths }),
-      });
-      const data = await response.json();
-
-      if (response.ok) {
-        setCacheMessage({
-          type: 'success',
-          text: `สำเร็จ: ${data.memberCount} สมาชิก, ${data.eventCount} กิจกรรม`,
-        });
-        // Clear message after 5 seconds
-        setTimeout(() => setCacheMessage(null), 5000);
-      } else {
-        setCacheMessage({
-          type: 'error',
-          text: data.error || 'ไม่สามารถสร้าง Cache ได้',
-        });
-      }
-    } catch (err) {
-      setCacheMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
-      });
-    } finally {
-      setCacheLoading(false);
-    }
-  };
-
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -121,14 +83,6 @@ export default function Navbar() {
             >
               หน้าหลัก
             </Link>
-            {canViewMembers && (
-              <Link
-                href="/members"
-                className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                สมาชิก
-              </Link>
-            )}
             <Link
               href="/events"
               className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -141,6 +95,14 @@ export default function Navbar() {
             >
               ประวัติการจอง
             </Link>
+            {canViewMembers && (
+              <Link
+                href="/members"
+                className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                สมาชิก
+              </Link>
+            )}
             {canManageEvents && (
               <Link
                 href="/admin/events"
@@ -161,87 +123,24 @@ export default function Navbar() {
 
           {/* Profile & Settings */}
           <div className="flex items-center gap-2">
-            {/* Settings Dropdown - Only for admins */}
+            {/* Settings Button - Only for admins */}
             {canAccessAdmin && (
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setIsSettingsOpen(!isSettingsOpen);
-                    setIsProfileOpen(false);
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
-                  title="เครื่องมือระบบ"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </button>
-
-                {/* Settings Dropdown Menu */}
-                {isSettingsOpen && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-50">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-900">เครื่องมือระบบ</p>
-                    </div>
-
-                    {/* Rebuild Cache */}
-                    <div className="px-4 py-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Attendance Cache</p>
-                          <p className="text-xs text-gray-500">อัพเดทไอคอนกิจกรรมสมาชิก</p>
-                        </div>
-                        <button
-                          onClick={handleRebuildCache}
-                          disabled={cacheLoading}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {cacheLoading ? (
-                            <>
-                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
-                              กำลังสร้าง...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                              </svg>
-                              Rebuild
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <label className="text-xs text-gray-500">ย้อนหลัง</label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="60"
-                          value={cacheMonths}
-                          onChange={(e) => setCacheMonths(Math.max(1, Math.min(60, parseInt(e.target.value) || 12)))}
-                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                        <span className="text-xs text-gray-500">เดือน</span>
-                      </div>
-                      {cacheMessage && (
-                        <div className={`text-xs p-2 rounded ${cacheMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                          {cacheMessage.text}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <Link
+                href="/admin/settings"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
+                title="ตั้งค่าทั่วไป"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </Link>
             )}
 
             {/* Profile Dropdown */}
             <div className="relative">
               <button
-                onClick={() => {
-                  setIsProfileOpen(!isProfileOpen);
-                  setIsSettingsOpen(false);
-                }}
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 {session.user.image ? (
@@ -334,15 +233,6 @@ export default function Navbar() {
             >
               หน้าหลัก
             </Link>
-            {canViewMembers && (
-              <Link
-                href="/members"
-                className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                สมาชิก
-              </Link>
-            )}
             <Link
               href="/events"
               className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
@@ -357,6 +247,15 @@ export default function Navbar() {
             >
               ประวัติการจอง
             </Link>
+            {canViewMembers && (
+              <Link
+                href="/members"
+                className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                สมาชิก
+              </Link>
+            )}
             {canManageEvents && (
               <Link
                 href="/admin/events"

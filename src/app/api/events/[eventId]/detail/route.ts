@@ -68,6 +68,7 @@ export async function GET(
       eventName: eventData?.eventName || '',
       eventNameEN: eventData?.eventNameEN || '',
       eventDate: eventData?.eventDate || '',
+      eventEndDate: eventData?.eventEndDate || '', // ✅ Add event end date for date range display
       location: eventData?.location || '',
       description: eventData?.description || '',
       sheetName: eventData?.sheetName || '',

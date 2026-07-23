@@ -88,6 +88,7 @@ export async function GET(request: Request) {
             eventName: e.eventName,
             eventNameEN: e.eventNameEN,
             eventDate: e.eventDate,
+            eventEndDate: e.eventEndDate, // ✅ Add event end date for date range display
             location: e.location,
             description: e.description,
             year: e.year,

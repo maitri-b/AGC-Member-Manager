@@ -45,6 +45,7 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         eventName: data.eventName || '',
         eventNameEN: data.eventNameEN || '',
         eventDate: data.eventDate || '',
+        eventEndDate: data.eventEndDate || '',
         location: data.location || '',
         description: data.description || '',
         sheetName: data.sheetName || '',

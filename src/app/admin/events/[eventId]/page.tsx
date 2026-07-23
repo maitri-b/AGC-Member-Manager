@@ -3694,8 +3694,9 @@ export default function EventDetailPage() {
                                         <span className="text-orange-700 font-medium">คงเหลือยอดค้างชำระ:</span>
                                         <span className="font-semibold text-orange-600">{additionalRequired.toLocaleString()} บาท</span>
                                       </div>
-                                      {/* Show deadline based on payment mode */}
+                                      {/* Show deadline based on payment mode - BUILD b5edd69+ */}
                                       {(() => {
+                                        console.log('[Deadline Check] additionalRequired:', additionalRequired);
                                         const depositMode = attendee.registration.depositAmount > 0;
                                         let deadline = '';
 

@@ -690,16 +690,23 @@ export default function AdminEventsPage() {
     setError(null);
 
     try {
+      // ✅ Instead of deleting, set status to 'cancelled'
       const response = await fetch(`/api/admin/events?eventId=${deletingEventId}`, {
-        method: 'DELETE',
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'cancelled',
+        }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to delete event');
+        throw new Error(data.error || 'Failed to cancel event');
       }
 
-      setSuccess('ลบกิจกรรมเรียบร้อยแล้ว');
+      setSuccess('ยกเลิกกิจกรรมเรียบร้อยแล้ว');
       setShowDeleteConfirm(false);
       setDeletingEventId(null);
       fetchEvents();
@@ -1001,25 +1008,6 @@ export default function AdminEventsPage() {
         {success && (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
             {success}
-          </div>
-        )}
-
-        {/* Info Box - Only show for admins who can create events */}
-        {isAdmin && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">วิธีการเพิ่มกิจกรรมใหม่:</p>
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>สร้าง Sheet ใหม่ใน Google Spreadsheet สำหรับเก็บข้อมูลลงทะเบียน</li>
-                  <li>ตั้งชื่อ Sheet และใส่ columns ที่จำเป็น (ต้องมี <code className="bg-blue-100 px-1 rounded">license_number</code>)</li>
-                  <li>กดปุ่ม &quot;เพิ่มกิจกรรมใหม่&quot; และกรอกข้อมูล โดยใส่ชื่อ Sheet ให้ตรงกับที่สร้างไว้</li>
-                </ol>
-              </div>
-            </div>
           </div>
         )}
 
@@ -2565,7 +2553,7 @@ export default function AdminEventsPage() {
                     }}
                     className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                   >
-                    ลบกิจกรรม
+                    ยกเลิกกิจกรรม
                   </button>
                 )}
                 <div className={`flex gap-3 ${!editingEvent ? 'ml-auto' : ''}`}>
@@ -2590,13 +2578,13 @@ export default function AdminEventsPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Cancel Event Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">ยืนยันการลบกิจกรรม</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">ยืนยันการยกเลิกกิจกรรม</h3>
             <p className="text-gray-600 mb-6">
-              คุณต้องการลบกิจกรรมนี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              คุณต้องการยกเลิกกิจกรรมนี้หรือไม่? กิจกรรมจะไม่แสดงในรายการอีกต่อไป
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -2613,7 +2601,7 @@ export default function AdminEventsPage() {
                 disabled={saving}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {saving ? 'กำลังลบ...' : 'ลบกิจกรรม'}
+                {saving ? 'กำลังยกเลิก...' : 'ยกเลิกกิจกรรม'}
               </button>
             </div>
           </div>

@@ -43,76 +43,80 @@ export async function GET() {
       return NextResponse.json({ events: DEFAULT_EVENTS, migrated: true });
     }
 
-    const events = eventsSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        eventId: doc.id,
-        eventName: data.eventName || '',
-        eventNameEN: data.eventNameEN || '',
-        eventDate: data.eventDate || '',
-        eventEndDate: data.eventEndDate || undefined,
-        location: data.location || '',
-        description: data.description || '',
-        sheetName: data.sheetName || '',  // DEPRECATED - kept for backward compatibility
-        bankAccountId: data.bankAccountId || undefined,  // NEW - preferred method
-        year: data.year || 0,
-        isActive: data.isActive ?? true,
-        isPublished: data.isPublished ?? false,
-        countsAttendance: data.countsAttendance ?? true,
-        maxCapacity: data.maxCapacity ?? 0,
-        maxPerCompany: data.maxPerCompany ?? 0,
-        registrationFee: data.registrationFee ?? 0,
-        pricingType: data.pricingType || 'fixed',
-        baseFee: data.baseFee ?? 0,
-        additionalFeePerPerson: data.additionalFeePerPerson ?? 0,
-        priceTiers: data.priceTiers || undefined,
-        memberDiscount: data.memberDiscount ?? 0,
-        registrationOpen: data.registrationOpen ?? false,
-        documentName: data.documentName || '',
-        documentUrl: data.documentUrl || '',
-        mainImageUrl: data.mainImageUrl || '',
-        paymentBankName: data.paymentBankName || '',
-        paymentAccountName: data.paymentAccountName || '',
-        paymentAccountNumber: data.paymentAccountNumber || '',
-        paymentQrCodeUrl: data.paymentQrCodeUrl || '',
-        paymentTerms: data.paymentTerms || '',
-        paymentSlipSubmissionUrl: data.paymentSlipSubmissionUrl || '',
-        paymentSlipButtonText: data.paymentSlipButtonText || '',
-        paymentInstructionText: data.paymentInstructionText || '',
-        // Payment configuration (New)
-        paymentTiming: data.paymentTiming || 'deferred',
-        paymentMode: data.paymentMode || 'full',
-        // Full payment deadline (for paymentMode = 'full')
-        paymentDeadlineType: data.paymentDeadlineType || 'none',
-        paymentDeadlineFixed: data.paymentDeadlineFixed || '',
-        paymentDeadlineHours: data.paymentDeadlineHours ?? 0,
-        // Deposit payment configuration (for paymentMode = 'deposit')
-        depositAmount: data.depositAmount ?? 0,
-        depositPercentage: data.depositPercentage ?? 0,
-        useDepositPercentage: data.useDepositPercentage ?? false,
-        depositDeadlineType: data.depositDeadlineType || 'none',
-        depositDeadlineFixed: data.depositDeadlineFixed || '',
-        depositDeadlineHours: data.depositDeadlineHours ?? 0,
-        remainingDeadlineType: data.remainingDeadlineType || 'none',
-        remainingDeadlineFixed: data.remainingDeadlineFixed || '',
-        remainingDeadlineHours: data.remainingDeadlineHours ?? 0,
-        // Registration edit control
-        allowMemberEdit: data.allowMemberEdit ?? true,
-        requireAttendeeNames: data.requireAttendeeNames ?? true,
-        // LINE notification control
-        sendLineNotification: data.sendLineNotification ?? true,
-        // Attendee type pricing
-        useAttendeeTypePricing: data.useAttendeeTypePricing ?? false,
-        attendeeTypes: data.attendeeTypes || [],
-        // Room allocation
-        roomTypes: data.roomTypes || [],
-        // Convert Firestore Timestamps to ISO strings
-        createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
-        updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
-        createdBy: data.createdBy || '',
-        updatedBy: data.updatedBy || '',
-      };
-    }) as Event[];
+    const events = eventsSnapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          eventId: doc.id,
+          eventName: data.eventName || '',
+          eventNameEN: data.eventNameEN || '',
+          eventDate: data.eventDate || '',
+          eventEndDate: data.eventEndDate || undefined,
+          location: data.location || '',
+          description: data.description || '',
+          sheetName: data.sheetName || '',  // DEPRECATED - kept for backward compatibility
+          bankAccountId: data.bankAccountId || undefined,  // NEW - preferred method
+          year: data.year || 0,
+          isActive: data.isActive ?? true,
+          isPublished: data.isPublished ?? false,
+          countsAttendance: data.countsAttendance ?? true,
+          maxCapacity: data.maxCapacity ?? 0,
+          maxPerCompany: data.maxPerCompany ?? 0,
+          registrationFee: data.registrationFee ?? 0,
+          pricingType: data.pricingType || 'fixed',
+          baseFee: data.baseFee ?? 0,
+          additionalFeePerPerson: data.additionalFeePerPerson ?? 0,
+          priceTiers: data.priceTiers || undefined,
+          memberDiscount: data.memberDiscount ?? 0,
+          registrationOpen: data.registrationOpen ?? false,
+          documentName: data.documentName || '',
+          documentUrl: data.documentUrl || '',
+          mainImageUrl: data.mainImageUrl || '',
+          paymentBankName: data.paymentBankName || '',
+          paymentAccountName: data.paymentAccountName || '',
+          paymentAccountNumber: data.paymentAccountNumber || '',
+          paymentQrCodeUrl: data.paymentQrCodeUrl || '',
+          paymentTerms: data.paymentTerms || '',
+          paymentSlipSubmissionUrl: data.paymentSlipSubmissionUrl || '',
+          paymentSlipButtonText: data.paymentSlipButtonText || '',
+          paymentInstructionText: data.paymentInstructionText || '',
+          // Payment configuration (New)
+          paymentTiming: data.paymentTiming || 'deferred',
+          paymentMode: data.paymentMode || 'full',
+          // Full payment deadline (for paymentMode = 'full')
+          paymentDeadlineType: data.paymentDeadlineType || 'none',
+          paymentDeadlineFixed: data.paymentDeadlineFixed || '',
+          paymentDeadlineHours: data.paymentDeadlineHours ?? 0,
+          // Deposit payment configuration (for paymentMode = 'deposit')
+          depositAmount: data.depositAmount ?? 0,
+          depositPercentage: data.depositPercentage ?? 0,
+          useDepositPercentage: data.useDepositPercentage ?? false,
+          depositDeadlineType: data.depositDeadlineType || 'none',
+          depositDeadlineFixed: data.depositDeadlineFixed || '',
+          depositDeadlineHours: data.depositDeadlineHours ?? 0,
+          remainingDeadlineType: data.remainingDeadlineType || 'none',
+          remainingDeadlineFixed: data.remainingDeadlineFixed || '',
+          remainingDeadlineHours: data.remainingDeadlineHours ?? 0,
+          // Registration edit control
+          allowMemberEdit: data.allowMemberEdit ?? true,
+          requireAttendeeNames: data.requireAttendeeNames ?? true,
+          // LINE notification control
+          sendLineNotification: data.sendLineNotification ?? true,
+          // Attendee type pricing
+          useAttendeeTypePricing: data.useAttendeeTypePricing ?? false,
+          attendeeTypes: data.attendeeTypes || [],
+          // Room allocation
+          roomTypes: data.roomTypes || [],
+          // Event status
+          status: data.status || 'active',
+          // Convert Firestore Timestamps to ISO strings
+          createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
+          updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
+          createdBy: data.createdBy || '',
+          updatedBy: data.updatedBy || '',
+        };
+      })
+      .filter(event => event.status !== 'cancelled') as Event[]; // ✅ Filter out cancelled events
 
     return NextResponse.json({ events });
   } catch (error) {

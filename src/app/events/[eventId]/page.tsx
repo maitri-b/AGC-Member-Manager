@@ -688,7 +688,7 @@ export default function EventDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <Toast toasts={toast.toasts} onRemove={toast.removeToast} />
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Back Link */}
         <Link href="/events" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -698,7 +698,7 @@ export default function EventDetailPage() {
         </Link>
 
         {/* Event Header */}
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
           {/* Preview mode banner for unpublished events */}
           {isCommitteeOrAdmin && !event.isPublished && (
             <div className="bg-yellow-500 text-white px-6 py-2 text-sm font-medium flex items-center gap-2">
@@ -823,28 +823,34 @@ export default function EventDetailPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Full Capacity Alert Card */}
-            {isFull && (
-              <div className="mb-8 bg-red-50 border-2 border-red-300 rounded-lg p-6 shadow-md">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0">
-                    <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-red-700 mb-2">ปิดรับลงทะเบียน</h3>
-                    <p className="text-red-600 text-base">ขณะนี้มีผู้ให้ความสนใจจองกิจกรรมนี้เต็มจำนวนแล้ว</p>
-                  </div>
-                </div>
+        {/* Full Capacity Alert Card */}
+        {isFull && (
+          <div className="mb-8 bg-red-50 border-2 border-red-300 rounded-lg p-6 shadow-md">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
               </div>
-            )}
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-red-700 mb-2">ปิดรับลงทะเบียน</h3>
+                <p className="text-red-600 text-base">ขณะนี้มีผู้ให้ความสนใจจองกิจกรรมนี้เต็มจำนวนแล้ว</p>
+              </div>
+            </div>
+          </div>
+        )}
 
+        {/* Two Column Layout - Desktop only, Stack on mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left Column - Event Information (58%) */}
+          <div className="lg:col-span-7 space-y-6">
             {/* Description */}
             {event.description && (
-              <div className="mb-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">รายละเอียด</h2>
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">รายละเอียด</h2>
                 <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap">
                   {event.description}
                 </div>
@@ -853,8 +859,8 @@ export default function EventDetailPage() {
 
             {/* Document Download */}
             {event.documentUrl && (
-              <div className="mb-8">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">
                   Download เอกสาร
                 </h3>
                 <a
@@ -875,7 +881,7 @@ export default function EventDetailPage() {
 
             {/* Registration Button - Show when not registered */}
             {!userRegistration && !isFull && event.registrationOpen && (
-              <div className="mb-8">
+              <div className="bg-white rounded-lg shadow p-6">
                 {session?.user?.role === 'visitor' ? (
                   // Visitor cannot register - show membership message
                   <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-lg p-6 text-center">
@@ -926,11 +932,14 @@ export default function EventDetailPage() {
                 )}
               </div>
             )}
+          </div>
 
-            {/* Registration Status / Form */}
-            <div className="border-t pt-6">
+          {/* Right Column - Registration Status & Payment Info (42%) */}
+          <div className="lg:col-span-5">
+            <div className="lg:sticky lg:top-24">
+              {/* Registration Status / Form */}
               {userRegistration ? (
-                <div className="space-y-4">
+                <div className="bg-white rounded-lg shadow p-6 space-y-4">
                   {/* Registration Info Card */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-start gap-3 mb-3">
@@ -2492,26 +2501,30 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               ) : !event.registrationOpen ? (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                  <p className="text-gray-600 font-medium">ปิดรับสมัคร</p>
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                    <p className="text-gray-600 font-medium">ปิดรับสมัคร</p>
+                  </div>
                 </div>
               ) : isFull ? (
-                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 text-center">
-                  <div className="flex items-center justify-center mb-3">
-                    <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 text-center">
+                    <div className="flex items-center justify-center mb-3">
+                      <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-bold text-red-700 mb-2">ปิดรับลงทะเบียน</h3>
+                    <p className="text-red-600">ขณะนี้มีผู้ให้ความสนใจจองกิจกรรมนี้เต็มจำนวนแล้ว</p>
+                    {event.maxCapacity && summary && (
+                      <p className="text-sm text-red-500 mt-3">
+                        จำนวนผู้ลงทะเบียน: {summary.totalAttendees} / {event.maxCapacity} คน
+                      </p>
+                    )}
                   </div>
-                  <h3 className="text-lg font-bold text-red-700 mb-2">ปิดรับลงทะเบียน</h3>
-                  <p className="text-red-600">ขณะนี้มีผู้ให้ความสนใจจองกิจกรรมนี้เต็มจำนวนแล้ว</p>
-                  {event.maxCapacity && summary && (
-                    <p className="text-sm text-red-500 mt-3">
-                      จำนวนผู้ลงทะเบียน: {summary.totalAttendees} / {event.maxCapacity} คน
-                    </p>
-                  )}
                 </div>
               ) : showRegistrationForm ? (
-                <div className="space-y-4">
+                <div className="bg-white rounded-lg shadow p-6 space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900">ลงทะเบียนเข้าร่วมกิจกรรม</h3>
 
                   {/* Guest Information Form for Event-Co without memberId */}

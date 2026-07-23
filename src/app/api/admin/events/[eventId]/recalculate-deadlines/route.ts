@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { calculateDepositDeadline, calculateRemainingDeadline, calculateFullPaymentDeadline } from '@/lib/payment-deadlines';
+import { Event } from '@/types/event';
 
 export async function POST(
   request: NextRequest,
@@ -72,23 +73,23 @@ export async function POST(
         // Deposit mode: Calculate both deposit and remaining deadlines
 
         // Calculate deposit deadline
-        const depositDeadline = calculateDepositDeadline(eventData, registrationDate);
+        const depositDeadline = calculateDepositDeadline(eventData as Event, registrationDate);
         updateData.depositDeadline = depositDeadline;
 
         // Calculate remaining deadline (if deposit was paid, use depositPaidDate)
         if (depositPaidDate) {
-          const remainingDeadline = calculateRemainingDeadline(eventData, depositPaidDate);
+          const remainingDeadline = calculateRemainingDeadline(eventData as Event, depositPaidDate);
           updateData.remainingDeadline = remainingDeadline;
         } else if (eventData.remainingDeadlineType && eventData.remainingDeadlineType !== 'none') {
           // If not paid yet, still calculate based on registration date
-          const remainingDeadline = calculateRemainingDeadline(eventData, registrationDate);
+          const remainingDeadline = calculateRemainingDeadline(eventData as Event, registrationDate);
           updateData.remainingDeadline = remainingDeadline;
         }
 
         console.log(`[Recalculate Deadlines] ${doc.id}: depositDeadline = ${updateData.depositDeadline}, remainingDeadline = ${updateData.remainingDeadline || 'none'}`);
       } else {
         // Full payment mode: Calculate only full payment deadline
-        const fullPaymentDeadline = calculateFullPaymentDeadline(eventData, registrationDate);
+        const fullPaymentDeadline = calculateFullPaymentDeadline(eventData as Event, registrationDate);
         updateData.fullPaymentDeadline = fullPaymentDeadline;
 
         console.log(`[Recalculate Deadlines] ${doc.id}: fullPaymentDeadline = ${updateData.fullPaymentDeadline}`);

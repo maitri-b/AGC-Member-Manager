@@ -2044,158 +2044,6 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
-                      {/* 3. Payment Submission Section - Show Upload Button/Instructions */}
-                      {(() => {
-                        const hasPaymentAccount = !!event.paymentAccountNumber;
-                        const hasTotalAmount = (userRegistration.totalAmount ?? 0) > 0;
-
-                        // Calculate if fully paid (including additional payments)
-                        const totalAmount = userRegistration.totalAmount || 0;
-
-                        // Calculate actual total paid from tracked amounts
-                        const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
-                        const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
-                        const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
-                        const additionalPaymentAmountPaid = (userRegistration as any).additionalPaymentAmountPaid || 0;
-                        // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid
-                        const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
-
-                        // Fallback to legacy paidAmount if no tracked amounts
-                        const paidAmount = actualTotalPaid || userRegistration.paidAmount || 0;
-
-                        const additionalPayments = parseAdditionalPayments(userRegistration.additionalPayments);
-
-                        // Check if fully paid using utility function
-                        const fullyPaid = isFullyPaid(totalAmount, paidAmount, additionalPayments);
-
-                        // Sum approved additional payments
-                        const approvedAdditional = additionalPayments
-                          .filter((p: any) => p.status === 'อนุมัติแล้ว')
-                          .reduce((sum: number, p: any) => sum + p.amount, 0);
-
-                        const additionalRequired = Math.max(0, totalAmount - (paidAmount + approvedAdditional));
-
-                        // Check if there's a pending additional payment
-                        const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
-
-                        // Hide button if fully paid (no additional payment required and no pending additional payment)
-                        if (fullyPaid && !hasPendingAdditional) {
-                          return false;
-                        }
-
-                        // ✅ Check if any applicable deadline has passed
-                        let isPastDeadline = false;
-                        if (event.paymentMode === 'deposit') {
-                          // Deposit mode: Check deposit deadline if deposit not paid, or remaining deadline if deposit paid
-                          if (!userRegistration.depositPaid && userRegistration.depositDeadline) {
-                            isPastDeadline = isDeadlinePassed(userRegistration.depositDeadline);
-                          } else if (userRegistration.depositPaid && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl) {
-                            isPastDeadline = isDeadlinePassed(userRegistration.remainingDeadline);
-                          }
-                        } else {
-                          // Full payment mode: Check full payment deadline
-                          if (userRegistration.fullPaymentDeadline) {
-                            isPastDeadline = isDeadlinePassed(userRegistration.fullPaymentDeadline);
-                          }
-                        }
-
-                        // Hide button if deadline has passed
-                        if (isPastDeadline) {
-                          return false;
-                        }
-
-                        // Full Payment Mode: Hide button if slip is uploaded (unless additional payment is required)
-                        if (event.paymentMode !== 'deposit') {
-                          const hasFullPaymentSlip = !!(userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl);
-                          // Show button if additional payment is required, even if initial slip was uploaded
-                          if (hasFullPaymentSlip && additionalRequired === 0 && !hasPendingAdditional) return false;
-                          return hasPaymentAccount && hasTotalAmount;
-                        }
-
-                        // Deposit Mode: Show button if deposit not paid OR remaining not paid OR additional payment required
-                        const notPaidDeposit = !userRegistration.depositPaid && !userRegistration.depositSlipUrl;
-                        const hasRemainingUnpaid = userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl;
-                        const needsAdditional = additionalRequired > 0 && !hasPendingAdditional;
-                        const shouldShow = hasPaymentAccount && hasTotalAmount && (notPaidDeposit || hasRemainingUnpaid || needsAdditional);
-
-                        return shouldShow;
-                      })() ? (
-                        <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4 mb-4">
-                          {event.paymentSlipSubmissionUrl && (
-                            <>
-                              {(event as any).paymentInstructionText && (
-                                <p className="text-sm text-gray-700 mb-3">
-                                  {(event as any).paymentInstructionText}
-                                </p>
-                              )}
-                              {!(event as any).paymentInstructionText && (
-                                <p className="text-sm text-gray-700 mb-3">
-                                  <strong>📋 คำแนะนำ:</strong> กรุณาชำระเงินและส่งหลักฐานการชำระเงินผ่านปุ่มด้านล่าง
-                                </p>
-                              )}
-                            </>
-                          )}
-
-                          <button
-                            onClick={() => {
-                              if (!userRegistration) {
-                                toast.error('กรุณาลงทะเบียนก่อนอัพโหลดสลิป');
-                                return;
-                              }
-
-                              // Determine payment type and amount
-                              let paymentType: 'deposit' | 'remaining' | 'full' = 'full';
-                              let amount = 0;
-
-                              if (event.paymentMode === 'deposit') {
-                                if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
-                                  paymentType = 'remaining';
-                                  amount = userRegistration.remainingAmount;
-                                } else {
-                                  paymentType = 'deposit';
-                                  amount = userRegistration.depositAmount || 0;
-                                }
-                              } else {
-                                paymentType = 'full';
-                                amount = userRegistration.totalAmount || event.registrationFee || 0;
-                              }
-
-                              console.log('[Event Detail] Opening upload modal:', {
-                                paymentType,
-                                amount,
-                                totalAmount: userRegistration.totalAmount,
-                                eventFee: event.registrationFee,
-                              });
-
-                              setUploadPaymentType(paymentType);
-                              setUploadAmount(amount);
-                              setUploadModalOpen(true);
-                            }}
-                            className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-                          >
-                            <span className="flex items-center justify-center gap-2">
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              {(() => {
-                                // Custom button text if defined
-                                if ((event as any).paymentSlipButtonText) {
-                                  return (event as any).paymentSlipButtonText;
-                                }
-
-                                // Deposit mode - check if deposit is paid
-                                if (event.paymentMode === 'deposit' && userRegistration.depositPaid) {
-                                  return 'ส่งสลิปชำระยอดที่เหลือ';
-                                }
-
-                                // Default text
-                                return 'ส่งหลักฐานการชำระเงิน';
-                              })()}
-                            </span>
-                          </button>
-                        </div>
-                      ) : null}
-
                       {/* 4a. Full Payment Mode - Show deadline (hide if fully paid) */}
                       {(() => {
                         const totalAmount = userRegistration.totalAmount || 0;
@@ -2448,6 +2296,158 @@ export default function EventDetailPage() {
                     </div>
                     );
                   })()}
+
+                  {/* 3. Payment Submission Section - Show Upload Button/Instructions */}
+                  {(() => {
+                    const hasPaymentAccount = !!event.paymentAccountNumber;
+                    const hasTotalAmount = (userRegistration.totalAmount ?? 0) > 0;
+
+                    // Calculate if fully paid (including additional payments)
+                    const totalAmount = userRegistration.totalAmount || 0;
+
+                    // Calculate actual total paid from tracked amounts
+                    const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
+                    const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
+                    const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
+                    const additionalPaymentAmountPaid = (userRegistration as any).additionalPaymentAmountPaid || 0;
+                    // ✅ CRITICAL FIX: Include additionalPaymentAmountPaid
+                    const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
+
+                    // Fallback to legacy paidAmount if no tracked amounts
+                    const paidAmount = actualTotalPaid || userRegistration.paidAmount || 0;
+
+                    const additionalPayments = parseAdditionalPayments(userRegistration.additionalPayments);
+
+                    // Check if fully paid using utility function
+                    const fullyPaid = isFullyPaid(totalAmount, paidAmount, additionalPayments);
+
+                    // Sum approved additional payments
+                    const approvedAdditional = additionalPayments
+                      .filter((p: any) => p.status === 'อนุมัติแล้ว')
+                      .reduce((sum: number, p: any) => sum + p.amount, 0);
+
+                    const additionalRequired = Math.max(0, totalAmount - (paidAmount + approvedAdditional));
+
+                    // Check if there's a pending additional payment
+                    const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
+
+                    // Hide button if fully paid (no additional payment required and no pending additional payment)
+                    if (fullyPaid && !hasPendingAdditional) {
+                      return false;
+                    }
+
+                    // ✅ Check if any applicable deadline has passed
+                    let isPastDeadline = false;
+                    if (event.paymentMode === 'deposit') {
+                      // Deposit mode: Check deposit deadline if deposit not paid, or remaining deadline if deposit paid
+                      if (!userRegistration.depositPaid && userRegistration.depositDeadline) {
+                        isPastDeadline = isDeadlinePassed(userRegistration.depositDeadline);
+                      } else if (userRegistration.depositPaid && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl) {
+                        isPastDeadline = isDeadlinePassed(userRegistration.remainingDeadline);
+                      }
+                    } else {
+                      // Full payment mode: Check full payment deadline
+                      if (userRegistration.fullPaymentDeadline) {
+                        isPastDeadline = isDeadlinePassed(userRegistration.fullPaymentDeadline);
+                      }
+                    }
+
+                    // Hide button if deadline has passed
+                    if (isPastDeadline) {
+                      return false;
+                    }
+
+                    // Full Payment Mode: Hide button if slip is uploaded (unless additional payment is required)
+                    if (event.paymentMode !== 'deposit') {
+                      const hasFullPaymentSlip = !!(userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl);
+                      // Show button if additional payment is required, even if initial slip was uploaded
+                      if (hasFullPaymentSlip && additionalRequired === 0 && !hasPendingAdditional) return false;
+                      return hasPaymentAccount && hasTotalAmount;
+                    }
+
+                    // Deposit Mode: Show button if deposit not paid OR remaining not paid OR additional payment required
+                    const notPaidDeposit = !userRegistration.depositPaid && !userRegistration.depositSlipUrl;
+                    const hasRemainingUnpaid = userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl;
+                    const needsAdditional = additionalRequired > 0 && !hasPendingAdditional;
+                    const shouldShow = hasPaymentAccount && hasTotalAmount && (notPaidDeposit || hasRemainingUnpaid || needsAdditional);
+
+                    return shouldShow;
+                  })() ? (
+                    <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4 mb-4">
+                      {event.paymentSlipSubmissionUrl && (
+                        <>
+                          {(event as any).paymentInstructionText && (
+                            <p className="text-sm text-gray-700 mb-3">
+                              {(event as any).paymentInstructionText}
+                            </p>
+                          )}
+                          {!(event as any).paymentInstructionText && (
+                            <p className="text-sm text-gray-700 mb-3">
+                              <strong>📋 คำแนะนำ:</strong> กรุณาชำระเงินและส่งหลักฐานการชำระเงินผ่านปุ่มด้านล่าง
+                            </p>
+                          )}
+                        </>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          if (!userRegistration) {
+                            toast.error('กรุณาลงทะเบียนก่อนอัพโหลดสลิป');
+                            return;
+                          }
+
+                          // Determine payment type and amount
+                          let paymentType: 'deposit' | 'remaining' | 'full' = 'full';
+                          let amount = 0;
+
+                          if (event.paymentMode === 'deposit') {
+                            if (userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0) {
+                              paymentType = 'remaining';
+                              amount = userRegistration.remainingAmount;
+                            } else {
+                              paymentType = 'deposit';
+                              amount = userRegistration.depositAmount || 0;
+                            }
+                          } else {
+                            paymentType = 'full';
+                            amount = userRegistration.totalAmount || event.registrationFee || 0;
+                          }
+
+                          console.log('[Event Detail] Opening upload modal:', {
+                            paymentType,
+                            amount,
+                            totalAmount: userRegistration.totalAmount,
+                            eventFee: event.registrationFee,
+                          });
+
+                          setUploadPaymentType(paymentType);
+                          setUploadAmount(amount);
+                          setUploadModalOpen(true);
+                        }}
+                        className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {(() => {
+                            // Custom button text if defined
+                            if ((event as any).paymentSlipButtonText) {
+                              return (event as any).paymentSlipButtonText;
+                            }
+
+                            // Deposit mode - check if deposit is paid
+                            if (event.paymentMode === 'deposit' && userRegistration.depositPaid) {
+                              return 'ส่งสลิปชำระยอดที่เหลือ';
+                            }
+
+                            // Default text
+                            return 'ส่งหลักฐานการชำระเงิน';
+                          })()}
+                        </span>
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : !session?.user?.memberId && !['admin', 'committee', 'event-co', 'event-staff'].includes(session?.user?.role || '') ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

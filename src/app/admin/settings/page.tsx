@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { SystemSettings } from '@/types/settings';
 import { toast } from 'react-hot-toast';
+import { hasPermission } from '@/lib/permissions';
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -33,11 +34,18 @@ export default function SettingsPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/');
+    } else if (status === 'authenticated') {
+      // Check if user is admin with proper permissions
+      const isAdmin = session?.user?.role === 'admin' && hasPermission(session?.user?.permissions || [], 'admin:access');
+      if (!isAdmin) {
+        toast.error('ไม่มีสิทธิ์เข้าถึงหน้านี้');
+        router.push('/dashboard');
+      }
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   useEffect(() => {
-    if (session?.user?.role === 'admin' && !settings) {
+    if (session?.user?.role === 'admin' && hasPermission(session?.user?.permissions || [], 'admin:access') && !settings) {
       fetchSettings();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -152,12 +160,21 @@ export default function SettingsPage() {
     );
   }
 
-  if (session?.user?.role !== 'admin') {
+  // Check if user has both admin role and admin:access permission
+  const isAdmin = session?.user?.role === 'admin' && hasPermission(session?.user?.permissions || [], 'admin:access');
+
+  if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">ไม่มีสิทธิ์เข้าถึง</h1>
-          <Link href="/dashboard" className="text-blue-600 hover:underline">
+          <div className="mb-4">
+            <svg className="w-20 h-20 text-red-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-red-600 mb-2">ไม่มีสิทธิ์เข้าถึงหน้านี้</h1>
+          <p className="text-gray-600 mb-6">หน้านี้เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น</p>
+          <Link href="/dashboard" className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
             กลับหน้าหลัก
           </Link>
         </div>

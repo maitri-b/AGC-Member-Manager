@@ -13,6 +13,8 @@ export default function Navbar() {
 
   if (!session) return null;
 
+  // Check if user is admin (both role and permission)
+  const isAdmin = session.user.role === 'admin' && hasPermission(session.user.permissions, 'admin:access');
   const canAccessAdmin = hasPermission(session.user.permissions, 'admin:access');
   const canViewMembers = hasPermission(session.user.permissions, 'members:list');
   const canManageEvents = hasPermission(session.user.permissions, 'events:manage-assigned');
@@ -123,8 +125,8 @@ export default function Navbar() {
 
           {/* Profile & Settings */}
           <div className="flex items-center gap-2">
-            {/* Settings Button - Only for admins */}
-            {canAccessAdmin && (
+            {/* Settings Button - Only for admin role with admin:access permission */}
+            {isAdmin && (
               <Link
                 href="/admin/settings"
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 hover:text-gray-700"

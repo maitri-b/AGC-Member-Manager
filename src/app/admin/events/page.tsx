@@ -286,6 +286,23 @@ export default function AdminEventsPage() {
   // Dropdown menu state
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
+  // Deadline update modal state
+  const [showDeadlineModal, setShowDeadlineModal] = useState(false);
+  const [deadlineChangeType, setDeadlineChangeType] = useState<'full' | 'deposit' | 'remaining' | null>(null);
+  const [applyToExisting, setApplyToExisting] = useState<'new_only' | 'all'>('new_only');
+  const [pendingRegistrationsCount, setPendingRegistrationsCount] = useState(0);
+  const [originalDeadlines, setOriginalDeadlines] = useState<{
+    paymentDeadlineType: string;
+    paymentDeadlineFixed: string;
+    paymentDeadlineHours: number;
+    depositDeadlineType: string;
+    depositDeadlineFixed: string;
+    depositDeadlineHours: number;
+    remainingDeadlineType: string;
+    remainingDeadlineFixed: string;
+    remainingDeadlineHours: number;
+  } | null>(null);
+
   // Lightbox state for viewing full-size images
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
@@ -389,6 +406,52 @@ export default function AdminEventsPage() {
     }
   };
 
+  const fetchPendingRegistrationsCount = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/admin/events/${eventId}/pending-count`);
+      if (response.ok) {
+        const data = await response.json();
+        setPendingRegistrationsCount(data.count || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching pending registrations count:', err);
+      setPendingRegistrationsCount(0);
+    }
+  };
+
+  // Update deadlines for existing pending registrations
+  const updateExistingDeadlines = async () => {
+    if (!editingEvent || !deadlineChangeType) return;
+
+    try {
+      const response = await fetch(`/api/admin/events/${editingEvent.eventId}/update-deadlines`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deadlineType: deadlineChangeType,
+          paymentDeadlineType: formData.paymentDeadlineType,
+          paymentDeadlineFixed: formData.paymentDeadlineFixed,
+          paymentDeadlineHours: formData.paymentDeadlineHours,
+          depositDeadlineType: formData.depositDeadlineType,
+          depositDeadlineFixed: formData.depositDeadlineFixed,
+          depositDeadlineHours: formData.depositDeadlineHours,
+          remainingDeadlineType: formData.remainingDeadlineType,
+          remainingDeadlineFixed: formData.remainingDeadlineFixed,
+          remainingDeadlineHours: formData.remainingDeadlineHours,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to update existing deadlines');
+      } else {
+        const data = await response.json();
+        console.log(`Updated ${data.updatedCount} pending registration(s)`);
+      }
+    } catch (err) {
+      console.error('Error updating existing deadlines:', err);
+    }
+  };
+
   const handleOpenModal = (event?: Event) => {
     if (event) {
       setEditingEvent(event);
@@ -464,9 +527,27 @@ export default function AdminEventsPage() {
           { upToCount: 999, price: 0, priceType: 'per_person' }
         ]);
       }
+
+      // ✅ Store original deadlines for comparison (Edit mode only)
+      setOriginalDeadlines({
+        paymentDeadlineType: (event as any).paymentDeadlineType ?? 'none',
+        paymentDeadlineFixed: (event as any).paymentDeadlineFixed ?? '',
+        paymentDeadlineHours: (event as any).paymentDeadlineHours ?? 0,
+        depositDeadlineType: event.depositDeadlineType ?? 'none',
+        depositDeadlineFixed: event.depositDeadlineFixed ?? '',
+        depositDeadlineHours: event.depositDeadlineHours ?? 0,
+        remainingDeadlineType: event.remainingDeadlineType ?? 'none',
+        remainingDeadlineFixed: event.remainingDeadlineFixed ?? '',
+        remainingDeadlineHours: event.remainingDeadlineHours ?? 0,
+      });
+
+      // ✅ Fetch pending registrations count for this event
+      fetchPendingRegistrationsCount(event.eventId);
     } else {
       setEditingEvent(null);
       setFormData(initialFormData);
+      setOriginalDeadlines(null); // Reset for new event
+      setPendingRegistrationsCount(0);
       // Reset to default price tiers for new event
       setPriceTiers([
         { upToCount: 2, price: 0, priceType: 'total' },
@@ -486,6 +567,66 @@ export default function AdminEventsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ Check if editing event and deadline changed
+    if (editingEvent && originalDeadlines && pendingRegistrationsCount > 0) {
+      const hasDeadlineChange = checkDeadlineChanges();
+      if (hasDeadlineChange) {
+        // Show modal instead of submitting directly
+        return;
+      }
+    }
+
+    // Proceed with normal submission
+    await submitEventData();
+  };
+
+  // Helper function to check if deadlines changed
+  const checkDeadlineChanges = (): boolean => {
+    if (!originalDeadlines) return false;
+
+    // Check Full Payment deadline
+    if (formData.paymentMode === 'full') {
+      if (
+        formData.paymentDeadlineType !== originalDeadlines.paymentDeadlineType ||
+        formData.paymentDeadlineFixed !== originalDeadlines.paymentDeadlineFixed ||
+        formData.paymentDeadlineHours !== originalDeadlines.paymentDeadlineHours
+      ) {
+        setDeadlineChangeType('full');
+        setShowDeadlineModal(true);
+        return true;
+      }
+    }
+
+    // Check Deposit deadline
+    if (formData.paymentMode === 'deposit') {
+      if (
+        formData.depositDeadlineType !== originalDeadlines.depositDeadlineType ||
+        formData.depositDeadlineFixed !== originalDeadlines.depositDeadlineFixed ||
+        formData.depositDeadlineHours !== originalDeadlines.depositDeadlineHours
+      ) {
+        setDeadlineChangeType('deposit');
+        setShowDeadlineModal(true);
+        return true;
+      }
+
+      // Check Remaining deadline
+      if (
+        formData.remainingDeadlineType !== originalDeadlines.remainingDeadlineType ||
+        formData.remainingDeadlineFixed !== originalDeadlines.remainingDeadlineFixed ||
+        formData.remainingDeadlineHours !== originalDeadlines.remainingDeadlineHours
+      ) {
+        setDeadlineChangeType('remaining');
+        setShowDeadlineModal(true);
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Main submission function
+  const submitEventData = async () => {
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -506,6 +647,11 @@ export default function AdminEventsPage() {
         if (!response.ok) {
           const data = await response.json();
           throw new Error(data.error || 'Failed to update event');
+        }
+
+        // ✅ If user wants to update existing pending registrations
+        if (applyToExisting === 'all' && deadlineChangeType) {
+          await updateExistingDeadlines();
         }
 
         setSuccess('อัพเดทกิจกรรมเรียบร้อยแล้ว');
@@ -1388,43 +1534,6 @@ export default function AdminEventsPage() {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    บัญชีธนาคารสำหรับรับชำระเงิน
-                  </label>
-                  {loadingBankAccounts ? (
-                    <div className="text-sm text-gray-500">กำลังโหลดบัญชีธนาคาร...</div>
-                  ) : bankAccounts.length === 0 ? (
-                    <div className="text-sm text-gray-500">
-                      ยังไม่มีบัญชีธนาคาร กรุณา
-                      <Link href="/admin/settings/bank-accounts" className="text-blue-600 hover:underline ml-1">
-                        เพิ่มบัญชีธนาคาร
-                      </Link>
-                    </div>
-                  ) : (
-                    <>
-                      <select
-                        value={formData.bankAccountId}
-                        onChange={(e) => setFormData({ ...formData, bankAccountId: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">-- ไม่ระบุบัญชี (ใช้ข้อมูลเดิม) --</option>
-                        {bankAccounts
-                          .filter(account => account.isActive)
-                          .map(account => (
-                            <option key={account.id} value={account.id}>
-                              {account.bankName} - {account.accountName} ({account.accountNumber})
-                              {account.isDefault ? ' (ค่าเริ่มต้น)' : ''}
-                            </option>
-                          ))}
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        เลือกบัญชีธนาคารจากระบบ หรือไม่ระบุเพื่อใช้ข้อมูลที่กรอกด้านล่าง
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     สถานที่จัดกิจกรรม
                   </label>
                   <input
@@ -1948,7 +2057,7 @@ export default function AdminEventsPage() {
                             type="radio"
                             value="immediate"
                             checked={formData.paymentTiming === 'immediate'}
-                            onChange={() => setFormData({ ...formData, paymentTiming: 'immediate' })}
+                            onChange={() => setFormData({ ...formData, paymentTiming: 'immediate', paymentMode: 'full' })}
                             className="w-4 h-4 mt-0.5"
                           />
                           <div className="flex-1">
@@ -1975,16 +2084,22 @@ export default function AdminEventsPage() {
                           />
                           <span className="text-sm">ชำระเต็มจำนวน (Full) - ชำระครั้งเดียว</span>
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label className={`flex items-center gap-2 ${formData.paymentTiming === 'immediate' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                           <input
                             type="radio"
                             value="deposit"
                             checked={formData.paymentMode === 'deposit'}
                             onChange={() => setFormData({ ...formData, paymentMode: 'deposit' })}
+                            disabled={formData.paymentTiming === 'immediate'}
                             className="w-4 h-4"
                           />
                           <span className="text-sm">ชำระแบบมัดจำ (Deposit) - แบ่ง 2 งวด</span>
                         </label>
+                        {formData.paymentTiming === 'immediate' && (
+                          <p className="text-xs text-gray-500 ml-6 mt-1">
+                            ⚠️ เมื่อเลือก &quot;ชำระพร้อมลงทะเบียน&quot; จะต้องชำระเต็มจำนวนเท่านั้น
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -2007,12 +2122,18 @@ export default function AdminEventsPage() {
                           </select>
 
                           {formData.paymentDeadlineType === 'fixed' && (
-                            <input
-                              type="date"
-                              value={formData.paymentDeadlineFixed || ''}
-                              onChange={(e) => setFormData({ ...formData, paymentDeadlineFixed: e.target.value })}
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
+                            <div>
+                              <input
+                                type="date"
+                                value={formData.paymentDeadlineFixed || ''}
+                                onChange={(e) => setFormData({ ...formData, paymentDeadlineFixed: e.target.value })}
+                                min={new Date().toISOString().split('T')[0]}
+                                className="w-full px-3 py-2 border rounded-md"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                กำหนดวันที่ชำระเงิน (ต้องไม่เป็นวันที่ในอดีต)
+                              </p>
+                            </div>
                           )}
 
                           {formData.paymentDeadlineType === 'hours' && (
@@ -2095,12 +2216,18 @@ export default function AdminEventsPage() {
                           </select>
 
                           {formData.depositDeadlineType === 'fixed' && (
-                            <input
-                              type="date"
-                              value={formData.depositDeadlineFixed || ''}
-                              onChange={(e) => setFormData({ ...formData, depositDeadlineFixed: e.target.value })}
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
+                            <div>
+                              <input
+                                type="date"
+                                value={formData.depositDeadlineFixed || ''}
+                                onChange={(e) => setFormData({ ...formData, depositDeadlineFixed: e.target.value })}
+                                min={new Date().toISOString().split('T')[0]}
+                                className="w-full px-3 py-2 border rounded-md"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                กำหนดวันที่ชำระมัดจำ (ต้องไม่เป็นวันที่ในอดีต)
+                              </p>
+                            </div>
                           )}
 
                           {formData.depositDeadlineType === 'hours' && (
@@ -2136,12 +2263,18 @@ export default function AdminEventsPage() {
                           </select>
 
                           {formData.remainingDeadlineType === 'fixed' && (
-                            <input
-                              type="date"
-                              value={formData.remainingDeadlineFixed || ''}
-                              onChange={(e) => setFormData({ ...formData, remainingDeadlineFixed: e.target.value })}
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
+                            <div>
+                              <input
+                                type="date"
+                                value={formData.remainingDeadlineFixed || ''}
+                                onChange={(e) => setFormData({ ...formData, remainingDeadlineFixed: e.target.value })}
+                                min={new Date().toISOString().split('T')[0]}
+                                className="w-full px-3 py-2 border rounded-md"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                กำหนดวันที่ชำระยอดคงเหลือ (ต้องไม่เป็นวันที่ในอดีต)
+                              </p>
+                            </div>
                           )}
 
                           {formData.remainingDeadlineType === 'hours' && (
@@ -2164,6 +2297,42 @@ export default function AdminEventsPage() {
                     )}
                   </div>
                 )}
+
+                {/* Bank Account for Payment */}
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-3">บัญชีธนาคารสำหรับรับชำระเงิน</h3>
+                  {loadingBankAccounts ? (
+                    <div className="text-sm text-gray-500">กำลังโหลดบัญชีธนาคาร...</div>
+                  ) : bankAccounts.length === 0 ? (
+                    <div className="text-sm text-gray-500">
+                      ยังไม่มีบัญชีธนาคาร กรุณา
+                      <Link href="/admin/settings/bank-accounts" className="text-blue-600 hover:underline ml-1">
+                        เพิ่มบัญชีธนาคาร
+                      </Link>
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={formData.bankAccountId}
+                        onChange={(e) => setFormData({ ...formData, bankAccountId: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">-- ไม่ระบุบัญชี --</option>
+                        {bankAccounts
+                          .filter(account => account.isActive)
+                          .map(account => (
+                            <option key={account.id} value={account.id}>
+                              {account.bankName} - {account.accountName} ({account.accountNumber})
+                              {account.isDefault ? ' (ค่าเริ่มต้น)' : ''}
+                            </option>
+                          ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        เลือกบัญชีธนาคารที่ใช้รับชำระเงินสำหรับกิจกรรมนี้
+                      </p>
+                    </>
+                  )}
+                </div>
 
                 {/* Document Link */}
                 <div className="md:col-span-2 border-t pt-4 mt-2">
@@ -2217,62 +2386,7 @@ export default function AdminEventsPage() {
                     (formData.pricingType === 'tiered' && ((formData.baseFee > 0 || formData.additionalFeePerPerson > 0) || (priceTiers[0]?.price > 0 || priceTiers[1]?.price > 0)) && !formData.useAttendeeTypePricing) ||
                     (formData.useAttendeeTypePricing && formData.attendeeTypes.length > 0)) ? (
                     <>
-                    <div className="text-xs text-blue-600 mb-3 p-2 bg-blue-50 rounded">
-                      กรอกข้อมูลบัญชีธนาคารสำหรับการชำระเงิน
-                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          ธนาคาร
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.paymentBankName}
-                          onChange={(e) => setFormData({ ...formData, paymentBankName: e.target.value })}
-                          placeholder="เช่น ธนาคารกสิกรไทย"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          ชื่อบัญชี
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.paymentAccountName}
-                          onChange={(e) => setFormData({ ...formData, paymentAccountName: e.target.value })}
-                          placeholder="ชื่อบัญชีธนาคาร"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          เลขที่บัญชี
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.paymentAccountNumber}
-                          onChange={(e) => setFormData({ ...formData, paymentAccountNumber: e.target.value })}
-                          placeholder="เลขบัญชีธนาคาร"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Link รูป QR Code
-                        </label>
-                        <input
-                          type="url"
-                          value={formData.paymentQrCodeUrl}
-                          onChange={(e) => setFormData({ ...formData, paymentQrCodeUrl: e.target.value })}
-                          placeholder="https://..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           เงื่อนไขการชำระเงิน
@@ -2500,6 +2614,95 @@ export default function AdminEventsPage() {
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
               >
                 {saving ? 'กำลังลบ...' : 'ลบกิจกรรม'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deadline Update Confirmation Modal */}
+      {showDeadlineModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              ⚠️ ตรวจพบการเปลี่ยนแปลงกำหนดชำระเงิน
+            </h3>
+
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+              <p className="text-sm text-gray-700 mb-2">
+                คุณได้เปลี่ยนแปลงกำหนดการชำระเงิน
+                {deadlineChangeType === 'full' && ' (ชำระเต็มจำนวน)'}
+                {deadlineChangeType === 'deposit' && ' (ชำระมัดจำ)'}
+                {deadlineChangeType === 'remaining' && ' (ชำระยอดคงเหลือ)'}
+              </p>
+              <p className="text-sm font-medium text-blue-700">
+                มีรายการลงทะเบียนที่รอชำระเงินอยู่ {pendingRegistrationsCount} รายการ
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm font-medium text-gray-700 mb-3">
+                คุณต้องการให้การเปลี่ยนแปลงนี้มีผลกับ:
+              </p>
+
+              <div className="space-y-2">
+                <label className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="applyTo"
+                    value="new_only"
+                    checked={applyToExisting === 'new_only'}
+                    onChange={(e) => setApplyToExisting(e.target.value as 'new_only' | 'all')}
+                    className="w-4 h-4 mt-0.5"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">รายการใหม่เท่านั้น</span>
+                    <p className="text-xs text-gray-600 mt-1">
+                      รายการที่ลงทะเบียนไปแล้วจะใช้กำหนดเวลาเดิม
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="applyTo"
+                    value="all"
+                    checked={applyToExisting === 'all'}
+                    onChange={(e) => setApplyToExisting(e.target.value as 'new_only' | 'all')}
+                    className="w-4 h-4 mt-0.5"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">ทั้งรายการใหม่และรายการเก่า</span>
+                    <p className="text-xs text-gray-600 mt-1">
+                      อัพเดทกำหนดเวลาให้กับรายการที่รอชำระทั้งหมด ({pendingRegistrationsCount} รายการ)
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeadlineModal(false);
+                  setDeadlineChangeType(null);
+                  setApplyToExisting('new_only');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={async () => {
+                  setShowDeadlineModal(false);
+                  await submitEventData();
+                  setDeadlineChangeType(null);
+                  setApplyToExisting('new_only');
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                ยืนยันการเปลี่ยนแปลง
               </button>
             </div>
           </div>

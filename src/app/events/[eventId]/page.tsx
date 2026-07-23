@@ -9,7 +9,7 @@ import PaymentSlipUploadModal from '@/components/PaymentSlipUploadModal';
 // TEMP: Hidden until PDF generation is fixed on Vercel
 // import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier } from '@/types/event';
-import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
+import { formatDeadline, getTimeRemaining, isDeadlinePassed } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass, isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
 import { formatEventDateRange } from '@/lib/date-utils';
@@ -206,6 +206,9 @@ export default function EventDetailPage() {
   const [paymentSlipFile, setPaymentSlipFile] = useState<File | null>(null);
   const [slipPreviewUrl, setSlipPreviewUrl] = useState<string | null>(null);
 
+  // LINE Official Account URL from settings
+  const [lineOaUrl, setLineOaUrl] = useState('');
+
   // Payment slip upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadPaymentType, setUploadPaymentType] = useState<'deposit' | 'remaining' | 'full' | 'additional'>('full');
@@ -239,6 +242,24 @@ export default function EventDetailPage() {
       fetchEventDetail();
     }
   }, [eventId]);
+
+  // Fetch LINE OA URL from settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.lineOfficialAccount) {
+            setLineOaUrl(data.lineOfficialAccount);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const fetchPaymentSlips = async (registrationId: string) => {
     try {
@@ -2062,6 +2083,27 @@ export default function EventDetailPage() {
                           return false;
                         }
 
+                        // ✅ Check if any applicable deadline has passed
+                        let isPastDeadline = false;
+                        if (event.paymentMode === 'deposit') {
+                          // Deposit mode: Check deposit deadline if deposit not paid, or remaining deadline if deposit paid
+                          if (!userRegistration.depositPaid && userRegistration.depositDeadline) {
+                            isPastDeadline = isDeadlinePassed(userRegistration.depositDeadline);
+                          } else if (userRegistration.depositPaid && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl) {
+                            isPastDeadline = isDeadlinePassed(userRegistration.remainingDeadline);
+                          }
+                        } else {
+                          // Full payment mode: Check full payment deadline
+                          if (userRegistration.fullPaymentDeadline) {
+                            isPastDeadline = isDeadlinePassed(userRegistration.fullPaymentDeadline);
+                          }
+                        }
+
+                        // Hide button if deadline has passed
+                        if (isPastDeadline) {
+                          return false;
+                        }
+
                         // Full Payment Mode: Hide button if slip is uploaded (unless additional payment is required)
                         if (event.paymentMode !== 'deposit') {
                           const hasFullPaymentSlip = !!(userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl);
@@ -2166,18 +2208,38 @@ export default function EventDetailPage() {
 
                         // ✅ Use fullPaymentDeadline for full payment mode (not remainingDeadline)
                         const deadline = userRegistration.fullPaymentDeadline;
+                        const isPastDeadline = deadline && isDeadlinePassed(deadline);
 
                         return event?.paymentMode !== 'deposit' && deadline && (
-                          <div className="bg-white rounded-lg p-4 mb-3 border-2 border-orange-300">
+                          <div className={`bg-white rounded-lg p-4 mb-3 border-2 ${isPastDeadline ? 'border-red-400 bg-red-50' : 'border-orange-300'}`}>
                             <div className="flex items-center justify-between mb-2">
                               <span className="font-medium text-gray-700">กำหนดชำระเงิน</span>
-                              <span className="text-sm text-orange-600 font-bold">
+                              <span className={`text-sm font-bold ${isPastDeadline ? 'text-red-600' : 'text-orange-600'}`}>
                                 {formatDeadline(deadline)}
                               </span>
                             </div>
-                            <div className="text-sm text-orange-600 font-medium">
+                            <div className={`text-sm font-medium ${isPastDeadline ? 'text-red-600' : 'text-orange-600'}`}>
                               {getTimeRemaining(deadline)}
                             </div>
+                            {isPastDeadline && (
+                              <div className="mt-3 pt-3 border-t border-red-200">
+                                <p className="text-sm text-red-700">
+                                  การจองนี้พ้นกำหนดชำระแล้ว โปรดติดต่อ Admin{lineOaUrl && (
+                                    <>
+                                      {' '}
+                                      <a
+                                        href={lineOaUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-medium underline hover:text-red-800"
+                                      >
+                                        ที่นี่
+                                      </a>
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         );
                       })()}
@@ -2199,16 +2261,38 @@ export default function EventDetailPage() {
                                   <span className="text-lg font-bold">{userRegistration.depositAmount.toLocaleString()} บาท</span>
                                 </div>
 
-                                {/* Hide countdown if fully paid */}
-                                {!fullyPaid && userRegistration.depositDeadline && !userRegistration.depositPaid && (
-                                  <div className="text-sm text-gray-600 mb-2">
-                                    ครบกำหนด: {formatDeadline(userRegistration.depositDeadline)}
-                                    <br />
-                                    <span className="text-orange-600 font-medium">
-                                      {getTimeRemaining(userRegistration.depositDeadline)}
-                                    </span>
-                                  </div>
-                                )}
+                                {/* Show deadline with warning if past deadline */}
+                                {!fullyPaid && userRegistration.depositDeadline && !userRegistration.depositPaid && (() => {
+                                  const isPastDepositDeadline = isDeadlinePassed(userRegistration.depositDeadline);
+                                  return (
+                                    <div className={`text-sm mb-2 ${isPastDepositDeadline ? 'text-red-600' : 'text-gray-600'}`}>
+                                      ครบกำหนด: {formatDeadline(userRegistration.depositDeadline)}
+                                      <br />
+                                      <span className={`font-medium ${isPastDepositDeadline ? 'text-red-600' : 'text-orange-600'}`}>
+                                        {getTimeRemaining(userRegistration.depositDeadline)}
+                                      </span>
+                                      {isPastDepositDeadline && (
+                                        <div className="mt-2 pt-2 border-t border-red-200">
+                                          <p className="text-sm text-red-700">
+                                            การจองนี้พ้นกำหนดชำระแล้ว โปรดติดต่อ Admin{lineOaUrl && (
+                                              <>
+                                                {' '}
+                                                <a
+                                                  href={lineOaUrl}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="font-medium underline hover:text-red-800"
+                                                >
+                                                  ที่นี่
+                                                </a>
+                                              </>
+                                            )}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
 
                               {userRegistration.depositPaid && (
                                 <span className="text-sm text-green-600 flex items-center gap-1">
@@ -2231,16 +2315,38 @@ export default function EventDetailPage() {
                                   </span>
                                 </div>
 
-                                {/* Hide countdown if fully paid */}
-                                {!fullyPaid && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl && (
-                                  <div className="text-sm text-gray-600 mb-2">
-                                    ครบกำหนด: {formatDeadline(userRegistration.remainingDeadline)}
-                                    <br />
-                                    <span className="text-orange-600 font-medium">
-                                      {getTimeRemaining(userRegistration.remainingDeadline)}
-                                    </span>
-                                  </div>
-                                )}
+                                {/* Show deadline with warning if past deadline */}
+                                {!fullyPaid && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl && (() => {
+                                  const isPastRemainingDeadline = isDeadlinePassed(userRegistration.remainingDeadline);
+                                  return (
+                                    <div className={`text-sm mb-2 ${isPastRemainingDeadline ? 'text-red-600' : 'text-gray-600'}`}>
+                                      ครบกำหนด: {formatDeadline(userRegistration.remainingDeadline)}
+                                      <br />
+                                      <span className={`font-medium ${isPastRemainingDeadline ? 'text-red-600' : 'text-orange-600'}`}>
+                                        {getTimeRemaining(userRegistration.remainingDeadline)}
+                                      </span>
+                                      {isPastRemainingDeadline && (
+                                        <div className="mt-2 pt-2 border-t border-red-200">
+                                          <p className="text-sm text-red-700">
+                                            การจองนี้พ้นกำหนดชำระแล้ว โปรดติดต่อ Admin{lineOaUrl && (
+                                              <>
+                                                {' '}
+                                                <a
+                                                  href={lineOaUrl}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="font-medium underline hover:text-red-800"
+                                                >
+                                                  ที่นี่
+                                                </a>
+                                              </>
+                                            )}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
 
                                 {userRegistration.remainingSlipUrl && (
                                   <span className="text-sm text-green-600 flex items-center gap-1">
@@ -2259,10 +2365,33 @@ export default function EventDetailPage() {
                     );
                   })()}
 
-                  {/* Payment Information - Show after registration for payment reference */}
-                  {userRegistration.totalAmount && userRegistration.totalAmount > 0 && (event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                      <h3 className="text-sm font-semibold text-blue-900 mb-4">บัญชีสำหรับชำระเงิน</h3>
+                  {/* Payment Information - Show after registration for payment reference (hide if deadline passed) */}
+                  {(() => {
+                    // Check if any applicable deadline has passed
+                    let isPastDeadline = false;
+                    if (event?.paymentMode === 'deposit') {
+                      // Deposit mode: Check deposit deadline if deposit not paid, or remaining deadline if deposit paid
+                      if (!userRegistration.depositPaid && userRegistration.depositDeadline) {
+                        isPastDeadline = isDeadlinePassed(userRegistration.depositDeadline);
+                      } else if (userRegistration.depositPaid && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl) {
+                        isPastDeadline = isDeadlinePassed(userRegistration.remainingDeadline);
+                      }
+                    } else {
+                      // Full payment mode: Check full payment deadline
+                      if (userRegistration.fullPaymentDeadline) {
+                        isPastDeadline = isDeadlinePassed(userRegistration.fullPaymentDeadline);
+                      }
+                    }
+
+                    // Hide bank account info if deadline has passed
+                    if (isPastDeadline) {
+                      return null;
+                    }
+
+                    // Show bank account info if has total amount and payment account details
+                    return userRegistration.totalAmount && userRegistration.totalAmount > 0 && (event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-4">บัญชีสำหรับชำระเงิน</h3>
 
                       <div className="space-y-4">
                         {(event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber) && (
@@ -2317,7 +2446,8 @@ export default function EventDetailPage() {
                         )}
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               ) : !session?.user?.memberId && !['admin', 'committee', 'event-co', 'event-staff'].includes(session?.user?.role || '') ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

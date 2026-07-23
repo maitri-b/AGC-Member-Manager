@@ -111,8 +111,10 @@ interface UserRegistration {
   remainingPaidDate?: string; // วันที่จ่ายยอดคงเหลือ
   depositSlipUrl?: string;
   remainingSlipUrl?: string;
+  // Payment deadlines
   depositDeadline?: string;
   remainingDeadline?: string;
+  fullPaymentDeadline?: string; // ✅ Full payment deadline (for paymentMode = 'full')
   paymentStatus?: string;
   // Payment tracking (for additional payments after amount adjustments)
   paidAmount?: number;
@@ -2162,16 +2164,19 @@ export default function EventDetailPage() {
                         // Hide deadline if fully paid
                         if (fullyPaid) return null;
 
-                        return event?.paymentMode !== 'deposit' && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl && (
+                        // ✅ Use fullPaymentDeadline for full payment mode (not remainingDeadline)
+                        const deadline = userRegistration.fullPaymentDeadline;
+
+                        return event?.paymentMode !== 'deposit' && deadline && (
                           <div className="bg-white rounded-lg p-4 mb-3 border-2 border-orange-300">
                             <div className="flex items-center justify-between mb-2">
                               <span className="font-medium text-gray-700">กำหนดชำระเงิน</span>
                               <span className="text-sm text-orange-600 font-bold">
-                                {formatDeadline(userRegistration.remainingDeadline)}
+                                {formatDeadline(deadline)}
                               </span>
                             </div>
                             <div className="text-sm text-orange-600 font-medium">
-                              {getTimeRemaining(userRegistration.remainingDeadline)}
+                              {getTimeRemaining(deadline)}
                             </div>
                           </div>
                         );

@@ -288,8 +288,10 @@ export async function GET(
               // Legacy slip URLs - kept for backward compatibility during migration
               depositSlipUrl: latestReg.depositSlipUrl,
               remainingSlipUrl: latestReg.remainingSlipUrl,
+              // Payment deadlines
               depositDeadline: latestReg.depositDeadline,
               remainingDeadline: latestReg.remainingDeadline,
+              fullPaymentDeadline: latestReg.fullPaymentDeadline, // ✅ CRITICAL FIX: Full payment deadline for member view
               // Use actual paymentStatus from Firestore (updated by GAS webhook and approve/reject)
               // NOT determinePaymentStatus() which is legacy logic
               paymentStatus: latestReg.paymentStatus || 'รอชำระเงิน',

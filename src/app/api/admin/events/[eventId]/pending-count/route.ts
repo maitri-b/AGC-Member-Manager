@@ -30,20 +30,19 @@ export async function GET(
 
     const db = adminDb();
 
-    // Query for pending registrations (รอชำระเงิน, รอตรวจสอบ, etc.)
+    // Query for pending registrations
     const snapshot = await db
       .collection('eventRegistrations')
       .where('eventId', '==', eventId)
       .get();
 
-    // Filter for pending payment statuses (not fully paid, not cancelled)
-    const pendingStatuses = [
+    // ✅ STRICT FILTER: Only registrations that haven't uploaded payment slip yet
+    // Include ONLY: รอชำระเงิน, รอชำระมัดจำ, รอชำระยอดคงเหลือ
+    // Exclude: รอตรวจสอบ (already uploaded slip)
+    const pendingPaymentStatuses = [
       'รอชำระเงิน',
       'รอชำระมัดจำ',
       'รอชำระยอดคงเหลือ',
-      'รอตรวจสอบ',
-      'รอตรวจสอบมัดจำ',
-      'รอตรวจสอบยอดคงเหลือ',
     ];
 
     const pendingRegistrations = snapshot.docs.filter(doc => {
@@ -56,7 +55,8 @@ export async function GET(
         return false;
       }
 
-      return pendingStatuses.includes(paymentStatus);
+      // Only include registrations waiting for payment (no slip uploaded yet)
+      return pendingPaymentStatuses.includes(paymentStatus);
     });
 
     return NextResponse.json({

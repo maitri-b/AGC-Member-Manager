@@ -2636,7 +2636,10 @@ export default function AdminEventsPage() {
                 {deadlineChangeType === 'remaining' && ' (ชำระยอดคงเหลือ)'}
               </p>
               <p className="text-sm font-medium text-blue-700">
-                มีรายการลงทะเบียนที่รอชำระเงินอยู่ {pendingRegistrationsCount} รายการ
+                มีรายการที่รอชำระเงินอยู่ {pendingRegistrationsCount} รายการ
+              </p>
+              <p className="text-xs text-gray-600 mt-2">
+                💡 <strong>หมายเหตุ:</strong> รายการที่แจ้งชำระเงินแล้ว (สถานะ &quot;รอตรวจสอบ&quot;) จะไม่ได้รับผลกระทบ เนื่องจากมีการอัพโหลดสลิปเข้ามาแล้ว
               </p>
             </div>
 
@@ -2646,7 +2649,7 @@ export default function AdminEventsPage() {
               </p>
 
               <div className="space-y-2">
-                <label className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors">
+                <label className="flex items-start gap-3 p-3 border border-gray-300 rounded cursor-pointer hover:bg-gray-50 transition-colors">
                   <input
                     type="radio"
                     name="applyTo"
@@ -2656,14 +2659,14 @@ export default function AdminEventsPage() {
                     className="w-4 h-4 mt-0.5"
                   />
                   <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-900">รายการใหม่เท่านั้น</span>
+                    <span className="text-sm font-medium text-gray-900">✨ รายการใหม่เท่านั้น (แนะนำ)</span>
                     <p className="text-xs text-gray-600 mt-1">
-                      รายการที่ลงทะเบียนไปแล้วจะใช้กำหนดเวลาเดิม
+                      รายการที่ลงทะเบียนไว้แล้วจะใช้กำหนดเวลาเดิม ไม่มีการเปลี่ยนแปลง
                     </p>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors">
+                <label className="flex items-start gap-3 p-3 border border-orange-300 bg-orange-50 rounded cursor-pointer hover:bg-orange-100 transition-colors">
                   <input
                     type="radio"
                     name="applyTo"
@@ -2673,9 +2676,12 @@ export default function AdminEventsPage() {
                     className="w-4 h-4 mt-0.5"
                   />
                   <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-900">ทั้งรายการใหม่และรายการเก่า</span>
-                    <p className="text-xs text-gray-600 mt-1">
-                      อัพเดทกำหนดเวลาให้กับรายการที่รอชำระทั้งหมด ({pendingRegistrationsCount} รายการ)
+                    <span className="text-sm font-medium text-orange-900">⚠️ ทั้งรายการใหม่และรายการเก่า</span>
+                    <p className="text-xs text-orange-700 mt-1">
+                      อัพเดทกำหนดเวลาให้กับรายการที่ <strong>ยังไม่ได้อัพโหลดสลิป</strong> ({pendingRegistrationsCount} รายการ)
+                    </p>
+                    <p className="text-xs text-orange-600 mt-1 italic">
+                      * รายการที่มีสถานะ &quot;รอตรวจสอบ&quot; จะไม่เปลี่ยนแปลง
                     </p>
                   </div>
                 </label>

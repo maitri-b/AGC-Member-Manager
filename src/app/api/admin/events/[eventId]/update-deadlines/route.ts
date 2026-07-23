@@ -53,14 +53,13 @@ export async function POST(
       .where('eventId', '==', eventId)
       .get();
 
-    // Filter for pending payment statuses
-    const pendingStatuses = [
+    // ✅ STRICT FILTER: Only registrations that haven't uploaded payment slip yet
+    // Include ONLY: รอชำระเงิน, รอชำระมัดจำ, รอชำระยอดคงเหลือ
+    // Exclude: รอตรวจสอบ (already uploaded slip - cannot change deadline)
+    const pendingPaymentStatuses = [
       'รอชำระเงิน',
       'รอชำระมัดจำ',
       'รอชำระยอดคงเหลือ',
-      'รอตรวจสอบ',
-      'รอตรวจสอบมัดจำ',
-      'รอตรวจสอบยอดคงเหลือ',
     ];
 
     const pendingDocs = snapshot.docs.filter(doc => {
@@ -73,7 +72,8 @@ export async function POST(
         return false;
       }
 
-      return pendingStatuses.includes(paymentStatus);
+      // Only include registrations waiting for payment (no slip uploaded yet)
+      return pendingPaymentStatuses.includes(paymentStatus);
     });
 
     console.log(`[Update Deadlines] Found ${pendingDocs.length} pending registration(s)`);

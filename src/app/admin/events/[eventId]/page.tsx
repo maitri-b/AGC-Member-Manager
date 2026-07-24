@@ -133,21 +133,21 @@ interface EventData {
 function hasAdditionalCharges(attendee: Attendee, eventPaymentMode: 'full' | 'deposit'): boolean {
   const reg = attendee.registration;
   const totalAmount = reg.totalAmount || 0;
-  const paidAmount = reg.paidAmount || 0;
-  const depositAmount = reg.depositAmount || 0;
-  const remainingAmount = reg.remainingAmount || 0;
+
+  // ✅ FIX: Calculate paidAmount from actual payment fields (don't use reg.paidAmount as it's not reliable)
+  const fullPaymentAmountPaid = (reg as any).fullPaymentAmountPaid || 0;
+  const depositAmountPaid = (reg as any).depositAmountPaid || 0;
+  const remainingAmountPaid = (reg as any).remainingAmountPaid || 0;
+  const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
+  const paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
 
   if (eventPaymentMode === 'full') {
     // ✅ Full payment mode: check if totalAmount > paidAmount and payment has been made
-    // Use fullPaymentPaid or paidAmount to determine if payment started
     const hasStartedPayment = reg.fullPaymentPaid === true || paidAmount > 0;
     return hasStartedPayment && totalAmount > paidAmount;
   } else {
-    // Deposit mode: check if totalAmount > (depositAmount + remainingAmount) when payments are made
-    const depositPaidAmount = (reg.depositPaid ? depositAmount : 0);
-    const remainingPaidAmount = (reg.remainingPaid ? remainingAmount : 0);
-    const totalPaid = depositPaidAmount + remainingPaidAmount;
-    return reg.depositPaid === true && totalAmount > totalPaid;
+    // Deposit mode: check if totalAmount > actual paid amounts when payments are made
+    return reg.depositPaid === true && totalAmount > paidAmount;
   }
 }
 

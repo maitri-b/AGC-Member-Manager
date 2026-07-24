@@ -2343,10 +2343,37 @@ export default function EventDetailPage() {
             <p className="text-[10px] sm:text-sm text-gray-500">บริษัทยืนยันแล้ว/บริษัทลงทะเบียน</p>
           </div>
 
-          {/* Total Attendees */}
+          {/* Total Attendees with Payment Count */}
           <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-indigo-200">
-            <p className="text-xl sm:text-3xl font-bold text-indigo-600">{eventData.summary.totalAttendees || 0}</p>
-            <p className="text-[10px] sm:text-sm text-gray-500">จำนวนผู้เข้าร่วม</p>
+            <p className="text-xl sm:text-3xl font-bold text-indigo-600">
+              {(() => {
+                // Count attendees who have completed payment
+                const isFullPaymentMode = eventData.event.paymentMode === 'full';
+                let paidCount = 0;
+
+                eventData.attendees.forEach(attendee => {
+                  const reg = attendee.registration;
+                  let isFullyPaid = false;
+
+                  if (isFullPaymentMode) {
+                    // Full Payment Mode: Check if full payment is approved
+                    isFullyPaid = (reg as any).fullPaymentPaid === true;
+                  } else {
+                    // Deposit + Remaining Mode: Check if both deposit and remaining are paid
+                    const depositPaid = reg.depositPaid === true;
+                    const remainingPaid = (reg as any).remainingPaid === true;
+                    isFullyPaid = depositPaid && remainingPaid;
+                  }
+
+                  if (isFullyPaid) {
+                    paidCount += attendee.registration.attendeeCount || 1;
+                  }
+                });
+
+                return `${paidCount}/${eventData.summary.totalAttendees || 0}`;
+              })()}
+            </p>
+            <p className="text-[10px] sm:text-sm text-gray-500">ชำระแล้ว/จำนวนผู้เข้าร่วม (คน)</p>
           </div>
 
           {/* Club Members - Paired */}

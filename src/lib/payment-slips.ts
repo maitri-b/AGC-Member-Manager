@@ -148,6 +148,19 @@ export async function createPaymentSlip(
     } else if (slip.paymentType === 'full') {
       updateData.fullPaymentSlipUrl = slip.slipUrl;
       updateData.paymentStatus = 'รอตรวจสอบ';
+
+      // ✅ CRITICAL FIX: Clear deposit/remaining fields to prevent data corruption
+      // This ensures Full Payment mode never has deposit/remaining data
+      updateData.depositSlipUrl = '';
+      updateData.remainingSlipUrl = '';
+      updateData.depositPaid = false;
+      updateData.remainingPaid = false;
+      updateData.depositPaidDate = null;
+      updateData.remainingPaidDate = null;
+      updateData.depositAmount = 0;
+      updateData.remainingAmount = 0;
+      updateData.depositDeadline = null;
+      updateData.remainingDeadline = null;
     }
     // Note: 'additional' type doesn't need to update main slip URLs
 

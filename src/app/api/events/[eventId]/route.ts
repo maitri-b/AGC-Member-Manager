@@ -83,6 +83,12 @@ export async function GET(
     let verifiedMemberCount = 0;
     let clubMemberCount = 0;
 
+    // Helper function to check if registration is cancelled
+    const isRegistrationCancelled = (registration: any): boolean => {
+      const status = registration.status?.toLowerCase() || '';
+      return status === 'cancelled' || registration.status?.includes('ยกเลิก') || false;
+    };
+
     const attendeesWithProfile = summary.attendees.map(attendee => {
       // Try to get LINE profile by memberId first, then by lineUserId
       let lineProfile = attendee.member?.memberId
@@ -94,14 +100,17 @@ export async function GET(
         lineProfile = lineProfilesByLineUserId.get(attendee.registration.lineUserId);
       }
 
-      // Count club members (has member record = is in AGC_Membership)
-      if (attendee.member?.memberId) {
-        clubMemberCount++;
-      }
+      // Count club members and verified members (exclude cancelled registrations)
+      if (!isRegistrationCancelled(attendee.registration)) {
+        // Count club members (has member record = is in AGC_Membership)
+        if (attendee.member?.memberId) {
+          clubMemberCount++;
+        }
 
-      // Count verified members (has LINE profile = verified through the system)
-      if (lineProfile) {
-        verifiedMemberCount++;
+        // Count verified members (has LINE profile = verified through the system)
+        if (lineProfile) {
+          verifiedMemberCount++;
+        }
       }
 
       // Check status for confirmed - ensure status is a string

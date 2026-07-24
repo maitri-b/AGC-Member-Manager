@@ -129,6 +129,12 @@ interface EventData {
   attendees: Attendee[];
 }
 
+// Helper function to check if registration is cancelled
+function isCancelledRegistration(attendee: Attendee): boolean {
+  const status = attendee.registration.status?.toLowerCase() || '';
+  return status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก') || false;
+}
+
 // Helper function to check if there are additional charges after payment
 function hasAdditionalCharges(attendee: Attendee, eventPaymentMode: 'full' | 'deposit'): boolean {
   const reg = attendee.registration;
@@ -2347,30 +2353,43 @@ export default function EventDetailPage() {
           <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-indigo-200">
             <p className="text-xl sm:text-3xl font-bold text-indigo-600">
               {(() => {
-                // Count attendees who have completed payment
+                // Count attendees who have completed payment (exclude cancelled, include overpaid)
                 const isFullPaymentMode = eventData.event.paymentMode === 'full';
                 let paidCount = 0;
+                let totalActiveAttendees = 0;
 
                 eventData.attendees.forEach(attendee => {
+                  // Skip cancelled registrations
+                  if (isCancelledRegistration(attendee)) {
+                    return;
+                  }
+
                   const reg = attendee.registration;
+                  const attendeeCount = reg.attendeeCount || 1;
+                  totalActiveAttendees += attendeeCount;
+
                   let isFullyPaid = false;
+                  const paymentStatus = reg.paymentStatus?.toLowerCase() || '';
+
+                  // Check if overpaid (counts as paid, waiting for refund)
+                  const isOverpaid = paymentStatus === 'ชำระเกินจำนวน' || paymentStatus.includes('overpaid');
 
                   if (isFullPaymentMode) {
-                    // Full Payment Mode: Check if full payment is approved
-                    isFullyPaid = (reg as any).fullPaymentPaid === true;
+                    // Full Payment Mode: Check if full payment is approved OR overpaid
+                    isFullyPaid = (reg as any).fullPaymentPaid === true || isOverpaid;
                   } else {
-                    // Deposit + Remaining Mode: Check if both deposit and remaining are paid
+                    // Deposit + Remaining Mode: Check if both deposit and remaining are paid OR overpaid
                     const depositPaid = reg.depositPaid === true;
                     const remainingPaid = (reg as any).remainingPaid === true;
-                    isFullyPaid = depositPaid && remainingPaid;
+                    isFullyPaid = (depositPaid && remainingPaid) || isOverpaid;
                   }
 
                   if (isFullyPaid) {
-                    paidCount += attendee.registration.attendeeCount || 1;
+                    paidCount += attendeeCount;
                   }
                 });
 
-                return `${paidCount}/${eventData.summary.totalAttendees || 0}`;
+                return `${paidCount}/${totalActiveAttendees}`;
               })()}
             </p>
             <p className="text-[10px] sm:text-sm text-gray-500">ชำระแล้ว/จำนวนผู้เข้าร่วม (คน)</p>
@@ -2385,7 +2404,7 @@ export default function EventDetailPage() {
           </div>
           {/* Payment Summary Cards */}
           {(() => {
-            // Calculate payment totals from registration status
+            // Calculate payment totals from registration status (exclude cancelled)
             // Note: This counts based on ACTUAL payment status in the database
             // which is updated when payment slips are approved
             let totalPending = 0;
@@ -2395,6 +2414,11 @@ export default function EventDetailPage() {
             const isFullPaymentMode = eventData.event.paymentMode === 'full';
 
             eventData.attendees.forEach(attendee => {
+              // Skip cancelled registrations
+              if (isCancelledRegistration(attendee)) {
+                return;
+              }
+
               const reg = attendee.registration;
               const totalAmount = reg.totalAmount || 0;
               const depositAmount = reg.depositAmount || 0;

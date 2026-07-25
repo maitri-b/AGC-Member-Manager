@@ -330,21 +330,30 @@ export async function approvePaymentSlip(
 
       updateData.additionalPayments = JSON.stringify(additionalPayments);
 
-      // ✅ CRITICAL FIX: Update additionalPaymentAmountPaid field
-      // This field is used for payment calculation on frontend and backend
-      const currentAdditionalPaid = registrationData.additionalPaymentAmountPaid || 0;
-      updateData.additionalPaymentAmountPaid = currentAdditionalPaid + slip.amount;
+      // ✅ CRITICAL FIX: Recalculate additionalPaymentAmountPaid from actual approved additional payments
+      // This prevents accumulation errors from duplicate approvals or data corruption
+      const approvedAdditionalTotal = additionalPayments
+        .filter((p: any) => p.status === 'อนุมัติแล้ว')
+        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
 
-      // ✅ CRITICAL FIX: Update total paidAmount
-      const currentPaid = registrationData.paidAmount || 0;
-      updateData.paidAmount = currentPaid + slip.amount;
+      updateData.additionalPaymentAmountPaid = approvedAdditionalTotal;
 
-      console.log('[Approve Additional Payment] Updated amounts:', {
+      // ✅ CRITICAL FIX: Recalculate total paidAmount from all payment type fields
+      // Use tracked amounts for accuracy instead of cumulative addition
+      const fullPaymentAmountPaid = registrationData.fullPaymentAmountPaid || 0;
+      const depositAmountPaid = registrationData.depositAmountPaid || 0;
+      const remainingAmountPaid = registrationData.remainingAmountPaid || 0;
+
+      updateData.paidAmount = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + approvedAdditionalTotal;
+
+      console.log('[Approve Additional Payment] Recalculated amounts from approved slips:', {
         slipAmount: slip.amount,
-        oldAdditionalPaid: currentAdditionalPaid,
-        newAdditionalPaid: updateData.additionalPaymentAmountPaid,
-        oldPaidAmount: currentPaid,
-        newPaidAmount: updateData.paidAmount,
+        approvedAdditionalPayments: additionalPayments.length,
+        approvedAdditionalTotal,
+        fullPaymentAmountPaid,
+        depositAmountPaid,
+        remainingAmountPaid,
+        totalPaidAmount: updateData.paidAmount,
       });
     } else if (slip.paymentType === 'refund') {
       // ✅ REFUND: Deduct from paid amounts (opposite of payment)

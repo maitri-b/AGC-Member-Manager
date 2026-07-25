@@ -310,11 +310,21 @@ export function recalculatePaymentStatus(
   approvedSlipsTotal: number = 0
 ): { payment_status: string; status?: string; overpayment_amount?: number } {
   // Calculate actual total paid from tracked amounts
+  // ✅ CRITICAL FIX: Use registration object which may have been updated with new values
   const depositAmountPaid = (registration as any).depositAmountPaid || 0;
   const remainingAmountPaid = (registration as any).remainingAmountPaid || 0;
   const fullPaymentAmountPaid = (registration as any).fullPaymentAmountPaid || 0;
   const additionalPaymentAmountPaid = (registration as any).additionalPaymentAmountPaid || 0;
   let actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
+
+  console.log('[recalculatePaymentStatus] Calculating from tracked amounts:', {
+    registrationId: registration.registrationId,
+    depositAmountPaid,
+    remainingAmountPaid,
+    fullPaymentAmountPaid,
+    additionalPaymentAmountPaid,
+    actualTotalPaid,
+  });
 
   // ✅ CRITICAL FIX: Only add approvedSlipsTotal if we don't have tracked amounts
   // Otherwise we'd be double-counting (the slip approval already sets *AmountPaid fields)

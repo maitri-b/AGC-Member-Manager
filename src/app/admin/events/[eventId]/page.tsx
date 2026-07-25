@@ -1727,31 +1727,19 @@ export default function EventDetailPage() {
 
         slipUrl = uploadData.slipUrl;
         setPaymentFormData({ ...paymentFormData, uploadingFile: false, slipUrl });
+
+        console.log('[Client] Upload successful:', uploadData);
+
+        // ✅ Admin upload API already auto-approves and updates registration
+        // No need to call additional API - just show success and refresh
+        setActionMessage({ type: 'success', text: uploadData.message || 'อัพโหลดและอนุมัติสลิปเรียบร้อยแล้ว' });
+        setTimeout(() => setActionMessage(null), 3000);
+        handleClosePaymentModal();
+        fetchEventData(); // Refresh data
+      } else {
+        // No file to upload - this shouldn't happen for admin uploads
+        throw new Error('กรุณาเลือกไฟล์สลิปที่จะอัพโหลด');
       }
-
-      const response = await fetch(`/api/events/${eventId}/update-payment`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          registrationId: paymentFormData.registrationId,
-          paymentType: paymentFormData.paymentType,
-          amount: paymentFormData.amount,
-          slipUrl: slipUrl,
-          paidDate: paymentFormData.paidDate,
-          action: 'approve',
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'ไม่สามารถบันทึกการชำระเงินได้');
-      }
-
-      setActionMessage({ type: 'success', text: data.message || 'บันทึกการชำระเงินเรียบร้อยแล้ว' });
-      setTimeout(() => setActionMessage(null), 3000);
-      handleClosePaymentModal();
-      fetchEventData(); // Refresh data
     } catch (err) {
       setActionMessage({
         type: 'error',

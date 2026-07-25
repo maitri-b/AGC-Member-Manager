@@ -605,6 +605,25 @@ export default function EventDetailPage() {
   } | null>(null);
   const [paymentDetailsRefreshKey, setPaymentDetailsRefreshKey] = useState(0);
 
+  // Edit deadline modal state
+  const [editDeadlineModalOpen, setEditDeadlineModalOpen] = useState(false);
+  const [editDeadlineFormData, setEditDeadlineFormData] = useState<{
+    registrationId: string;
+    deadlineType: 'full' | 'deposit' | 'remaining';
+    currentDeadline: string;
+    updateMethod: 'hours' | 'fixed';
+    hoursToAdd: number;
+    fixedDate: string;
+  }>({
+    registrationId: '',
+    deadlineType: 'full',
+    currentDeadline: '',
+    updateMethod: 'hours',
+    hoursToAdd: 24,
+    fixedDate: new Date().toISOString().split('T')[0],
+  });
+  const [updatingDeadline, setUpdatingDeadline] = useState(false);
+
   // Message template modal state
   const [messageTemplateModalOpen, setMessageTemplateModalOpen] = useState(false);
   const [selectedRegistrationsForMessage, setSelectedRegistrationsForMessage] = useState<Set<string>>(new Set());
@@ -1775,6 +1794,118 @@ export default function EventDetailPage() {
     fetchEventData();
     // Force PaymentDetailsModal to refresh
     setPaymentDetailsRefreshKey(prev => prev + 1);
+  };
+
+  // Edit Deadline Modal handlers
+  const handleOpenEditDeadlineModal = (attendee: Attendee) => {
+    if (!eventData?.event) return;
+
+    // ✅ Auto-analyze which deadline to edit based on payment mode and status
+    let deadlineType: 'full' | 'deposit' | 'remaining' = 'full';
+    let currentDeadline = '';
+
+    if (eventData.event.paymentMode === 'deposit') {
+      // Deposit mode: check if deposit is paid
+      if (!attendee.registration.depositPaid && attendee.registration.depositDeadline) {
+        deadlineType = 'deposit';
+        currentDeadline = attendee.registration.depositDeadline;
+      } else if (attendee.registration.depositPaid && attendee.registration.remainingDeadline) {
+        deadlineType = 'remaining';
+        currentDeadline = attendee.registration.remainingDeadline;
+      }
+    } else {
+      // Full payment mode
+      deadlineType = 'full';
+      currentDeadline = attendee.registration.fullPaymentDeadline || '';
+    }
+
+    if (!currentDeadline) {
+      setActionMessage({ type: 'error', text: 'ไม่พบกำหนดชำระเงินที่ต้องแก้ไข' });
+      return;
+    }
+
+    setEditDeadlineFormData({
+      registrationId: attendee.registration.registrationId,
+      deadlineType,
+      currentDeadline,
+      updateMethod: 'hours',
+      hoursToAdd: 24,
+      fixedDate: new Date().toISOString().split('T')[0],
+    });
+    setEditDeadlineModalOpen(true);
+  };
+
+  const handleCloseEditDeadlineModal = () => {
+    setEditDeadlineModalOpen(false);
+    setEditDeadlineFormData({
+      registrationId: '',
+      deadlineType: 'full',
+      currentDeadline: '',
+      updateMethod: 'hours',
+      hoursToAdd: 24,
+      fixedDate: new Date().toISOString().split('T')[0],
+    });
+  };
+
+  const handleSaveDeadline = async () => {
+    if (!editDeadlineFormData.registrationId) return;
+
+    setUpdatingDeadline(true);
+    setActionMessage(null);
+
+    try {
+      let newDeadline: string;
+
+      if (editDeadlineFormData.updateMethod === 'hours') {
+        // Add hours to current time
+        const deadline = new Date();
+        deadline.setHours(deadline.getHours() + editDeadlineFormData.hoursToAdd);
+        newDeadline = deadline.toISOString();
+      } else {
+        // Set to end of selected date (23:59:59)
+        const deadline = new Date(editDeadlineFormData.fixedDate);
+        deadline.setHours(23, 59, 59, 999);
+        newDeadline = deadline.toISOString();
+      }
+
+      // Prepare update data
+      const updateData: Record<string, unknown> = {};
+      if (editDeadlineFormData.deadlineType === 'full') {
+        updateData.full_payment_deadline = newDeadline;
+      } else if (editDeadlineFormData.deadlineType === 'deposit') {
+        updateData.deposit_deadline = newDeadline;
+      } else if (editDeadlineFormData.deadlineType === 'remaining') {
+        updateData.remaining_deadline = newDeadline;
+      }
+
+      // Call API to update
+      const response = await fetch(`/api/events/${eventId}/admin-update-registration`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registrationId: editDeadlineFormData.registrationId,
+          updateData,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่สามารถอัพเดทกำหนดชำระเงินได้');
+      }
+
+      setActionMessage({ type: 'success', text: 'อัพเดทกำหนดชำระเงินเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      handleCloseEditDeadlineModal();
+      fetchEventData();
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาด',
+      });
+    } finally {
+      setUpdatingDeadline(false);
+    }
   };
 
   const handleRejectPayment = async () => {
@@ -3832,10 +3963,19 @@ export default function EventDetailPage() {
 
                                         if (deadline) {
                                           return (
-                                            <div className="text-gray-500 text-xs mt-1">
-                                              กำหนดชำระ: {formatDeadline(deadline)}
-                                              <br />
-                                              <span className="text-orange-600">{getTimeRemaining(deadline)}</span>
+                                            <div className="text-gray-500 text-xs mt-1 flex items-start justify-between gap-2">
+                                              <div>
+                                                กำหนดชำระ: {formatDeadline(deadline)}
+                                                <br />
+                                                <span className="text-orange-600">{getTimeRemaining(deadline)}</span>
+                                              </div>
+                                              <button
+                                                onClick={() => handleOpenEditDeadlineModal(attendee)}
+                                                className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors whitespace-nowrap"
+                                                title="แก้ไขกำหนดชำระ"
+                                              >
+                                                ✏️ แก้ไข
+                                              </button>
                                             </div>
                                           );
                                         }
@@ -3864,10 +4004,21 @@ export default function EventDetailPage() {
                                     <span className="font-semibold">{attendee.registration.depositAmount.toLocaleString()} บาท</span>
                                   </div>
                                   {attendee.registration.depositDeadline && (
-                                    <div className="text-gray-500 text-xs">
-                                      กำหนด: {formatDeadline(attendee.registration.depositDeadline)}
-                                      <br />
-                                      <span className="text-orange-600">{getTimeRemaining(attendee.registration.depositDeadline)}</span>
+                                    <div className="text-gray-500 text-xs flex items-start justify-between gap-2">
+                                      <div>
+                                        กำหนด: {formatDeadline(attendee.registration.depositDeadline)}
+                                        <br />
+                                        <span className="text-orange-600">{getTimeRemaining(attendee.registration.depositDeadline)}</span>
+                                      </div>
+                                      {!attendee.registration.depositPaid && (
+                                        <button
+                                          onClick={() => handleOpenEditDeadlineModal(attendee)}
+                                          className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors whitespace-nowrap"
+                                          title="แก้ไขกำหนดชำระ"
+                                        >
+                                          ✏️ แก้ไข
+                                        </button>
+                                      )}
                                     </div>
                                   )}
                                   {attendee.registration.depositPaid ? (
@@ -3918,10 +4069,21 @@ export default function EventDetailPage() {
                                       <span className="font-semibold text-orange-600">{attendee.registration.remainingAmount.toLocaleString()} บาท</span>
                                     </div>
                                     {attendee.registration.remainingDeadline && (
-                                      <div className="text-gray-500 text-xs">
-                                        กำหนด: {formatDeadline(attendee.registration.remainingDeadline)}
-                                        <br />
-                                        <span className="text-orange-600">{getTimeRemaining(attendee.registration.remainingDeadline)}</span>
+                                      <div className="text-gray-500 text-xs flex items-start justify-between gap-2">
+                                        <div>
+                                          กำหนด: {formatDeadline(attendee.registration.remainingDeadline)}
+                                          <br />
+                                          <span className="text-orange-600">{getTimeRemaining(attendee.registration.remainingDeadline)}</span>
+                                        </div>
+                                        {!attendee.registration.remainingPaid && (
+                                          <button
+                                            onClick={() => handleOpenEditDeadlineModal(attendee)}
+                                            className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors whitespace-nowrap"
+                                            title="แก้ไขกำหนดชำระ"
+                                          >
+                                            ✏️ แก้ไข
+                                          </button>
+                                        )}
                                       </div>
                                     )}
                                     {attendee.registration.remainingSlipUrl ? (
@@ -4892,6 +5054,137 @@ export default function EventDetailPage() {
             })) || []
         }
       />
+
+      {/* Edit Deadline Modal */}
+      {editDeadlineModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">✏️ แก้ไขกำหนดชำระเงิน</h2>
+              <button
+                onClick={handleCloseEditDeadlineModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Current Deadline Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900 mb-1">
+                  <strong>ประเภท:</strong> {
+                    editDeadlineFormData.deadlineType === 'full' ? 'ชำระเต็มจำนวน' :
+                    editDeadlineFormData.deadlineType === 'deposit' ? 'มัดจำ' :
+                    'ยอดคงเหลือ'
+                  }
+                </p>
+                <p className="text-sm text-blue-900">
+                  <strong>กำหนดปัจจุบัน:</strong> {formatDeadline(editDeadlineFormData.currentDeadline)}
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  {getTimeRemaining(editDeadlineFormData.currentDeadline)}
+                </p>
+              </div>
+
+              {/* Update Method Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  วิธีการตั้งกำหนดใหม่
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      value="hours"
+                      checked={editDeadlineFormData.updateMethod === 'hours'}
+                      onChange={(e) => setEditDeadlineFormData({ ...editDeadlineFormData, updateMethod: e.target.value as 'hours' | 'fixed' })}
+                      className="mr-3"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">⏰ เพิ่มจำนวนชั่วโมง</div>
+                      <div className="text-xs text-gray-500">นับจากเวลาปัจจุบัน</div>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      value="fixed"
+                      checked={editDeadlineFormData.updateMethod === 'fixed'}
+                      onChange={(e) => setEditDeadlineFormData({ ...editDeadlineFormData, updateMethod: e.target.value as 'hours' | 'fixed' })}
+                      className="mr-3"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">📅 กำหนดวันตายตัว</div>
+                      <div className="text-xs text-gray-500">สิ้นวัน 23:59 ของวันที่เลือก</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Hours Input (if method is hours) */}
+              {editDeadlineFormData.updateMethod === 'hours' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    จำนวนชั่วโมงที่ต้องการเพิ่ม
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="720"
+                    value={editDeadlineFormData.hoursToAdd}
+                    onChange={(e) => setEditDeadlineFormData({ ...editDeadlineFormData, hoursToAdd: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="เช่น 24, 48, 72"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    กำหนดใหม่จะเป็น: {new Date(Date.now() + editDeadlineFormData.hoursToAdd * 60 * 60 * 1000).toLocaleString('th-TH')}
+                  </p>
+                </div>
+              )}
+
+              {/* Date Input (if method is fixed) */}
+              {editDeadlineFormData.updateMethod === 'fixed' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    เลือกวันที่กำหนด
+                  </label>
+                  <input
+                    type="date"
+                    value={editDeadlineFormData.fixedDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setEditDeadlineFormData({ ...editDeadlineFormData, fixedDate: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    กำหนดใหม่จะเป็น: {new Date(editDeadlineFormData.fixedDate + 'T23:59:59').toLocaleString('th-TH')}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCloseEditDeadlineModal}
+                disabled={updatingDeadline}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleSaveDeadline}
+                disabled={updatingDeadline}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {updatingDeadline ? 'กำลังบันทึก...' : '💾 บันทึก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

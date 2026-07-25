@@ -474,7 +474,7 @@ export default function EventDetailPage() {
     specialRequests?: string;
     attendeeTypeSelections?: Array<{ typeId: string; quantity: number }>;
     roomAllocations?: Array<{ roomTypeId: string; roomCount: number }>;
-  }>({ attendeeCount: 1, attendeeNames: [''], status: 'pending' });
+  }>({ attendeeCount: 1, attendeeNames: [''], status: 'รอดำเนินการ' });
   const [updating, setUpdating] = useState(false);
 
   // Payment confirmation state
@@ -603,6 +603,7 @@ export default function EventDetailPage() {
     companyName: string;
     contactName: string;
   } | null>(null);
+  const [paymentDetailsRefreshKey, setPaymentDetailsRefreshKey] = useState(0);
 
   // Message template modal state
   const [messageTemplateModalOpen, setMessageTemplateModalOpen] = useState(false);
@@ -1146,7 +1147,7 @@ export default function EventDetailPage() {
     setEditFormData({
       attendeeCount: attendee.registration.attendeeCount || 1,
       attendeeNames: names,
-      status: attendee.registration.status || 'pending',
+      status: attendee.registration.status || 'รอดำเนินการ',
       contactPhone: attendee.registration.contactPhone || '',
       contactEmail: attendee.registration.contactEmail || '',
       specialRequests: attendee.registration.specialRequests || '',
@@ -1158,7 +1159,7 @@ export default function EventDetailPage() {
   const handleCancelEdit = () => {
     // Exit edit mode but keep dropdown expanded
     setEditingRegistration(null);
-    setEditFormData({ attendeeCount: 1, attendeeNames: [''], status: 'pending' });
+    setEditFormData({ attendeeCount: 1, attendeeNames: [''], status: 'รอดำเนินการ' });
   };
 
   const handleSaveEdit = async () => {
@@ -1735,7 +1736,9 @@ export default function EventDetailPage() {
         setActionMessage({ type: 'success', text: uploadData.message || 'อัพโหลดและอนุมัติสลิปเรียบร้อยแล้ว' });
         setTimeout(() => setActionMessage(null), 3000);
         handleClosePaymentModal();
-        fetchEventData(); // Refresh data
+        await fetchEventData(); // Refresh data
+        // ✅ Force PaymentDetailsModal to refresh payment slips list
+        setPaymentDetailsRefreshKey(prev => prev + 1);
       } else {
         // No file to upload - this shouldn't happen for admin uploads
         throw new Error('กรุณาเลือกไฟล์สลิปที่จะอัพโหลด');
@@ -1770,6 +1773,8 @@ export default function EventDetailPage() {
   const handlePaymentDetailsUpdate = () => {
     // Refresh attendee list after approve/reject
     fetchEventData();
+    // Force PaymentDetailsModal to refresh
+    setPaymentDetailsRefreshKey(prev => prev + 1);
   };
 
   const handleRejectPayment = async () => {
@@ -3208,9 +3213,10 @@ export default function EventDetailPage() {
                               onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
                               className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                              <option value="pending">รอดำเนินการ</option>
-                              <option value="confirmed">ยืนยันแล้ว</option>
-                              <option value="cancelled">ยกเลิก</option>
+                              <option value="รอดำเนินการ">รอดำเนินการ</option>
+                              <option value="ยืนยันแล้ว">ยืนยันแล้ว</option>
+                              <option value="ชำระครบแล้ว">ชำระครบแล้ว</option>
+                              <option value="ยกเลิก">ยกเลิก</option>
                             </select>
                           </div>
                         </div>
@@ -4763,6 +4769,7 @@ export default function EventDetailPage() {
       {/* Payment Details Modal */}
       {paymentDetailsModalOpen && selectedRegistrationForPayment && (
         <PaymentDetailsModal
+          key={paymentDetailsRefreshKey}
           registrationId={selectedRegistrationForPayment.registrationId}
           totalAmount={selectedRegistrationForPayment.totalAmount}
           companyName={selectedRegistrationForPayment.companyName}

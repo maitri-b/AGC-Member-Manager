@@ -190,13 +190,17 @@ export function getTimeRemaining(deadlineISO: string): string {
 
   const deadline = new Date(deadlineISO);
 
-  // ✅ Get current time in Thailand timezone (GMT+7)
+  // ✅ Get current time in Thailand timezone using toLocaleString
   const nowUTC = new Date();
-  const thailandOffset = 7 * 60; // GMT+7 in minutes
-  const nowThailand = new Date(nowUTC.getTime() + (thailandOffset * 60 * 1000));
+  const nowThailandString = nowUTC.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
+  const nowThailand = new Date(nowThailandString);
 
-  // Calculate difference from Thailand current time to deadline
-  const diffMs = deadline.getTime() - nowThailand.getTime();
+  // Get deadline in Thailand timezone
+  const deadlineThailandString = deadline.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
+  const deadlineThailand = new Date(deadlineThailandString);
+
+  // Calculate difference
+  const diffMs = deadlineThailand.getTime() - nowThailand.getTime();
 
   if (diffMs < 0) {
     return 'พ้นกำหนดแล้ว';

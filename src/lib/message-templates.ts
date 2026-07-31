@@ -218,12 +218,26 @@ LINE: {{lineOfficialAccount}}
 
 /**
  * Calculate days until deadline
+ * ✅ CRITICAL FIX: Use Thailand timezone (GMT+7) for accurate day calculation
  */
 export function calculateDaysUntilDeadline(deadline: string): number {
-  const now = new Date();
+  // Get current time in Thailand timezone (GMT+7)
+  const nowUTC = new Date();
+  const thailandOffset = 7 * 60; // GMT+7 in minutes
+  const nowThailand = new Date(nowUTC.getTime() + (thailandOffset * 60 * 1000));
+
+  // Get deadline time in Thailand timezone
   const deadlineDate = new Date(deadline);
-  const diffTime = deadlineDate.getTime() - now.getTime();
+  const deadlineThailand = new Date(deadlineDate.getTime() + (thailandOffset * 60 * 1000));
+
+  // Calculate difference in days using Thailand timezone
+  // Reset time to start of day for accurate day counting
+  const nowDayStart = new Date(nowThailand.getFullYear(), nowThailand.getMonth(), nowThailand.getDate());
+  const deadlineDayStart = new Date(deadlineThailand.getFullYear(), deadlineThailand.getMonth(), deadlineThailand.getDate());
+
+  const diffTime = deadlineDayStart.getTime() - nowDayStart.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
   return diffDays;
 }
 

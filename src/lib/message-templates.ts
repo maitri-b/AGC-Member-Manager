@@ -221,17 +221,21 @@ LINE: {{lineOfficialAccount}}
  * ✅ CRITICAL FIX: Use Thailand timezone (GMT+7) for accurate day calculation
  */
 export function calculateDaysUntilDeadline(deadline: string): number {
-  // Get current time in Thailand timezone (GMT+7)
-  const nowUTC = new Date();
-  const thailandOffset = 7 * 60; // GMT+7 in minutes
-  const nowThailand = new Date(nowUTC.getTime() + (thailandOffset * 60 * 1000));
+  // ✅ CRITICAL FIX: Deadline is already stored as Thailand time in database
+  // We only need to convert current time to Thailand timezone
 
-  // Get deadline time in Thailand timezone
   const deadlineDate = new Date(deadline);
-  const deadlineThailand = new Date(deadlineDate.getTime() + (thailandOffset * 60 * 1000));
 
-  // Calculate difference in days using Thailand timezone
-  // Reset time to start of day for accurate day counting
+  // Get current time and convert to Thailand timezone components
+  const nowUTC = new Date();
+  const nowThailandString = nowUTC.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
+  const nowThailand = new Date(nowThailandString);
+
+  // Get deadline in Thailand timezone components
+  const deadlineThailandString = deadlineDate.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
+  const deadlineThailand = new Date(deadlineThailandString);
+
+  // Reset both to start of day for accurate day counting
   const nowDayStart = new Date(nowThailand.getFullYear(), nowThailand.getMonth(), nowThailand.getDate());
   const deadlineDayStart = new Date(deadlineThailand.getFullYear(), deadlineThailand.getMonth(), deadlineThailand.getDate());
 

@@ -181,6 +181,7 @@ export function formatDeadline(deadlineISO: string): string {
 
 /**
  * Get human-readable time remaining until deadline
+ * ✅ CRITICAL FIX: Use Thailand timezone (GMT+7) for accurate time calculation
  * @param deadlineISO ISO timestamp
  * @returns String like "เหลืออีก 2 วัน 5 ชั่วโมง" or "พ้นกำหนดแล้ว"
  */
@@ -188,8 +189,14 @@ export function getTimeRemaining(deadlineISO: string): string {
   if (!deadlineISO) return '';
 
   const deadline = new Date(deadlineISO);
-  const now = new Date();
-  const diffMs = deadline.getTime() - now.getTime();
+
+  // ✅ Get current time in Thailand timezone (GMT+7)
+  const nowUTC = new Date();
+  const thailandOffset = 7 * 60; // GMT+7 in minutes
+  const nowThailand = new Date(nowUTC.getTime() + (thailandOffset * 60 * 1000));
+
+  // Calculate difference from Thailand current time to deadline
+  const diffMs = deadline.getTime() - nowThailand.getTime();
 
   if (diffMs < 0) {
     return 'พ้นกำหนดแล้ว';

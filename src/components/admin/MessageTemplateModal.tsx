@@ -99,11 +99,11 @@ export default function MessageTemplateModal({
       // Send personalized messages to each recipient
       const results = await Promise.allSettled(
         selectedRegistrations.map(async ({ registration, lineUserId }) => {
-          // Personalize message for this recipient
-          // Note: customMessage is already personalized from updateMessageFromTemplate
+          // Personalize message for this recipient using the template
+          // CRITICAL FIX: Use custom template (if available) for EACH recipient
           const personalizedMsg = selectedTemplate
-            ? personalizeMessage(selectedTemplate, registration, event, customMessage, baseUrl)
-            : customMessage;
+            ? personalizeMessage(selectedTemplate, registration, event, customTemplates[selectedTemplate], baseUrl)
+            : customMessage; // For custom messages without template, send as-is
 
           // Send via LINE API
           const response = await fetch('/api/line/send-notification', {

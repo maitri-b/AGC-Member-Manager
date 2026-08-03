@@ -546,6 +546,28 @@ function ContactModal({
 
   const [copied, setCopied] = useState(false);
 
+  // Custom templates from settings
+  const [customTemplates, setCustomTemplates] = useState<Record<string, string>>({});
+  const [baseUrl, setBaseUrl] = useState('https://agc-member-manager.vercel.app');
+
+  // Fetch base URL and custom templates from settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/admin/settings');
+        if (response.ok) {
+          const settings = await response.json();
+          setBaseUrl(settings.baseUrl || 'https://agc-member-manager.vercel.app');
+          setCustomTemplates(settings.messageTemplates || {});
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+        // Keep default values
+      }
+    };
+    fetchSettings();
+  }, []);
+
   // Fetch contacts for this member
   useEffect(() => {
     fetchContacts();
@@ -566,11 +588,54 @@ function ContactModal({
     }
   };
 
+  // Personalize member contact message template
+  const personalizeContactMessage = (template: string, topic?: ContactTopic): string => {
+    const nickname = member.nickname || member.fullNameTH || '';
+    const companyName = member.companyNameTH || member.companyNameEN || '';
+    const licenseNumber = member.licenseNumber || '-';
+    const expiryDate = formatThaiDateForMessage(member.licenseExpiry);
+    const status = member.status || '-';
+
+    // Replace variables in template
+    let result = template;
+    result = result.replace(/\{\{contactName\}\}/g, nickname);
+    result = result.replace(/\{\{companyName\}\}/g, companyName);
+    result = result.replace(/\{\{licenseNumber\}\}/g, licenseNumber);
+    result = result.replace(/\{\{expiryDate\}\}/g, expiryDate);
+    result = result.replace(/\{\{status\}\}/g, status);
+
+    // For complaint topic, also replace complaint-specific variables
+    if (topic === 'complaint') {
+      result = result.replace(/\{\{complaintAgainst\}\}/g, complaintAgainst || '[ชื่อคู่กรณี]');
+      result = result.replace(/\{\{complaintCompany\}\}/g, complaintCompany || '[บริษัทคู่กรณี]');
+    }
+
+    return result;
+  };
+
   // Generate message based on topic
   const generateMessage = (topic: ContactTopic) => {
     const nickname = member.nickname || member.fullNameTH || '';
     const companyName = member.companyNameTH || member.companyNameEN || '';
 
+    // Map contact topics to message template types
+    const topicToTemplateMap: Record<string, string> = {
+      'license_expired': 'license_expired',
+      'inactive_member': 'inactive_member',
+      'complaint': 'complaint',
+      'line_not_found': 'line_not_found',
+      'not_verified': 'not_verified',
+      'license_renewal': 'license_renewal',
+    };
+
+    // Check if custom template exists for this topic
+    const templateKey = topicToTemplateMap[topic];
+    if (templateKey && customTemplates[templateKey]) {
+      // Use custom template from settings and personalize it
+      return personalizeContactMessage(customTemplates[templateKey], topic);
+    }
+
+    // Fall back to hard-coded message if no custom template
     switch (topic) {
       case 'license_expired':
         return `สวัสดีครับ คุณ${nickname}
@@ -702,7 +767,7 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
     if (selectedTopic !== 'other' && selectedTopic !== 'license_renewal') {
       setWaitForResponse(false);
     }
-  }, [selectedTopic, complaintAgainst, complaintCompany]);
+  }, [selectedTopic, complaintAgainst, complaintCompany, customTemplates]);
 
   const handleCopyMessage = async () => {
     try {

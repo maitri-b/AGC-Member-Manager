@@ -456,6 +456,7 @@ export default function EventDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled'>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | string>('all');
+  const [roomTypeFilter, setRoomTypeFilter] = useState<'all' | string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
@@ -2271,6 +2272,23 @@ export default function EventDetailPage() {
       if (attendee.registration.paymentStatus !== paymentFilter) return false;
     }
 
+    // Filter by room type
+    if (roomTypeFilter !== 'all') {
+      // Parse room allocations
+      let roomAllocations: Array<{ roomTypeId: string; roomCount: number }> = [];
+      try {
+        if (attendee.registration.roomAllocations) {
+          roomAllocations = JSON.parse(attendee.registration.roomAllocations);
+        }
+      } catch (e) {
+        // Invalid JSON, skip this attendee
+      }
+
+      // Check if this attendee has selected the filtered room type
+      const hasRoomType = roomAllocations.some(ra => ra.roomTypeId === roomTypeFilter && ra.roomCount > 0);
+      if (!hasRoomType) return false;
+    }
+
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -2751,6 +2769,64 @@ export default function EventDetailPage() {
                 })()}
               </div>
             </div>
+
+            {/* Room Type Filter - Only show if event has room types configured */}
+            {eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">ประเภทการใช้ห้อง</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setRoomTypeFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      roomTypeFilter === 'all'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    ทั้งหมด
+                  </button>
+                  {eventData.event.roomTypes
+                    .filter((rt: any) => rt.isActive)
+                    .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                    .map((roomType: any) => {
+                      // Count registrations with this room type
+                      const count = eventData.attendees.filter(attendee => {
+                        // Exclude cancelled registrations
+                        const status = String(attendee.registration.status || '').toLowerCase();
+                        const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
+                        if (isCancelled) return false;
+
+                        // Parse room allocations
+                        let roomAllocations: Array<{ roomTypeId: string; roomCount: number }> = [];
+                        try {
+                          if (attendee.registration.roomAllocations) {
+                            roomAllocations = JSON.parse(attendee.registration.roomAllocations);
+                          }
+                        } catch (e) {
+                          return false;
+                        }
+
+                        // Check if has this room type with count > 0
+                        return roomAllocations.some(ra => ra.roomTypeId === roomType.typeId && ra.roomCount > 0);
+                      }).length;
+
+                      return (
+                        <button
+                          key={roomType.typeId}
+                          onClick={() => setRoomTypeFilter(roomType.typeId)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            roomTypeFilter === roomType.typeId
+                              ? 'bg-indigo-600 text-white border-2 border-indigo-700'
+                              : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                          }`}
+                        >
+                          {roomType.typeName} ({count})
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

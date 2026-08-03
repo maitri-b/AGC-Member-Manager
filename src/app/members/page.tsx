@@ -698,8 +698,8 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
       // Clear message when topic is empty or 'other'
       setMessage('');
     }
-    // Reset waitForResponse when topic changes
-    if (selectedTopic !== 'other') {
+    // Reset waitForResponse when topic changes (except for 'other' and 'license_renewal')
+    if (selectedTopic !== 'other' && selectedTopic !== 'license_renewal') {
       setWaitForResponse(false);
     }
   }, [selectedTopic, complaintAgainst, complaintCompany]);
@@ -745,7 +745,7 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
           assigneeName: selectedStaff?.lineDisplayName || '',
           contactDate,
           previousLineStatus: member.lineGroupStatus,
-          updateLineStatus: selectedTopic === 'other' ? waitForResponse : true,
+          updateLineStatus: (selectedTopic === 'other' || selectedTopic === 'license_renewal') ? waitForResponse : true,
         }),
       });
 
@@ -988,8 +988,8 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
                 </div>
               </div>
 
-              {/* Checkbox for 'other' topic */}
-              {selectedTopic === 'other' && (
+              {/* Checkbox for 'other' and 'license_renewal' topics */}
+              {(selectedTopic === 'other' || selectedTopic === 'license_renewal') && (
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -1005,7 +1005,10 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
               )}
 
               {/* Note about LINE status change */}
-              {selectedTopic && (selectedTopic !== 'other' || waitForResponse) && (
+              {selectedTopic && (
+                (selectedTopic !== 'other' && selectedTopic !== 'license_renewal') ||
+                waitForResponse
+              ) && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                   <p className="text-sm text-yellow-800">
                     <strong>หมายเหตุ:</strong> เมื่อบันทึก สถานะไลน์ของสมาชิกจะถูกเปลี่ยนเป็น &quot;รอผลการติดต่อ&quot;

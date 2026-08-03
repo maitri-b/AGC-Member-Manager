@@ -27,7 +27,8 @@ export default function MessageTemplateModal({
   event,
 }: MessageTemplateModalProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplateType | null>(null);
-  const [customMessage, setCustomMessage] = useState('');
+  const [customMessage, setCustomMessage] = useState(''); // Personalized preview message
+  const [editableTemplate, setEditableTemplate] = useState(''); // Template with {{placeholders}} for editing
   const [isSending, setIsSending] = useState(false);
   const [previewRecipient, setPreviewRecipient] = useState(0);
   const [baseUrl, setBaseUrl] = useState('https://agc-member-manager.vercel.app');
@@ -65,7 +66,16 @@ export default function MessageTemplateModal({
     if (selectedTemplate && selectedRegistrations.length > 0) {
       updateMessageFromTemplate(selectedTemplate);
     }
-  }, [selectedTemplate, previewRecipient, baseUrl]);
+  }, [selectedTemplate, previewRecipient, baseUrl, customTemplates]);
+
+  // Update preview when user edits the template or changes preview recipient
+  useEffect(() => {
+    if (selectedTemplate && selectedRegistrations.length > 0 && editableTemplate) {
+      const registration = selectedRegistrations[previewRecipient].registration;
+      const preview = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
+      setCustomMessage(preview);
+    }
+  }, [editableTemplate, previewRecipient, selectedRegistrations, selectedTemplate, event, baseUrl]);
 
   const updateMessageFromTemplate = (templateType: MessageTemplateType) => {
     if (selectedRegistrations.length === 0) return;
@@ -73,6 +83,11 @@ export default function MessageTemplateModal({
     const registration = selectedRegistrations[previewRecipient].registration;
     // Use custom template if available, otherwise use default
     const template = customTemplates[templateType];
+
+    // Store the editable template (with placeholders)
+    setEditableTemplate(template || '');
+
+    // Generate personalized preview
     const message = personalizeMessage(templateType, registration, event, template, baseUrl);
     setCustomMessage(message);
   };
@@ -83,7 +98,7 @@ export default function MessageTemplateModal({
   };
 
   const handleSendMessages = async () => {
-    if (!customMessage.trim()) {
+    if (!editableTemplate.trim() && !customMessage.trim()) {
       toast.error('กรุณาระบุข้อความ');
       return;
     }
@@ -99,10 +114,10 @@ export default function MessageTemplateModal({
       // Send personalized messages to each recipient
       const results = await Promise.allSettled(
         selectedRegistrations.map(async ({ registration, lineUserId }) => {
-          // Personalize message for this recipient using the template
-          // CRITICAL FIX: Use custom template (if available) for EACH recipient
-          const personalizedMsg = selectedTemplate
-            ? personalizeMessage(selectedTemplate, registration, event, customTemplates[selectedTemplate], baseUrl)
+          // Personalize message for this recipient using the EDITED template
+          // CRITICAL FIX: Use editableTemplate (user's edited version) for EACH recipient
+          const personalizedMsg = selectedTemplate && editableTemplate
+            ? personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl)
             : customMessage; // For custom messages without template, send as-is
 
           // Send via LINE API
@@ -215,21 +230,21 @@ export default function MessageTemplateModal({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">
-                ข้อความ: (สามารถแก้ไขได้)
+                Template ข้อความ: (สามารถแก้ไขได้)
               </label>
               <span className="text-xs text-gray-500">
-                {customMessage.length} / 1,000 ตัวอักษร
+                {editableTemplate.length} / 1,000 ตัวอักษร
               </span>
             </div>
             <textarea
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value.slice(0, 1000))}
+              value={editableTemplate}
+              onChange={(e) => setEditableTemplate(e.target.value.slice(0, 1000))}
               rows={12}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
               placeholder="พิมพ์ข้อความที่ต้องการส่ง..."
             />
             <p className="text-xs text-gray-500 mt-2">
-              💡 ข้อความจะถูก personalize สำหรับผู้รับแต่ละคนโดยอัตโนมัติ
+              💡 ใช้ {'{{'} และ {'}}'}  เพื่อใส่ตัวแปร เช่น {'{{memberName}}'}, {'{{amountText}}'} - ระบบจะแทนค่าสำหรับแต่ละคนอัตโนมัติ
             </p>
           </div>
 
@@ -237,12 +252,10 @@ export default function MessageTemplateModal({
           {currentRecipient && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <div className="text-xs font-medium text-gray-600 mb-2">
-                ตัวอย่างข้อความที่จะส่งถึง: {currentRecipient.registration.contactName}
+                ✨ ตัวอย่างข้อความที่จะส่งถึง: {currentRecipient.registration.contactName}
               </div>
               <div className="bg-white border border-gray-300 rounded-lg p-3 text-sm whitespace-pre-wrap font-sans">
-                {selectedTemplate
-                  ? personalizeMessage(selectedTemplate, currentRecipient.registration, event, customTemplates[selectedTemplate] || undefined, baseUrl)
-                  : customMessage}
+                {customMessage}
               </div>
             </div>
           )}

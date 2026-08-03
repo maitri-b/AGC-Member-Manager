@@ -714,9 +714,15 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (sendLine: boolean = false) => {
     if (!selectedTopic || !message || !assigneeId) {
       alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
+
+    // Check if LINE sending is requested but member doesn't have LINE ID
+    if (sendLine && !member.lineUserId) {
+      alert('ไม่สามารถส่ง LINE ได้ เนื่องจากสมาชิกท่านนี้ยังไม่ได้ทำการยืนยันตัวตน');
       return;
     }
 
@@ -748,6 +754,31 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
         throw new Error(data.error || 'Failed to create contact');
       }
 
+      // If sendLine is true, send LINE notification
+      if (sendLine && member.lineUserId) {
+        try {
+          const lineResponse = await fetch('/api/line/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lineUserIds: [member.lineUserId],
+              message: message,
+            }),
+          });
+
+          if (!lineResponse.ok) {
+            throw new Error('Failed to send LINE notification');
+          }
+
+          toast.success('บันทึกและส่งข้อความทาง LINE สำเร็จ');
+        } catch (lineErr) {
+          toast.error('บันทึกสำเร็จ แต่ส่ง LINE ไม่สำเร็จ');
+          console.error('LINE send error:', lineErr);
+        }
+      } else {
+        toast.success('บันทึกการติดต่อสำเร็จ');
+      }
+
       // Reset form and refresh
       setShowNewForm(false);
       setSelectedTopic('');
@@ -759,7 +790,7 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
       fetchContacts();
       onSuccess();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
     } finally {
       setSaving(false);
     }
@@ -1133,20 +1164,87 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
 
         {/* Footer */}
         {(showNewForm || resolvingId) && (
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
-            <button
-              onClick={() => { setShowNewForm(false); setResolvingId(null); }}
-              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              ยกเลิก
-            </button>
-            <button
-              onClick={showNewForm ? handleSubmit : handleResolve}
-              disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? 'กำลังบันทึก...' : showNewForm ? 'บันทึกการติดต่อ' : 'บันทึกผลดำเนินการ'}
-            </button>
+          <div className="px-6 py-4 border-t border-gray-200 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              {/* Left side: LINE Profile Info (show only for new form) */}
+              {showNewForm && (
+                <div className="flex items-center gap-3">
+                  {member.lineUserId && member.lineProfile ? (
+                    <>
+                      <img
+                        src={member.lineProfile.lineProfilePicture}
+                        alt={member.lineProfile.lineDisplayName}
+                        className="w-10 h-10 rounded-full border-2 border-green-500"
+                      />
+                      <div className="text-sm">
+                        <div className="text-gray-600">ส่ง LINE ถึง:</div>
+                        <div className="font-medium text-gray-900">{member.lineProfile.lineDisplayName}</div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-amber-600 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span>สมาชิกยังไม่ทำการยืนยันตัวตน - ส่ง LINE ไม่ได้</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Right side: Action buttons */}
+              <div className="flex items-center gap-3 ml-auto">
+                <button
+                  onClick={() => { setShowNewForm(false); setResolvingId(null); }}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  ยกเลิก
+                </button>
+                {showNewForm ? (
+                  <>
+                    <button
+                      onClick={() => handleSubmit(false)}
+                      disabled={saving}
+                      className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 disabled:opacity-50"
+                    >
+                      {saving ? 'กำลังบันทึก...' : 'บันทึกอย่างเดียว'}
+                    </button>
+                    {member.lineUserId && (
+                      <button
+                        onClick={() => handleSubmit(true)}
+                        disabled={saving}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {saving ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            กำลังส่ง...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                            </svg>
+                            บันทึกพร้อมส่ง LINE
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    onClick={handleResolve}
+                    disabled={saving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {saving ? 'กำลังบันทึก...' : 'บันทึกผลดำเนินการ'}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -213,6 +213,7 @@ export default function EventDetailPage() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadPaymentType, setUploadPaymentType] = useState<'deposit' | 'remaining' | 'full' | 'additional'>('full');
   const [uploadAmount, setUploadAmount] = useState(0);
+  const [showUploadSuccessModal, setShowUploadSuccessModal] = useState(false);
 
   // Registration form visibility state
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
@@ -2257,6 +2258,33 @@ export default function EventDetailPage() {
                       return null;
                     }
 
+                    // Check if fully paid (including pending slips)
+                    const totalAmount = userRegistration.totalAmount || 0;
+                    const fullPaymentAmountPaid = (userRegistration as any).fullPaymentAmountPaid || 0;
+                    const depositAmountPaid = (userRegistration as any).depositAmountPaid || 0;
+                    const remainingAmountPaid = (userRegistration as any).remainingAmountPaid || 0;
+                    const additionalPaymentAmountPaid = (userRegistration as any).additionalPaymentAmountPaid || 0;
+                    const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
+                    const paidAmount = actualTotalPaid || userRegistration.paidAmount || 0;
+
+                    // Check if has pending slips (slip uploaded but not approved yet)
+                    const hasPendingFullPaymentSlip = !!(userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl) && event.paymentMode !== 'deposit';
+                    const hasPendingDepositSlip = !!userRegistration.depositSlipUrl && !userRegistration.depositPaid;
+                    const hasPendingRemainingSlip = !!userRegistration.remainingSlipUrl && event.paymentMode === 'deposit' && !userRegistration.remainingPaid;
+
+                    // Hide if fully paid OR has pending slip that covers full amount
+                    const additionalPayments = parseAdditionalPayments(userRegistration.additionalPayments);
+                    const approvedAdditional = additionalPayments
+                      .filter((p: any) => p.status === 'อนุมัติแล้ว')
+                      .reduce((sum: number, p: any) => sum + p.amount, 0);
+                    const fullyPaid = isFullyPaid(totalAmount, paidAmount, additionalPayments);
+                    const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
+
+                    // Hide account info if fully paid or has pending slip for full amount
+                    if (fullyPaid || hasPendingFullPaymentSlip || (hasPendingDepositSlip && hasPendingRemainingSlip)) {
+                      return null;
+                    }
+
                     // Show bank account info if has total amount and payment account details
                     return userRegistration.totalAmount && userRegistration.totalAmount > 0 && (event.paymentBankName || event.paymentAccountName || event.paymentAccountNumber || event.paymentQrCodeUrl || event.paymentTerms) && (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -3323,8 +3351,74 @@ export default function EventDetailPage() {
           onSuccess={() => {
             // Refresh event data after successful upload
             fetchEventDetail();
+            // Show success modal
+            setUploadModalOpen(false);
+            setShowUploadSuccessModal(true);
           }}
         />
+      )}
+
+      {/* Upload Success Modal */}
+      {showUploadSuccessModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowUploadSuccessModal(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Success Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl font-bold text-gray-900 text-center mb-3">
+              ✅ ส่งหลักฐานการชำระเงินสำเร็จ
+            </h3>
+
+            {/* Message */}
+            <div className="space-y-3 text-gray-700 mb-6">
+              <p className="text-center">
+                ระบบได้รับสลิปการโอนเงินของคุณเรียบร้อยแล้ว
+              </p>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-blue-900 mb-2">📋 ขั้นตอนต่อไป:</p>
+                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                  <li>ทีมงานจะตรวจสอบยอดโอนเงินของคุณ</li>
+                  <li>เมื่อตรวจสอบเรียบร้อย ระบบจะอัปเดตสถานะการชำระเงินอัตโนมัติ</li>
+                  <li>คุณจะได้รับการแจ้งเตือนผ่าน LINE เมื่อทีมงานอนุมัติ</li>
+                </ol>
+              </div>
+
+              <p className="text-sm text-gray-600 text-center">
+                ⏱️ <strong>เวลาการตรวจสอบ:</strong> ปกติภายใน 24-48 ชั่วโมง<br />
+                (ในวันและเวลาทำการ)
+              </p>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>⚠️ หมายเหตุ:</strong> หากคุณชำระเงินครบถ้วนตามจำนวนที่ระบบแจ้ง
+                  ไม่จำเป็นต้องอัพโหลดสลิปซ้ำอีกครั้ง รอการตรวจสอบจากทีมงานเท่านั้น
+                </p>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => setShowUploadSuccessModal(false)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              เข้าใจแล้ว
+            </button>
+          </div>
+        </div>
       )}
 
       {/* TEMP: Hidden until PDF generation is fixed on Vercel */}

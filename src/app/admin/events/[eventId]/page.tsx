@@ -2790,11 +2790,45 @@ export default function EventDetailPage() {
                     .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
                     .map((roomType: any) => {
                       // Count registrations with this room type
+                      // Use same filtering logic as filteredAttendees but exclude roomTypeFilter
                       const count = eventData.attendees.filter(attendee => {
-                        // Exclude cancelled registrations
+                        // Check if registration is cancelled
                         const status = String(attendee.registration.status || '').toLowerCase();
                         const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
-                        if (isCancelled) return false;
+
+                        // Filter by registration status
+                        if (filter === 'confirmed') {
+                          if (isCancelled || !attendee.isConfirmed) return false;
+                        } else if (filter === 'pending') {
+                          if (isCancelled || attendee.isConfirmed) return false;
+                        } else if (filter === 'cancelled') {
+                          if (!isCancelled) return false;
+                        } else if (filter === 'all') {
+                          if (isCancelled) return false;
+                        }
+
+                        // Filter by payment status
+                        if (paymentFilter !== 'all') {
+                          if (isCancelled) return false;
+                          if (attendee.registration.paymentStatus !== paymentFilter) return false;
+                        }
+
+                        // Filter by search term
+                        if (searchTerm) {
+                          const term = searchTerm.toLowerCase();
+                          const matchCompany = attendee.registration.companyName?.toLowerCase().includes(term) ||
+                                              attendee.member?.companyNameTH?.toLowerCase().includes(term);
+                          const matchName = attendee.registration.contactName?.toLowerCase().includes(term) ||
+                                           attendee.member?.fullNameTH?.toLowerCase().includes(term) ||
+                                           attendee.lineProfile?.lineDisplayName?.toLowerCase().includes(term);
+                          const matchLicense = attendee.registration.licenseNumber?.toLowerCase().includes(term);
+                          const matchMemberId = attendee.member?.memberId?.toLowerCase().includes(term);
+                          const matchRegistrationId = attendee.registration.registrationId?.toLowerCase().includes(term);
+
+                          if (!(matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId)) {
+                            return false;
+                          }
+                        }
 
                         // Parse room allocations
                         let roomAllocations: Array<{ roomTypeId: string; roomCount: number }> = [];

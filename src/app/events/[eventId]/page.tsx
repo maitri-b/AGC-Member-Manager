@@ -2267,21 +2267,39 @@ export default function EventDetailPage() {
                     const actualTotalPaid = fullPaymentAmountPaid + depositAmountPaid + remainingAmountPaid + additionalPaymentAmountPaid;
                     const paidAmount = actualTotalPaid || userRegistration.paidAmount || 0;
 
-                    // Check if has pending slips (slip uploaded but not approved yet)
-                    const hasPendingFullPaymentSlip = !!(userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl) && event.paymentMode !== 'deposit';
-                    const hasPendingDepositSlip = !!userRegistration.depositSlipUrl && !userRegistration.depositPaid;
-                    const hasPendingRemainingSlip = !!userRegistration.remainingSlipUrl && event.paymentMode === 'deposit' && !(userRegistration as any).remainingPaid;
+                    // Check if has pending slips from paymentSlips array
+                    const hasPendingFullPaymentSlip = paymentSlips.some(
+                      slip => slip.paymentType === 'full' && slip.status === 'pending'
+                    );
+                    const hasPendingDepositSlip = paymentSlips.some(
+                      slip => slip.paymentType === 'deposit' && slip.status === 'pending'
+                    );
+                    const hasPendingRemainingSlip = paymentSlips.some(
+                      slip => slip.paymentType === 'remaining' && slip.status === 'pending'
+                    );
+                    const hasPendingAdditionalSlip = paymentSlips.some(
+                      slip => slip.paymentType === 'additional' && slip.status === 'pending'
+                    );
 
-                    // Hide if fully paid OR has pending slip that covers full amount
+                    // Calculate if payment is complete (including pending slips)
                     const additionalPayments = parseAdditionalPayments(userRegistration.additionalPayments);
                     const approvedAdditional = additionalPayments
                       .filter((p: any) => p.status === 'อนุมัติแล้ว')
                       .reduce((sum: number, p: any) => sum + p.amount, 0);
                     const fullyPaid = isFullyPaid(totalAmount, paidAmount, additionalPayments);
-                    const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
 
-                    // Hide account info if fully paid or has pending slip for full amount
-                    if (fullyPaid || hasPendingFullPaymentSlip || (hasPendingDepositSlip && hasPendingRemainingSlip)) {
+                    // Calculate pending slip amounts
+                    const pendingSlipTotal = paymentSlips
+                      .filter(slip => slip.status === 'pending' && slip.paymentType !== 'refund')
+                      .reduce((sum, slip) => sum + slip.amount, 0);
+
+                    // Check if pending slips + paid amount >= total amount
+                    const willBeFullyPaid = (paidAmount + pendingSlipTotal) >= totalAmount;
+
+                    // Hide account info if:
+                    // 1. Already fully paid, OR
+                    // 2. Has pending slip(s) that will cover the full amount
+                    if (fullyPaid || willBeFullyPaid) {
                       return null;
                     }
 
@@ -2380,8 +2398,16 @@ export default function EventDetailPage() {
                     // Check if there's a pending additional payment
                     const hasPendingAdditional = additionalPayments.some((p: any) => p.status === 'รอตรวจสอบ');
 
-                    // Hide button if fully paid (no additional payment required and no pending additional payment)
-                    if (fullyPaid && !hasPendingAdditional) {
+                    // Calculate pending slip amounts
+                    const pendingSlipTotal = paymentSlips
+                      .filter(slip => slip.status === 'pending' && slip.paymentType !== 'refund')
+                      .reduce((sum, slip) => sum + slip.amount, 0);
+
+                    // Check if pending slips + paid amount >= total amount
+                    const willBeFullyPaid = (paidAmount + pendingSlipTotal) >= totalAmount;
+
+                    // Hide button if fully paid OR will be fully paid with pending slips
+                    if (fullyPaid || willBeFullyPaid) {
                       return false;
                     }
 
@@ -2406,21 +2432,8 @@ export default function EventDetailPage() {
                       return false;
                     }
 
-                    // Full Payment Mode: Hide button if slip is uploaded (unless additional payment is required)
-                    if (event.paymentMode !== 'deposit') {
-                      const hasFullPaymentSlip = !!(userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl);
-                      // Show button if additional payment is required, even if initial slip was uploaded
-                      if (hasFullPaymentSlip && additionalRequired === 0 && !hasPendingAdditional) return false;
-                      return hasPaymentAccount && hasTotalAmount;
-                    }
-
-                    // Deposit Mode: Show button if deposit not paid OR remaining not paid OR additional payment required
-                    const notPaidDeposit = !userRegistration.depositPaid && !userRegistration.depositSlipUrl;
-                    const hasRemainingUnpaid = userRegistration.depositPaid && userRegistration.remainingAmount && userRegistration.remainingAmount > 0 && !userRegistration.remainingSlipUrl;
-                    const needsAdditional = additionalRequired > 0 && !hasPendingAdditional;
-                    const shouldShow = hasPaymentAccount && hasTotalAmount && (notPaidDeposit || hasRemainingUnpaid || needsAdditional);
-
-                    return shouldShow;
+                    // Show button if has payment account and total amount > 0
+                    return hasPaymentAccount && hasTotalAmount;
                   })() ? (
                     <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4 mb-4">
                       {event.paymentSlipSubmissionUrl && (

@@ -2789,28 +2789,28 @@ export default function EventDetailPage() {
                     .filter((rt: any) => rt.isActive)
                     .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
                     .map((roomType: any) => {
-                      // Count registrations with this room type
+                      // Count TOTAL ROOMS (not companies) of this room type
                       // Use same filtering logic as filteredAttendees but exclude roomTypeFilter
-                      const count = eventData.attendees.filter(attendee => {
+                      const totalRooms = eventData.attendees.reduce((sum, attendee) => {
                         // Check if registration is cancelled
                         const status = String(attendee.registration.status || '').toLowerCase();
                         const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
 
                         // Filter by registration status
                         if (filter === 'confirmed') {
-                          if (isCancelled || !attendee.isConfirmed) return false;
+                          if (isCancelled || !attendee.isConfirmed) return sum;
                         } else if (filter === 'pending') {
-                          if (isCancelled || attendee.isConfirmed) return false;
+                          if (isCancelled || attendee.isConfirmed) return sum;
                         } else if (filter === 'cancelled') {
-                          if (!isCancelled) return false;
+                          if (!isCancelled) return sum;
                         } else if (filter === 'all') {
-                          if (isCancelled) return false;
+                          if (isCancelled) return sum;
                         }
 
                         // Filter by payment status
                         if (paymentFilter !== 'all') {
-                          if (isCancelled) return false;
-                          if (attendee.registration.paymentStatus !== paymentFilter) return false;
+                          if (isCancelled) return sum;
+                          if (attendee.registration.paymentStatus !== paymentFilter) return sum;
                         }
 
                         // Filter by search term
@@ -2826,7 +2826,7 @@ export default function EventDetailPage() {
                           const matchRegistrationId = attendee.registration.registrationId?.toLowerCase().includes(term);
 
                           if (!(matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId)) {
-                            return false;
+                            return sum;
                           }
                         }
 
@@ -2837,12 +2837,13 @@ export default function EventDetailPage() {
                             roomAllocations = JSON.parse(attendee.registration.roomAllocations);
                           }
                         } catch (e) {
-                          return false;
+                          return sum;
                         }
 
-                        // Check if has this room type with count > 0
-                        return roomAllocations.some(ra => ra.roomTypeId === roomType.typeId && ra.roomCount > 0);
-                      }).length;
+                        // Find this room type and add its count
+                        const allocation = roomAllocations.find(ra => ra.roomTypeId === roomType.typeId);
+                        return sum + (allocation?.roomCount || 0);
+                      }, 0);
 
                       return (
                         <button
@@ -2854,7 +2855,7 @@ export default function EventDetailPage() {
                               : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                           }`}
                         >
-                          {roomType.typeName} ({count})
+                          {roomType.typeName} ({totalRooms})
                         </button>
                       );
                     })}

@@ -14,7 +14,8 @@ export type MessageTemplateType =
   | 'overdue_notice'       // แจ้งเตือนพ้นกำหนด
   | 'application_approved' // แจ้งใบสมัครได้รับการอนุมัติ
   | 'application_rejected' // แจ้งใบสมัครไม่ได้รับการอนุมัติ
-  | 'verification_reminder';// แจ้งเตือนให้ยืนยันตัวตน
+  | 'verification_reminder'// แจ้งเตือนให้ยืนยันตัวตน
+  | 'license_renewal';     // แจ้งเตือนต่ออายุใบอนุญาต
 
 export interface MessageTemplate {
   id: MessageTemplateType;
@@ -213,6 +214,30 @@ LINE: {{lineOfficialAccount}}
 
 ทีมทะเบียนชมรม Agents Club`,
     variables: ['verificationLink'],
+  },
+
+  license_renewal: {
+    id: 'license_renewal',
+    name: 'แจ้งเตือนต่ออายุใบอนุญาต',
+    description: 'แจ้งเตือนสมาชิกให้ต่ออายุใบอนุญาตธุรกิจนำเที่ยวก่อนหมดอายุ',
+    template: `🔔 แจ้งเตือนต่ออายุใบอนุญาตธุรกิจนำเที่ยว
+
+เรียน คุณ{{contactName}}
+{{companyName}} (ทะเบียน {{licenseNumber}})
+
+ใบอนุญาตธุรกิจนำเที่ยวของท่านจะหมดอายุวันที่ {{expiryDate}}
+
+📌 กรุณาดำเนินการต่ออายุกับกรมการท่องเที่ยวก่อนวันหมดอายุ
+
+⚠️ นโยบายชมรม:
+สมาชิกต้องมีใบอนุญาตที่ยังไม่หมดอายุเท่านั้น หากไม่ต่ออายุ ชมรมขอสงวนสิทธิ์นำชื่อออกจากกลุ่ม
+
+ℹ️ หมายเหตุ:
+• ต่ออายุเลขที่เดิม: ไม่ต้องส่งหลักฐาน (ทีมทะเบียนอัปเดตจากเว็บกรมท่องเที่ยวทุกเดือน)
+• ขอใบอนุญาตใหม่: โปรดติดต่อนายทะเบียนชมรม
+
+ทีมทะเบียนชมรม Agents Club`,
+    variables: ['contactName', 'companyName', 'licenseNumber', 'expiryDate'],
   },
 };
 

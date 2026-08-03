@@ -53,7 +53,7 @@ interface AttendanceStatus {
   eventsLast12Months: number;
 }
 
-type ContactTopic = 'license_expired' | 'inactive_member' | 'complaint' | 'line_not_found' | 'not_verified' | 'other';
+type ContactTopic = 'license_expired' | 'inactive_member' | 'complaint' | 'line_not_found' | 'not_verified' | 'license_renewal' | 'other';
 
 const CONTACT_TOPICS: { value: ContactTopic; label: string }[] = [
   { value: 'license_expired', label: 'ใบอนุญาตหมดอายุ/ถูกเพิกถอน' },
@@ -61,6 +61,7 @@ const CONTACT_TOPICS: { value: ContactTopic; label: string }[] = [
   { value: 'complaint', label: 'แจ้งข้อร้องเรียนระหว่างสมาชิก' },
   { value: 'line_not_found', label: 'ไม่พบข้อมูลไลน์ของสมาชิก' },
   { value: 'not_verified', label: 'สมาชิกยังไม่ได้ทำการยืนยันตัวตน' },
+  { value: 'license_renewal', label: 'แจ้งเตือนต่ออายุใบอนุญาต' },
   { value: 'other', label: 'อื่นๆ' },
 ];
 
@@ -662,6 +663,25 @@ function ContactModal({
 
 ด้วยความนับถือ
 นายทะเบียน ชมรม Agents Club`;
+
+      case 'license_renewal':
+        return `🔔 แจ้งเตือนต่ออายุใบอนุญาตธุรกิจนำเที่ยว
+
+เรียน คุณ${nickname}
+${companyName} (ทะเบียน ${member.licenseNumber || '-'})
+
+ใบอนุญาตธุรกิจนำเที่ยวของท่านจะหมดอายุวันที่ ${formatThaiDateForMessage(member.licenseExpiry)}
+
+📌 กรุณาดำเนินการต่ออายุกับกรมการท่องเที่ยวก่อนวันหมดอายุ
+
+⚠️ นโยบายชมรม:
+สมาชิกต้องมีใบอนุญาตที่ยังไม่หมดอายุเท่านั้น หากไม่ต่ออายุ ชมรมขอสงวนสิทธิ์นำชื่อออกจากกลุ่ม
+
+ℹ️ หมายเหตุ:
+• ต่ออายุเลขที่เดิม: ไม่ต้องส่งหลักฐาน (ทีมทะเบียนอัปเดตจากเว็บกรมท่องเที่ยวทุกเดือน)
+• ขอใบอนุญาตใหม่: โปรดติดต่อนายทะเบียนชมรม
+
+ทีมทะเบียนชมรม Agents Club`;
 
       case 'other':
       default:

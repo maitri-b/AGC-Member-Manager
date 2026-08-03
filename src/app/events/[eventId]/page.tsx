@@ -2270,7 +2270,7 @@ export default function EventDetailPage() {
                     // Check if has pending slips (slip uploaded but not approved yet)
                     const hasPendingFullPaymentSlip = !!(userRegistration.remainingSlipUrl || (userRegistration as any).slipUrl) && event.paymentMode !== 'deposit';
                     const hasPendingDepositSlip = !!userRegistration.depositSlipUrl && !userRegistration.depositPaid;
-                    const hasPendingRemainingSlip = !!userRegistration.remainingSlipUrl && event.paymentMode === 'deposit' && !userRegistration.remainingPaid;
+                    const hasPendingRemainingSlip = !!userRegistration.remainingSlipUrl && event.paymentMode === 'deposit' && !(userRegistration as any).remainingPaid;
 
                     // Hide if fully paid OR has pending slip that covers full amount
                     const additionalPayments = parseAdditionalPayments(userRegistration.additionalPayments);

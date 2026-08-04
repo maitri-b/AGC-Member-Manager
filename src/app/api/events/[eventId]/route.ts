@@ -180,6 +180,8 @@ export async function GET(
           discounts: String(attendee.registration.discounts || ''),
           // Special requests
           specialRequests: String(attendee.registration.specialRequests || ''),
+          // Room assignments
+          roomAssignments: String(attendee.registration.roomAssignments || ''),
         },
         member: attendee.member,
         lineProfile: lineProfile ? {

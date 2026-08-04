@@ -548,8 +548,6 @@ export default function RoomManagementModal({
     }
 
     try {
-      setLoading(true);
-
       // Fetch current registration to get room assignments
       const eventResponse = await fetch(`/api/events/${eventId}`);
       if (!eventResponse.ok) throw new Error('Failed to fetch event data');
@@ -592,13 +590,25 @@ export default function RoomManagementModal({
         throw new Error(data.error || 'Failed to leave room');
       }
 
+      // ✅ In-place update: Remove occupant from the room without full refresh
+      setRoomsWithOccupants(prevRooms =>
+        prevRooms.map(room => {
+          if (room.roomId === currentRoomId) {
+            return {
+              ...room,
+              occupants: room.occupants.filter(
+                occ => !(occ.registrationId === occupant.registrationId && occ.attendeeIndex === occupant.attendeeIndex)
+              ),
+            };
+          }
+          return room;
+        })
+      );
+
       toast.success('ปล่อยห้องสำเร็จ');
-      fetchRoomOccupants();
     } catch (error: any) {
       console.error('Error leaving room:', error);
       toast.error(error.message || 'เกิดข้อผิดพลาด');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -672,10 +682,45 @@ export default function RoomManagementModal({
         throw new Error(data.error || 'Failed to transfer room');
       }
 
+      // ✅ In-place update: Move occupant between rooms without full refresh
+      setRoomsWithOccupants(prevRooms => {
+        // Find the occupant object from the old room
+        let occupantToMove: RoomOccupant | null = null;
+        const roomsAfterRemoval = prevRooms.map(room => {
+          if (room.roomId === transferData.currentRoomId) {
+            const occupantIndex = room.occupants.findIndex(
+              occ => occ.registrationId === transferData.registrationId && occ.attendeeIndex === transferData.attendeeIndex
+            );
+            if (occupantIndex >= 0) {
+              occupantToMove = room.occupants[occupantIndex];
+              return {
+                ...room,
+                occupants: room.occupants.filter((_, idx) => idx !== occupantIndex),
+              };
+            }
+          }
+          return room;
+        });
+
+        // Add occupant to new room
+        if (occupantToMove) {
+          return roomsAfterRemoval.map(room => {
+            if (room.roomId === transferData.newRoomId) {
+              return {
+                ...room,
+                occupants: [...room.occupants, occupantToMove!],
+              };
+            }
+            return room;
+          });
+        }
+
+        return roomsAfterRemoval;
+      });
+
       toast.success('ย้ายห้องสำเร็จ');
       setTransferModalOpen(false);
       setTransferData(null);
-      fetchRoomOccupants();
     } catch (error: any) {
       console.error('Error transferring room:', error);
       toast.error(error.message || 'เกิดข้อผิดพลาด');

@@ -513,6 +513,8 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   depositAmountPaid: 'deposit_amount_paid',
   remainingPaid: 'remaining_paid',
   remainingAmountPaid: 'remaining_amount_paid',
+  // Room Assignments (New - specific room assignments for each attendee)
+  roomAssignments: 'room_assignments',
 };
 
 // Reverse mapping for sheet to registration conversion

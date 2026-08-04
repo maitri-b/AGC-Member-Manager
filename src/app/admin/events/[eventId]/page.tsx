@@ -3249,10 +3249,13 @@ export default function EventDetailPage() {
                           if (unassignedCount > 0) {
                             return (
                               <span
-                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 cursor-help"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 cursor-help"
                                 title={`มีผู้เข้าร่วม ${unassignedCount} คนที่ยังไม่ได้ระบุห้องพัก`}
                               >
-                                ⚠️ ยังไม่ระบุห้อง {unassignedCount} คน
+                                <span className="hidden sm:inline">⚠️ ยังไม่ระบุห้อง</span>
+                                <span className="sm:hidden">⚠️</span>
+                                <span className="font-semibold">{unassignedCount}</span>
+                                <span className="hidden sm:inline">คน</span>
                               </span>
                             );
                           }

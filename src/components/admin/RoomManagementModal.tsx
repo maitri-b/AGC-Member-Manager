@@ -771,6 +771,12 @@ export default function RoomManagementModal({
         });
       });
 
+      // Find max occupants per room in this event to determine number of columns needed
+      const maxOccupantsInEvent = Math.max(
+        ...roomsWithOccupants.map(room => room.occupants.length),
+        1 // At least 1 column
+      );
+
       // Prepare data for Excel
       const excelData: any[] = [];
 
@@ -792,85 +798,124 @@ export default function RoomManagementModal({
 
         buildingRooms.forEach(room => {
           if (room.occupants.length === 0) {
-            // Empty room - one row
-            excelData.push({
+            // Empty room - one row with empty occupant columns
+            const rowData: any = {
               'อาคาร': buildingName,
               'เลขห้อง': room.roomNumber,
               'ประเภทห้อง': room.roomTypeCategory || '-',
               'จำนวนผู้พัก': `0/${room.maxOccupancy}`,
               'สถานะห้อง': room.isLocked ? 'ล็อค' : 'ว่าง',
-              'ชื่อผู้เข้าพัก': '-',
-              'บริษัท': '-',
-              'รหัสการจอง': '-',
-              'สถานะการชำระเงิน': '-',
-              'หมายเหตุ': room.note || '-',
-              '_roomStatus': room.isLocked ? 'locked' : 'empty',
-              '_paymentStatus': 'none',
-            });
-          } else {
-            // Room with occupants - one row per room with all occupants
-            const occupantNames = room.occupants.map(occ => occ.attendeeName).join(', ');
-            const companies = room.occupants.map(occ => occ.companyName).join(', ');
-            const registrationIds = room.occupants.map(occ => occ.registrationId.slice(0, 8)).join(', ');
+            };
 
-            // Determine overall payment status for the room
-            let paymentStatus = 'ชำระแล้ว';
-            let paymentStatusCode = 'paid';
-
-            const occupantPaymentStatuses = room.occupants.map(occ => {
-              const payment = paymentStatusMap.get(occ.registrationId);
-              if (!payment) return 'unknown';
-              if (payment.isPaid) return 'paid';
-              if (payment.hasSlip) return 'pending';
-              return 'unpaid';
-            });
-
-            // If any occupant is unpaid
-            if (occupantPaymentStatuses.includes('unpaid')) {
-              paymentStatus = 'ยังไม่ชำระ/ไม่มีสลิป';
-              paymentStatusCode = 'unpaid';
-            } else if (occupantPaymentStatuses.includes('pending')) {
-              paymentStatus = 'ส่งสลิปแล้ว รอตรวจสอบ';
-              paymentStatusCode = 'pending';
+            // Add empty occupant columns
+            for (let i = 1; i <= maxOccupantsInEvent; i++) {
+              rowData[`ผู้เข้าพัก ${i}`] = '-';
             }
 
-            excelData.push({
-              'อาคาร': buildingName,
-              'เลขห้อง': room.roomNumber,
-              'ประเภทห้อง': room.roomTypeCategory || '-',
-              'จำนวนผู้พัก': `${room.occupants.length}/${room.maxOccupancy}`,
-              'สถานะห้อง': room.isLocked ? 'ล็อค' : 'มีผู้พัก',
-              'ชื่อผู้เข้าพัก': occupantNames,
-              'บริษัท': companies,
-              'รหัสการจอง': registrationIds,
-              'สถานะการชำระเงิน': paymentStatus,
-              'หมายเหตุ': room.note || '-',
-              '_roomStatus': room.isLocked ? 'locked' : 'occupied',
-              '_paymentStatus': paymentStatusCode,
+            rowData['บริษัท'] = '-';
+            rowData['รหัสการจอง'] = '-';
+            rowData['สถานะการชำระเงิน'] = '-';
+            rowData['หมายเหตุ'] = room.note || '-';
+            rowData['_roomStatus'] = room.isLocked ? 'locked' : 'empty';
+            rowData['_paymentStatus'] = 'none';
+
+            excelData.push(rowData);
+          } else {
+            // Group occupants by company and registration ID
+            // Key: companyName|registrationId -> array of occupants
+            const groupedOccupants = new Map<string, RoomOccupant[]>();
+
+            room.occupants.forEach(occ => {
+              const key = `${occ.companyName}|${occ.registrationId}`;
+              if (!groupedOccupants.has(key)) {
+                groupedOccupants.set(key, []);
+              }
+              groupedOccupants.get(key)!.push(occ);
+            });
+
+            // Create one row per group
+            groupedOccupants.forEach((occupants, key) => {
+              const [companyName, registrationId] = key.split('|');
+
+              const rowData: any = {
+                'อาคาร': buildingName,
+                'เลขห้อง': room.roomNumber,
+                'ประเภทห้อง': room.roomTypeCategory || '-',
+                'จำนวนผู้พัก': `${room.occupants.length}/${room.maxOccupancy}`,
+                'สถานะห้อง': room.isLocked ? 'ล็อค' : 'มีผู้พัก',
+              };
+
+              // Add individual occupant columns
+              for (let i = 1; i <= maxOccupantsInEvent; i++) {
+                const occupant = occupants[i - 1];
+                rowData[`ผู้เข้าพัก ${i}`] = occupant ? occupant.attendeeName : '-';
+              }
+
+              rowData['บริษัท'] = companyName;
+              rowData['รหัสการจอง'] = registrationId.slice(0, 8);
+
+              // Determine payment status for this registration
+              let paymentStatus = 'ชำระแล้ว';
+              let paymentStatusCode = 'paid';
+
+              const payment = paymentStatusMap.get(registrationId);
+              if (payment) {
+                if (payment.isPaid) {
+                  paymentStatus = 'ชำระแล้ว';
+                  paymentStatusCode = 'paid';
+                } else if (payment.hasSlip) {
+                  paymentStatus = 'ส่งสลิปแล้ว รอตรวจสอบ';
+                  paymentStatusCode = 'pending';
+                } else {
+                  paymentStatus = 'ยังไม่ชำระ/ไม่มีสลิป';
+                  paymentStatusCode = 'unpaid';
+                }
+              }
+
+              rowData['สถานะการชำระเงิน'] = paymentStatus;
+              rowData['หมายเหตุ'] = room.note || '-';
+              rowData['_roomStatus'] = room.isLocked ? 'locked' : 'occupied';
+              rowData['_paymentStatus'] = paymentStatusCode;
+
+              excelData.push(rowData);
             });
           }
         });
       });
 
+      // Build header columns dynamically
+      const headerColumns = ['อาคาร', 'เลขห้อง', 'ประเภทห้อง', 'จำนวนผู้พัก', 'สถานะห้อง'];
+      for (let i = 1; i <= maxOccupantsInEvent; i++) {
+        headerColumns.push(`ผู้เข้าพัก ${i}`);
+      }
+      headerColumns.push('บริษัท', 'รหัสการจอง', 'สถานะการชำระเงิน', 'หมายเหตุ');
+
       // Create workbook
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData, {
-        header: ['อาคาร', 'เลขห้อง', 'ประเภทห้อง', 'จำนวนผู้พัก', 'สถานะห้อง', 'ชื่อผู้เข้าพัก', 'บริษัท', 'รหัสการจอง', 'สถานะการชำระเงิน', 'หมายเหตุ']
+        header: headerColumns
       });
 
-      // Set column widths
-      ws['!cols'] = [
+      // Set column widths dynamically
+      const columnWidths = [
         { wch: 10 },  // อาคาร
         { wch: 12 },  // เลขห้อง
         { wch: 15 },  // ประเภทห้อง
         { wch: 15 },  // จำนวนผู้พัก
         { wch: 12 },  // สถานะห้อง
-        { wch: 40 },  // ชื่อผู้เข้าพัก
+      ];
+      // Add widths for occupant columns
+      for (let i = 1; i <= maxOccupantsInEvent; i++) {
+        columnWidths.push({ wch: 30 }); // ผู้เข้าพัก columns
+      }
+      columnWidths.push(
         { wch: 40 },  // บริษัท
         { wch: 25 },  // รหัสการจอง
         { wch: 25 },  // สถานะการชำระเงิน
         { wch: 30 },  // หมายเหตุ
-      ];
+      );
+
+      ws['!cols'] = columnWidths;
 
       // Apply cell styling with colors
       const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
@@ -901,20 +946,31 @@ export default function RoomManagementModal({
             fillColor = 'FFE5CC'; // Light orange
             fontColor = 'CC5500'; // Dark orange
           } else if (paymentStatus === 'pending') {
-            // Slip submitted, pending: Purple
-            fillColor = 'E5CCFF'; // Light purple
-            fontColor = '663399'; // Dark purple
+            // Slip submitted, pending: Yellow/Gold
+            fillColor = 'FFFFCC'; // Light yellow
+            fontColor = '996600'; // Dark yellow/brown
           } else if (paymentStatus === 'paid') {
-            // Paid: Light blue/default
+            // Paid: Light blue
             fillColor = 'CCE5FF'; // Light blue
             fontColor = '003366'; // Dark blue
           }
         }
 
-        // Apply fill to all cells in the row
+        // Apply fill to all cells in the row (except metadata columns)
         for (let C = range.s.c; C <= range.e.c; ++C) {
           const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
           if (!ws[cellAddress]) continue;
+
+          // Determine alignment based on column
+          let horizontalAlign: 'left' | 'center' | 'right' = 'center';
+          // Occupant name columns and company column should be left-aligned
+          const occupantStartCol = 5; // After 'สถานะห้อง'
+          const occupantEndCol = 5 + maxOccupantsInEvent - 1;
+          const companyCol = 5 + maxOccupantsInEvent; // บริษัท column
+
+          if ((C >= occupantStartCol && C <= occupantEndCol) || C === companyCol) {
+            horizontalAlign = 'left';
+          }
 
           ws[cellAddress].s = {
             fill: {
@@ -925,7 +981,7 @@ export default function RoomManagementModal({
             },
             alignment: {
               vertical: 'center',
-              horizontal: C === 5 || C === 6 ? 'left' : 'center', // Left align names and company
+              horizontal: horizontalAlign,
               wrapText: true
             },
             border: {
@@ -953,7 +1009,8 @@ export default function RoomManagementModal({
           },
           alignment: {
             vertical: 'center',
-            horizontal: 'center'
+            horizontal: 'center',
+            wrapText: true
           },
           border: {
             top: { style: 'thin', color: { rgb: '000000' } },

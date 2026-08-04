@@ -726,3 +726,36 @@ export function getPricingSummary(event: Event | EventInput): string {
   }
   return `${event.registrationFee.toLocaleString()} บาท/คน`;
 }
+
+/**
+ * Room Management Types
+ * For events with accommodation management
+ */
+
+// Event Room - represents a hotel room for an event
+export interface EventRoom {
+  roomId: string;              // Unique ID
+  eventId: string;             // Which event this room belongs to
+  buildingName: string;        // Building name (e.g., "A", "B", "C")
+  roomNumber: string;          // Room number (e.g., "101", "102")
+  maxOccupancy: number;        // Maximum number of occupants
+  createdAt: string;           // ISO timestamp
+  createdBy: string;           // User ID who created
+  updatedAt?: string;          // ISO timestamp
+  updatedBy?: string;          // User ID who last updated
+}
+
+// Input type for creating/updating rooms
+export interface EventRoomInput {
+  buildingName: string;
+  roomNumber: string;
+  maxOccupancy: number;
+}
+
+// Room assignment - links attendee to room
+export interface RoomAssignment {
+  attendeeName: string;        // Name of the attendee
+  attendeeIndex: number;       // Index in the attendeeNames array (0-based)
+  companyName: string;         // Company name for reference
+  registrationId: string;      // Registration ID for reference
+}

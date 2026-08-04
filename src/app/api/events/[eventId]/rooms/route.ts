@@ -113,6 +113,8 @@ export async function POST(
       roomNumber: body.roomNumber,
       roomTypeCategory: body.roomTypeCategory,
       maxOccupancy: body.maxOccupancy,
+      isLocked: body.isLocked || false,
+      note: body.note || '',
       createdAt: now,
       createdBy: session.user.id,
     };

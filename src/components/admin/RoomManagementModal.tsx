@@ -11,6 +11,17 @@ interface RoomManagementModalProps {
   eventName: string;
 }
 
+interface RoomOccupant {
+  attendeeName: string;
+  attendeeIndex: number;
+  companyName: string;
+  registrationId: string;
+}
+
+interface RoomWithOccupants extends EventRoom {
+  occupants: RoomOccupant[];
+}
+
 export default function RoomManagementModal({
   isOpen,
   onClose,
@@ -19,8 +30,20 @@ export default function RoomManagementModal({
 }: RoomManagementModalProps) {
   const [activeTab, setActiveTab] = useState<'manage' | 'summary'>('manage');
   const [rooms, setRooms] = useState<EventRoom[]>([]);
+  const [roomsWithOccupants, setRoomsWithOccupants] = useState<RoomWithOccupants[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Room transfer state
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferData, setTransferData] = useState<{
+    registrationId: string;
+    attendeeIndex: number;
+    attendeeName: string;
+    currentRoomId: string;
+    newRoomId: string;
+  } | null>(null);
+  const [transferring, setTransferring] = useState(false);
 
   // Form state for creating/editing room
   const [showRoomForm, setShowRoomForm] = useState(false);
@@ -30,6 +53,8 @@ export default function RoomManagementModal({
     roomNumber: '',
     roomTypeCategory: '',
     maxOccupancy: 2,
+    isLocked: false,
+    note: '',
   });
 
   const toast = useToast();
@@ -37,8 +62,11 @@ export default function RoomManagementModal({
   useEffect(() => {
     if (isOpen) {
       fetchRooms();
+      if (activeTab === 'summary') {
+        fetchRoomOccupants();
+      }
     }
-  }, [isOpen, eventId]);
+  }, [isOpen, eventId, activeTab]);
 
   const fetchRooms = async () => {
     try {
@@ -55,6 +83,81 @@ export default function RoomManagementModal({
     }
   };
 
+  const fetchRoomOccupants = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch rooms
+      const roomsResponse = await fetch(`/api/events/${eventId}/rooms`);
+      if (!roomsResponse.ok) throw new Error('Failed to fetch rooms');
+      const roomsData = await roomsResponse.json();
+      const fetchedRooms = roomsData.rooms || [];
+
+      // Fetch event registrations
+      const eventResponse = await fetch(`/api/events/${eventId}`);
+      if (!eventResponse.ok) throw new Error('Failed to fetch registrations');
+      const eventData = await eventResponse.json();
+      const registrations = eventData.attendees || [];
+
+      // Build room occupancy map
+      const roomOccupancyMap: Record<string, RoomOccupant[]> = {};
+
+      registrations.forEach((attendee: any) => {
+        const reg = attendee.registration;
+
+        // Skip cancelled registrations
+        if (reg.status === 'ยกเลิก') return;
+
+        try {
+          if (reg.roomAssignments) {
+            const assignments = JSON.parse(reg.roomAssignments);
+            if (Array.isArray(assignments)) {
+              // Parse attendee names
+              let attendeeNames: string[] = [];
+              try {
+                attendeeNames = JSON.parse(reg.attendeeNames || '[]');
+              } catch (e) {
+                attendeeNames = [];
+              }
+
+              assignments.forEach((assignment: any) => {
+                if (assignment.roomId) {
+                  const attendeeName = attendeeNames[assignment.attendeeIndex] || `ผู้เข้าพักท่านที่ ${assignment.attendeeIndex + 1}`;
+
+                  if (!roomOccupancyMap[assignment.roomId]) {
+                    roomOccupancyMap[assignment.roomId] = [];
+                  }
+
+                  roomOccupancyMap[assignment.roomId].push({
+                    attendeeName,
+                    attendeeIndex: assignment.attendeeIndex,
+                    companyName: reg.companyName,
+                    registrationId: reg.registrationId,
+                  });
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing room assignments:', e);
+        }
+      });
+
+      // Merge rooms with occupants
+      const roomsWithOccupantsData: RoomWithOccupants[] = fetchedRooms.map((room: EventRoom) => ({
+        ...room,
+        occupants: roomOccupancyMap[room.roomId] || [],
+      }));
+
+      setRoomsWithOccupants(roomsWithOccupantsData);
+    } catch (error) {
+      console.error('Error fetching room occupants:', error);
+      toast.error('ไม่สามารถโหลดข้อมูลผู้พักได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateRoom = () => {
     setEditingRoomId(null);
     setFormData({
@@ -62,6 +165,8 @@ export default function RoomManagementModal({
       roomNumber: '',
       roomTypeCategory: '',
       maxOccupancy: 2,
+      isLocked: false,
+      note: '',
     });
     setShowRoomForm(true);
   };
@@ -73,6 +178,8 @@ export default function RoomManagementModal({
       roomNumber: room.roomNumber,
       roomTypeCategory: room.roomTypeCategory || '',
       maxOccupancy: room.maxOccupancy,
+      isLocked: room.isLocked || false,
+      note: room.note || '',
     });
     setShowRoomForm(true);
   };
@@ -137,6 +244,88 @@ export default function RoomManagementModal({
     } catch (error: any) {
       console.error('Error deleting room:', error);
       toast.error(error.message || 'เกิดข้อผิดพลาด');
+    }
+  };
+
+  const handleOpenTransferModal = (occupant: RoomOccupant, currentRoomId: string) => {
+    setTransferData({
+      registrationId: occupant.registrationId,
+      attendeeIndex: occupant.attendeeIndex,
+      attendeeName: occupant.attendeeName,
+      currentRoomId,
+      newRoomId: '',
+    });
+    setTransferModalOpen(true);
+  };
+
+  const handleTransferRoom = async () => {
+    if (!transferData || !transferData.newRoomId) {
+      toast.error('กรุณาเลือกห้องปลายทาง');
+      return;
+    }
+
+    if (transferData.newRoomId === transferData.currentRoomId) {
+      toast.error('ไม่สามารถย้ายไปห้องเดิมได้');
+      return;
+    }
+
+    try {
+      setTransferring(true);
+
+      // Fetch current registration to get room assignments
+      const eventResponse = await fetch(`/api/events/${eventId}`);
+      if (!eventResponse.ok) throw new Error('Failed to fetch event data');
+      const eventData = await eventResponse.json();
+      const registration = eventData.attendees.find(
+        (a: any) => a.registration.registrationId === transferData.registrationId
+      );
+
+      if (!registration) {
+        throw new Error('ไม่พบข้อมูลการลงทะเบียน');
+      }
+
+      // Parse current room assignments
+      let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
+      try {
+        roomAssignments = JSON.parse(registration.registration.roomAssignments || '[]');
+      } catch (e) {
+        console.error('Error parsing room assignments:', e);
+      }
+
+      // Update the assignment for this attendee
+      const updatedAssignments = roomAssignments.map((assignment) => {
+        if (assignment.attendeeIndex === transferData.attendeeIndex) {
+          return { ...assignment, roomId: transferData.newRoomId };
+        }
+        return assignment;
+      });
+
+      // Update registration with new room assignments
+      const updateResponse = await fetch(`/api/events/${eventId}/admin-update-registration`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registrationId: transferData.registrationId,
+          updateData: {
+            room_assignments: JSON.stringify(updatedAssignments),
+          },
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        const data = await updateResponse.json();
+        throw new Error(data.error || 'Failed to transfer room');
+      }
+
+      toast.success('ย้ายห้องสำเร็จ');
+      setTransferModalOpen(false);
+      setTransferData(null);
+      fetchRoomOccupants();
+    } catch (error: any) {
+      console.error('Error transferring room:', error);
+      toast.error(error.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setTransferring(false);
     }
   };
 
@@ -268,6 +457,34 @@ export default function RoomManagementModal({
                     </div>
                   </div>
 
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="isLocked"
+                        checked={formData.isLocked || false}
+                        onChange={(e) => setFormData({ ...formData, isLocked: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="isLocked" className="text-sm font-medium text-gray-700">
+                        ล็อคห้อง (ห้ามสำรองห้องนี้)
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        หมายเหตุ
+                      </label>
+                      <textarea
+                        value={formData.note || ''}
+                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                        placeholder="เช่น สำรองสำหรับ VIP, มีข้อกำหนดพิเศษ"
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setShowRoomForm(false)}
@@ -314,7 +531,7 @@ export default function RoomManagementModal({
                             className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors"
                           >
                             <div className="flex items-start justify-between">
-                              <div>
+                              <div className="flex-1">
                                 <div className="font-medium text-gray-900">
                                   ห้อง {room.roomNumber}
                                   {room.roomTypeCategory && (
@@ -322,10 +539,20 @@ export default function RoomManagementModal({
                                       {room.roomTypeCategory}
                                     </span>
                                   )}
+                                  {room.isLocked && (
+                                    <span className="ml-2 text-xs font-normal text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                                      🔒 ล็อค
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="text-sm text-gray-600">
                                   รองรับ {room.maxOccupancy} คน
                                 </div>
+                                {room.note && (
+                                  <div className="text-xs text-gray-500 mt-1 italic">
+                                    📝 {room.note}
+                                  </div>
+                                )}
                               </div>
                               <div className="flex gap-1">
                                 <button
@@ -357,8 +584,138 @@ export default function RoomManagementModal({
               )}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500">
-              สรุปห้องพัก (กำลังพัฒนา)
+            <div className="space-y-4">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-900">{roomsWithOccupants.length}</div>
+                  <div className="text-sm text-blue-700">ห้องทั้งหมด</div>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-green-900">
+                    {roomsWithOccupants.filter(r => r.occupants.length > 0).length}
+                  </div>
+                  <div className="text-sm text-green-700">ห้องมีผู้พัก</div>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-amber-900">
+                    {roomsWithOccupants.reduce((sum, r) => sum + r.occupants.length, 0)}
+                  </div>
+                  <div className="text-sm text-amber-700">ผู้เข้าพักทั้งหมด</div>
+                </div>
+              </div>
+
+              {/* Room List with Occupants */}
+              {loading ? (
+                <div className="text-center py-12 text-gray-500">กำลังโหลด...</div>
+              ) : roomsWithOccupants.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  ยังไม่มีห้องพัก กรุณาเพิ่มห้องพักในแท็บ "จัดการห้อง"
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Group by building */}
+                  {Object.entries(
+                    roomsWithOccupants.reduce((acc, room) => {
+                      if (!acc[room.buildingName]) acc[room.buildingName] = [];
+                      acc[room.buildingName].push(room);
+                      return acc;
+                    }, {} as Record<string, RoomWithOccupants[]>)
+                  ).map(([buildingName, buildingRooms]) => (
+                    <div key={buildingName} className="space-y-3">
+                      <h3 className="font-semibold text-gray-900 text-lg border-b border-gray-300 pb-2">
+                        อาคาร {buildingName}
+                      </h3>
+                      <div className="space-y-2">
+                        {buildingRooms.map((room) => {
+                          const isFull = room.occupants.length >= room.maxOccupancy;
+                          const isEmpty = room.occupants.length === 0;
+                          const isLocked = room.isLocked || false;
+
+                          return (
+                            <div
+                              key={room.roomId}
+                              className={`border rounded-lg p-4 ${
+                                isLocked
+                                  ? 'border-red-300 bg-red-50'
+                                  : isEmpty
+                                  ? 'border-gray-300 bg-gray-50'
+                                  : isFull
+                                  ? 'border-green-300 bg-green-50'
+                                  : 'border-blue-300 bg-blue-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="font-semibold text-gray-900">
+                                    ห้อง {room.roomNumber}
+                                    {room.roomTypeCategory && (
+                                      <span className="ml-2 text-xs font-normal text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">
+                                        {room.roomTypeCategory}
+                                      </span>
+                                    )}
+                                    {isLocked && (
+                                      <span className="ml-2 text-xs font-normal text-red-700 bg-red-200 px-2 py-0.5 rounded">
+                                        🔒 ล็อค
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className={`text-sm px-2 py-0.5 rounded ${
+                                    isLocked
+                                      ? 'bg-red-200 text-red-800'
+                                      : isEmpty
+                                      ? 'bg-gray-200 text-gray-700'
+                                      : isFull
+                                      ? 'bg-green-200 text-green-800'
+                                      : 'bg-blue-200 text-blue-800'
+                                  }`}>
+                                    {room.occupants.length}/{room.maxOccupancy} คน
+                                  </div>
+                                </div>
+                              </div>
+
+                              {room.note && (
+                                <div className="text-sm text-gray-700 mb-3 bg-yellow-50 border border-yellow-200 rounded px-3 py-2">
+                                  📝 {room.note}
+                                </div>
+                              )}
+
+                              {room.occupants.length > 0 ? (
+                                <div className="space-y-2">
+                                  {room.occupants.map((occupant, idx) => (
+                                    <div
+                                      key={`${occupant.registrationId}-${occupant.attendeeIndex}`}
+                                      className="flex items-center justify-between bg-white border border-gray-200 rounded p-3"
+                                    >
+                                      <div className="flex-1">
+                                        <div className="font-medium text-gray-900">
+                                          {occupant.attendeeName}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                          {occupant.companyName} · รหัส: {occupant.registrationId.slice(0, 8)}
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={() => handleOpenTransferModal(occupant, room.roomId)}
+                                        className="ml-3 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                        title="ย้ายห้อง"
+                                      >
+                                        ย้าย
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-sm text-gray-500 italic">ยังไม่มีผู้พัก</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -373,6 +730,73 @@ export default function RoomManagementModal({
           </button>
         </div>
       </div>
+
+      {/* Transfer Modal */}
+      {transferModalOpen && transferData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">ย้ายห้องพัก</h3>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-700 mb-1">
+                <strong>ผู้พัก:</strong> {transferData.attendeeName}
+              </p>
+              <p className="text-sm text-gray-700">
+                <strong>ห้องปัจจุบัน:</strong>{' '}
+                {(() => {
+                  const currentRoom = roomsWithOccupants.find(r => r.roomId === transferData.currentRoomId);
+                  return currentRoom ? `${currentRoom.buildingName}-${currentRoom.roomNumber}` : 'ไม่ระบุ';
+                })()}
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                เลือกห้องปลายทาง *
+              </label>
+              <select
+                value={transferData.newRoomId}
+                onChange={(e) => setTransferData({ ...transferData, newRoomId: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">- เลือกห้อง -</option>
+                {roomsWithOccupants
+                  .filter(room => {
+                    // Exclude current room
+                    if (room.roomId === transferData.currentRoomId) return false;
+                    // Only show rooms that are not full and not locked
+                    return room.occupants.length < room.maxOccupancy && !room.isLocked;
+                  })
+                  .map(room => (
+                    <option key={room.roomId} value={room.roomId}>
+                      {room.buildingName}-{room.roomNumber}
+                      {room.roomTypeCategory && ` (${room.roomTypeCategory})`} [{room.occupants.length}/{room.maxOccupancy}]
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setTransferModalOpen(false);
+                  setTransferData(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleTransferRoom}
+                disabled={transferring || !transferData.newRoomId}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {transferring ? 'กำลังย้าย...' : 'ย้ายห้อง'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

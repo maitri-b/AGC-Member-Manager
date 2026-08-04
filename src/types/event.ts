@@ -740,6 +740,8 @@ export interface EventRoom {
   roomNumber: string;          // Room number (e.g., "101", "102")
   roomTypeCategory?: string;   // Room type (e.g., "Twin", "Double", "Triple", "Suite", "Deluxe Twin")
   maxOccupancy: number;        // Maximum number of occupants
+  isLocked?: boolean;          // Locked status - prevents booking (for VIP/reserved rooms)
+  note?: string;               // Notes about the room (e.g., VIP reservation, special requirements)
   createdAt: string;           // ISO timestamp
   createdBy: string;           // User ID who created
   updatedAt?: string;          // ISO timestamp
@@ -752,6 +754,8 @@ export interface EventRoomInput {
   roomNumber: string;
   roomTypeCategory?: string;
   maxOccupancy: number;
+  isLocked?: boolean;
+  note?: string;
 }
 
 // Room assignment - links attendee to room

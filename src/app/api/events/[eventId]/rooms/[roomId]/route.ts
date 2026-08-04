@@ -71,6 +71,8 @@ export async function PUT(
       roomNumber: body.roomNumber,
       roomTypeCategory: body.roomTypeCategory,
       maxOccupancy: body.maxOccupancy,
+      isLocked: body.isLocked !== undefined ? body.isLocked : false,
+      note: body.note !== undefined ? body.note : '',
       updatedAt: new Date().toISOString(),
       updatedBy: session.user.id,
     };

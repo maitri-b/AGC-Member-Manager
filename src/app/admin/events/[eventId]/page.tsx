@@ -486,8 +486,10 @@ export default function EventDetailPage() {
     roomId: string;
     buildingName: string;
     roomNumber: string;
+    roomTypeCategory?: string;
     maxOccupancy: number;
     currentOccupancy: number;
+    isLocked?: boolean;
   }>>([]);
 
   // Payment confirmation state
@@ -780,6 +782,7 @@ export default function EventDetailPage() {
         roomTypeCategory: room.roomTypeCategory,
         maxOccupancy: room.maxOccupancy,
         currentOccupancy: occupancyMap[room.roomId] || 0,
+        isLocked: room.isLocked || false,
       }));
 
       setAvailableRooms(roomsWithOccupancy);
@@ -3600,9 +3603,9 @@ export default function EventDetailPage() {
                                       <option value="">- ไม่ระบุห้อง -</option>
                                       {availableRooms
                                         .filter(room => {
-                                          // Show room if it's the currently selected room OR if it's not full
+                                          // Show room if it's the currently selected room OR if it's not full and not locked
                                           if (room.roomId === currentRoomId) return true;
-                                          return room.currentOccupancy < room.maxOccupancy;
+                                          return room.currentOccupancy < room.maxOccupancy && !(room as any).isLocked;
                                         })
                                         .map(room => {
                                           const label = `${room.buildingName}-${room.roomNumber}${room.roomTypeCategory ? ` (${room.roomTypeCategory})` : ''} [${room.currentOccupancy}/${room.maxOccupancy}]`;

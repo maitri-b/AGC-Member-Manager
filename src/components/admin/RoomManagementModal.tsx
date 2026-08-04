@@ -43,6 +43,7 @@ export default function RoomManagementModal({
   // Filter and search state for Summary tab
   const [roomFilter, setRoomFilter] = useState<'all' | '1-person' | '2-person' | '3-person' | 'empty'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedBuildings, setExpandedBuildings] = useState<Record<string, boolean>>({});
 
   // Room transfer state
   const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -1350,16 +1351,45 @@ export default function RoomManagementModal({
 
                     return Object.entries(groupedRooms).map(([buildingName, buildingRooms]) => {
                     const emptyRoomsCount = buildingRooms.filter(r => r.occupants.length === 0 && !r.isLocked).length;
+                    const totalOccupants = buildingRooms.reduce((sum, r) => sum + r.occupants.length, 0);
+                    const isExpanded = expandedBuildings[buildingName] ?? true; // Default to expanded
 
                     return (
-                      <div key={buildingName} className="space-y-3">
-                        <h3 className="font-semibold text-gray-900 text-lg border-b border-gray-300 pb-2 flex items-center justify-between">
-                          <span>อาคาร {buildingName}</span>
-                          <span className="text-sm font-normal text-gray-600">
-                            {buildingRooms.length} ห้อง · ว่าง {emptyRoomsCount} ห้อง
-                          </span>
-                        </h3>
-                        <div className="space-y-2">
+                      <div key={buildingName} className="border border-gray-300 rounded-lg overflow-hidden">
+                        {/* Building Header - Clickable */}
+                        <button
+                          onClick={() => setExpandedBuildings(prev => ({ ...prev, [buildingName]: !isExpanded }))}
+                          className="w-full bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-150 transition-colors p-4 flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <svg
+                              className={`w-5 h-5 text-gray-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            <h3 className="font-semibold text-gray-900 text-lg">
+                              อาคาร {buildingName}
+                            </h3>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-gray-600">
+                              {buildingRooms.length} ห้อง
+                            </span>
+                            <span className="text-green-600 font-medium">
+                              ผู้พัก {totalOccupants} คน
+                            </span>
+                            <span className="text-purple-600 font-medium">
+                              ว่าง {emptyRoomsCount} ห้อง
+                            </span>
+                          </div>
+                        </button>
+
+                        {/* Building Rooms - Collapsible */}
+                        {isExpanded && (
+                        <div className="p-4 space-y-2 bg-white">
                           {buildingRooms.map((room) => {
                             const isFull = room.occupants.length >= room.maxOccupancy;
                             const isEmpty = room.occupants.length === 0;
@@ -1453,8 +1483,9 @@ export default function RoomManagementModal({
                             </div>
                           );
                         })}
+                        </div>
+                        )}
                       </div>
-                    </div>
                     );
                   });
                   })()}

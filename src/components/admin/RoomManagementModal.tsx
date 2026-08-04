@@ -730,6 +730,253 @@ export default function RoomManagementModal({
     }
   };
 
+  const handleExportToExcel = async () => {
+    try {
+      // Fetch full event data with payment information
+      const eventResponse = await fetch(`/api/events/${eventId}`);
+      if (!eventResponse.ok) throw new Error('Failed to fetch event data');
+      const eventData = await eventResponse.json();
+      const registrations = eventData.attendees || [];
+
+      // Build payment status map by registration ID
+      const paymentStatusMap = new Map<string, {
+        hasSlip: boolean;
+        isPaid: boolean;
+        totalAmount: number;
+        paidAmount: number;
+      }>();
+
+      registrations.forEach((attendee: any) => {
+        const reg = attendee.registration;
+        const hasSlip = !!(reg.depositSlipUrl || reg.remainingSlipUrl || reg.fullPaymentSlipUrl);
+        const totalAmount = Number(reg.totalAmount) || 0;
+
+        // Calculate total paid amount
+        let paidAmount = 0;
+        if (reg.fullPaymentPaid) {
+          paidAmount = Number(reg.fullPaymentAmountPaid) || totalAmount;
+        } else {
+          paidAmount = (Number(reg.depositAmountPaid) || 0) +
+                      (Number(reg.remainingAmountPaid) || 0) +
+                      (Number(reg.additionalPaymentAmountPaid) || 0);
+        }
+
+        const isPaid = paidAmount >= totalAmount && totalAmount > 0;
+
+        paymentStatusMap.set(reg.registrationId, {
+          hasSlip,
+          isPaid,
+          totalAmount,
+          paidAmount,
+        });
+      });
+
+      // Prepare data for Excel
+      const excelData: any[] = [];
+
+      // Group rooms by building
+      const groupedRooms = roomsWithOccupants.reduce((acc, room) => {
+        if (!acc[room.buildingName]) acc[room.buildingName] = [];
+        acc[room.buildingName].push(room);
+        return acc;
+      }, {} as Record<string, RoomWithOccupants[]>);
+
+      // Sort buildings alphabetically
+      const sortedBuildings = Object.keys(groupedRooms).sort();
+
+      sortedBuildings.forEach(buildingName => {
+        const buildingRooms = groupedRooms[buildingName];
+
+        // Sort rooms by room number
+        buildingRooms.sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
+
+        buildingRooms.forEach(room => {
+          if (room.occupants.length === 0) {
+            // Empty room - one row
+            excelData.push({
+              'อาคาร': buildingName,
+              'เลขห้อง': room.roomNumber,
+              'ประเภทห้อง': room.roomTypeCategory || '-',
+              'จำนวนผู้พัก': `0/${room.maxOccupancy}`,
+              'สถานะห้อง': room.isLocked ? 'ล็อค' : 'ว่าง',
+              'ชื่อผู้เข้าพัก': '-',
+              'บริษัท': '-',
+              'รหัสการจอง': '-',
+              'สถานะการชำระเงิน': '-',
+              'หมายเหตุ': room.note || '-',
+              '_roomStatus': room.isLocked ? 'locked' : 'empty',
+              '_paymentStatus': 'none',
+            });
+          } else {
+            // Room with occupants - one row per room with all occupants
+            const occupantNames = room.occupants.map(occ => occ.attendeeName).join(', ');
+            const companies = room.occupants.map(occ => occ.companyName).join(', ');
+            const registrationIds = room.occupants.map(occ => occ.registrationId.slice(0, 8)).join(', ');
+
+            // Determine overall payment status for the room
+            let paymentStatus = 'ชำระแล้ว';
+            let paymentStatusCode = 'paid';
+
+            const occupantPaymentStatuses = room.occupants.map(occ => {
+              const payment = paymentStatusMap.get(occ.registrationId);
+              if (!payment) return 'unknown';
+              if (payment.isPaid) return 'paid';
+              if (payment.hasSlip) return 'pending';
+              return 'unpaid';
+            });
+
+            // If any occupant is unpaid
+            if (occupantPaymentStatuses.includes('unpaid')) {
+              paymentStatus = 'ยังไม่ชำระ/ไม่มีสลิป';
+              paymentStatusCode = 'unpaid';
+            } else if (occupantPaymentStatuses.includes('pending')) {
+              paymentStatus = 'ส่งสลิปแล้ว รอตรวจสอบ';
+              paymentStatusCode = 'pending';
+            }
+
+            excelData.push({
+              'อาคาร': buildingName,
+              'เลขห้อง': room.roomNumber,
+              'ประเภทห้อง': room.roomTypeCategory || '-',
+              'จำนวนผู้พัก': `${room.occupants.length}/${room.maxOccupancy}`,
+              'สถานะห้อง': room.isLocked ? 'ล็อค' : 'มีผู้พัก',
+              'ชื่อผู้เข้าพัก': occupantNames,
+              'บริษัท': companies,
+              'รหัสการจอง': registrationIds,
+              'สถานะการชำระเงิน': paymentStatus,
+              'หมายเหตุ': room.note || '-',
+              '_roomStatus': room.isLocked ? 'locked' : 'occupied',
+              '_paymentStatus': paymentStatusCode,
+            });
+          }
+        });
+      });
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(excelData, {
+        header: ['อาคาร', 'เลขห้อง', 'ประเภทห้อง', 'จำนวนผู้พัก', 'สถานะห้อง', 'ชื่อผู้เข้าพัก', 'บริษัท', 'รหัสการจอง', 'สถานะการชำระเงิน', 'หมายเหตุ']
+      });
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 10 },  // อาคาร
+        { wch: 12 },  // เลขห้อง
+        { wch: 15 },  // ประเภทห้อง
+        { wch: 15 },  // จำนวนผู้พัก
+        { wch: 12 },  // สถานะห้อง
+        { wch: 40 },  // ชื่อผู้เข้าพัก
+        { wch: 40 },  // บริษัท
+        { wch: 25 },  // รหัสการจอง
+        { wch: 25 },  // สถานะการชำระเงิน
+        { wch: 30 },  // หมายเหตุ
+      ];
+
+      // Apply cell styling with colors
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+
+      for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+        const row = excelData[R - 1];
+        if (!row) continue;
+
+        const roomStatus = row._roomStatus;
+        const paymentStatus = row._paymentStatus;
+
+        // Determine background color
+        let fillColor = 'FFFFFF'; // White default
+        let fontColor = '000000'; // Black default
+
+        if (roomStatus === 'locked') {
+          // Locked room: Red pastel background with dark red text
+          fillColor = 'FFCCCC'; // Light red/pink pastel
+          fontColor = '8B0000'; // Dark red
+        } else if (roomStatus === 'empty') {
+          // Empty room: Green background
+          fillColor = 'CCFFCC'; // Light green
+          fontColor = '006400'; // Dark green
+        } else if (roomStatus === 'occupied') {
+          // Room with occupants - color based on payment status
+          if (paymentStatus === 'unpaid') {
+            // Unpaid/no slip: Orange
+            fillColor = 'FFE5CC'; // Light orange
+            fontColor = 'CC5500'; // Dark orange
+          } else if (paymentStatus === 'pending') {
+            // Slip submitted, pending: Purple
+            fillColor = 'E5CCFF'; // Light purple
+            fontColor = '663399'; // Dark purple
+          } else if (paymentStatus === 'paid') {
+            // Paid: Light blue/default
+            fillColor = 'CCE5FF'; // Light blue
+            fontColor = '003366'; // Dark blue
+          }
+        }
+
+        // Apply fill to all cells in the row
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) continue;
+
+          ws[cellAddress].s = {
+            fill: {
+              fgColor: { rgb: fillColor }
+            },
+            font: {
+              color: { rgb: fontColor }
+            },
+            alignment: {
+              vertical: 'center',
+              horizontal: C === 5 || C === 6 ? 'left' : 'center', // Left align names and company
+              wrapText: true
+            },
+            border: {
+              top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+            }
+          };
+        }
+      }
+
+      // Style header row
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+        if (!ws[cellAddress]) continue;
+
+        ws[cellAddress].s = {
+          fill: {
+            fgColor: { rgb: '4472C4' } // Blue header
+          },
+          font: {
+            color: { rgb: 'FFFFFF' }, // White text
+            bold: true
+          },
+          alignment: {
+            vertical: 'center',
+            horizontal: 'center'
+          },
+          border: {
+            top: { style: 'thin', color: { rgb: '000000' } },
+            bottom: { style: 'thin', color: { rgb: '000000' } },
+            left: { style: 'thin', color: { rgb: '000000' } },
+            right: { style: 'thin', color: { rgb: '000000' } }
+          }
+        };
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, 'สรุปห้องพัก');
+
+      // Download file
+      const fileName = `Room_Summary_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast.success('Export Excel สำเร็จ');
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('เกิดข้อผิดพลาดในการ Export Excel');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -1202,6 +1449,20 @@ export default function RoomManagementModal({
                   </div>
                   <div className="text-sm text-red-700">ห้องถูกล็อค</div>
                 </div>
+              </div>
+
+              {/* Export Excel Button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={handleExportToExcel}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                  title="Export สรุปห้องพักเป็น Excel"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export Excel
+                </button>
               </div>
 
               {/* Filter and Search Controls */}

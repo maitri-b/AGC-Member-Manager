@@ -35,6 +35,11 @@ export default function RoomManagementModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Batch edit state
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [editedRooms, setEditedRooms] = useState<Record<string, EventRoom>>({});
+  const [batchSaving, setBatchSaving] = useState(false);
+
   // Room transfer state
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [transferData, setTransferData] = useState<{
@@ -447,6 +452,92 @@ export default function RoomManagementModal({
     }
   };
 
+  // Batch edit handlers
+  const handleBatchEditChange = (roomId: string, field: keyof EventRoom, value: any) => {
+    setEditedRooms(prev => ({
+      ...prev,
+      [roomId]: {
+        ...(prev[roomId] || rooms.find(r => r.roomId === roomId)!),
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSaveBatchEdit = async () => {
+    const changedRooms = Object.entries(editedRooms).filter(([roomId, editedRoom]) => {
+      const original = rooms.find(r => r.roomId === roomId);
+      if (!original) return false;
+      return (
+        original.buildingName !== editedRoom.buildingName ||
+        original.roomNumber !== editedRoom.roomNumber ||
+        original.roomTypeCategory !== editedRoom.roomTypeCategory ||
+        original.maxOccupancy !== editedRoom.maxOccupancy ||
+        original.isLocked !== editedRoom.isLocked ||
+        original.note !== editedRoom.note
+      );
+    });
+
+    if (changedRooms.length === 0) {
+      toast.error('ไม่มีการเปลี่ยนแปลงข้อมูล');
+      return;
+    }
+
+    try {
+      setBatchSaving(true);
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      for (const [roomId, editedRoom] of changedRooms) {
+        try {
+          const response = await fetch(`/api/events/${eventId}/rooms/${roomId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              buildingName: editedRoom.buildingName,
+              roomNumber: editedRoom.roomNumber,
+              roomTypeCategory: editedRoom.roomTypeCategory,
+              maxOccupancy: editedRoom.maxOccupancy,
+              isLocked: editedRoom.isLocked,
+              note: editedRoom.note,
+            }),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            const data = await response.json();
+            errorCount++;
+            errors.push(`${editedRoom.buildingName}-${editedRoom.roomNumber}: ${data.error}`);
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${editedRoom.buildingName}-${editedRoom.roomNumber}: เกิดข้อผิดพลาด`);
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`บันทึกสำเร็จ ${successCount} ห้อง`);
+      }
+      if (errorCount > 0) {
+        toast.error(`บันทึกไม่สำเร็จ ${errorCount} ห้อง:\n${errors.slice(0, 3).join('\n')}`);
+      }
+
+      setEditedRooms({});
+      fetchRooms();
+    } catch (error) {
+      console.error('Error saving batch edit:', error);
+      toast.error('เกิดข้อผิดพลาดในการบันทึก');
+    } finally {
+      setBatchSaving(false);
+    }
+  };
+
+  const handleCancelBatchEdit = () => {
+    setEditedRooms({});
+    toast.success('ยกเลิกการแก้ไข');
+  };
+
   const handleOpenTransferModal = (occupant: RoomOccupant, currentRoomId: string) => {
     setTransferData({
       registrationId: occupant.registrationId,
@@ -580,11 +671,45 @@ export default function RoomManagementModal({
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'manage' ? (
             <div className="space-y-4">
-              {/* Add Room Button */}
+              {/* Toolbar */}
               <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-600">
-                  จำนวนห้องทั้งหมด: {rooms.length} ห้อง
-                </p>
+                <div className="flex items-center gap-4">
+                  <p className="text-sm text-gray-600">
+                    จำนวนห้องทั้งหมด: {rooms.length} ห้อง
+                  </p>
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => {
+                        setViewMode('card');
+                        setEditedRooms({});
+                      }}
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        viewMode === 'card'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      title="มุมมองการ์ด"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setViewMode('table')}
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        viewMode === 'table'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      title="มุมมองตาราง (Batch Edit)"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={handleDownloadTemplate}
@@ -732,7 +857,130 @@ export default function RoomManagementModal({
                 <div className="text-center py-12 text-gray-500">
                   ยังไม่มีห้องพัก กรุณาเพิ่มห้องพักใหม่
                 </div>
+              ) : viewMode === 'table' ? (
+                /* Table View for Batch Edit */
+                <div className="space-y-4">
+                  {/* Batch Edit Actions */}
+                  {Object.keys(editedRooms).length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+                      <p className="text-sm text-blue-900">
+                        มีการเปลี่ยนแปลง {Object.keys(editedRooms).length} ห้อง
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleCancelBatchEdit}
+                          className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm"
+                        >
+                          ยกเลิก
+                        </button>
+                        <button
+                          onClick={handleSaveBatchEdit}
+                          disabled={batchSaving}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm"
+                        >
+                          {batchSaving ? 'กำลังบันทึก...' : `บันทึกทั้งหมด`}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Table */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">อาคาร</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">เลขห้อง</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ประเภทห้อง</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">จำนวนคน</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">สถานะ</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">หมายเหตุ</th>
+                            <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">จัดการ</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {rooms.map((room) => {
+                            const editedRoom = editedRooms[room.roomId] || room;
+                            const isEdited = editedRooms[room.roomId] !== undefined;
+
+                            return (
+                              <tr key={room.roomId} className={isEdited ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
+                                <td className="px-3 py-3 whitespace-nowrap">
+                                  <input
+                                    type="text"
+                                    value={editedRoom.buildingName}
+                                    onChange={(e) => handleBatchEditChange(room.roomId, 'buildingName', e.target.value)}
+                                    className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-3 whitespace-nowrap">
+                                  <input
+                                    type="text"
+                                    value={editedRoom.roomNumber}
+                                    onChange={(e) => handleBatchEditChange(room.roomId, 'roomNumber', e.target.value)}
+                                    className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-3 whitespace-nowrap">
+                                  <input
+                                    type="text"
+                                    value={editedRoom.roomTypeCategory || ''}
+                                    onChange={(e) => handleBatchEditChange(room.roomId, 'roomTypeCategory', e.target.value)}
+                                    placeholder="Twin, Double, etc."
+                                    className="w-32 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-3 whitespace-nowrap">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={editedRoom.maxOccupancy}
+                                    onChange={(e) => handleBatchEditChange(room.roomId, 'maxOccupancy', parseInt(e.target.value) || 1)}
+                                    className="w-16 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-3 whitespace-nowrap">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={editedRoom.isLocked || false}
+                                      onChange={(e) => handleBatchEditChange(room.roomId, 'isLocked', e.target.checked)}
+                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">ล็อค</span>
+                                  </label>
+                                </td>
+                                <td className="px-3 py-3">
+                                  <input
+                                    type="text"
+                                    value={editedRoom.note || ''}
+                                    onChange={(e) => handleBatchEditChange(room.roomId, 'note', e.target.value)}
+                                    placeholder="หมายเหตุ"
+                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-3 py-3 whitespace-nowrap">
+                                  <button
+                                    onClick={() => handleDeleteRoom(room.roomId)}
+                                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="ลบ"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
               ) : (
+                /* Card View */
                 <div className="space-y-2">
                   {/* Group by building */}
                   {Object.entries(

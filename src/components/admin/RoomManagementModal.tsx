@@ -741,11 +741,17 @@ export default function RoomManagementModal({
                       acc[room.buildingName].push(room);
                       return acc;
                     }, {} as Record<string, EventRoom[]>)
-                  ).map(([buildingName, buildingRooms]) => (
-                    <div key={buildingName} className="space-y-2">
-                      <h3 className="font-semibold text-gray-900 mt-4 mb-2">
-                        อาคาร {buildingName} ({buildingRooms.length} ห้อง)
-                      </h3>
+                  ).map(([buildingName, buildingRooms]) => {
+                    const availableRooms = buildingRooms.filter(r => !r.isLocked).length;
+
+                    return (
+                      <div key={buildingName} className="space-y-2">
+                        <h3 className="font-semibold text-gray-900 mt-4 mb-2 flex items-center justify-between">
+                          <span>อาคาร {buildingName}</span>
+                          <span className="text-sm font-normal text-gray-600">
+                            {buildingRooms.length} ห้อง · พร้อมใช้งาน {availableRooms} ห้อง
+                          </span>
+                        </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                         {buildingRooms.map((room) => (
                           <div
@@ -801,7 +807,8 @@ export default function RoomManagementModal({
                         ))}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -843,16 +850,22 @@ export default function RoomManagementModal({
                       acc[room.buildingName].push(room);
                       return acc;
                     }, {} as Record<string, RoomWithOccupants[]>)
-                  ).map(([buildingName, buildingRooms]) => (
-                    <div key={buildingName} className="space-y-3">
-                      <h3 className="font-semibold text-gray-900 text-lg border-b border-gray-300 pb-2">
-                        อาคาร {buildingName}
-                      </h3>
-                      <div className="space-y-2">
-                        {buildingRooms.map((room) => {
-                          const isFull = room.occupants.length >= room.maxOccupancy;
-                          const isEmpty = room.occupants.length === 0;
-                          const isLocked = room.isLocked || false;
+                  ).map(([buildingName, buildingRooms]) => {
+                    const emptyRoomsCount = buildingRooms.filter(r => r.occupants.length === 0 && !r.isLocked).length;
+
+                    return (
+                      <div key={buildingName} className="space-y-3">
+                        <h3 className="font-semibold text-gray-900 text-lg border-b border-gray-300 pb-2 flex items-center justify-between">
+                          <span>อาคาร {buildingName}</span>
+                          <span className="text-sm font-normal text-gray-600">
+                            {buildingRooms.length} ห้อง · ว่าง {emptyRoomsCount} ห้อง
+                          </span>
+                        </h3>
+                        <div className="space-y-2">
+                          {buildingRooms.map((room) => {
+                            const isFull = room.occupants.length >= room.maxOccupancy;
+                            const isEmpty = room.occupants.length === 0;
+                            const isLocked = room.isLocked || false;
 
                           return (
                             <div
@@ -935,7 +948,8 @@ export default function RoomManagementModal({
                         })}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

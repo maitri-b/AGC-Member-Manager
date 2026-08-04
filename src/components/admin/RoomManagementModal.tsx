@@ -1352,7 +1352,7 @@ export default function RoomManagementModal({
                     return Object.entries(groupedRooms).map(([buildingName, buildingRooms]) => {
                     const emptyRoomsCount = buildingRooms.filter(r => r.occupants.length === 0 && !r.isLocked).length;
                     const totalOccupants = buildingRooms.reduce((sum, r) => sum + r.occupants.length, 0);
-                    const isExpanded = expandedBuildings[buildingName] ?? true; // Default to expanded
+                    const isExpanded = expandedBuildings[buildingName] ?? false; // Default to collapsed
 
                     return (
                       <div key={buildingName} className="border border-gray-300 rounded-lg overflow-hidden">

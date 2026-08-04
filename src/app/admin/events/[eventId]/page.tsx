@@ -3232,6 +3232,32 @@ export default function EventDetailPage() {
                             ยกเลิก
                           </span>
                         )}
+
+                        {/* Unassigned Rooms Warning */}
+                        {eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0 && !isCancelled && (() => {
+                          let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
+                          try {
+                            if ((attendee.registration as any).roomAssignments) {
+                              roomAssignments = JSON.parse((attendee.registration as any).roomAssignments);
+                            }
+                          } catch (e) {
+                            console.error('Error parsing roomAssignments:', e);
+                          }
+
+                          const unassignedCount = attendee.registration.attendeeCount - roomAssignments.length;
+
+                          if (unassignedCount > 0) {
+                            return (
+                              <span
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 cursor-help"
+                                title={`มีผู้เข้าร่วม ${unassignedCount} คนที่ยังไม่ได้ระบุห้องพัก`}
+                              >
+                                ⚠️ ยังไม่ระบุห้อง {unassignedCount} คน
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
 
                       {/* Company info */}

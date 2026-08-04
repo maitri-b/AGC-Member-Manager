@@ -330,6 +330,7 @@ async function getEventRegistrationsFromFirestore(eventId: string): Promise<Even
         checkinSections: data.checkinSections || '',
         attendeeTypeSelections: data.attendeeTypeSelections || '',
         roomAllocations: data.roomAllocations || '',
+        roomAssignments: data.roomAssignments || '',
         specialCharges: data.specialCharges || '',
         discounts: data.discounts || '',
         notes: data.notes || '',

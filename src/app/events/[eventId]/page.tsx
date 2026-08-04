@@ -3406,7 +3406,7 @@ export default function EventDetailPage() {
                 <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                   <li>ทีมงานจะตรวจสอบยอดโอนเงินของคุณ</li>
                   <li>เมื่อตรวจสอบเรียบร้อย ระบบจะอัปเดตสถานะการชำระเงินอัตโนมัติ</li>
-                  <li>คุณจะได้รับการแจ้งเตือนผ่าน LINE เมื่อทีมงานอนุมัติ</li>
+                  <li>คุณสามารถตรวจสอบสถานะการชำระเงินได้ตลอดเวลาผ่านหน้านี้</li>
                 </ol>
               </div>
 

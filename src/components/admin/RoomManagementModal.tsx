@@ -761,7 +761,9 @@ export default function RoomManagementModal({
                       (Number(reg.additionalPaymentAmountPaid) || 0);
         }
 
-        const isPaid = paidAmount >= totalAmount && totalAmount > 0;
+        // ✅ Check isPaid using amount comparison (most reliable for all cases)
+        // This handles: full payment, deposit+remaining, and additional payments
+        const isPaid = totalAmount > 0 && paidAmount >= totalAmount;
 
         paymentStatusMap.set(reg.registrationId, {
           hasSlip,
@@ -851,8 +853,11 @@ export default function RoomManagementModal({
             const occupantPaymentStatuses = room.occupants.map(occ => {
               const payment = paymentStatusMap.get(occ.registrationId);
               if (!payment) return 'unknown';
+              // Check isPaid first - if paid, it's paid regardless of slip status
               if (payment.isPaid) return 'paid';
+              // If not paid but has slip, it's pending approval
               if (payment.hasSlip) return 'pending';
+              // No payment and no slip
               return 'unpaid';
             });
 

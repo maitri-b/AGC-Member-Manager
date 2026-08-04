@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { EventRoom, EventRoomInput } from '@/types/event';
 import { useToast } from '../Toast';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 interface RoomManagementModalProps {
   isOpen: boolean;
@@ -821,64 +821,56 @@ export default function RoomManagementModal({
 
             excelData.push(rowData);
           } else {
-            // Group occupants by company and registration ID
-            // Key: companyName|registrationId -> array of occupants
-            const groupedOccupants = new Map<string, RoomOccupant[]>();
+            // ONE ROW per room - consolidate all occupants regardless of registration ID
+            const rowData: any = {
+              'อาคาร': buildingName,
+              'เลขห้อง': room.roomNumber,
+              'ประเภทห้อง': room.roomTypeCategory || '-',
+              'จำนวนผู้พัก': `${room.occupants.length}/${room.maxOccupancy}`,
+              'สถานะห้อง': room.isLocked ? 'ล็อค' : 'มีผู้พัก',
+            };
 
-            room.occupants.forEach(occ => {
-              const key = `${occ.companyName}|${occ.registrationId}`;
-              if (!groupedOccupants.has(key)) {
-                groupedOccupants.set(key, []);
-              }
-              groupedOccupants.get(key)!.push(occ);
+            // Add individual occupant names in separate columns
+            for (let i = 1; i <= maxOccupantsInEvent; i++) {
+              const occupant = room.occupants[i - 1];
+              rowData[`ผู้เข้าพัก ${i}`] = occupant ? occupant.attendeeName : '-';
+            }
+
+            // Collect unique companies and registration IDs
+            const uniqueCompanies = [...new Set(room.occupants.map(occ => occ.companyName))];
+            const uniqueRegistrationIds = [...new Set(room.occupants.map(occ => occ.registrationId))];
+
+            // Join with comma if multiple
+            rowData['บริษัท'] = uniqueCompanies.join(', ');
+            rowData['รหัสการจอง'] = uniqueRegistrationIds.map(id => id.slice(0, 8)).join(', ');
+
+            // Determine overall payment status for the room
+            let paymentStatus = 'ชำระแล้ว';
+            let paymentStatusCode = 'paid';
+
+            const occupantPaymentStatuses = room.occupants.map(occ => {
+              const payment = paymentStatusMap.get(occ.registrationId);
+              if (!payment) return 'unknown';
+              if (payment.isPaid) return 'paid';
+              if (payment.hasSlip) return 'pending';
+              return 'unpaid';
             });
 
-            // Create one row per group
-            groupedOccupants.forEach((occupants, key) => {
-              const [companyName, registrationId] = key.split('|');
+            // If any occupant is unpaid
+            if (occupantPaymentStatuses.includes('unpaid')) {
+              paymentStatus = 'ยังไม่ชำระ/ไม่มีสลิป';
+              paymentStatusCode = 'unpaid';
+            } else if (occupantPaymentStatuses.includes('pending')) {
+              paymentStatus = 'ส่งสลิปแล้ว รอตรวจสอบ';
+              paymentStatusCode = 'pending';
+            }
 
-              const rowData: any = {
-                'อาคาร': buildingName,
-                'เลขห้อง': room.roomNumber,
-                'ประเภทห้อง': room.roomTypeCategory || '-',
-                'จำนวนผู้พัก': `${room.occupants.length}/${room.maxOccupancy}`,
-                'สถานะห้อง': room.isLocked ? 'ล็อค' : 'มีผู้พัก',
-              };
+            rowData['สถานะการชำระเงิน'] = paymentStatus;
+            rowData['หมายเหตุ'] = room.note || '-';
+            rowData['_roomStatus'] = room.isLocked ? 'locked' : 'occupied';
+            rowData['_paymentStatus'] = paymentStatusCode;
 
-              // Add individual occupant columns
-              for (let i = 1; i <= maxOccupantsInEvent; i++) {
-                const occupant = occupants[i - 1];
-                rowData[`ผู้เข้าพัก ${i}`] = occupant ? occupant.attendeeName : '-';
-              }
-
-              rowData['บริษัท'] = companyName;
-              rowData['รหัสการจอง'] = registrationId.slice(0, 8);
-
-              // Determine payment status for this registration
-              let paymentStatus = 'ชำระแล้ว';
-              let paymentStatusCode = 'paid';
-
-              const payment = paymentStatusMap.get(registrationId);
-              if (payment) {
-                if (payment.isPaid) {
-                  paymentStatus = 'ชำระแล้ว';
-                  paymentStatusCode = 'paid';
-                } else if (payment.hasSlip) {
-                  paymentStatus = 'ส่งสลิปแล้ว รอตรวจสอบ';
-                  paymentStatusCode = 'pending';
-                } else {
-                  paymentStatus = 'ยังไม่ชำระ/ไม่มีสลิป';
-                  paymentStatusCode = 'unpaid';
-                }
-              }
-
-              rowData['สถานะการชำระเงิน'] = paymentStatus;
-              rowData['หมายเหตุ'] = room.note || '-';
-              rowData['_roomStatus'] = room.isLocked ? 'locked' : 'occupied';
-              rowData['_paymentStatus'] = paymentStatusCode;
-
-              excelData.push(rowData);
-            });
+            excelData.push(rowData);
           }
         });
       });

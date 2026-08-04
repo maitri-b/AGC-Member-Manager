@@ -729,6 +729,11 @@ export default function EventDetailPage() {
         return;
       }
       const data = await response.json();
+
+      // Debug: Check if roomAssignments are being fetched
+      console.log('[Fetch Event Data] Sample attendee:', data.attendees?.[0]?.registration);
+      console.log('[Fetch Event Data] Has roomAssignments?:', !!data.attendees?.[0]?.registration?.roomAssignments);
+
       setEventData(data);
     } catch (err) {
       console.error('Error fetching event:', err);
@@ -1234,8 +1239,10 @@ export default function EventDetailPage() {
     // Parse room assignments
     let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
     try {
+      console.log('[Edit Registration] Raw roomAssignments data:', (attendee.registration as any).roomAssignments);
       if ((attendee.registration as any).roomAssignments) {
         roomAssignments = JSON.parse((attendee.registration as any).roomAssignments);
+        console.log('[Edit Registration] Parsed roomAssignments:', roomAssignments);
       }
     } catch (e) {
       console.error('Error parsing roomAssignments:', e);

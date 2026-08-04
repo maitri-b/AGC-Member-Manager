@@ -1358,10 +1358,13 @@ export default function EventDetailPage() {
         updateData.room_allocations = JSON.stringify(editFormData.roomAllocations);
       }
 
-      // Include room assignments if present
+      // Include room assignments - always send even if empty array to clear assignments
       if (editFormData.roomAssignments !== undefined) {
-        updateData.room_assignments = JSON.stringify(editFormData.roomAssignments);
+        updateData.room_assignments = JSON.stringify(editFormData.roomAssignments || []);
+        console.log('[Admin Update] Room Assignments:', editFormData.roomAssignments);
       }
+
+      console.log('[Admin Update] Sending update data:', updateData);
 
       const response = await fetch(`/api/events/${eventId}/admin-update-registration`, {
         method: 'PUT',

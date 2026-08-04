@@ -542,6 +542,66 @@ export default function RoomManagementModal({
     toast.success('ยกเลิกการแก้ไข');
   };
 
+  const handleLeaveRoom = async (occupant: RoomOccupant, currentRoomId: string) => {
+    if (!confirm(`ต้องการปล่อยห้องสำหรับ ${occupant.attendeeName} ใช่หรือไม่?\n\nห้องจะกลับมาว่างและผู้เข้าพักจะกลับไปเป็นสถานะยังไม่ได้ระบุห้อง`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Fetch current registration to get room assignments
+      const eventResponse = await fetch(`/api/events/${eventId}`);
+      if (!eventResponse.ok) throw new Error('Failed to fetch event data');
+      const eventData = await eventResponse.json();
+      const registration = eventData.attendees.find(
+        (a: any) => a.registration.registrationId === occupant.registrationId
+      );
+
+      if (!registration) {
+        throw new Error('ไม่พบข้อมูลการลงทะเบียน');
+      }
+
+      // Parse current room assignments
+      let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
+      try {
+        roomAssignments = JSON.parse(registration.registration.roomAssignments || '[]');
+      } catch (e) {
+        console.error('Error parsing room assignments:', e);
+      }
+
+      // Remove the assignment for this attendee
+      const updatedAssignments = roomAssignments.filter(
+        (assignment) => assignment.attendeeIndex !== occupant.attendeeIndex
+      );
+
+      // Update registration with new room assignments
+      const updateResponse = await fetch(`/api/events/${eventId}/admin-update-registration`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registrationId: occupant.registrationId,
+          updateData: {
+            room_assignments: JSON.stringify(updatedAssignments),
+          },
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        const data = await updateResponse.json();
+        throw new Error(data.error || 'Failed to leave room');
+      }
+
+      toast.success('ปล่อยห้องสำเร็จ');
+      fetchRoomOccupants();
+    } catch (error: any) {
+      console.error('Error leaving room:', error);
+      toast.error(error.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOpenTransferModal = (occupant: RoomOccupant, currentRoomId: string) => {
     setTransferData({
       registrationId: occupant.registrationId,
@@ -1323,13 +1383,22 @@ export default function RoomManagementModal({
                                           {occupant.companyName} · รหัส: {occupant.registrationId.slice(0, 8)}
                                         </div>
                                       </div>
-                                      <button
-                                        onClick={() => handleOpenTransferModal(occupant, room.roomId)}
-                                        className="ml-3 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                                        title="ย้ายห้อง"
-                                      >
-                                        ย้าย
-                                      </button>
+                                      <div className="flex gap-2 ml-3">
+                                        <button
+                                          onClick={() => handleLeaveRoom(occupant, room.roomId)}
+                                          className="px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                                          title="ปล่อยห้อง"
+                                        >
+                                          ปล่อยห้อง
+                                        </button>
+                                        <button
+                                          onClick={() => handleOpenTransferModal(occupant, room.roomId)}
+                                          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                          title="ย้ายห้อง"
+                                        >
+                                          ย้าย
+                                        </button>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { EventRoom, EventRoomInput } from '@/types/event';
 import { useToast } from '../Toast';
+import * as XLSX from 'xlsx';
 
 interface RoomManagementModalProps {
   isOpen: boolean;
@@ -44,6 +45,12 @@ export default function RoomManagementModal({
     newRoomId: string;
   } | null>(null);
   const [transferring, setTransferring] = useState(false);
+
+  // Import state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<EventRoomInput[]>([]);
 
   // Form state for creating/editing room
   const [showRoomForm, setShowRoomForm] = useState(false);
@@ -226,6 +233,199 @@ export default function RoomManagementModal({
     }
   };
 
+  const handleDownloadTemplate = () => {
+    // Create template data
+    const template = [
+      {
+        'ชื่ออาคาร': 'A',
+        'เลขห้อง': '101',
+        'ประเภทห้อง': 'Twin',
+        'จำนวนผู้พักสูงสุด': 2,
+        'ล็อคห้อง (TRUE/FALSE)': 'FALSE',
+        'หมายเหตุ': 'ห้องมุม',
+      },
+      {
+        'ชื่ออาคาร': 'A',
+        'เลขห้อง': '102',
+        'ประเภทห้อง': 'Double',
+        'จำนวนผู้พักสูงสุด': 2,
+        'ล็อคห้อง (TRUE/FALSE)': 'FALSE',
+        'หมายเหตุ': '',
+      },
+      {
+        'ชื่ออาคาร': 'B',
+        'เลขห้อง': '201',
+        'ประเภทห้อง': 'Suite',
+        'จำนวนผู้พักสูงสุด': 4,
+        'ล็อคห้อง (TRUE/FALSE)': 'TRUE',
+        'หมายเหตุ': 'สำรองสำหรับ VIP',
+      },
+    ];
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(template);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 15 }, // ชื่ออาคาร
+      { wch: 15 }, // เลขห้อง
+      { wch: 15 }, // ประเภทห้อง
+      { wch: 20 }, // จำนวนผู้พักสูงสุด
+      { wch: 25 }, // ล็อคห้อง
+      { wch: 30 }, // หมายเหตุ
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Room Template');
+
+    // Download file
+    XLSX.writeFile(wb, `Room_Import_Template_${eventName}.xlsx`);
+    toast.success('ดาวน์โหลด Template สำเร็จ');
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    if (!['csv', 'xlsx', 'xls'].includes(fileExt || '')) {
+      toast.error('กรุณาเลือกไฟล์ .csv หรือ .xlsx เท่านั้น');
+      return;
+    }
+
+    setImportFile(file);
+    parseImportFile(file);
+  };
+
+  const parseImportFile = async (file: File) => {
+    try {
+      setLoading(true);
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      // Parse and validate data
+      const parsedRooms: EventRoomInput[] = [];
+      const errors: string[] = [];
+
+      jsonData.forEach((row: any, index: number) => {
+        const rowNum = index + 2; // Excel row number (header is row 1)
+
+        // Extract data from columns
+        const buildingName = String(row['ชื่ออาคาร'] || '').trim();
+        const roomNumber = String(row['เลขห้อง'] || '').trim();
+        const roomTypeCategory = String(row['ประเภทห้อง'] || '').trim();
+        const maxOccupancy = parseInt(String(row['จำนวนผู้พักสูงสุด'] || '0'));
+        const isLockedStr = String(row['ล็อคห้อง (TRUE/FALSE)'] || 'FALSE').trim().toUpperCase();
+        const note = String(row['หมายเหตุ'] || '').trim();
+
+        // Validate required fields
+        if (!buildingName) {
+          errors.push(`แถว ${rowNum}: ไม่พบชื่ออาคาร`);
+          return;
+        }
+        if (!roomNumber) {
+          errors.push(`แถว ${rowNum}: ไม่พบเลขห้อง`);
+          return;
+        }
+        if (!maxOccupancy || maxOccupancy < 1) {
+          errors.push(`แถว ${rowNum}: จำนวนผู้พักสูงสุดต้องมากกว่า 0`);
+          return;
+        }
+
+        // Parse isLocked
+        const isLocked = isLockedStr === 'TRUE' || isLockedStr === '1';
+
+        parsedRooms.push({
+          buildingName,
+          roomNumber,
+          roomTypeCategory: roomTypeCategory || undefined,
+          maxOccupancy,
+          isLocked,
+          note: note || undefined,
+        });
+      });
+
+      if (errors.length > 0) {
+        toast.error(`พบข้อผิดพลาด ${errors.length} รายการ:\n${errors.slice(0, 3).join('\n')}`);
+        setImportPreview([]);
+        return;
+      }
+
+      if (parsedRooms.length === 0) {
+        toast.error('ไม่พบข้อมูลห้องพักในไฟล์');
+        return;
+      }
+
+      setImportPreview(parsedRooms);
+      toast.success(`พบข้อมูล ${parsedRooms.length} ห้อง พร้อมนำเข้า`);
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      toast.error('ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบรูปแบบไฟล์');
+      setImportPreview([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImportRooms = async () => {
+    if (importPreview.length === 0) {
+      toast.error('ไม่มีข้อมูลที่จะนำเข้า');
+      return;
+    }
+
+    try {
+      setImporting(true);
+
+      // Import rooms one by one
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      for (const room of importPreview) {
+        try {
+          const response = await fetch(`/api/events/${eventId}/rooms`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(room),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            const data = await response.json();
+            errorCount++;
+            errors.push(`${room.buildingName}-${room.roomNumber}: ${data.error}`);
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`${room.buildingName}-${room.roomNumber}: เกิดข้อผิดพลาด`);
+        }
+      }
+
+      // Show results
+      if (successCount > 0) {
+        toast.success(`นำเข้าสำเร็จ ${successCount} ห้อง`);
+      }
+      if (errorCount > 0) {
+        toast.error(`นำเข้าไม่สำเร็จ ${errorCount} ห้อง:\n${errors.slice(0, 3).join('\n')}`);
+      }
+
+      // Close modal and refresh
+      setShowImportModal(false);
+      setImportFile(null);
+      setImportPreview([]);
+      fetchRooms();
+    } catch (error) {
+      console.error('Error importing rooms:', error);
+      toast.error('เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleDeleteRoom = async (roomId: string) => {
     if (!confirm('คุณต้องการลบห้องนี้หรือไม่?')) return;
 
@@ -385,15 +585,37 @@ export default function RoomManagementModal({
                 <p className="text-sm text-gray-600">
                   จำนวนห้องทั้งหมด: {rooms.length} ห้อง
                 </p>
-                <button
-                  onClick={handleCreateRoom}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  เพิ่มห้องพัก
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                    title="ดาวน์โหลด Template Excel"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="hidden sm:inline">Template</span>
+                  </button>
+                  <button
+                    onClick={() => setShowImportModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+                    title="นำเข้าข้อมูลจาก Excel/CSV"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="hidden sm:inline">Import</span>
+                  </button>
+                  <button
+                    onClick={handleCreateRoom}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    เพิ่มห้องพัก
+                  </button>
+                </div>
               </div>
 
               {/* Room Form */}
@@ -730,6 +952,135 @@ export default function RoomManagementModal({
           </button>
         </div>
       </div>
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">นำเข้าข้อมูลห้องพัก</h3>
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportFile(null);
+                  setImportPreview([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">วิธีการใช้งาน:</h4>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+                  <li>คลิกปุ่ม "Template" เพื่อดาวน์โหลดไฟล์ตัวอย่าง</li>
+                  <li>เปิดไฟล์ด้วย Excel และกรอกข้อมูลห้องพักตามรูปแบบ</li>
+                  <li>บันทึกไฟล์และอัปโหลดที่นี่</li>
+                  <li>ตรวจสอบข้อมูลและกดยืนยันการนำเข้า</li>
+                </ol>
+              </div>
+
+              {/* Required Columns Info */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2">คอลัมน์ที่ต้องมี:</h4>
+                <ul className="space-y-1 text-sm text-gray-700">
+                  <li><strong>ชื่ออาคาร:</strong> ชื่อของอาคาร (เช่น A, B, C)</li>
+                  <li><strong>เลขห้อง:</strong> หมายเลขห้อง (เช่น 101, 102)</li>
+                  <li><strong>ประเภทห้อง:</strong> ประเภทห้องพัก (เช่น Twin, Double, Suite) - ไม่บังคับ</li>
+                  <li><strong>จำนวนผู้พักสูงสุด:</strong> จำนวนคนที่รองรับได้ (ตัวเลข)</li>
+                  <li><strong>ล็อคห้อง (TRUE/FALSE):</strong> ระบุว่าต้องการล็อคห้องหรือไม่</li>
+                  <li><strong>หมายเหตุ:</strong> ข้อความเพิ่มเติม - ไม่บังคับ</li>
+                </ul>
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  เลือกไฟล์ Excel/CSV
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleFileSelect}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {importFile && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    ไฟล์ที่เลือก: {importFile.name}
+                  </p>
+                )}
+              </div>
+
+              {/* Preview */}
+              {importPreview.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    ตัวอย่างข้อมูล ({importPreview.length} ห้อง)
+                  </h4>
+                  <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">อาคาร</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">ห้อง</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">ประเภท</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">จำนวนคน</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">ล็อค</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">หมายเหตุ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {importPreview.map((room, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-gray-900">{room.buildingName}</td>
+                            <td className="px-3 py-2 text-gray-900">{room.roomNumber}</td>
+                            <td className="px-3 py-2 text-gray-600">{room.roomTypeCategory || '-'}</td>
+                            <td className="px-3 py-2 text-gray-900 text-center">{room.maxOccupancy}</td>
+                            <td className="px-3 py-2">
+                              {room.isLocked ? (
+                                <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">🔒 ล็อค</span>
+                              ) : (
+                                <span className="text-xs text-green-600">ไม่ล็อค</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-gray-600 text-xs truncate max-w-xs">{room.note || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportFile(null);
+                  setImportPreview([]);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleImportRooms}
+                disabled={importing || importPreview.length === 0}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {importing ? 'กำลังนำเข้า...' : `นำเข้า ${importPreview.length} ห้อง`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Transfer Modal */}
       {transferModalOpen && transferData && (

@@ -2465,28 +2465,30 @@ export default function EventDetailPage() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Link href="/admin/events" className="text-gray-500 hover:text-gray-700">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </Link>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{eventData.event.eventName}</h1>
-              {eventData.event.eventNameEN && (
-                <p className="text-sm text-gray-500">{eventData.event.eventNameEN}</p>
-              )}
-              {/* Event Date */}
-              {eventData.event.eventDate && (
-                <div className="flex items-center gap-1.5 text-sm text-blue-600 font-medium mt-1">
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span>{formatEventDateRange(eventData.event.eventDate, eventData.event.eventEndDate)}</span>
-                </div>
-              )}
-              {/* Status Badges */}
-              <div className="flex flex-wrap gap-2 mt-2">
+          {/* Desktop: Horizontal layout, Mobile: Stacked layout */}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            <div className="flex items-center gap-4 flex-1">
+              <Link href="/admin/events" className="text-gray-500 hover:text-gray-700 flex-shrink-0">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </Link>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{eventData.event.eventName}</h1>
+                {eventData.event.eventNameEN && (
+                  <p className="text-sm text-gray-500">{eventData.event.eventNameEN}</p>
+                )}
+                {/* Event Date */}
+                {eventData.event.eventDate && (
+                  <div className="flex items-center gap-1.5 text-sm text-blue-600 font-medium mt-1">
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>{formatEventDateRange(eventData.event.eventDate, eventData.event.eventEndDate)}</span>
+                  </div>
+                )}
+                {/* Status Badges - Single row on all screen sizes */}
+                <div className="flex flex-wrap gap-2 mt-2">
                 {/* Capacity Status - Highest priority */}
                 {(() => {
                   const isFull = eventData.event.maxCapacity > 0 && eventData.summary.totalAttendees >= eventData.event.maxCapacity;
@@ -2535,10 +2537,11 @@ export default function EventDetailPage() {
                     ยังไม่ Published
                   </span>
                 )}
+                </div>
               </div>
             </div>
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            {/* Action Buttons - Separate row on mobile, inline on desktop */}
+            <div className="flex flex-wrap items-center gap-2">
               {/* Copy Quick Report Button */}
               <button
                 onClick={handleCopyQuickReport}
@@ -3115,11 +3118,11 @@ export default function EventDetailPage() {
                       : 'hover:bg-gray-50 border-l-4 border-transparent'
                   }`}
                 >
-                  {/* Header Section with LINE Profile - Horizontal Layout */}
-                  <div className="flex items-start gap-4 mb-3">
+                  {/* Header Section with LINE Profile - Improved Mobile Layout */}
+                  <div className="flex items-start gap-3 sm:gap-4 mb-3">
                     {/* Selection Checkbox (only if has LINE user ID) */}
                     {attendee.registration.lineUserId && attendee.registration.lineUserId.trim() !== '' && (
-                      <div className="flex-shrink-0 pt-3">
+                      <div className="flex-shrink-0 pt-2 sm:pt-3">
                         <input
                           type="checkbox"
                           checked={selectedRegistrationsForMessage.has(attendee.registration.registrationId)}
@@ -3130,35 +3133,36 @@ export default function EventDetailPage() {
                       </div>
                     )}
 
-                    {/* LINE Profile Picture */}
+                    {/* LINE Profile Picture - Smaller on mobile */}
                     <div className="flex-shrink-0">
                       {attendee.lineProfile?.lineProfilePicture ? (
                         <Image
                           src={attendee.lineProfile.lineProfilePicture}
                           alt={attendee.lineProfile.lineDisplayName || 'Profile'}
-                          width={56}
-                          height={56}
-                          className="rounded-full object-cover"
+                          width={48}
+                          height={48}
+                          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center">
-                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-200 rounded-full flex items-center justify-center">
+                          <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         </div>
                       )}
                     </div>
 
-                    {/* Basic Info */}
+                    {/* Basic Info - More space on mobile */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      {/* Name and verified icon */}
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {/* Name from LINE profile or registration - clickable if has memberId */}
                         {attendee.member?.memberId ? (
                           <Link
                             href={`/members/${attendee.member.memberId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline truncate transition-colors"
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline break-words transition-colors"
                             title="จัดการชื่อ (เปิดในแท็บใหม่)"
                           >
                             {attendee.lineProfile?.lineDisplayName ||
@@ -3167,7 +3171,7 @@ export default function EventDetailPage() {
                              'ไม่ระบุชื่อ'}
                           </Link>
                         ) : (
-                          <h3 className="font-medium text-gray-900 truncate">
+                          <h3 className="font-medium text-gray-900 break-words">
                             {attendee.lineProfile?.lineDisplayName ||
                              attendee.member?.fullNameTH ||
                              attendee.registration.contactName ||
@@ -3181,7 +3185,10 @@ export default function EventDetailPage() {
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
                         )}
+                      </div>
 
+                      {/* Badges - First row: Role and Member ID */}
+                      <div className="flex flex-wrap gap-1.5 mb-1.5">
                         {/* Role badge based on user role */}
                         {attendee.lineProfile?.role && (() => {
                           const role = attendee.lineProfile.role;
@@ -3218,7 +3225,10 @@ export default function EventDetailPage() {
                             {attendee.member.memberId}
                           </span>
                         )}
+                      </div>
 
+                      {/* Badges - Second row: Payment and Room Status */}
+                      <div className="flex flex-wrap gap-1.5">
                         {/* Payment Status badge */}
                         {attendee.registration.paymentStatus && (
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeClass(attendee.registration.paymentStatus)}`}>

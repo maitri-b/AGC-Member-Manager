@@ -199,9 +199,15 @@ export async function GET(
         eventName: event.eventName,
         eventNameEN: event.eventNameEN,
         eventDate: event.eventDate,
+        eventEndDate: event.eventEndDate,
         location: event.location,
         description: event.description,
         year: event.year,
+        // Event status flags
+        isActive: event.isActive ?? true,
+        isPublished: event.isPublished ?? false,
+        registrationOpen: event.registrationOpen ?? false,
+        maxCapacity: event.maxCapacity || 0,
         // Event pricing configuration
         pricingType: event.pricingType || 'fixed',
         registrationFee: event.registrationFee || 0,

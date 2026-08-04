@@ -738,6 +738,7 @@ export interface EventRoom {
   eventId: string;             // Which event this room belongs to
   buildingName: string;        // Building name (e.g., "A", "B", "C")
   roomNumber: string;          // Room number (e.g., "101", "102")
+  roomTypeCategory?: string;   // Room type (e.g., "Twin", "Double", "Triple", "Suite", "Deluxe Twin")
   maxOccupancy: number;        // Maximum number of occupants
   createdAt: string;           // ISO timestamp
   createdBy: string;           // User ID who created
@@ -749,6 +750,7 @@ export interface EventRoom {
 export interface EventRoomInput {
   buildingName: string;
   roomNumber: string;
+  roomTypeCategory?: string;
   maxOccupancy: number;
 }
 

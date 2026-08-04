@@ -14,6 +14,7 @@ import RegisterOnBehalfModal from './RegisterOnBehalfModal';
 import PaymentDetailsModal from '@/components/admin/PaymentDetailsModal';
 import PromoteEventModal from '@/components/admin/PromoteEventModal';
 import MessageTemplateModal from '@/components/admin/MessageTemplateModal';
+import RoomManagementModal from '@/components/admin/RoomManagementModal';
 
 interface Event {
   eventId: string;
@@ -465,6 +466,7 @@ export default function EventDetailPage() {
   const [expandedRegistrations, setExpandedRegistrations] = useState<Set<string>>(new Set());
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [showRoomManagementModal, setShowRoomManagementModal] = useState(false);
   const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<{
     attendeeCount: number;
@@ -475,8 +477,18 @@ export default function EventDetailPage() {
     specialRequests?: string;
     attendeeTypeSelections?: Array<{ typeId: string; quantity: number }>;
     roomAllocations?: Array<{ roomTypeId: string; roomCount: number }>;
+    roomAssignments?: Array<{ roomId: string; attendeeIndex: number }>;
   }>({ attendeeCount: 1, attendeeNames: [''], status: 'รอดำเนินการ' });
   const [updating, setUpdating] = useState(false);
+
+  // Room management state
+  const [availableRooms, setAvailableRooms] = useState<Array<{
+    roomId: string;
+    buildingName: string;
+    roomNumber: string;
+    maxOccupancy: number;
+    currentOccupancy: number;
+  }>>([]);
 
   // Payment confirmation state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -721,6 +733,58 @@ export default function EventDetailPage() {
       setError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailableRooms = async () => {
+    if (!eventId) return;
+
+    try {
+      // Fetch all rooms for this event
+      const roomsResponse = await fetch(`/api/events/${eventId}/rooms`);
+      if (!roomsResponse.ok) throw new Error('Failed to fetch rooms');
+      const roomsData = await roomsResponse.json();
+      const rooms = roomsData.rooms || [];
+
+      // Fetch all registrations to calculate current occupancy
+      const eventResponse = await fetch(`/api/events/${eventId}`);
+      if (!eventResponse.ok) throw new Error('Failed to fetch event data');
+      const eventData = await eventResponse.json();
+      const registrations = eventData.attendees || [];
+
+      // Calculate current occupancy for each room
+      const occupancyMap: Record<string, number> = {};
+
+      registrations.forEach((attendee: any) => {
+        try {
+          if (attendee.registration.roomAssignments) {
+            const assignments = JSON.parse(attendee.registration.roomAssignments);
+            if (Array.isArray(assignments)) {
+              assignments.forEach((assignment: any) => {
+                if (assignment.roomId) {
+                  occupancyMap[assignment.roomId] = (occupancyMap[assignment.roomId] || 0) + 1;
+                }
+              });
+            }
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      });
+
+      // Build available rooms list with current occupancy
+      const roomsWithOccupancy = rooms.map((room: any) => ({
+        roomId: room.roomId,
+        buildingName: room.buildingName,
+        roomNumber: room.roomNumber,
+        roomTypeCategory: room.roomTypeCategory,
+        maxOccupancy: room.maxOccupancy,
+        currentOccupancy: occupancyMap[room.roomId] || 0,
+      }));
+
+      setAvailableRooms(roomsWithOccupancy);
+    } catch (error) {
+      console.error('Error fetching available rooms:', error);
     }
   };
 
@@ -1164,6 +1228,16 @@ export default function EventDetailPage() {
       console.error('Error parsing roomAllocations:', e);
     }
 
+    // Parse room assignments
+    let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
+    try {
+      if (attendee.registration.roomAssignments) {
+        roomAssignments = JSON.parse(attendee.registration.roomAssignments);
+      }
+    } catch (e) {
+      console.error('Error parsing roomAssignments:', e);
+    }
+
     setEditFormData({
       attendeeCount: attendee.registration.attendeeCount || 1,
       attendeeNames: names,
@@ -1173,7 +1247,11 @@ export default function EventDetailPage() {
       specialRequests: attendee.registration.specialRequests || '',
       attendeeTypeSelections,
       roomAllocations,
+      roomAssignments,
     });
+
+    // Fetch available rooms
+    fetchAvailableRooms();
   };
 
   const handleCancelEdit = () => {
@@ -1277,6 +1355,11 @@ export default function EventDetailPage() {
         updateData.room_allocations = JSON.stringify(editFormData.roomAllocations);
       }
 
+      // Include room assignments if present
+      if (editFormData.roomAssignments !== undefined) {
+        updateData.room_assignments = JSON.stringify(editFormData.roomAssignments);
+      }
+
       const response = await fetch(`/api/events/${eventId}/admin-update-registration`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1324,6 +1407,20 @@ export default function EventDetailPage() {
     const newNames = [...editFormData.attendeeNames];
     newNames[index] = value;
     setEditFormData({ ...editFormData, attendeeNames: newNames });
+  };
+
+  const handleRoomAssignmentChange = (attendeeIndex: number, roomId: string) => {
+    const currentAssignments = [...(editFormData.roomAssignments || [])];
+
+    // Remove any existing assignment for this attendee
+    const filteredAssignments = currentAssignments.filter(a => a.attendeeIndex !== attendeeIndex);
+
+    // Add new assignment if a room was selected (not empty)
+    if (roomId) {
+      filteredAssignments.push({ roomId, attendeeIndex });
+    }
+
+    setEditFormData({ ...editFormData, roomAssignments: filteredAssignments });
   };
 
   // Check if registration has approved payments
@@ -2467,6 +2564,18 @@ export default function EventDetailPage() {
                 </svg>
                 <span className="hidden sm:inline">ส่งข้อความ LINE</span>
               </button>
+
+              {/* Room Management Button */}
+              <button
+                onClick={() => setShowRoomManagementModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                title="จัดการห้องพัก"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span className="hidden sm:inline">จัดการห้องพัก</span>
+              </button>
             </div>
           </div>
         </div>
@@ -3466,19 +3575,48 @@ export default function EventDetailPage() {
                         {/* Attendee Names */}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">
-                            ชื่อผู้เข้าร่วม
+                            ชื่อผู้เข้าร่วม {availableRooms.length > 0 && '& เลขห้องพัก'}
                           </label>
                           <div className="space-y-2">
-                            {Array.from({ length: editFormData.attendeeCount }).map((_, index) => (
-                              <input
-                                key={index}
-                                type="text"
-                                value={editFormData.attendeeNames[index] || ''}
-                                onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
-                                placeholder={index === 0 ? 'ชื่อผู้ติดต่อ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
-                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            ))}
+                            {Array.from({ length: editFormData.attendeeCount }).map((_, index) => {
+                              const currentAssignment = editFormData.roomAssignments?.find(a => a.attendeeIndex === index);
+                              const currentRoomId = currentAssignment?.roomId || '';
+
+                              return (
+                                <div key={index} className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={editFormData.attendeeNames[index] || ''}
+                                    onChange={(e) => handleAttendeeNameChange(index, e.target.value)}
+                                    placeholder={index === 0 ? 'ชื่อผู้ติดต่อ' : `ชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
+                                    className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                  {availableRooms.length > 0 && (
+                                    <select
+                                      value={currentRoomId}
+                                      onChange={(e) => handleRoomAssignmentChange(index, e.target.value)}
+                                      className="w-48 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                      <option value="">- ไม่ระบุห้อง -</option>
+                                      {availableRooms
+                                        .filter(room => {
+                                          // Show room if it's the currently selected room OR if it's not full
+                                          if (room.roomId === currentRoomId) return true;
+                                          return room.currentOccupancy < room.maxOccupancy;
+                                        })
+                                        .map(room => {
+                                          const label = `${room.buildingName}-${room.roomNumber}${room.roomTypeCategory ? ` (${room.roomTypeCategory})` : ''} [${room.currentOccupancy}/${room.maxOccupancy}]`;
+                                          return (
+                                            <option key={room.roomId} value={room.roomId}>
+                                              {label}
+                                            </option>
+                                          );
+                                        })}
+                                    </select>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
 

@@ -111,6 +111,7 @@ export async function POST(
       eventId,
       buildingName: body.buildingName,
       roomNumber: body.roomNumber,
+      roomTypeCategory: body.roomTypeCategory,
       maxOccupancy: body.maxOccupancy,
       createdAt: now,
       createdBy: session.user.id,

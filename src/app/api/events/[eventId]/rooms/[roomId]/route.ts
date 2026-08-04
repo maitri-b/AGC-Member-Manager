@@ -69,6 +69,7 @@ export async function PUT(
     const updateData = {
       buildingName: body.buildingName,
       roomNumber: body.roomNumber,
+      roomTypeCategory: body.roomTypeCategory,
       maxOccupancy: body.maxOccupancy,
       updatedAt: new Date().toISOString(),
       updatedBy: session.user.id,

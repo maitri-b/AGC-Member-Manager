@@ -1234,8 +1234,8 @@ export default function EventDetailPage() {
     // Parse room assignments
     let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
     try {
-      if (attendee.registration.roomAssignments) {
-        roomAssignments = JSON.parse(attendee.registration.roomAssignments);
+      if ((attendee.registration as any).roomAssignments) {
+        roomAssignments = JSON.parse((attendee.registration as any).roomAssignments);
       }
     } catch (e) {
       console.error('Error parsing roomAssignments:', e);

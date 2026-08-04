@@ -40,6 +40,10 @@ export default function RoomManagementModal({
   const [editedRooms, setEditedRooms] = useState<Record<string, EventRoom>>({});
   const [batchSaving, setBatchSaving] = useState(false);
 
+  // Filter and search state for Summary tab
+  const [roomFilter, setRoomFilter] = useState<'all' | '1-person' | '2-person' | '3-person' | 'empty'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Room transfer state
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [transferData, setTransferData] = useState<{
@@ -1088,6 +1092,92 @@ export default function RoomManagementModal({
                 </div>
               </div>
 
+              {/* Filter and Search Controls */}
+              <div className="space-y-4">
+                {/* Filter Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setRoomFilter('all')}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                      roomFilter === 'all'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    ทั้งหมด
+                  </button>
+                  <button
+                    onClick={() => setRoomFilter('1-person')}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                      roomFilter === '1-person'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    ห้องพักเดี่ยว (1 คน)
+                  </button>
+                  <button
+                    onClick={() => setRoomFilter('2-person')}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                      roomFilter === '2-person'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    ห้องพัก 2 คน
+                  </button>
+                  <button
+                    onClick={() => setRoomFilter('3-person')}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                      roomFilter === '3-person'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    ห้องพัก 3 คน
+                  </button>
+                  <button
+                    onClick={() => setRoomFilter('empty')}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                      roomFilter === 'empty'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    ห้องว่าง
+                  </button>
+                </div>
+
+                {/* Search Box */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="ค้นหา เลขห้อง (เช่น B-101), ชื่อผู้เข้าพัก, ชื่อบริษัท, รหัสการจอง..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <svg
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Room List with Occupants */}
               {loading ? (
                 <div className="text-center py-12 text-gray-500">กำลังโหลด...</div>
@@ -1098,13 +1188,56 @@ export default function RoomManagementModal({
               ) : (
                 <div className="space-y-4">
                   {/* Group by building */}
-                  {Object.entries(
-                    roomsWithOccupants.reduce((acc, room) => {
+                  {(() => {
+                    // Apply filters and search
+                    let filteredRooms = roomsWithOccupants.filter(room => {
+                      // Apply room type filter
+                      if (roomFilter === 'empty') return room.occupants.length === 0 && !room.isLocked;
+                      if (roomFilter === '1-person') return room.maxOccupancy === 1;
+                      if (roomFilter === '2-person') return room.maxOccupancy === 2;
+                      if (roomFilter === '3-person') return room.maxOccupancy === 3;
+                      return true; // 'all'
+                    });
+
+                    // Apply search query
+                    if (searchQuery.trim()) {
+                      const query = searchQuery.toLowerCase().trim();
+                      filteredRooms = filteredRooms.filter(room => {
+                        // Search in room number and building
+                        if (room.roomNumber.toLowerCase().includes(query)) return true;
+                        if (room.buildingName.toLowerCase().includes(query)) return true;
+
+                        // Search in combined format (e.g., "B-101", "A-205")
+                        const combinedRoomId = `${room.buildingName}-${room.roomNumber}`.toLowerCase();
+                        if (combinedRoomId.includes(query)) return true;
+
+                        // Search in occupants
+                        return room.occupants.some(occupant => {
+                          if (occupant.attendeeName.toLowerCase().includes(query)) return true;
+                          if (occupant.companyName.toLowerCase().includes(query)) return true;
+                          if (occupant.registrationId.toLowerCase().includes(query)) return true;
+                          return false;
+                        });
+                      });
+                    }
+
+                    // Group filtered rooms by building
+                    const groupedRooms = filteredRooms.reduce((acc, room) => {
                       if (!acc[room.buildingName]) acc[room.buildingName] = [];
                       acc[room.buildingName].push(room);
                       return acc;
-                    }, {} as Record<string, RoomWithOccupants[]>)
-                  ).map(([buildingName, buildingRooms]) => {
+                    }, {} as Record<string, RoomWithOccupants[]>);
+
+                    // Show message if no results
+                    if (Object.keys(groupedRooms).length === 0) {
+                      return (
+                        <div className="text-center py-12 text-gray-500">
+                          ไม่พบห้องพักที่ตรงกับเงื่อนไข
+                        </div>
+                      );
+                    }
+
+                    return Object.entries(groupedRooms).map(([buildingName, buildingRooms]) => {
                     const emptyRoomsCount = buildingRooms.filter(r => r.occupants.length === 0 && !r.isLocked).length;
 
                     return (
@@ -1203,7 +1336,8 @@ export default function RoomManagementModal({
                       </div>
                     </div>
                     );
-                  })}
+                  });
+                  })()}
                 </div>
               )}
             </div>

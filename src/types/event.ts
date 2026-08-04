@@ -96,6 +96,9 @@ export interface EventRegistration {
   // Room Allocation (New - for events with accommodation)
   roomAllocations?: string;         // room_allocations (JSON stringified RoomAllocation[])
 
+  // Room Assignments (New - specific room assignments for each attendee)
+  roomAssignments?: string;         // room_assignments (JSON stringified Array<{ roomId: string; attendeeIndex: number }>)
+
   // Special Charges (New - admin can add custom charges to specific registrations)
   specialCharges?: string;          // special_charges (JSON stringified SpecialCharge[])
 

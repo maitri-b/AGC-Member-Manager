@@ -50,10 +50,16 @@ export async function GET(request: NextRequest) {
     const lineUserIds = [...new Set(history.map((h: any) => h.lineUserId))];
 
     // Fetch from users collection to get member info
-    const usersSnapshot = await adminDb()
-      .collection('users')
-      .where('lineUserId', 'in', lineUserIds.slice(0, 10)) // Firestore limit
-      .get();
+    // Firestore 'in' query limit is 10, so batch the requests
+    const userDocs: any[] = [];
+    for (let i = 0; i < lineUserIds.length; i += 10) {
+      const batch = lineUserIds.slice(i, i + 10);
+      const snapshot = await adminDb()
+        .collection('users')
+        .where('lineUserId', 'in', batch)
+        .get();
+      userDocs.push(...snapshot.docs);
+    }
 
     // Also fetch all members to get full details
     const membersSnapshot = await adminDb()
@@ -70,7 +76,7 @@ export async function GET(request: NextRequest) {
     });
 
     const memberMap: Record<string, any> = {};
-    usersSnapshot.docs.forEach(doc => {
+    userDocs.forEach(doc => {
       const userData = doc.data();
       const memberId = userData.memberId;
       const memberDetails = memberId ? membersDataMap[memberId] : null;

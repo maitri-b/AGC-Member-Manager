@@ -1063,7 +1063,7 @@ export default function RoomManagementModal({
           ) : (
             <div className="space-y-4">
               {/* Summary Stats */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                   <div className="text-2xl font-bold text-blue-900">{roomsWithOccupants.length}</div>
                   <div className="text-sm text-blue-700">ห้องทั้งหมด</div>
@@ -1079,6 +1079,12 @@ export default function RoomManagementModal({
                     {roomsWithOccupants.reduce((sum, r) => sum + r.occupants.length, 0)}
                   </div>
                   <div className="text-sm text-amber-700">ผู้เข้าพักทั้งหมด</div>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-red-900">
+                    {roomsWithOccupants.filter(r => r.isLocked).length}
+                  </div>
+                  <div className="text-sm text-red-700">ห้องถูกล็อค</div>
                 </div>
               </div>
 

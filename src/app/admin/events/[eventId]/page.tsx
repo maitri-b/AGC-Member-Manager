@@ -5307,6 +5307,14 @@ export default function EventDetailPage() {
         }
       />
 
+      {/* Room Management Modal */}
+      <RoomManagementModal
+        isOpen={showRoomManagementModal}
+        onClose={() => setShowRoomManagementModal(false)}
+        eventId={eventId as string}
+        eventName={eventData?.event?.eventName || ''}
+      />
+
       {/* Edit Deadline Modal */}
       {editDeadlineModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

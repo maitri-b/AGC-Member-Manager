@@ -2410,10 +2410,24 @@ export default function EventDetailPage() {
         // Invalid JSON, skip this attendee
       }
 
-      // Special filter: "unassigned" shows registrations with no room allocations
+      // Special filter: "unassigned" shows registrations with unassigned attendees (no room number assignments)
       if (roomTypeFilter === 'unassigned') {
-        const hasAnyRoom = roomAllocations.length > 0 && roomAllocations.some(ra => ra.roomCount > 0);
-        if (hasAnyRoom) return false;
+        // Check room assignments instead of room allocations
+        let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
+        try {
+          if ((attendee.registration as any).roomAssignments) {
+            roomAssignments = JSON.parse((attendee.registration as any).roomAssignments);
+          }
+        } catch (e) {
+          // Invalid JSON or empty
+        }
+
+        const attendeeCount = attendee.registration.attendeeCount || 1;
+        const assignedCount = roomAssignments.length;
+        const hasUnassigned = attendeeCount > assignedCount;
+
+        // Only show if there are unassigned attendees
+        if (!hasUnassigned) return false;
       } else {
         // Check if this attendee has selected the filtered room type
         const hasRoomType = roomAllocations.some(ra => ra.roomTypeId === roomTypeFilter && ra.roomCount > 0);
@@ -3012,18 +3026,23 @@ export default function EventDetailPage() {
                         }
                       }
 
-                      // Check if has no room allocations
-                      let roomAllocations: Array<{ roomTypeId: string; roomCount: number }> = [];
+                      // Check if has unassigned attendees (not assigned to specific room numbers)
+                      let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
                       try {
-                        if (attendee.registration.roomAllocations) {
-                          roomAllocations = JSON.parse(attendee.registration.roomAllocations);
+                        if ((attendee.registration as any).roomAssignments) {
+                          roomAssignments = JSON.parse((attendee.registration as any).roomAssignments);
                         }
                       } catch (e) {
                         // Invalid JSON or empty
                       }
 
-                      const hasAnyRoom = roomAllocations.length > 0 && roomAllocations.some(ra => ra.roomCount > 0);
-                      return hasAnyRoom ? count : count + 1;
+                      // Count attendees who haven't been assigned to specific rooms
+                      const attendeeCount = attendee.registration.attendeeCount || 1;
+                      const assignedCount = roomAssignments.length;
+                      const unassigned = attendeeCount - assignedCount;
+
+                      // Only count if there are unassigned attendees
+                      return unassigned > 0 ? count + 1 : count;
                     }, 0);
 
                     return (

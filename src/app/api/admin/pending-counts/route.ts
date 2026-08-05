@@ -44,7 +44,7 @@ export async function GET() {
         .count()
         .get(),
       // Count pending disputes
-      db.collection('disputes')
+      db.collection('disputeRequests')
         .where('status', '==', 'pending')
         .count()
         .get(),

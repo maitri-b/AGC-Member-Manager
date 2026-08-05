@@ -864,12 +864,8 @@ export default function ProfilePage() {
                             <p className="text-sm text-gray-500">{formatEventDateRange(event.eventDate, event.eventEndDate)}</p>
                           </div>
                           <div className="text-right">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              event.checkedIn
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {event.checkedIn ? 'เข้าร่วมแล้ว' : 'ลงทะเบียนแล้ว'}
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              เข้าร่วมแล้ว
                             </span>
                             <p className="text-sm text-gray-500 mt-1">{event.attendeeCount} คน</p>
                           </div>

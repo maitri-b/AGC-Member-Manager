@@ -1080,45 +1080,53 @@ export default function RoomManagementModal({
             }
           }
 
-          // Helper function to get color based on payment status
-          const getStatusColor = (status: 'paid' | 'pending' | 'partial' | 'unpaid'): string => {
-            if (status === 'paid') return '003366'; // Dark blue
-            if (status === 'partial') return '6A3D9A'; // Dark purple
-            if (status === 'pending') return '996600'; // Dark yellow/brown
-            return 'CC5500'; // Dark orange (unpaid)
+          // Helper function to determine worst payment status for company/registration ID cells
+          const getWorstStatus = (statuses: Array<'paid' | 'pending' | 'partial' | 'unpaid'>): 'paid' | 'pending' | 'partial' | 'unpaid' => {
+            if (statuses.includes('unpaid')) return 'unpaid';
+            if (statuses.includes('partial')) return 'partial';
+            if (statuses.includes('pending')) return 'pending';
+            return 'paid';
           };
 
-          // Apply rich text formatting for company column
+          // Apply color for company column based on worst payment status
           const registrationIdCol = companyCol + 1; // รหัสการจอง column
           if (C === companyCol && row._companyPayments && row._companyPayments.length > 0) {
-            const richText: any[] = [];
-            row._companyPayments.forEach((company: any, idx: number) => {
-              if (idx > 0) {
-                richText.push({ text: ', ', font: { color: { rgb: cellFontColor } } });
-              }
-              richText.push({
-                text: company.name,
-                font: { color: { rgb: getStatusColor(company.status) } }
-              });
-            });
-            ws[cellAddress].r = richText;
-            delete ws[cellAddress].v; // Remove plain text value when using rich text
+            const statuses = row._companyPayments.map((c: any) => c.status);
+            const worstStatus = getWorstStatus(statuses);
+
+            if (worstStatus === 'paid') {
+              cellFillColor = 'CCE5FF'; // Light blue
+              cellFontColor = '003366'; // Dark blue
+            } else if (worstStatus === 'partial') {
+              cellFillColor = 'E6D9F2'; // Light lavender
+              cellFontColor = '6A3D9A'; // Dark purple
+            } else if (worstStatus === 'pending') {
+              cellFillColor = 'FFFFCC'; // Light yellow
+              cellFontColor = '996600'; // Dark yellow/brown
+            } else if (worstStatus === 'unpaid') {
+              cellFillColor = 'FFE5CC'; // Light orange
+              cellFontColor = 'CC5500'; // Dark orange
+            }
           }
 
-          // Apply rich text formatting for registration ID column
+          // Apply color for registration ID column based on worst payment status
           if (C === registrationIdCol && row._registrationPayments && row._registrationPayments.length > 0) {
-            const richText: any[] = [];
-            row._registrationPayments.forEach((reg: any, idx: number) => {
-              if (idx > 0) {
-                richText.push({ text: ', ', font: { color: { rgb: cellFontColor } } });
-              }
-              richText.push({
-                text: reg.id,
-                font: { color: { rgb: getStatusColor(reg.status) } }
-              });
-            });
-            ws[cellAddress].r = richText;
-            delete ws[cellAddress].v; // Remove plain text value when using rich text
+            const statuses = row._registrationPayments.map((r: any) => r.status);
+            const worstStatus = getWorstStatus(statuses);
+
+            if (worstStatus === 'paid') {
+              cellFillColor = 'CCE5FF'; // Light blue
+              cellFontColor = '003366'; // Dark blue
+            } else if (worstStatus === 'partial') {
+              cellFillColor = 'E6D9F2'; // Light lavender
+              cellFontColor = '6A3D9A'; // Dark purple
+            } else if (worstStatus === 'pending') {
+              cellFillColor = 'FFFFCC'; // Light yellow
+              cellFontColor = '996600'; // Dark yellow/brown
+            } else if (worstStatus === 'unpaid') {
+              cellFillColor = 'FFE5CC'; // Light orange
+              cellFontColor = 'CC5500'; // Dark orange
+            }
           }
 
           ws[cellAddress].s = {

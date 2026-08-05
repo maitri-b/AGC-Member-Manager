@@ -37,6 +37,7 @@ interface User {
   lockedReason?: string;
   lineHistory?: LineHistoryEntry[];
   adminNote?: string;
+  adminNoteIcon?: string;
   adminNoteUpdatedAt?: { _seconds: number } | string;
   adminNoteUpdatedBy?: string;
   adminNoteUpdatedByName?: string;
@@ -90,6 +91,7 @@ export default function AdminPage() {
   // Admin note states
   const [editingNoteUser, setEditingNoteUser] = useState<User | null>(null);
   const [adminNoteText, setAdminNoteText] = useState('');
+  const [adminNoteIcon, setAdminNoteIcon] = useState('note');
   const [savingNote, setSavingNote] = useState(false);
 
   // Send message states
@@ -455,6 +457,20 @@ export default function AdminPage() {
     return new Date(timestamp._seconds * 1000).toLocaleString('th-TH');
   };
 
+  // Get icon for admin note
+  const getNoteIcon = (iconType?: string) => {
+    const icons: { [key: string]: string } = {
+      urgent: '🔴',
+      reminder: '⏰',
+      note: '📝',
+      schedule: '📅',
+      call: '📞',
+      waiting: '⏳',
+      alert: '⚠️',
+    };
+    return icons[iconType || 'note'] || '📝';
+  };
+
   // Handle admin note save
   const handleSaveAdminNote = async () => {
     if (!editingNoteUser) return;
@@ -465,7 +481,8 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: editingNoteUser.id,
-          adminNote: adminNoteText
+          adminNote: adminNoteText,
+          adminNoteIcon: adminNoteIcon
         }),
       });
 
@@ -477,6 +494,7 @@ export default function AdminPage() {
       setSuccess('บันทึกหมายเหตุเรียบร้อยแล้ว');
       setEditingNoteUser(null);
       setAdminNoteText('');
+      setAdminNoteIcon('note');
       fetchUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -988,16 +1006,18 @@ export default function AdminPage() {
                             onClick={() => {
                               setEditingNoteUser(user);
                               setAdminNoteText(user.adminNote || '');
+                              setAdminNoteIcon(user.adminNoteIcon || 'note');
                             }}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-2xl hover:scale-110 transition-transform"
                             title="ดูหมายเหตุ"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                            </svg>
+                            {getNoteIcon(user.adminNoteIcon)}
                           </button>
                           <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 bg-gray-900 text-white text-xs rounded-lg p-3 z-10 shadow-lg">
-                            <div className="font-semibold mb-1">หมายเหตุจาก Admin:</div>
+                            <div className="font-semibold mb-1 flex items-center gap-2">
+                              <span>{getNoteIcon(user.adminNoteIcon)}</span>
+                              <span>หมายเหตุจาก Admin:</span>
+                            </div>
                             <div className="whitespace-pre-wrap break-words">{user.adminNote}</div>
                             {user.adminNoteUpdatedByName && (
                               <div className="text-gray-400 mt-2 text-xs">
@@ -1012,6 +1032,7 @@ export default function AdminPage() {
                           onClick={() => {
                             setEditingNoteUser(user);
                             setAdminNoteText('');
+                            setAdminNoteIcon('note');
                           }}
                           className="text-gray-400 hover:text-gray-600"
                           title="เพิ่มหมายเหตุ"
@@ -1489,23 +1510,62 @@ export default function AdminPage() {
                 User: {editingNoteUser.lineDisplayName || 'Unknown'}
               </p>
             </div>
-            <div className="p-6">
-              <textarea
-                value={adminNoteText}
-                onChange={(e) => setAdminNoteText(e.target.value)}
-                placeholder="เพิ่มหมายเหตุเกี่ยวกับ user นี้..."
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                หมายเหตุนี้จะแสดงเฉพาะ Admin เท่านั้น
-              </p>
+            <div className="p-6 space-y-4">
+              {/* Icon Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  เลือกประเภทหมายเหตุ
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'urgent', label: 'เรื่องด่วน', icon: '🔴', color: 'bg-red-100 border-red-300 hover:bg-red-200' },
+                    { id: 'reminder', label: 'เตือนความจำ', icon: '⏰', color: 'bg-yellow-100 border-yellow-300 hover:bg-yellow-200' },
+                    { id: 'note', label: 'Note ทั่วไป', icon: '📝', color: 'bg-blue-100 border-blue-300 hover:bg-blue-200' },
+                    { id: 'schedule', label: 'ตั้งเวลา', icon: '📅', color: 'bg-purple-100 border-purple-300 hover:bg-purple-200' },
+                    { id: 'call', label: 'โทรหา', icon: '📞', color: 'bg-green-100 border-green-300 hover:bg-green-200' },
+                    { id: 'waiting', label: 'รอการตอบรับ', icon: '⏳', color: 'bg-orange-100 border-orange-300 hover:bg-orange-200' },
+                    { id: 'alert', label: 'ตกใจ', icon: '⚠️', color: 'bg-pink-100 border-pink-300 hover:bg-pink-200' },
+                  ].map((iconType) => (
+                    <button
+                      key={iconType.id}
+                      type="button"
+                      onClick={() => setAdminNoteIcon(iconType.id)}
+                      className={`flex flex-col items-center gap-1 p-3 border-2 rounded-lg transition-all ${
+                        adminNoteIcon === iconType.id
+                          ? iconType.color + ' border-opacity-100 shadow-md'
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-2xl">{iconType.icon}</span>
+                      <span className="text-xs font-medium text-gray-700">{iconType.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Note Text */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  หมายเหตุ
+                </label>
+                <textarea
+                  value={adminNoteText}
+                  onChange={(e) => setAdminNoteText(e.target.value)}
+                  placeholder="เพิ่มหมายเหตุเกี่ยวกับ user นี้..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  หมายเหตุนี้จะแสดงเฉพาะ Admin เท่านั้น
+                </p>
+              </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
               <button
                 onClick={() => {
                   setEditingNoteUser(null);
                   setAdminNoteText('');
+                  setAdminNoteIcon('note');
                 }}
                 disabled={savingNote}
                 className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"

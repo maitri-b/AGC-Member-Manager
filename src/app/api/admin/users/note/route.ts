@@ -18,7 +18,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, adminNote } = body;
+    const { userId, adminNote, adminNoteIcon } = body;
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -30,6 +30,7 @@ export async function PUT(request: NextRequest) {
     // Update admin note
     await userRef.update({
       adminNote: adminNote || '',
+      adminNoteIcon: adminNoteIcon || 'note',
       adminNoteUpdatedAt: new Date(),
       adminNoteUpdatedBy: session.user.id,
       adminNoteUpdatedByName: session.user.name || 'Unknown',

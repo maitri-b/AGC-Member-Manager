@@ -749,6 +749,7 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
         eventId: record.eventId,
         eventName: record.eventName,
         eventDate: event.eventDate,
+        eventEndDate: event.eventEndDate || '', // Include end date for proper date range formatting
         registrationId: record.registration.registrationId,
         attendeeNames: record.registration.attendeeNames,
         attendeeCount: record.registration.attendeeCount,

@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Member, formatThaiDate as formatLicenseDate } from '@/types/member';
 import { Toast, useToast } from '@/components/Toast';
+import { formatEventDateRange } from '@/lib/date-utils';
 
 interface UserProfile {
   id: string;
@@ -35,6 +36,7 @@ interface EventAttendanceRecord {
   eventId: string;
   eventName: string;
   eventDate: string;
+  eventEndDate?: string;
   attendeeCount: number;
   status: string;
   checkedIn: boolean;
@@ -859,7 +861,7 @@ export default function ProfilePage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-medium text-gray-900">{event.eventName}</h4>
-                            <p className="text-sm text-gray-500">{event.eventDate}</p>
+                            <p className="text-sm text-gray-500">{formatEventDateRange(event.eventDate, event.eventEndDate)}</p>
                           </div>
                           <div className="text-right">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

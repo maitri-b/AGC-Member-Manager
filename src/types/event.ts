@@ -300,6 +300,7 @@ export interface EventAttendanceRecord {
   eventId: string;                  // Event identifier
   eventName: string;                // ชื่อกิจกรรม
   eventDate: string;                // วันที่กิจกรรม
+  eventEndDate?: string;            // วันสิ้นสุดกิจกรรม (optional for date range formatting)
   registrationId: string;           // Registration ID from event sheet
   attendeeNames: string;            // ชื่อผู้เข้าร่วม
   attendeeCount: number;            // จำนวนผู้เข้าร่วม

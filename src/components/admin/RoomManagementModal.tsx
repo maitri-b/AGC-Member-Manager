@@ -852,20 +852,26 @@ export default function RoomManagementModal({
             };
 
             // Add individual occupant names in separate columns with payment status metadata
-            const occupantPaymentData: Array<{ name: string; status: 'paid' | 'pending' | 'unpaid' | 'none' }> = [];
+            const occupantPaymentData: Array<{ name: string; status: 'paid' | 'pending' | 'partial' | 'unpaid' | 'none' }> = [];
 
             for (let i = 1; i <= maxOccupantsInEvent; i++) {
               const occupant = room.occupants[i - 1];
               if (occupant) {
                 const payment = paymentStatusMap.get(occupant.registrationId);
-                let status: 'paid' | 'pending' | 'unpaid' | 'none' = 'none';
+                let status: 'paid' | 'pending' | 'partial' | 'unpaid' | 'none' = 'none';
 
                 if (payment) {
                   if (payment.isPaid) {
+                    // Fully paid
                     status = 'paid';
                   } else if (payment.hasPendingSlip) {
+                    // Has slip waiting for approval
                     status = 'pending';
+                  } else if (payment.paidAmount > 0 && payment.totalAmount > 0) {
+                    // Has paid some amount (approved) but not full amount yet
+                    status = 'partial';
                   } else {
+                    // No payment at all or no slip
                     status = 'unpaid';
                   }
                 }
@@ -894,6 +900,7 @@ export default function RoomManagementModal({
             const statusTextMap: Record<string, string> = {
               'paid': 'ชำระแล้ว',
               'pending': 'ส่งสลิปแล้ว รอตรวจสอบ',
+              'partial': 'ชำระบางส่วนแล้ว รอชำระเพิ่ม',
               'unpaid': 'ยังไม่ชำระ/ไม่มีสลิป'
             };
 
@@ -901,9 +908,11 @@ export default function RoomManagementModal({
             const paymentStatus = paymentStatusTexts.length > 0 ? paymentStatusTexts.join(', ') : 'ชำระแล้ว';
 
             // Determine overall payment status code (for backward compatibility if needed)
-            let paymentStatusCode: 'paid' | 'pending' | 'unpaid' = 'paid';
+            let paymentStatusCode: 'paid' | 'pending' | 'partial' | 'unpaid' = 'paid';
             if (uniqueStatuses.includes('unpaid')) {
               paymentStatusCode = 'unpaid';
+            } else if (uniqueStatuses.includes('partial')) {
+              paymentStatusCode = 'partial';
             } else if (uniqueStatuses.includes('pending')) {
               paymentStatusCode = 'pending';
             }
@@ -980,6 +989,10 @@ export default function RoomManagementModal({
             // Unpaid/no slip: Orange
             fillColor = 'FFE5CC'; // Light orange
             fontColor = 'CC5500'; // Dark orange
+          } else if (paymentStatus === 'partial') {
+            // Partial payment: Light purple/lavender
+            fillColor = 'E6D9F2'; // Light lavender
+            fontColor = '6A3D9A'; // Dark purple
           } else if (paymentStatus === 'pending') {
             // Slip submitted, pending: Yellow/Gold
             fillColor = 'FFFFCC'; // Light yellow
@@ -1021,6 +1034,9 @@ export default function RoomManagementModal({
               if (occupantPayment.status === 'paid') {
                 cellFillColor = 'CCE5FF'; // Light blue
                 cellFontColor = '003366'; // Dark blue
+              } else if (occupantPayment.status === 'partial') {
+                cellFillColor = 'E6D9F2'; // Light lavender
+                cellFontColor = '6A3D9A'; // Dark purple
               } else if (occupantPayment.status === 'pending') {
                 cellFillColor = 'FFFFCC'; // Light yellow
                 cellFontColor = '996600'; // Dark yellow/brown

@@ -6,6 +6,8 @@ import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { ROLE_PERMISSIONS } from '@/types/next-auth.d';
 import { updateMember, getMemberById } from '@/lib/google-sheets';
+import { getSystemSettings } from '@/lib/settings';
+import { generateWelcomeMessage } from '@/lib/member-welcome-template';
 
 export async function GET() {
   try {
@@ -123,7 +125,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { userId, role, memberId, isActive, assignedEventIds, unlockSearch, resetLineConnection, resetReason } = await request.json();
+    const { userId, role, memberId, isActive, assignedEventIds, unlockSearch, resetLineConnection, resetReason, sendLineNotification } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -233,6 +235,7 @@ export async function PUT(request: NextRequest) {
         const lineUserId = userData?.lineUserId || userId; // LINE User ID from Firestore
         // Use consistent field name priority: lineDisplayName > displayName > name
         const lineDisplayName = userData?.lineDisplayName || userData?.displayName || userData?.name || '';
+        const oldRole = userData?.role || 'guest';
 
         // Update Google Sheet with LINE info
         await updateMember(memberId, {
@@ -264,6 +267,52 @@ export async function PUT(request: NextRequest) {
           if (Object.keys(firestoreUpdates).length > 0) {
             await userRef.update(firestoreUpdates);
             console.log(`Updated Firestore user ${userId} with licenseNumber and phone from Google Sheets`);
+          }
+
+          // Send LINE notification if:
+          // 1. sendLineNotification is true (default: true)
+          // 2. Role changed from guest to member or higher
+          // 3. User has LINE User ID
+          const shouldSendNotification = sendLineNotification !== false &&
+                                        (oldRole === 'guest' || oldRole === 'visitor') &&
+                                        (role === 'member' || role === 'committee' || role === 'admin') &&
+                                        lineUserId;
+
+          if (shouldSendNotification) {
+            try {
+              const settings = await getSystemSettings();
+              const welcomeMessage = generateWelcomeMessage({
+                memberName: lineDisplayName || '',
+                companyName: memberData.companyNameTH || memberData.companyNameEN || '',
+                memberId: memberId,
+                licenseNumber: memberData.licenseNumber || '',
+                status: 'ปกติ',
+                baseUrl: settings.baseUrl,
+              });
+
+              // Send notification via LINE API
+              const lineApiUrl = process.env.NEXT_PUBLIC_BASE_URL
+                ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/line/send-notification`
+                : '/api/line/send-notification';
+
+              const lineResponse = await fetch(lineApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lineUserIds: [lineUserId],
+                  message: welcomeMessage,
+                }),
+              });
+
+              if (lineResponse.ok) {
+                console.log('✅ Welcome notification sent to member:', memberId);
+              } else {
+                console.error('⚠️ Failed to send welcome notification:', await lineResponse.text());
+              }
+            } catch (error) {
+              console.error('⚠️ Error sending welcome notification (non-critical):', error);
+              // Don't fail the update if notification fails
+            }
           }
         }
       } catch (sheetError) {

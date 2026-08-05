@@ -76,6 +76,7 @@ export default function AdminPage() {
   const [showResetLineModal, setShowResetLineModal] = useState(false);
   const [resetLineReason, setResetLineReason] = useState('');
   const [resetLineLoading, setResetLineLoading] = useState(false);
+  const [sendLineNotification, setSendLineNotification] = useState(true); // Default: true
   const [pendingCounts, setPendingCounts] = useState<PendingCounts>({
     applications: 0,
     verifications: 0,
@@ -234,6 +235,7 @@ export default function AdminPage() {
     setSearchLogs([]);
     setMemberSearchQuery('');
     setMemberPreview(null);
+    setSendLineNotification(true); // Reset to default (checked)
 
     // Fetch search logs for this user
     if (user.searchCount && user.searchCount > 0) {
@@ -524,6 +526,7 @@ export default function AdminPage() {
         memberId: editForm.memberId || null,
         isActive: editForm.isActive,
         assignedEventIds: editForm.assignedEventIds || [],
+        sendLineNotification: sendLineNotification, // Include notification preference
       };
 
       // Only include role if user has permission to change roles
@@ -1451,19 +1454,44 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-                <button
-                  onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  onClick={handleSaveUser}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                >
-                  บันทึก
-                </button>
+              <div className="px-6 py-4 border-t border-gray-200">
+                {/* LINE Notification Checkbox - Only show when changing guest to member */}
+                {hasPermission(session?.user?.permissions || [], 'admin:roles') &&
+                 (editingUser.role === 'guest' || editingUser.role === 'visitor') &&
+                 (editForm.role === 'member' || editForm.role === 'committee' || editForm.role === 'admin') &&
+                 editForm.memberId && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={sendLineNotification}
+                        onChange={(e) => setSendLineNotification(e.target.checked)}
+                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-900">ส่งข้อความแจ้งผลการยืนยันตัวตนผ่าน LINE</span>
+                        <p className="text-xs text-gray-600 mt-1">
+                          ระบบจะส่ง LINE Flex Message ไปแจ้งให้สมาชิกทราบว่าได้รับการยืนยันตัวตนแล้ว พร้อมรายละเอียดสมาชิก
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setEditingUser(null)}
+                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    onClick={handleSaveUser}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                  >
+                    บันทึก
+                  </button>
+                </div>
               </div>
             </div>
           </div>

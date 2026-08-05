@@ -2686,10 +2686,13 @@ export default function EventDetailPage() {
                     // Full Payment Mode: Check if full payment is approved OR overpaid
                     isFullyPaid = (reg as any).fullPaymentPaid === true || isOverpaid;
                   } else {
-                    // Deposit + Remaining Mode: Check if both deposit and remaining are paid OR overpaid
+                    // Deposit + Remaining Mode: Can pay in full OR pay in installments
+                    // Option 1: Pay full amount directly (fullPaymentPaid)
+                    // Option 2: Pay deposit + remaining (depositPaid && remainingPaid)
+                    const fullPaymentPaid = (reg as any).fullPaymentPaid === true;
                     const depositPaid = reg.depositPaid === true;
                     const remainingPaid = (reg as any).remainingPaid === true;
-                    isFullyPaid = (depositPaid && remainingPaid) || isOverpaid;
+                    isFullyPaid = fullPaymentPaid || (depositPaid && remainingPaid) || isOverpaid;
                   }
 
                   if (isFullyPaid) {
@@ -2746,18 +2749,33 @@ export default function EventDetailPage() {
                 }
               } else {
                 // Deposit + Remaining Mode
-                // Deposit payment
-                if (reg.depositPaid === true) {
-                  totalApproved += depositAmount;
-                } else if (reg.depositSlipUrl && reg.depositSlipUrl.trim() !== '') {
-                  totalPending += depositAmount;
-                }
+                // Can pay in full OR pay in installments
 
-                // Remaining payment
-                if ((reg as any).remainingPaid === true) {
-                  totalApproved += remainingAmount;
-                } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
-                  totalPending += remainingAmount;
+                // Option 1: Check if paid in full (fullPaymentPaid)
+                const fullPaymentPaid = (reg as any).fullPaymentPaid === true;
+                const hasFullPaymentSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
+
+                if (fullPaymentPaid) {
+                  // Paid full amount
+                  totalApproved += totalAmount;
+                } else if (hasFullPaymentSlip) {
+                  // Full payment slip pending approval
+                  totalPending += totalAmount;
+                } else {
+                  // Option 2: Pay in installments (deposit + remaining)
+                  // Deposit payment
+                  if (reg.depositPaid === true) {
+                    totalApproved += depositAmount;
+                  } else if (reg.depositSlipUrl && reg.depositSlipUrl.trim() !== '') {
+                    totalPending += depositAmount;
+                  }
+
+                  // Remaining payment
+                  if ((reg as any).remainingPaid === true) {
+                    totalApproved += remainingAmount;
+                  } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
+                    totalPending += remainingAmount;
+                  }
                 }
               }
             });

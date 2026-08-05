@@ -75,15 +75,15 @@ export default function PaymentDetailsModal({
         throw new Error(data.error || 'Failed to approve payment slip');
       }
 
-      // Refresh payment data
-      await fetchPaymentData();
+      alert('อนุมัติสลิปเรียบร้อยแล้ว');
 
-      // Notify parent to refresh
+      // Notify parent to refresh (this will update the attendee list and buttons)
       if (onUpdate) {
         onUpdate();
       }
 
-      alert('อนุมัติสลิปเรียบร้อยแล้ว');
+      // Refresh payment data in modal
+      await fetchPaymentData();
     } catch (err) {
       console.error('Error approving payment:', err);
       alert(err instanceof Error ? err.message : 'Failed to approve payment');
@@ -105,15 +105,15 @@ export default function PaymentDetailsModal({
         throw new Error(data.error || 'Failed to reject payment slip');
       }
 
-      // Refresh payment data
-      await fetchPaymentData();
+      alert('ปฏิเสธสลิปเรียบร้อยแล้ว');
 
-      // Notify parent to refresh
+      // Notify parent to refresh (this will update the attendee list and buttons)
       if (onUpdate) {
         onUpdate();
       }
 
-      alert('ปฏิเสธสลิปเรียบร้อยแล้ว');
+      // Refresh payment data in modal
+      await fetchPaymentData();
     } catch (err) {
       console.error('Error rejecting payment:', err);
       alert(err instanceof Error ? err.message : 'Failed to reject payment');

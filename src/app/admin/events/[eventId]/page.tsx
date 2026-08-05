@@ -2395,9 +2395,15 @@ export default function EventDetailPage() {
         // Invalid JSON, skip this attendee
       }
 
-      // Check if this attendee has selected the filtered room type
-      const hasRoomType = roomAllocations.some(ra => ra.roomTypeId === roomTypeFilter && ra.roomCount > 0);
-      if (!hasRoomType) return false;
+      // Special filter: "unassigned" shows registrations with no room allocations
+      if (roomTypeFilter === 'unassigned') {
+        const hasAnyRoom = roomAllocations.length > 0 && roomAllocations.some(ra => ra.roomCount > 0);
+        if (hasAnyRoom) return false;
+      } else {
+        // Check if this attendee has selected the filtered room type
+        const hasRoomType = roomAllocations.some(ra => ra.roomTypeId === roomTypeFilter && ra.roomCount > 0);
+        if (!hasRoomType) return false;
+      }
     }
 
     // Filter by search term
@@ -2930,6 +2936,77 @@ export default function EventDetailPage() {
                   >
                     ทั้งหมด
                   </button>
+
+                  {/* Unassigned Room Filter */}
+                  {(() => {
+                    // Count registrations with no room allocations
+                    const unassignedCount = eventData.attendees.reduce((count, attendee) => {
+                      // Check if registration is cancelled
+                      const status = String(attendee.registration.status || '').toLowerCase();
+                      const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
+
+                      // Apply same filters as main list
+                      if (filter === 'confirmed') {
+                        if (isCancelled || !attendee.isConfirmed) return count;
+                      } else if (filter === 'pending') {
+                        if (isCancelled || attendee.isConfirmed) return count;
+                      } else if (filter === 'cancelled') {
+                        if (!isCancelled) return count;
+                      } else if (filter === 'all') {
+                        if (isCancelled) return count;
+                      }
+
+                      // Filter by payment status
+                      if (paymentFilter !== 'all') {
+                        if (isCancelled) return count;
+                        if (attendee.registration.paymentStatus !== paymentFilter) return count;
+                      }
+
+                      // Filter by search term
+                      if (searchTerm) {
+                        const term = searchTerm.toLowerCase();
+                        const matchCompany = attendee.registration.companyName?.toLowerCase().includes(term) ||
+                                            attendee.member?.companyNameTH?.toLowerCase().includes(term);
+                        const matchName = attendee.registration.contactName?.toLowerCase().includes(term) ||
+                                         attendee.member?.fullNameTH?.toLowerCase().includes(term) ||
+                                         attendee.lineProfile?.lineDisplayName?.toLowerCase().includes(term);
+                        const matchLicense = attendee.registration.licenseNumber?.toLowerCase().includes(term);
+                        const matchMemberId = attendee.member?.memberId?.toLowerCase().includes(term);
+                        const matchRegistrationId = attendee.registration.registrationId?.toLowerCase().includes(term);
+
+                        if (!(matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId)) {
+                          return count;
+                        }
+                      }
+
+                      // Check if has no room allocations
+                      let roomAllocations: Array<{ roomTypeId: string; roomCount: number }> = [];
+                      try {
+                        if (attendee.registration.roomAllocations) {
+                          roomAllocations = JSON.parse(attendee.registration.roomAllocations);
+                        }
+                      } catch (e) {
+                        // Invalid JSON or empty
+                      }
+
+                      const hasAnyRoom = roomAllocations.length > 0 && roomAllocations.some(ra => ra.roomCount > 0);
+                      return hasAnyRoom ? count : count + 1;
+                    }, 0);
+
+                    return (
+                      <button
+                        onClick={() => setRoomTypeFilter('unassigned')}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          roomTypeFilter === 'unassigned'
+                            ? 'bg-orange-600 text-white border-2 border-orange-700'
+                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                        }`}
+                      >
+                        ยังไม่ระบุห้อง ({unassignedCount})
+                      </button>
+                    );
+                  })()}
+
                   {eventData.event.roomTypes
                     .filter((rt: any) => rt.isActive)
                     .sort((a: any, b: any) => a.sortOrder - b.sortOrder)

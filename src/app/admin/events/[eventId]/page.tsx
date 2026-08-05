@@ -3010,14 +3010,6 @@ export default function EventDetailPage() {
           </div>
         </div>
 
-        {/* Attendees with Room Numbers - Static View */}
-        {!editingRegistration && (
-          <AttendeesRoomListSection
-            attendees={filteredAttendees}
-            eventId={eventId as string}
-          />
-        )}
-
         {/* Attendees List */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -3580,6 +3572,55 @@ export default function EventDetailPage() {
                             }
                           } catch (e) {
                             console.error('Error parsing room allocations:', e);
+                          }
+                          return null;
+                        })()}
+
+                        {/* Attendees with Room Assignments */}
+                        {(() => {
+                          // Parse room assignments
+                          let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
+                          try {
+                            if ((attendee.registration as any).roomAssignments) {
+                              roomAssignments = JSON.parse((attendee.registration as any).roomAssignments);
+                            }
+                          } catch (e) {
+                            console.error('Error parsing roomAssignments:', e);
+                          }
+
+                          if (roomAssignments.length > 0) {
+                            // Get attendee names
+                            const names = attendee.registration.attendeeNames?.split(',').map(n => n.trim()) || [];
+                            const attendeeCount = attendee.registration.attendeeCount || 1;
+
+                            return (
+                              <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                                <p className="text-xs font-semibold text-indigo-900 mb-2">ชื่อผู้เข้าร่วมและเลขห้อง:</p>
+                                <div className="space-y-1">
+                                  {Array.from({ length: attendeeCount }).map((_, index) => {
+                                    const assignment = roomAssignments.find(a => a.attendeeIndex === index);
+                                    const attendeeName = names[index] || `ผู้เข้าร่วมคนที่ ${index + 1}`;
+
+                                    return (
+                                      <div key={index} className="text-xs text-gray-700 flex items-center justify-between">
+                                        <span>{index + 1}. {attendeeName}</span>
+                                        {assignment ? (
+                                          <RoomNumberWithTooltip
+                                            roomId={assignment.roomId}
+                                            eventId={eventId as string}
+                                            currentAttendeeIndex={index}
+                                            currentRegistrationId={attendee.registration.registrationId}
+                                            allAttendees={eventData?.attendees || []}
+                                          />
+                                        ) : (
+                                          <span className="text-gray-400 text-xs">ยังไม่จัดห้อง</span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
                           }
                           return null;
                         })()}
@@ -5526,190 +5567,142 @@ export default function EventDetailPage() {
   );
 }
 
-// Component: Attendees with Room Numbers Section
-function AttendeesRoomListSection({
-  attendees,
-  eventId
+// Component: Room Number with Tooltip
+function RoomNumberWithTooltip({
+  roomId,
+  eventId,
+  currentAttendeeIndex,
+  currentRegistrationId,
+  allAttendees,
 }: {
-  attendees: Attendee[];
+  roomId: string;
   eventId: string;
+  currentAttendeeIndex: number;
+  currentRegistrationId: string;
+  allAttendees: Attendee[];
 }) {
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tooltipRoomId, setTooltipRoomId] = useState<string | null>(null);
+  const [room, setRoom] = useState<any>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [roommates, setRoommates] = useState<Array<{
+    name: string;
+    companyName: string;
+    registrationId: string;
+  }>>([]);
 
   useEffect(() => {
-    fetchRooms();
-  }, [eventId]);
+    fetchRoomAndRoommates();
+  }, [roomId, allAttendees]);
 
-  const fetchRooms = async () => {
+  const fetchRoomAndRoommates = async () => {
     try {
-      setLoading(true);
+      // Fetch room details
       const response = await fetch(`/api/events/${eventId}/rooms`);
       if (response.ok) {
         const data = await response.json();
-        setRooms(data.rooms || []);
+        const foundRoom = data.rooms.find((r: any) => r.roomId === roomId);
+        setRoom(foundRoom);
       }
+
+      // Find all roommates (people in the same room)
+      const roommatesList: Array<{
+        name: string;
+        companyName: string;
+        registrationId: string;
+      }> = [];
+
+      allAttendees.forEach(attendee => {
+        let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
+        try {
+          if ((attendee.registration as any).roomAssignments) {
+            roomAssignments = JSON.parse((attendee.registration as any).roomAssignments);
+          }
+        } catch (e) {
+          console.error('Error parsing roomAssignments:', e);
+        }
+
+        const names = attendee.registration.attendeeNames?.split(',').map(n => n.trim()) || [];
+
+        roomAssignments.forEach(assignment => {
+          if (assignment.roomId === roomId) {
+            // Skip current attendee
+            if (assignment.attendeeIndex === currentAttendeeIndex &&
+                attendee.registration.registrationId === currentRegistrationId) {
+              return;
+            }
+
+            roommatesList.push({
+              name: names[assignment.attendeeIndex] || `ผู้เข้าร่วมคนที่ ${assignment.attendeeIndex + 1}`,
+              companyName: attendee.registration.companyName,
+              registrationId: attendee.registration.registrationId,
+            });
+          }
+        });
+      });
+
+      setRoommates(roommatesList);
     } catch (error) {
-      console.error('Error fetching rooms:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching room details:', error);
     }
-  };
-
-  // Build a list of all attendees with their room assignments
-  const attendeesList = attendees.flatMap(attendee => {
-    const names = attendee.registration.attendeeNames?.split(',').map(n => n.trim()) || [];
-    const attendeeCount = attendee.registration.attendeeCount || 1;
-
-    // Parse room assignments
-    let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
-    try {
-      if ((attendee.registration as any).roomAssignments) {
-        roomAssignments = JSON.parse((attendee.registration as any).roomAssignments);
-      }
-    } catch (e) {
-      console.error('Error parsing roomAssignments:', e);
-    }
-
-    // Create entry for each attendee
-    return Array.from({ length: attendeeCount }).map((_, index) => {
-      const assignment = roomAssignments.find(a => a.attendeeIndex === index);
-      const room = assignment ? rooms.find(r => r.roomId === assignment.roomId) : null;
-
-      return {
-        name: names[index] || `ผู้เข้าร่วมคนที่ ${index + 1}`,
-        companyName: attendee.registration.companyName,
-        registrationId: attendee.registration.registrationId,
-        roomId: assignment?.roomId,
-        roomNumber: room ? `${room.buildingName} ${room.roomNumber}` : null,
-        attendeeIndex: index,
-      };
-    });
-  });
-
-  // Sort by room number, then by name
-  const sortedAttendees = attendeesList.sort((a, b) => {
-    if (a.roomNumber && !b.roomNumber) return -1;
-    if (!a.roomNumber && b.roomNumber) return 1;
-    if (a.roomNumber && b.roomNumber) {
-      const compare = a.roomNumber.localeCompare(b.roomNumber);
-      if (compare !== 0) return compare;
-    }
-    return a.name.localeCompare(b.name);
-  });
-
-  // Get roommates for a specific room
-  const getRoommates = (roomId: string, currentIndex: number, currentRegistrationId: string) => {
-    return sortedAttendees.filter(
-      a => a.roomId === roomId &&
-      !(a.attendeeIndex === currentIndex && a.registrationId === currentRegistrationId)
-    );
   };
 
   const handleCopyRegistrationId = (registrationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(registrationId);
-    // You could add a toast notification here
   };
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <span className="ml-3 text-gray-600">กำลังโหลดข้อมูลห้องพัก...</span>
-        </div>
-      </div>
-    );
+  if (!room) {
+    return <span className="text-xs text-gray-400">กำลังโหลด...</span>;
   }
 
+  const roomNumber = `${room.buildingName} ${room.roomNumber}`;
+
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
-      <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          ชื่อผู้เข้าร่วม & เลขห้องพัก
-          <span className="text-sm font-normal text-gray-500">({sortedAttendees.length} คน)</span>
-        </h2>
-      </div>
+    <div className="relative inline-block">
+      <button
+        onClick={() => setShowTooltip(!showTooltip)}
+        className="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors"
+      >
+        {roomNumber}
+      </button>
 
-      <div className="px-6 py-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-          {sortedAttendees.map((attendee, idx) => {
-            const roommates = attendee.roomId ? getRoommates(attendee.roomId, attendee.attendeeIndex, attendee.registrationId) : [];
-
-            return (
-              <div
-                key={`${attendee.registrationId}-${attendee.attendeeIndex}`}
-                className="flex items-center justify-between p-2 rounded hover:bg-gray-50 border border-gray-100"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {attendee.name}
+      {/* Tooltip */}
+      {showTooltip && roommates.length > 0 && (
+        <div className="absolute z-50 right-0 mt-1 w-72 bg-white rounded-lg shadow-xl border border-gray-200 p-3">
+          <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
+            <h4 className="text-sm font-semibold text-gray-900">ผู้พักร่วมห้อง</h4>
+            <button
+              onClick={() => setShowTooltip(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {roommates.map((roommate, idx) => (
+              <div key={idx} className="text-sm border-b border-gray-100 pb-2 last:border-0">
+                <p className="font-medium text-gray-900">{roommate.name}</p>
+                <p className="text-xs text-gray-600">{roommate.companyName}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <p className="text-xs text-gray-500">
+                    รหัส: {roommate.registrationId.slice(0, 8)}
                   </p>
+                  <button
+                    onClick={(e) => handleCopyRegistrationId(roommate.registrationId, e)}
+                    className="text-gray-400 hover:text-indigo-600"
+                    title="คัดลอกรหัสการจอง"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
                 </div>
-
-                {attendee.roomNumber ? (
-                  <div className="relative">
-                    <button
-                      onClick={() => setTooltipRoomId(tooltipRoomId === attendee.roomId ? null : attendee.roomId || null)}
-                      className="ml-2 px-2 py-1 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors"
-                    >
-                      {attendee.roomNumber}
-                    </button>
-
-                    {/* Tooltip */}
-                    {tooltipRoomId === attendee.roomId && roommates.length > 0 && (
-                      <div className="absolute z-50 right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 p-4">
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
-                          <h4 className="font-semibold text-gray-900">ผู้พักร่วมห้อง</h4>
-                          <button
-                            onClick={() => setTooltipRoomId(null)}
-                            className="text-gray-400 hover:text-gray-600"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {roommates.map((roommate, rmIdx) => (
-                            <div key={rmIdx} className="text-sm border-b border-gray-100 pb-2 last:border-0">
-                              <p className="font-medium text-gray-900">{roommate.name}</p>
-                              <p className="text-xs text-gray-600">{roommate.companyName}</p>
-                              <div className="flex items-center gap-1 mt-1">
-                                <p className="text-xs text-gray-500">
-                                  รหัส: {roommate.registrationId.slice(0, 8)}
-                                </p>
-                                <button
-                                  onClick={(e) => handleCopyRegistrationId(roommate.registrationId, e)}
-                                  className="text-gray-400 hover:text-indigo-600"
-                                  title="คัดลอกรหัสการจอง"
-                                >
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                  </svg>
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <span className="ml-2 px-2 py-1 text-xs text-gray-400 bg-gray-100 rounded">
-                    ยังไม่จัดห้อง
-                  </span>
-                )}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

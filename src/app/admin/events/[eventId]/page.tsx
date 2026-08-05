@@ -469,6 +469,7 @@ export default function EventDetailPage() {
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [showRoomManagementModal, setShowRoomManagementModal] = useState(false);
   const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
+  const [originalAttendeeCount, setOriginalAttendeeCount] = useState<number>(1); // Track original count for validation
   const [editFormData, setEditFormData] = useState<{
     attendeeCount: number;
     attendeeNames: string[];
@@ -1249,8 +1250,11 @@ export default function EventDetailPage() {
       console.error('Error parsing roomAssignments:', e);
     }
 
+    const originalCount = attendee.registration.attendeeCount || 1;
+    setOriginalAttendeeCount(originalCount); // Store original count for validation
+
     setEditFormData({
-      attendeeCount: attendee.registration.attendeeCount || 1,
+      attendeeCount: originalCount,
       attendeeNames: names,
       status: attendee.registration.status || 'รอดำเนินการ',
       contactPhone: attendee.registration.contactPhone || '',
@@ -1274,27 +1278,31 @@ export default function EventDetailPage() {
   const handleSaveEdit = async () => {
     if (!editingRegistration || !eventData) return;
 
-    // ✅ CRITICAL VALIDATION: Check for pending payment slips
-    // Before allowing registration edit, ensure there are no unapproved/unrejected payment slips
-    // This prevents confusion about what total amount should be when there are pending slips
-    try {
-      const checkResponse = await fetch(`/api/payments/check-pending?registrationId=${editingRegistration}`);
-      const checkData = await checkResponse.json();
+    // ✅ CRITICAL VALIDATION: Check for pending payment slips ONLY when attendeeCount changed
+    // Allow editing special requests and room assignments even with pending payment slips
+    // But prevent changing attendee count when there are pending slips (affects total amount)
+    const attendeeCountChanged = editFormData.attendeeCount !== originalAttendeeCount;
 
-      if (checkResponse.ok && checkData.hasPending) {
+    if (attendeeCountChanged) {
+      try {
+        const checkResponse = await fetch(`/api/payments/check-pending?registrationId=${editingRegistration}`);
+        const checkData = await checkResponse.json();
+
+        if (checkResponse.ok && checkData.hasPending) {
+          setActionMessage({
+            type: 'error',
+            text: 'ไม่สามารถเปลี่ยนจำนวนผู้เข้าร่วมได้ เนื่องจากมีสลิปการชำระเงินที่รอตรวจสอบ กรุณาอนุมัติหรือปฏิเสธสลิปก่อน'
+          });
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking pending payment slips:', err);
         setActionMessage({
           type: 'error',
-          text: 'ไม่สามารถแก้ไขข้อมูลได้ เนื่องจากมีสลิปการชำระเงินที่รอตรวจสอบ กรุณาอนุมัติหรือปฏิเสธสลิปก่อน'
+          text: 'เกิดข้อผิดพลาดในการตรวจสอบสลิปการชำระเงิน'
         });
         return;
       }
-    } catch (err) {
-      console.error('Error checking pending payment slips:', err);
-      setActionMessage({
-        type: 'error',
-        text: 'เกิดข้อผิดพลาดในการตรวจสอบสลิปการชำระเงิน'
-      });
-      return;
     }
 
     // Validate attendee type selections (if enabled)

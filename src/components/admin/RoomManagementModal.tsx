@@ -740,7 +740,7 @@ export default function RoomManagementModal({
 
       // Build payment status map by registration ID
       const paymentStatusMap = new Map<string, {
-        hasSlip: boolean;
+        hasPendingSlip: boolean;
         isPaid: boolean;
         totalAmount: number;
         paidAmount: number;
@@ -748,25 +748,44 @@ export default function RoomManagementModal({
 
       registrations.forEach((attendee: any) => {
         const reg = attendee.registration;
-        const hasSlip = !!(reg.depositSlipUrl || reg.remainingSlipUrl || reg.fullPaymentSlipUrl);
         const totalAmount = Number(reg.totalAmount) || 0;
 
-        // Calculate total paid amount
+        // Calculate total paid amount based on event's payment mode
         let paidAmount = 0;
-        if (reg.fullPaymentPaid) {
-          paidAmount = Number(reg.fullPaymentAmountPaid) || totalAmount;
+        if (eventData.event.paymentMode === 'full') {
+          // Full payment mode: use fullPaymentAmountPaid
+          paidAmount = Number(reg.fullPaymentAmountPaid) || 0;
         } else {
+          // Deposit mode: sum all payment components
           paidAmount = (Number(reg.depositAmountPaid) || 0) +
-                      (Number(reg.remainingAmountPaid) || 0) +
-                      (Number(reg.additionalPaymentAmountPaid) || 0);
+                      (Number(reg.remainingAmountPaid) || 0);
         }
+
+        // Add additional payments (applies to both modes)
+        paidAmount += (Number(reg.additionalPaymentAmountPaid) || 0);
 
         // ✅ Check isPaid using amount comparison (most reliable for all cases)
         // This handles: full payment, deposit+remaining, and additional payments
         const isPaid = totalAmount > 0 && paidAmount >= totalAmount;
 
+        // ✅ Check for PENDING slips (submitted but not yet approved)
+        // A slip is pending if:
+        // 1. Full payment mode: has fullPaymentSlipUrl but fullPaymentPaid is false
+        // 2. Deposit mode: has depositSlipUrl but depositPaid is false, OR has remainingSlipUrl but remainingPaid is false
+        let hasPendingSlip = false;
+
+        if (eventData.event.paymentMode === 'full') {
+          // Full payment mode: check if slip exists but not approved
+          hasPendingSlip = !!(reg.fullPaymentSlipUrl && !reg.fullPaymentPaid);
+        } else {
+          // Deposit mode: check each payment stage
+          const depositPending = !!(reg.depositSlipUrl && !reg.depositPaid);
+          const remainingPending = !!(reg.remainingSlipUrl && !reg.remainingPaid);
+          hasPendingSlip = depositPending || remainingPending;
+        }
+
         paymentStatusMap.set(reg.registrationId, {
-          hasSlip,
+          hasPendingSlip,
           isPaid,
           totalAmount,
           paidAmount,
@@ -853,11 +872,11 @@ export default function RoomManagementModal({
             const occupantPaymentStatuses = room.occupants.map(occ => {
               const payment = paymentStatusMap.get(occ.registrationId);
               if (!payment) return 'unknown';
-              // Check isPaid first - if paid, it's paid regardless of slip status
+              // Check isPaid first - if fully paid, it's paid regardless of slip status
               if (payment.isPaid) return 'paid';
-              // If not paid but has slip, it's pending approval
-              if (payment.hasSlip) return 'pending';
-              // No payment and no slip
+              // If has pending slip (submitted but not approved), it's pending
+              if (payment.hasPendingSlip) return 'pending';
+              // Not fully paid and no pending slip = unpaid (may have partial payment approved)
               return 'unpaid';
             });
 

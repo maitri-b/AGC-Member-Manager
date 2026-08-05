@@ -1445,6 +1445,13 @@ export default function EventDetailPage() {
     setEditFormData({ ...editFormData, roomAssignments: filteredAssignments });
   };
 
+  // Copy registration ID to clipboard
+  const handleCopyRegistrationId = (registrationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(registrationId);
+    alert('คัดลอกรหัสการจองแล้ว: ' + registrationId);
+  };
+
   // Check if registration has approved payments
   const hasApprovedPayments = (registration: any): { hasPayment: boolean; totalPaid: number } => {
     // ✅ FIX: paidAmount might not exist in API response, calculate from actual payment fields

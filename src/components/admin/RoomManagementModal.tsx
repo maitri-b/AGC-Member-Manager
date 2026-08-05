@@ -851,11 +851,35 @@ export default function RoomManagementModal({
               'สถานะห้อง': room.isLocked ? 'ล็อค' : 'มีผู้พัก',
             };
 
-            // Add individual occupant names in separate columns
+            // Add individual occupant names in separate columns with payment status metadata
+            const occupantPaymentData: Array<{ name: string; status: 'paid' | 'pending' | 'unpaid' | 'none' }> = [];
+
             for (let i = 1; i <= maxOccupantsInEvent; i++) {
               const occupant = room.occupants[i - 1];
-              rowData[`ผู้เข้าพัก ${i}`] = occupant ? occupant.attendeeName : '-';
+              if (occupant) {
+                const payment = paymentStatusMap.get(occupant.registrationId);
+                let status: 'paid' | 'pending' | 'unpaid' | 'none' = 'none';
+
+                if (payment) {
+                  if (payment.isPaid) {
+                    status = 'paid';
+                  } else if (payment.hasPendingSlip) {
+                    status = 'pending';
+                  } else {
+                    status = 'unpaid';
+                  }
+                }
+
+                rowData[`ผู้เข้าพัก ${i}`] = occupant.attendeeName;
+                occupantPaymentData.push({ name: occupant.attendeeName, status });
+              } else {
+                rowData[`ผู้เข้าพัก ${i}`] = '-';
+                occupantPaymentData.push({ name: '-', status: 'none' });
+              }
             }
+
+            // Store occupant payment statuses for cell coloring
+            rowData['_occupantPayments'] = occupantPaymentData;
 
             // Collect unique companies and registration IDs
             const uniqueCompanies = [...new Set(room.occupants.map(occ => occ.companyName))];
@@ -865,27 +889,22 @@ export default function RoomManagementModal({
             rowData['บริษัท'] = uniqueCompanies.join(', ');
             rowData['รหัสการจอง'] = uniqueRegistrationIds.map(id => id.slice(0, 8)).join(', ');
 
-            // Determine overall payment status for the room
-            let paymentStatus = 'ชำระแล้ว';
-            let paymentStatusCode = 'paid';
+            // Collect ALL unique payment statuses in the room and display them
+            const uniqueStatuses = [...new Set(occupantPaymentData.map(occ => occ.status).filter(s => s !== 'none'))];
+            const statusTextMap: Record<string, string> = {
+              'paid': 'ชำระแล้ว',
+              'pending': 'ส่งสลิปแล้ว รอตรวจสอบ',
+              'unpaid': 'ยังไม่ชำระ/ไม่มีสลิป'
+            };
 
-            const occupantPaymentStatuses = room.occupants.map(occ => {
-              const payment = paymentStatusMap.get(occ.registrationId);
-              if (!payment) return 'unknown';
-              // Check isPaid first - if fully paid, it's paid regardless of slip status
-              if (payment.isPaid) return 'paid';
-              // If has pending slip (submitted but not approved), it's pending
-              if (payment.hasPendingSlip) return 'pending';
-              // Not fully paid and no pending slip = unpaid (may have partial payment approved)
-              return 'unpaid';
-            });
+            const paymentStatusTexts = uniqueStatuses.map(s => statusTextMap[s]).filter(Boolean);
+            const paymentStatus = paymentStatusTexts.length > 0 ? paymentStatusTexts.join(', ') : 'ชำระแล้ว';
 
-            // If any occupant is unpaid
-            if (occupantPaymentStatuses.includes('unpaid')) {
-              paymentStatus = 'ยังไม่ชำระ/ไม่มีสลิป';
+            // Determine overall payment status code (for backward compatibility if needed)
+            let paymentStatusCode: 'paid' | 'pending' | 'unpaid' = 'paid';
+            if (uniqueStatuses.includes('unpaid')) {
               paymentStatusCode = 'unpaid';
-            } else if (occupantPaymentStatuses.includes('pending')) {
-              paymentStatus = 'ส่งสลิปแล้ว รอตรวจสอบ';
+            } else if (uniqueStatuses.includes('pending')) {
               paymentStatusCode = 'pending';
             }
 
@@ -972,7 +991,7 @@ export default function RoomManagementModal({
           }
         }
 
-        // Apply fill to all cells in the row (except metadata columns)
+        // Apply fill to all cells in the row
         for (let C = range.s.c; C <= range.e.c; ++C) {
           const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
           if (!ws[cellAddress]) continue;
@@ -988,12 +1007,36 @@ export default function RoomManagementModal({
             horizontalAlign = 'left';
           }
 
+          // Determine cell-specific colors for occupant columns
+          let cellFillColor = fillColor;
+          let cellFontColor = fontColor;
+
+          // Check if this is an occupant column and has payment status data
+          if (C >= occupantStartCol && C <= occupantEndCol && row._occupantPayments) {
+            const occupantIndex = C - occupantStartCol;
+            const occupantPayment = row._occupantPayments[occupantIndex];
+
+            if (occupantPayment && occupantPayment.status !== 'none') {
+              // Apply individual color based on this occupant's payment status
+              if (occupantPayment.status === 'paid') {
+                cellFillColor = 'CCE5FF'; // Light blue
+                cellFontColor = '003366'; // Dark blue
+              } else if (occupantPayment.status === 'pending') {
+                cellFillColor = 'FFFFCC'; // Light yellow
+                cellFontColor = '996600'; // Dark yellow/brown
+              } else if (occupantPayment.status === 'unpaid') {
+                cellFillColor = 'FFE5CC'; // Light orange
+                cellFontColor = 'CC5500'; // Dark orange
+              }
+            }
+          }
+
           ws[cellAddress].s = {
             fill: {
-              fgColor: { rgb: fillColor }
+              fgColor: { rgb: cellFillColor }
             },
             font: {
-              color: { rgb: fontColor }
+              color: { rgb: cellFontColor }
             },
             alignment: {
               vertical: 'center',

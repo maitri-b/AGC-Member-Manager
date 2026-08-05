@@ -887,11 +887,44 @@ export default function RoomManagementModal({
             // Store occupant payment statuses for cell coloring
             rowData['_occupantPayments'] = occupantPaymentData;
 
-            // Collect unique companies and registration IDs
+            // Collect unique companies and registration IDs with their payment statuses
+            const companyPaymentMap = new Map<string, 'paid' | 'pending' | 'partial' | 'unpaid'>();
+            const registrationPaymentMap = new Map<string, 'paid' | 'pending' | 'partial' | 'unpaid'>();
+
+            room.occupants.forEach(occ => {
+              const payment = paymentStatusMap.get(occ.registrationId);
+              let status: 'paid' | 'pending' | 'partial' | 'unpaid' = 'unpaid';
+
+              if (payment) {
+                if (payment.isPaid) {
+                  status = 'paid';
+                } else if (payment.hasPendingSlip) {
+                  status = 'pending';
+                } else if (payment.paidAmount > 0 && payment.totalAmount > 0) {
+                  status = 'partial';
+                } else {
+                  status = 'unpaid';
+                }
+              }
+
+              companyPaymentMap.set(occ.companyName, status);
+              registrationPaymentMap.set(occ.registrationId, status);
+            });
+
             const uniqueCompanies = [...new Set(room.occupants.map(occ => occ.companyName))];
             const uniqueRegistrationIds = [...new Set(room.occupants.map(occ => occ.registrationId))];
 
-            // Join with comma if multiple
+            // Store metadata for rich text formatting
+            rowData['_companyPayments'] = uniqueCompanies.map(company => ({
+              name: company,
+              status: companyPaymentMap.get(company) || 'unpaid'
+            }));
+            rowData['_registrationPayments'] = uniqueRegistrationIds.map(id => ({
+              id: id.slice(0, 8),
+              status: registrationPaymentMap.get(id) || 'unpaid'
+            }));
+
+            // Join with comma if multiple (for plain text fallback)
             rowData['บริษัท'] = uniqueCompanies.join(', ');
             rowData['รหัสการจอง'] = uniqueRegistrationIds.map(id => id.slice(0, 8)).join(', ');
 
@@ -1045,6 +1078,47 @@ export default function RoomManagementModal({
                 cellFontColor = 'CC5500'; // Dark orange
               }
             }
+          }
+
+          // Helper function to get color based on payment status
+          const getStatusColor = (status: 'paid' | 'pending' | 'partial' | 'unpaid'): string => {
+            if (status === 'paid') return '003366'; // Dark blue
+            if (status === 'partial') return '6A3D9A'; // Dark purple
+            if (status === 'pending') return '996600'; // Dark yellow/brown
+            return 'CC5500'; // Dark orange (unpaid)
+          };
+
+          // Apply rich text formatting for company column
+          const registrationIdCol = companyCol + 1; // รหัสการจอง column
+          if (C === companyCol && row._companyPayments && row._companyPayments.length > 0) {
+            const richText: any[] = [];
+            row._companyPayments.forEach((company: any, idx: number) => {
+              if (idx > 0) {
+                richText.push({ text: ', ', font: { color: { rgb: cellFontColor } } });
+              }
+              richText.push({
+                text: company.name,
+                font: { color: { rgb: getStatusColor(company.status) } }
+              });
+            });
+            ws[cellAddress].r = richText;
+            delete ws[cellAddress].v; // Remove plain text value when using rich text
+          }
+
+          // Apply rich text formatting for registration ID column
+          if (C === registrationIdCol && row._registrationPayments && row._registrationPayments.length > 0) {
+            const richText: any[] = [];
+            row._registrationPayments.forEach((reg: any, idx: number) => {
+              if (idx > 0) {
+                richText.push({ text: ', ', font: { color: { rgb: cellFontColor } } });
+              }
+              richText.push({
+                text: reg.id,
+                font: { color: { rgb: getStatusColor(reg.status) } }
+              });
+            });
+            ws[cellAddress].r = richText;
+            delete ws[cellAddress].v; // Remove plain text value when using rich text
           }
 
           ws[cellAddress].s = {

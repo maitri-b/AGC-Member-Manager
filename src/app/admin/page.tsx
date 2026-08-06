@@ -457,8 +457,8 @@ export default function AdminPage() {
     return new Date(timestamp._seconds * 1000).toLocaleString('th-TH');
   };
 
-  // Get icon for admin note
-  const getNoteIcon = (iconType?: string) => {
+  // Get emoji icon for admin note (for selection buttons only)
+  const getNoteEmoji = (iconType?: string) => {
     const icons: { [key: string]: string } = {
       urgent: '🔴',
       reminder: '⏰',
@@ -1008,14 +1008,26 @@ export default function AdminPage() {
                               setAdminNoteText(user.adminNote || '');
                               setAdminNoteIcon(user.adminNoteIcon || 'note');
                             }}
-                            className="text-2xl hover:scale-110 transition-transform"
+                            className={!user.adminNoteIcon || user.adminNoteIcon === 'note' ? 'text-blue-600 hover:text-blue-800' : 'text-2xl hover:scale-110 transition-transform'}
                             title="ดูหมายเหตุ"
                           >
-                            {getNoteIcon(user.adminNoteIcon)}
+                            {!user.adminNoteIcon || user.adminNoteIcon === 'note' ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                              </svg>
+                            ) : (
+                              getNoteEmoji(user.adminNoteIcon)
+                            )}
                           </button>
                           <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 bg-gray-900 text-white text-xs rounded-lg p-3 z-10 shadow-lg">
                             <div className="font-semibold mb-1 flex items-center gap-2">
-                              <span>{getNoteIcon(user.adminNoteIcon)}</span>
+                              {!user.adminNoteIcon || user.adminNoteIcon === 'note' ? (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                </svg>
+                              ) : (
+                                <span>{getNoteEmoji(user.adminNoteIcon)}</span>
+                              )}
                               <span>หมายเหตุจาก Admin:</span>
                             </div>
                             <div className="whitespace-pre-wrap break-words">{user.adminNote}</div>
@@ -1518,13 +1530,13 @@ export default function AdminPage() {
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: 'urgent', label: 'เรื่องด่วน', icon: '🔴', color: 'bg-red-100 border-red-300 hover:bg-red-200' },
-                    { id: 'reminder', label: 'เตือนความจำ', icon: '⏰', color: 'bg-yellow-100 border-yellow-300 hover:bg-yellow-200' },
-                    { id: 'note', label: 'Note ทั่วไป', icon: '📝', color: 'bg-blue-100 border-blue-300 hover:bg-blue-200' },
-                    { id: 'schedule', label: 'ตั้งเวลา', icon: '📅', color: 'bg-purple-100 border-purple-300 hover:bg-purple-200' },
-                    { id: 'call', label: 'โทรหา', icon: '📞', color: 'bg-green-100 border-green-300 hover:bg-green-200' },
-                    { id: 'waiting', label: 'รอการตอบรับ', icon: '⏳', color: 'bg-orange-100 border-orange-300 hover:bg-orange-200' },
-                    { id: 'alert', label: 'ตกใจ', icon: '⚠️', color: 'bg-pink-100 border-pink-300 hover:bg-pink-200' },
+                    { id: 'urgent', label: 'เรื่องด่วน', emoji: '🔴', color: 'bg-red-100 border-red-300 hover:bg-red-200' },
+                    { id: 'reminder', label: 'เตือนความจำ', emoji: '⏰', color: 'bg-yellow-100 border-yellow-300 hover:bg-yellow-200' },
+                    { id: 'note', label: 'Note ทั่วไป', emoji: null, color: 'bg-blue-100 border-blue-300 hover:bg-blue-200' },
+                    { id: 'schedule', label: 'ตั้งเวลา', emoji: '📅', color: 'bg-purple-100 border-purple-300 hover:bg-purple-200' },
+                    { id: 'call', label: 'โทรหา', emoji: '📞', color: 'bg-green-100 border-green-300 hover:bg-green-200' },
+                    { id: 'waiting', label: 'รอการตอบรับ', emoji: '⏳', color: 'bg-orange-100 border-orange-300 hover:bg-orange-200' },
+                    { id: 'alert', label: 'ตกใจ', emoji: '⚠️', color: 'bg-pink-100 border-pink-300 hover:bg-pink-200' },
                   ].map((iconType) => (
                     <button
                       key={iconType.id}
@@ -1536,7 +1548,13 @@ export default function AdminPage() {
                           : 'bg-white border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-2xl">{iconType.icon}</span>
+                      {iconType.emoji ? (
+                        <span className="text-2xl">{iconType.emoji}</span>
+                      ) : (
+                        <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                        </svg>
+                      )}
                       <span className="text-xs font-medium text-gray-700">{iconType.label}</span>
                     </button>
                   ))}

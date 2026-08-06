@@ -1136,9 +1136,16 @@ export default function RoomManagementModal({
       }
       headerColumns.push('บริษัท', 'รหัสการจอง', 'สถานะการชำระเงิน', 'หมายเหตุ');
 
+      // ✅ FIX: Remove metadata fields (prefixed with _) before creating sheet
+      // These fields are only used for cell styling and should not appear as columns
+      const cleanedExcelData = excelData.map(row => {
+        const { _occupantPayments, _companyPayments, _registrationPayments, _roomStatus, _paymentStatus, ...cleanRow } = row;
+        return cleanRow;
+      });
+
       // Create workbook
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(excelData, {
+      const ws = XLSX.utils.json_to_sheet(cleanedExcelData, {
         header: headerColumns
       });
 

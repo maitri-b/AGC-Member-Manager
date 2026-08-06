@@ -762,22 +762,25 @@ export default function EventDetailPage() {
 
     try {
       setRoomsLoading(true);
-      console.log('[Rooms] Fetching rooms...');
-      const roomsResponse = await fetch(`/api/events/${eventId}/rooms`);
-      if (!roomsResponse.ok) throw new Error('Failed to fetch rooms');
-      const roomsData = await roomsResponse.json();
-      const rooms = roomsData.rooms || [];
+      console.log('[Rooms] Fetching rooms and event data...');
 
-      setAllRooms(rooms);
+      // Fetch both rooms and event data to get updated room assignments
+      await Promise.all([
+        (async () => {
+          const roomsResponse = await fetch(`/api/events/${eventId}/rooms`);
+          if (!roomsResponse.ok) throw new Error('Failed to fetch rooms');
+          const roomsData = await roomsResponse.json();
+          const rooms = roomsData.rooms || [];
+          setAllRooms(rooms);
+          console.log(`[Rooms] Loaded ${rooms.length} rooms`);
+        })(),
+        fetchEventData() // Also refresh attendee data with updated room assignments
+      ]);
+
       setRoomsLastFetched(new Date());
-      console.log(`[Rooms] Loaded ${rooms.length} rooms at ${new Date().toLocaleTimeString()}`);
-
-      // Also update availableRooms if we have eventData
-      if (eventData) {
-        fetchAvailableRooms();
-      }
+      console.log(`[Rooms] Loaded rooms and event data at ${new Date().toLocaleTimeString()}`);
     } catch (error) {
-      console.error('[Rooms] Error fetching rooms:', error);
+      console.error('[Rooms] Error fetching data:', error);
     } finally {
       setRoomsLoading(false);
     }

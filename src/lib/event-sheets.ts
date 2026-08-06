@@ -748,7 +748,8 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
       statusLower === 'confirmed' ||
       statusLower === 'attended' ||
       status.includes('ยืนยัน') ||
-      status.includes('ตรวจสอบแล้ว');
+      status.includes('ตรวจสอบแล้ว') ||
+      status.includes('ยืนยันแล้ว');
 
     console.log(`getMemberAttendanceSummary: Event "${event.eventName}" (${event.eventDate}) - status: ${status}, isConfirmed: ${isConfirmed}`);
 
@@ -833,7 +834,8 @@ function isRegistrationConfirmed(reg: EventRegistration): boolean {
     statusLower === 'confirmed' ||
     statusLower === 'attended' ||
     status.includes('ยืนยัน') ||
-    status.includes('ตรวจสอบแล้ว')
+    status.includes('ตรวจสอบแล้ว') ||
+    status.includes('ยืนยันแล้ว')
   );
 }
 
@@ -1184,7 +1186,8 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
             statusLower === 'confirmed' ||
             statusLower === 'attended' ||
             status.includes('ยืนยัน') ||
-            status.includes('ตรวจสอบแล้ว');
+            status.includes('ตรวจสอบแล้ว') ||
+            status.includes('ยืนยันแล้ว');
 
           if (isConfirmed) {
             const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber);

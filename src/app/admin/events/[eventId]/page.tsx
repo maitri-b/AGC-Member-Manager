@@ -1062,10 +1062,10 @@ export default function EventDetailPage() {
 
         if (rowCount > 1) {
           // Calculate total columns (excluding last 2: attendee order and name)
-          // Base columns: 6 + room types + 6 other fields
+          // Base columns: 6 + room types + 7 other fields
           const baseColumns = 6; // รหัส, บริษัท, ผู้ติดต่อ, เบอร์, ไลน์, จำนวน
           const roomColumns = sortedRoomTypes.length;
-          const otherColumns = 6; // ค่าห้อง, สถานะ, สถานะชำระ, ยอดรวม, อนุมัติ, ความต้องการ, ค่าเสริม
+          const otherColumns = 7; // ค่าห้อง, สถานะ, สถานะชำระ, ยอดรวม, อนุมัติ, ความต้องการ, ค่าเสริม
           const totalMergeColumns = baseColumns + roomColumns + otherColumns;
 
           // Merge all columns except last 2 (attendee order and name)

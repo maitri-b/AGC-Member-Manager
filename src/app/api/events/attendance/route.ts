@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
-import { getMemberAttendanceSummary } from '@/lib/event-sheets';
+import { getMemberAttendanceSummary, getAttendanceCache } from '@/lib/event-sheets';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('memberId');
+    const useCache = searchParams.get('cache') !== 'false'; // Default to using cache
 
     // If querying another member's attendance, require permission
     if (memberId && memberId !== session.user.memberId) {
@@ -32,6 +33,30 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Try to use cache first if enabled
+    if (useCache) {
+      const cache = await getAttendanceCache();
+      if (cache && cache[targetMemberId]) {
+        const cacheEntry = cache[targetMemberId];
+
+        // Get full attendance details from real-time calculation
+        // (we need the eventsAttended list which is not in cache)
+        const fullAttendance = await getMemberAttendanceSummary(targetMemberId);
+
+        if (fullAttendance) {
+          // Use cached count but keep detailed event list from real-time
+          return NextResponse.json({
+            attendance: {
+              ...fullAttendance,
+              eventsLast12Months: cacheEntry.eventsLast12Months,
+              noActivityWarning: !cacheEntry.hasRecentActivity,
+            }
+          });
+        }
+      }
+    }
+
+    // Fallback to real-time calculation if cache is disabled or not available
     const attendance = await getMemberAttendanceSummary(targetMemberId);
 
     if (!attendance) {

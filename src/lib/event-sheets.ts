@@ -1146,9 +1146,24 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
         const registrations = await getEventRegistrationsByEventId(event.eventId);
         console.log(`buildAttendanceCache: Found ${registrations.length} registrations for ${event.eventId}`);
 
+        // Debug: Show first few registrations with status
+        if (registrations.length > 0) {
+          console.log(`buildAttendanceCache: Sample registrations for ${event.eventName}:`,
+            registrations.slice(0, 3).map(r => ({
+              registrationId: r.registrationId,
+              licenseNumber: r.licenseNumber,
+              status: r.status,
+              companyName: r.companyName
+            }))
+          );
+        }
+
         let confirmedInEvent = 0;
         for (const reg of registrations) {
-          if (!reg.licenseNumber) continue;
+          if (!reg.licenseNumber) {
+            console.log(`buildAttendanceCache: Skipping registration ${reg.registrationId} - no license number`);
+            continue;
+          }
 
           // Check if confirmed/attended
           const status = reg.status || '';
@@ -1165,7 +1180,10 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
               licenseAttendance[normalizedLicense] = (licenseAttendance[normalizedLicense] || 0) + 1;
               confirmedInEvent++;
               totalConfirmed++;
+              console.log(`buildAttendanceCache: ✓ Counted registration ${reg.registrationId} (${reg.companyName}) - license: ${normalizedLicense}, status: ${status}`);
             }
+          } else {
+            console.log(`buildAttendanceCache: ✗ Skipped registration ${reg.registrationId} (${reg.companyName}) - status: ${status} (not confirmed)`);
           }
         }
         console.log(`buildAttendanceCache: ${confirmedInEvent} confirmed registrations in ${event.eventName}`);

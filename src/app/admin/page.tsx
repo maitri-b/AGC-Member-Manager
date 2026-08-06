@@ -1008,7 +1008,7 @@ export default function AdminPage() {
                               setAdminNoteText(user.adminNote || '');
                               setAdminNoteIcon(user.adminNoteIcon || 'note');
                             }}
-                            className={!user.adminNoteIcon || user.adminNoteIcon === 'note' ? 'text-blue-600 hover:text-blue-800' : 'text-2xl hover:scale-110 transition-transform'}
+                            className={!user.adminNoteIcon || user.adminNoteIcon === 'note' ? 'text-blue-600 hover:text-blue-800' : 'text-lg hover:scale-110 transition-transform'}
                             title="ดูหมายเหตุ"
                           >
                             {!user.adminNoteIcon || user.adminNoteIcon === 'note' ? (
@@ -1549,9 +1549,9 @@ export default function AdminPage() {
                       }`}
                     >
                       {iconType.emoji ? (
-                        <span className="text-2xl">{iconType.emoji}</span>
+                        <span className="text-xl">{iconType.emoji}</span>
                       ) : (
-                        <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                         </svg>
                       )}

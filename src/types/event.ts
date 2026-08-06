@@ -597,9 +597,19 @@ export function isWithinLastMonths(dateStr: string, months: number = 12): boolea
   if (!date) return false;
 
   const now = new Date();
-  const cutoffDate = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+  // Fix: Use day 1 to avoid month overflow issues
+  // When subtracting months, using the current day can cause issues
+  // (e.g., Jan 31 - 1 month = Dec 31, but Feb 31 - 1 month would overflow)
+  const cutoffDate = new Date(now.getFullYear(), now.getMonth() - months, 1);
 
-  return date >= cutoffDate;
+  // Set cutoffDate to start of day for consistent comparison
+  cutoffDate.setHours(0, 0, 0, 0);
+
+  // Set event date to start of day for consistent comparison
+  const eventDate = new Date(date);
+  eventDate.setHours(0, 0, 0, 0);
+
+  return eventDate >= cutoffDate;
 }
 
 // Helper to get current year (พ.ศ.)

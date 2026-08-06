@@ -567,17 +567,24 @@ export function meetsAttendanceRequirement(attendance: MemberAttendance, minEven
   return attendance.eventsLast12Months >= minEvents;
 }
 
-// Helper to parse date from DD/MM/YYYY or YYYY format
+// Helper to parse date from DD/MM/YYYY, YYYY-MM-DD, or YYYY format
 export function parseEventDate(dateStr: string): Date | null {
   if (!dateStr) return null;
 
-  // Try DD/MM/YYYY format
+  // Try DD/MM/YYYY format (Buddhist or Gregorian)
   const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (ddmmyyyyMatch) {
     const [, day, month, year] = ddmmyyyyMatch;
     // Convert Buddhist year to Gregorian if year > 2500
     const gregorianYear = parseInt(year) > 2500 ? parseInt(year) - 543 : parseInt(year);
     return new Date(gregorianYear, parseInt(month) - 1, parseInt(day));
+  }
+
+  // Try YYYY-MM-DD format (ISO 8601, always Gregorian)
+  const yyyymmddMatch = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (yyyymmddMatch) {
+    const [, year, month, day] = yyyymmddMatch;
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
   }
 
   // Try YYYY format (year only - assume Jan 1)

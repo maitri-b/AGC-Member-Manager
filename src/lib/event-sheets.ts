@@ -717,8 +717,11 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
     return null;
   }
 
+  console.log(`getMemberAttendanceSummary: Fetching attendance for member ${memberId} (license: ${member.licenseNumber})`);
+
   // Find all event registrations by license number
   const eventRecords = await getRegistrationsByLicense(member.licenseNumber);
+  console.log(`getMemberAttendanceSummary: Found ${eventRecords.length} event records for license ${member.licenseNumber}`);
 
   const currentYear = new Date().getFullYear();
   const eventsAttended: EventAttendanceRecord[] = [];
@@ -732,7 +735,10 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
 
   for (const record of eventRecords) {
     const event = events.find(e => e.eventId === record.eventId);
-    if (!event) continue;
+    if (!event) {
+      console.log(`getMemberAttendanceSummary: Event ${record.eventId} not found in tracked events`);
+      continue;
+    }
 
     // Check if confirmed/attended - include Thai status values
     const status = record.registration.status || '';
@@ -743,6 +749,8 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
       statusLower === 'attended' ||
       status.includes('ยืนยัน') ||
       status.includes('ตรวจสอบแล้ว');
+
+    console.log(`getMemberAttendanceSummary: Event "${event.eventName}" (${event.eventDate}) - status: ${status}, isConfirmed: ${isConfirmed}`);
 
     if (isConfirmed) {
       const attendanceRecord: EventAttendanceRecord = {
@@ -766,7 +774,9 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
       }
 
       // Check if this event is within last 12 months (new logic)
-      if (isWithinLastMonths(event.eventDate, 12)) {
+      const withinLast12 = isWithinLastMonths(event.eventDate, 12);
+      console.log(`getMemberAttendanceSummary: Event "${event.eventName}" within 12 months: ${withinLast12}`);
+      if (withinLast12) {
         eventsLast12Months++;
       }
 
@@ -779,6 +789,8 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
       }
     }
   }
+
+  console.log(`getMemberAttendanceSummary: Total confirmed events: ${eventsAttended.length}, within 12 months: ${eventsLast12Months}`);
 
   // Sort eventsAttended by date (most recent first)
   eventsAttended.sort((a, b) => {

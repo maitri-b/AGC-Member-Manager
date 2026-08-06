@@ -483,7 +483,7 @@ export default function EventDetailPage() {
   }>({ attendeeCount: 1, attendeeNames: [''], status: 'รอดำเนินการ' });
   const [updating, setUpdating] = useState(false);
 
-  // Room management state
+  // Room management state - Lifted to parent level to prevent N+1 queries
   const [availableRooms, setAvailableRooms] = useState<Array<{
     roomId: string;
     buildingName: string;
@@ -491,6 +491,15 @@ export default function EventDetailPage() {
     roomTypeCategory?: string;
     maxOccupancy: number;
     currentOccupancy: number;
+    isLocked?: boolean;
+  }>>([]);
+  const [roomsLastFetched, setRoomsLastFetched] = useState<Date | null>(null);
+  const [allRooms, setAllRooms] = useState<Array<{
+    roomId: string;
+    buildingName: string;
+    roomNumber: string;
+    roomTypeCategory?: string;
+    maxOccupancy: number;
     isLocked?: boolean;
   }>>([]);
 
@@ -714,6 +723,7 @@ export default function EventDetailPage() {
   useEffect(() => {
     if (eventId) {
       fetchEventData();
+      fetchAllRooms(); // Load rooms once on mount
     }
   }, [eventId]);
 
@@ -745,24 +755,40 @@ export default function EventDetailPage() {
     }
   };
 
-  const fetchAvailableRooms = async () => {
+  // ✅ NEW: Fetch all rooms once and store in parent state (prevents N+1 queries)
+  const fetchAllRooms = async () => {
     if (!eventId) return;
 
     try {
-      // Fetch all rooms for this event
       const roomsResponse = await fetch(`/api/events/${eventId}/rooms`);
       if (!roomsResponse.ok) throw new Error('Failed to fetch rooms');
       const roomsData = await roomsResponse.json();
       const rooms = roomsData.rooms || [];
 
-      // Fetch all registrations to calculate current occupancy
-      const eventResponse = await fetch(`/api/events/${eventId}`);
-      if (!eventResponse.ok) throw new Error('Failed to fetch event data');
-      const eventData = await eventResponse.json();
-      const registrations = eventData.attendees || [];
+      setAllRooms(rooms);
+      setRoomsLastFetched(new Date());
+      console.log(`[Rooms] Loaded ${rooms.length} rooms at ${new Date().toLocaleTimeString()}`);
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
+    }
+  };
 
-      // Calculate current occupancy for each room
+  // ✅ OPTIMIZED: Use allRooms state instead of fetching again
+  const fetchAvailableRooms = async () => {
+    if (!eventId || !eventData) return;
+
+    try {
+      // Use cached rooms data if available
+      const rooms = allRooms.length > 0 ? allRooms : await (async () => {
+        const roomsResponse = await fetch(`/api/events/${eventId}/rooms`);
+        if (!roomsResponse.ok) throw new Error('Failed to fetch rooms');
+        const roomsData = await roomsResponse.json();
+        return roomsData.rooms || [];
+      })();
+
+      // Calculate current occupancy for each room using existing eventData
       const occupancyMap: Record<string, number> = {};
+      const registrations = eventData.attendees || [];
 
       registrations.forEach((attendee: any) => {
         try {
@@ -3157,8 +3183,24 @@ export default function EventDetailPage() {
               <h2 className="text-lg font-semibold text-gray-900">
                 รายชื่อผู้เข้าร่วม ({filteredAttendees.length} รายการ)
               </h2>
+              {roomsLastFetched && (
+                <span className="text-xs text-gray-500 ml-3">
+                  ข้อมูลห้องพัก: {roomsLastFetched.toLocaleTimeString('th-TH')}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              {/* Refresh Rooms Button */}
+              <button
+                onClick={() => fetchAllRooms()}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                title="รีเฟรชข้อมูลห้องพัก"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="hidden sm:inline">รีเฟรช</span>
+              </button>
               <button
                 onClick={handleExportExcel}
                 disabled={exportLoading || filteredAttendees.length === 0}
@@ -3751,6 +3793,7 @@ export default function EventDetailPage() {
                                             currentAttendeeIndex={index}
                                             currentRegistrationId={attendee.registration.registrationId}
                                             allAttendees={eventData?.attendees || []}
+                                            allRooms={allRooms}
                                           />
                                         ) : (
                                           <span className="text-gray-400 text-xs">ยังไม่จัดห้อง</span>
@@ -5714,12 +5757,21 @@ function RoomNumberWithTooltip({
   currentAttendeeIndex,
   currentRegistrationId,
   allAttendees,
+  allRooms,
 }: {
   roomId: string;
   eventId: string;
   currentAttendeeIndex: number;
   currentRegistrationId: string;
   allAttendees: Attendee[];
+  allRooms: Array<{
+    roomId: string;
+    buildingName: string;
+    roomNumber: string;
+    roomTypeCategory?: string;
+    maxOccupancy: number;
+    isLocked?: boolean;
+  }>;
 }) {
   const [room, setRoom] = useState<any>(null);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -5731,15 +5783,13 @@ function RoomNumberWithTooltip({
 
   useEffect(() => {
     fetchRoomAndRoommates();
-  }, [roomId, allAttendees]);
+  }, [roomId, allAttendees, allRooms]);
 
   const fetchRoomAndRoommates = async () => {
     try {
-      // Fetch room details
-      const response = await fetch(`/api/events/${eventId}/rooms`);
-      if (response.ok) {
-        const data = await response.json();
-        const foundRoom = data.rooms.find((r: any) => r.roomId === roomId);
+      // ✅ OPTIMIZED: Use allRooms prop instead of fetching
+      const foundRoom = allRooms.find((r: any) => r.roomId === roomId);
+      if (foundRoom) {
         setRoom(foundRoom);
       }
 

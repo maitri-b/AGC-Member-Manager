@@ -49,6 +49,90 @@ export async function PUT(
       return NextResponse.json({ error: 'กรุณาระบุ registrationId' }, { status: 400 });
     }
 
+    // ✅ NEW: Validate room capacity before updating room assignments
+    if (updateData.room_assignments) {
+      try {
+        const roomAssignments = typeof updateData.room_assignments === 'string'
+          ? JSON.parse(updateData.room_assignments)
+          : updateData.room_assignments;
+
+        if (Array.isArray(roomAssignments) && roomAssignments.length > 0) {
+          // Get all rooms for this event
+          const db = adminDb();
+          const roomsSnapshot = await db.collection('eventRooms')
+            .where('eventId', '==', eventId)
+            .get();
+
+          const roomsMap: Record<string, { maxOccupancy: number; buildingName: string; roomNumber: string }> = {};
+          roomsSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            roomsMap[doc.id] = {
+              maxOccupancy: data.maxOccupancy || 0,
+              buildingName: data.buildingName || '',
+              roomNumber: data.roomNumber || '',
+            };
+          });
+
+          // Get all registrations to calculate current occupancy
+          const allRegistrations = await getEventRegistrationsByEventId(eventId);
+
+          // Calculate occupancy per room (excluding current registration)
+          const occupancyMap: Record<string, number> = {};
+          for (const reg of allRegistrations) {
+            // Skip current registration being updated
+            if (reg.registrationId === registrationId) continue;
+            // Skip cancelled registrations
+            if (reg.status === 'ยกเลิก') continue;
+
+            try {
+              if (reg.roomAssignments) {
+                const assignments = JSON.parse(reg.roomAssignments);
+                if (Array.isArray(assignments)) {
+                  assignments.forEach((assignment: { roomId: string }) => {
+                    if (assignment.roomId) {
+                      occupancyMap[assignment.roomId] = (occupancyMap[assignment.roomId] || 0) + 1;
+                    }
+                  });
+                }
+              }
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+
+          // Count new assignments per room
+          const newAssignmentsPerRoom: Record<string, number> = {};
+          roomAssignments.forEach((assignment: { roomId: string }) => {
+            if (assignment.roomId) {
+              newAssignmentsPerRoom[assignment.roomId] = (newAssignmentsPerRoom[assignment.roomId] || 0) + 1;
+            }
+          });
+
+          // Validate each room capacity
+          for (const [roomId, newCount] of Object.entries(newAssignmentsPerRoom)) {
+            const room = roomsMap[roomId];
+            if (!room) {
+              return NextResponse.json({
+                error: `ไม่พบห้อง ${roomId}`
+              }, { status: 404 });
+            }
+
+            const currentOccupancy = occupancyMap[roomId] || 0;
+            const totalAfterUpdate = currentOccupancy + newCount;
+
+            if (totalAfterUpdate > room.maxOccupancy) {
+              return NextResponse.json({
+                error: `ห้อง ${room.buildingName}-${room.roomNumber} เต็มแล้ว (${currentOccupancy}/${room.maxOccupancy} คน) ไม่สามารถเพิ่มอีก ${newCount} คนได้`
+              }, { status: 409 }); // 409 Conflict
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error validating room assignments:', e);
+        return NextResponse.json({ error: 'รูปแบบข้อมูล room_assignments ไม่ถูกต้อง' }, { status: 400 });
+      }
+    }
+
     const db = adminDb();
 
     // Get event details

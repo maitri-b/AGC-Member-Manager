@@ -17,6 +17,7 @@ interface RoomOccupant {
   attendeeIndex: number;
   companyName: string;
   registrationId: string;
+  note?: string;
 }
 
 interface RoomWithOccupants extends EventRoom {
@@ -150,6 +151,7 @@ export default function RoomManagementModal({
                     attendeeIndex: assignment.attendeeIndex,
                     companyName: reg.companyName,
                     registrationId: reg.registrationId,
+                    note: reg.note || '',
                   });
                 }
               });
@@ -1803,6 +1805,7 @@ export default function RoomManagementModal({
                           if (occupant.attendeeName.toLowerCase().includes(query)) return true;
                           if (occupant.companyName.toLowerCase().includes(query)) return true;
                           if (occupant.registrationId.toLowerCase().includes(query)) return true;
+                          if (occupant.note && occupant.note.toLowerCase().includes(query)) return true;
                           return false;
                         });
                       });

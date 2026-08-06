@@ -1008,10 +1008,14 @@ export default function AdminPage() {
                               setAdminNoteText(user.adminNote || '');
                               setAdminNoteIcon(user.adminNoteIcon || 'note');
                             }}
-                            className={!user.adminNoteIcon || user.adminNoteIcon === 'note' ? 'text-blue-600 hover:text-blue-800' : 'text-lg hover:scale-110 transition-transform'}
+                            className={!user.adminNoteIcon || user.adminNoteIcon === 'note' || user.adminNoteIcon === 'none' ? 'text-blue-600 hover:text-blue-800' : 'text-lg hover:scale-110 transition-transform'}
                             title="ดูหมายเหตุ"
                           >
-                            {!user.adminNoteIcon || user.adminNoteIcon === 'note' ? (
+                            {user.adminNoteIcon === 'none' ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                              </svg>
+                            ) : !user.adminNoteIcon || user.adminNoteIcon === 'note' ? (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                               </svg>
@@ -1021,7 +1025,7 @@ export default function AdminPage() {
                           </button>
                           <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 bg-gray-900 text-white text-xs rounded-lg p-3 z-10 shadow-lg">
                             <div className="font-semibold mb-1 flex items-center gap-2">
-                              {!user.adminNoteIcon || user.adminNoteIcon === 'note' ? (
+                              {!user.adminNoteIcon || user.adminNoteIcon === 'note' || user.adminNoteIcon === 'none' ? (
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                                 </svg>
@@ -1530,6 +1534,7 @@ export default function AdminPage() {
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
+                    { id: 'none', label: 'ไม่ระบุ', emoji: '⭕', color: 'bg-gray-100 border-gray-300 hover:bg-gray-200' },
                     { id: 'urgent', label: 'เรื่องด่วน', emoji: '🔴', color: 'bg-red-100 border-red-300 hover:bg-red-200' },
                     { id: 'reminder', label: 'เตือนความจำ', emoji: '⏰', color: 'bg-yellow-100 border-yellow-300 hover:bg-yellow-200' },
                     { id: 'note', label: 'Note ทั่วไป', emoji: null, color: 'bg-blue-100 border-blue-300 hover:bg-blue-200' },
@@ -1548,7 +1553,11 @@ export default function AdminPage() {
                           : 'bg-white border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      {iconType.emoji ? (
+                      {iconType.id === 'none' ? (
+                        <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                      ) : iconType.emoji ? (
                         <span className="text-xl">{iconType.emoji}</span>
                       ) : (
                         <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

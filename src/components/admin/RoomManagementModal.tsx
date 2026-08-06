@@ -788,40 +788,61 @@ export default function RoomManagementModal({
       if (!eventResponse.ok) throw new Error('Failed to fetch event data');
       const eventData = await eventResponse.json();
 
-      // Group occupants by registration ID
+      // ✅ FIX: Group occupants by registration ID to handle multiple people per registration
+      const updatesByRegistration: Record<string, {
+        registrationId: string;
+        attendeeIndexes: number[];
+        originalAssignments: Array<{ roomId: string; attendeeIndex: number }>;
+      }> = {};
+
+      // First, group by registration
+      for (const occupant of bulkTransferData.occupants) {
+        if (!updatesByRegistration[occupant.registrationId]) {
+          const registration = eventData.attendees.find(
+            (a: any) => a.registration.registrationId === occupant.registrationId
+          );
+
+          if (!registration) {
+            console.warn(`Registration not found: ${occupant.registrationId}`);
+            continue;
+          }
+
+          // Parse current room assignments
+          let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
+          try {
+            roomAssignments = JSON.parse(registration.registration.roomAssignments || '[]');
+          } catch (e) {
+            console.error('Error parsing room assignments:', e);
+          }
+
+          updatesByRegistration[occupant.registrationId] = {
+            registrationId: occupant.registrationId,
+            attendeeIndexes: [],
+            originalAssignments: roomAssignments,
+          };
+        }
+
+        // Add this attendee index to the list
+        updatesByRegistration[occupant.registrationId].attendeeIndexes.push(occupant.attendeeIndex);
+      }
+
+      // Now build the updates array with all attendees per registration updated at once
       const updates: Array<{
         registrationId: string;
         newAssignments: Array<{ roomId: string; attendeeIndex: number }>;
       }> = [];
 
-      for (const occupant of bulkTransferData.occupants) {
-        const registration = eventData.attendees.find(
-          (a: any) => a.registration.registrationId === occupant.registrationId
-        );
-
-        if (!registration) {
-          console.warn(`Registration not found: ${occupant.registrationId}`);
-          continue;
-        }
-
-        // Parse current room assignments
-        let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
-        try {
-          roomAssignments = JSON.parse(registration.registration.roomAssignments || '[]');
-        } catch (e) {
-          console.error('Error parsing room assignments:', e);
-        }
-
-        // Update the assignment for this attendee
-        const updatedAssignments = roomAssignments.map((assignment) => {
-          if (assignment.attendeeIndex === occupant.attendeeIndex) {
+      for (const update of Object.values(updatesByRegistration)) {
+        // Update room for all attendees in this registration that are being moved
+        const updatedAssignments = update.originalAssignments.map((assignment) => {
+          if (update.attendeeIndexes.includes(assignment.attendeeIndex)) {
             return { ...assignment, roomId: bulkTransferData.selectedNewRoomId };
           }
           return assignment;
         });
 
         updates.push({
-          registrationId: occupant.registrationId,
+          registrationId: update.registrationId,
           newAssignments: updatedAssignments,
         });
       }

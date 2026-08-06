@@ -494,6 +494,7 @@ export default function EventDetailPage() {
     isLocked?: boolean;
   }>>([]);
   const [roomsLastFetched, setRoomsLastFetched] = useState<Date | null>(null);
+  const [roomsLoading, setRoomsLoading] = useState(false);
   const [allRooms, setAllRooms] = useState<Array<{
     roomId: string;
     buildingName: string;
@@ -760,6 +761,8 @@ export default function EventDetailPage() {
     if (!eventId) return;
 
     try {
+      setRoomsLoading(true);
+      console.log('[Rooms] Fetching rooms...');
       const roomsResponse = await fetch(`/api/events/${eventId}/rooms`);
       if (!roomsResponse.ok) throw new Error('Failed to fetch rooms');
       const roomsData = await roomsResponse.json();
@@ -768,8 +771,15 @@ export default function EventDetailPage() {
       setAllRooms(rooms);
       setRoomsLastFetched(new Date());
       console.log(`[Rooms] Loaded ${rooms.length} rooms at ${new Date().toLocaleTimeString()}`);
+
+      // Also update availableRooms if we have eventData
+      if (eventData) {
+        fetchAvailableRooms();
+      }
     } catch (error) {
-      console.error('Error fetching rooms:', error);
+      console.error('[Rooms] Error fetching rooms:', error);
+    } finally {
+      setRoomsLoading(false);
     }
   };
 
@@ -3193,13 +3203,23 @@ export default function EventDetailPage() {
               {/* Refresh Rooms Button */}
               <button
                 onClick={() => fetchAllRooms()}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={roomsLoading}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="รีเฟรชข้อมูลห้องพัก"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span className="hidden sm:inline">รีเฟรช</span>
+                {roomsLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-transparent"></div>
+                    <span className="hidden sm:inline">กำลังโหลด...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span className="hidden sm:inline">รีเฟรช</span>
+                  </>
+                )}
               </button>
               <button
                 onClick={handleExportExcel}

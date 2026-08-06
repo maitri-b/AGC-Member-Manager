@@ -57,6 +57,17 @@ export default function RoomManagementModal({
   } | null>(null);
   const [transferring, setTransferring] = useState(false);
 
+  // Bulk room transfer state
+  const [bulkTransferModalOpen, setBulkTransferModalOpen] = useState(false);
+  const [bulkTransferData, setBulkTransferData] = useState<{
+    currentRoomId: string;
+    currentRoomNumber: string;
+    occupants: RoomOccupant[];
+    availableRooms: RoomWithOccupants[];
+    selectedNewRoomId: string;
+  } | null>(null);
+  const [bulkTransferring, setBulkTransferring] = useState(false);
+
   // Import state
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -729,6 +740,141 @@ export default function RoomManagementModal({
       toast.error(error.message || 'เกิดข้อผิดพลาด');
     } finally {
       setTransferring(false);
+    }
+  };
+
+  // Handler to open bulk transfer modal
+  const handleOpenBulkTransferModal = (room: RoomWithOccupants) => {
+    if (room.occupants.length === 0) {
+      toast.error('ห้องนี้ไม่มีผู้พัก');
+      return;
+    }
+
+    // Find available rooms that can accommodate all occupants
+    const availableRooms = roomsWithOccupants.filter(r => {
+      if (r.roomId === room.roomId) return false; // Exclude current room
+      if (r.isLocked) return false; // Exclude locked rooms
+      const availableSpace = r.maxOccupancy - r.occupants.length;
+      return availableSpace >= room.occupants.length; // Can fit all occupants
+    });
+
+    if (availableRooms.length === 0) {
+      toast.error(`ไม่มีห้องว่างที่รองรับผู้พัก ${room.occupants.length} คนได้`);
+      return;
+    }
+
+    setBulkTransferData({
+      currentRoomId: room.roomId,
+      currentRoomNumber: `${room.buildingName}-${room.roomNumber}`,
+      occupants: room.occupants,
+      availableRooms,
+      selectedNewRoomId: '',
+    });
+    setBulkTransferModalOpen(true);
+  };
+
+  // Handler to execute bulk room transfer
+  const handleBulkTransferRoom = async () => {
+    if (!bulkTransferData || !bulkTransferData.selectedNewRoomId) {
+      toast.error('กรุณาเลือกห้องปลายทาง');
+      return;
+    }
+
+    try {
+      setBulkTransferring(true);
+
+      // Fetch event data to get all registrations
+      const eventResponse = await fetch(`/api/events/${eventId}`);
+      if (!eventResponse.ok) throw new Error('Failed to fetch event data');
+      const eventData = await eventResponse.json();
+
+      // Group occupants by registration ID
+      const updates: Array<{
+        registrationId: string;
+        newAssignments: Array<{ roomId: string; attendeeIndex: number }>;
+      }> = [];
+
+      for (const occupant of bulkTransferData.occupants) {
+        const registration = eventData.attendees.find(
+          (a: any) => a.registration.registrationId === occupant.registrationId
+        );
+
+        if (!registration) {
+          console.warn(`Registration not found: ${occupant.registrationId}`);
+          continue;
+        }
+
+        // Parse current room assignments
+        let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
+        try {
+          roomAssignments = JSON.parse(registration.registration.roomAssignments || '[]');
+        } catch (e) {
+          console.error('Error parsing room assignments:', e);
+        }
+
+        // Update the assignment for this attendee
+        const updatedAssignments = roomAssignments.map((assignment) => {
+          if (assignment.attendeeIndex === occupant.attendeeIndex) {
+            return { ...assignment, roomId: bulkTransferData.selectedNewRoomId };
+          }
+          return assignment;
+        });
+
+        updates.push({
+          registrationId: occupant.registrationId,
+          newAssignments: updatedAssignments,
+        });
+      }
+
+      // Execute all updates
+      for (const update of updates) {
+        const updateResponse = await fetch(`/api/events/${eventId}/admin-update-registration`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            registrationId: update.registrationId,
+            updateData: {
+              room_assignments: JSON.stringify(update.newAssignments),
+            },
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          const data = await updateResponse.json();
+          throw new Error(data.error || `Failed to update ${update.registrationId}`);
+        }
+      }
+
+      // Update UI state
+      setRoomsWithOccupants(prevRooms => {
+        // Remove all occupants from current room
+        const roomsAfterRemoval = prevRooms.map(room => {
+          if (room.roomId === bulkTransferData.currentRoomId) {
+            return { ...room, occupants: [] };
+          }
+          return room;
+        });
+
+        // Add all occupants to new room
+        return roomsAfterRemoval.map(room => {
+          if (room.roomId === bulkTransferData.selectedNewRoomId) {
+            return {
+              ...room,
+              occupants: [...room.occupants, ...bulkTransferData.occupants],
+            };
+          }
+          return room;
+        });
+      });
+
+      toast.success(`ย้ายผู้พัก ${bulkTransferData.occupants.length} คนสำเร็จ`);
+      setBulkTransferModalOpen(false);
+      setBulkTransferData(null);
+    } catch (error: any) {
+      console.error('Error bulk transferring room:', error);
+      toast.error(error.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setBulkTransferring(false);
     }
   };
 
@@ -1913,6 +2059,19 @@ export default function RoomManagementModal({
                                     {room.occupants.length}/{room.maxOccupancy} คน
                                   </div>
                                 </div>
+                                {/* Bulk Transfer Button */}
+                                {!isEmpty && !isLocked && (
+                                  <button
+                                    onClick={() => handleOpenBulkTransferModal(room)}
+                                    className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center gap-2"
+                                    title="สลับห้องทั้งหมด"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                    </svg>
+                                    สลับห้องทั้งหมด
+                                  </button>
+                                )}
                               </div>
 
                               {room.note && (
@@ -2174,6 +2333,87 @@ export default function RoomManagementModal({
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 {transferring ? 'กำลังย้าย...' : 'ย้ายห้อง'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Transfer Modal */}
+      {bulkTransferModalOpen && bulkTransferData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">สลับห้องพักทั้งหมด</h3>
+
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-gray-800 mb-2">
+                <strong>ห้องต้นทาง:</strong> {bulkTransferData.currentRoomNumber}
+              </p>
+              <p className="text-sm text-gray-800 mb-3">
+                <strong>จำนวนผู้พัก:</strong> {bulkTransferData.occupants.length} คน
+              </p>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-gray-700 mb-1">รายชื่อผู้พัก:</p>
+                {bulkTransferData.occupants.map((occupant, idx) => (
+                  <div key={`${occupant.registrationId}-${occupant.attendeeIndex}`} className="text-xs text-gray-600 pl-3">
+                    {idx + 1}. {occupant.attendeeName} ({occupant.companyName})
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                เลือกห้องปลายทาง * (แสดงเฉพาะห้องที่รองรับผู้พัก {bulkTransferData.occupants.length} คน)
+              </label>
+              <select
+                value={bulkTransferData.selectedNewRoomId}
+                onChange={(e) => setBulkTransferData({ ...bulkTransferData, selectedNewRoomId: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">- เลือกห้อง -</option>
+                {bulkTransferData.availableRooms.map(room => {
+                  const availableSpace = room.maxOccupancy - room.occupants.length;
+                  return (
+                    <option key={room.roomId} value={room.roomId}>
+                      {room.buildingName}-{room.roomNumber}
+                      {room.roomTypeCategory && ` (${room.roomTypeCategory})`}
+                      {' '}[ว่าง {availableSpace}/{room.maxOccupancy} ที่]
+                      {room.occupants.length > 0 && ' - มีผู้พักอยู่แล้ว'}
+                    </option>
+                  );
+                })}
+              </select>
+              {bulkTransferData.availableRooms.length === 0 && (
+                <p className="text-sm text-red-600 mt-2">
+                  ⚠️ ไม่มีห้องว่างที่รองรับผู้พัก {bulkTransferData.occupants.length} คนได้
+                </p>
+              )}
+            </div>
+
+            <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                ⚠️ <strong>คำเตือน:</strong> การสลับห้องจะย้ายผู้พักทั้งหมด {bulkTransferData.occupants.length} คน
+                จากห้อง {bulkTransferData.currentRoomNumber} ไปยังห้องที่เลือก กรุณาตรวจสอบให้แน่ใจก่อนดำเนินการ
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setBulkTransferModalOpen(false);
+                  setBulkTransferData(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleBulkTransferRoom}
+                disabled={bulkTransferring || !bulkTransferData.selectedNewRoomId}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkTransferring ? 'กำลังสลับห้อง...' : `สลับห้องทั้งหมด (${bulkTransferData.occupants.length} คน)`}
               </button>
             </div>
           </div>

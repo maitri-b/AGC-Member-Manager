@@ -120,17 +120,25 @@
   - [x] แสดงสถานะสมาชิกที่อยู่ Carpool แล้ว (disabled checkbox)
   - [x] สร้าง API endpoint `/api/registrations/[registrationId]` สำหรับค้นหาการจอง
 
-### ⏳ Phase 5: Admin UI - Car Number Assignment (PENDING)
-- [ ] สร้างแท็บ "จัดเลขรถ" ในหน้า admin event detail
-  - Location: `src/app/admin/events/[eventId]/page.tsx`
+### ✅ Phase 5: Admin UI - Car Number Assignment (COMPLETED - 2026-08-08)
+- [x] สร้าง API endpoints สำหรับการจัดเลขรถ
+  - [x] `PUT /api/carpools/[carpoolId]/assign-car-number` - กำหนดเลขรถให้ Carpool
+  - [x] `PUT /api/carpools/[carpoolId]/unassign-car-number` - ยกเลิกเลขรถ
+  - [x] `GET /api/events/[eventId]/car-assignments` - ดึงข้อมูลการ assign ทั้งหมด
+- [x] สร้าง CarNumberAssignmentModal component
+  - Location: `src/components/admin/CarNumberAssignmentModal.tsx`
   - Features:
-    - [ ] Input จำนวนรถทั้งหมด
-    - [ ] สร้าง List Box รถ (เลข 1-N)
-    - [ ] ปุ่ม "Assign Carpool" ในแต่ละ List Box
-    - [ ] Modal เลือก Carpool จาก List
-    - [ ] แสดงจำนวนที่นั่ง + validation เตือนเกิน
-    - [ ] Validation: เลขรถไม่ซ้ำ, Carpool ไม่ซ้ำ
-    - [ ] Toggle แสดงเลขรถให้ Member เห็น
+    - [x] Input จำนวนรถทั้งหมด (1-100 คัน)
+    - [x] Grid แสดง Car Slots ทั้งหมด (เลข 1-N)
+    - [x] แต่ละ slot แสดง: เลขรถ, Carpool ที่กำหนด (ถ้ามี), จำนวนสมาชิก
+    - [x] ปุ่ม "กำหนด Carpool" สำหรับ slot ว่าง
+    - [x] ปุ่ม "ยกเลิกเลขรถ" สำหรับ slot ที่มี Carpool แล้ว
+    - [x] Modal เลือก Carpool จาก List (แสดงเฉพาะ Carpool ที่ยังไม่มีเลข)
+    - [x] Validation: เลขรถไม่ซ้ำ (API level), Carpool assign ได้ครั้งละ 1 เลข
+- [x] เพิ่มปุ่มเปิด Modal ในหน้า admin event detail
+  - Location: `src/app/admin/events/[eventId]/page.tsx`
+  - ปุ่ม "จัดเลขรถ" (สีม่วง) ถัดจากปุ่ม "จัดการ Carpool"
+  - แสดงเฉพาะเมื่อ `hasCarpoolFeature = true`
 
 ### ⏳ Phase 6: Member UI - Carpool Section (PENDING)
 - [ ] สร้าง Section Carpool ในหน้า member event detail
@@ -153,10 +161,12 @@
     - [ ] ปุ่ม "ยกเลิกการ Join Carpool"
     - [ ] แสดงเลขรถ (ถ้า admin เปิด toggle)
 
-### ⏳ Phase 7: API Routes - Car Number Assignment (PENDING)
-- [ ] `PUT /api/carpools/[carpoolId]/assign-car-number` - กำหนดเลขรถ
-- [ ] `PUT /api/carpools/[carpoolId]/unassign-car-number` - ยกเลิกเลขรถ
-- [ ] `GET /api/events/[eventId]/car-assignments` - ดึงข้อมูลการ assign เลขรถทั้งหมด
+### ✅ Phase 7: API Routes - Car Number Assignment (COMPLETED - Merged into Phase 5)
+- [x] `PUT /api/carpools/[carpoolId]/assign-car-number` - กำหนดเลขรถ
+- [x] `PUT /api/carpools/[carpoolId]/unassign-car-number` - ยกเลิกเลขรถ
+- [x] `GET /api/events/[eventId]/car-assignments` - ดึงข้อมูลการ assign เลขรถทั้งหมด
+
+**Note**: Phase 7 ถูก merge เข้า Phase 5 แล้วเนื่องจากทำพร้อมกันกับ UI
 
 ### ⏳ Phase 8: Testing & Documentation (PENDING)
 - [ ] Test Carpool creation flow
@@ -209,8 +219,8 @@
 ---
 
 ## Current Status
-**Last Updated:** 2026-08-08 18:30
-**Current Phase:** Phase 4C - Admin UI: Member Management ✅ COMPLETED
+**Last Updated:** 2026-08-08 19:00
+**Current Phase:** Phase 5 - Admin UI: Car Number Assignment ✅ COMPLETED
 **Completed:**
 - Phase 1: Backend types & lib functions
 - Phase 2: Event interface updates
@@ -218,4 +228,6 @@
 - Phase 4A: API Routes - Carpool CRUD (7 endpoints)
 - Phase 4B: Admin UI - Carpool List & Basic Management
 - Phase 4C: Admin UI - Member Management (expand/collapse, add/remove members)
-**Next Task:** Phase 5 - Admin UI: Car Number Assignment
+- Phase 5: Admin UI - Car Number Assignment (APIs + UI)
+- Phase 7: API Routes - Car Number Assignment (merged into Phase 5)
+**Next Task:** Phase 6 - Member UI: Carpool Section

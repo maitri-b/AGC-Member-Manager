@@ -16,6 +16,7 @@ import PromoteEventModal from '@/components/admin/PromoteEventModal';
 import MessageTemplateModal from '@/components/admin/MessageTemplateModal';
 import RoomManagementModal from '@/components/admin/RoomManagementModal';
 import CarpoolManagementModal from '@/components/admin/CarpoolManagementModal';
+import CarNumberAssignmentModal from '@/components/admin/CarNumberAssignmentModal';
 
 interface Event {
   eventId: string;
@@ -548,6 +549,7 @@ export default function EventDetailPage() {
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [showRoomManagementModal, setShowRoomManagementModal] = useState(false);
   const [showCarpoolManagementModal, setShowCarpoolManagementModal] = useState(false);
+  const [showCarNumberAssignmentModal, setShowCarNumberAssignmentModal] = useState(false);
   const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
   const [originalAttendeeCount, setOriginalAttendeeCount] = useState<number>(1); // Track original count for validation
   const [editFormData, setEditFormData] = useState<{
@@ -2869,16 +2871,29 @@ export default function EventDetailPage() {
 
               {/* Carpool Management Button */}
               {eventData?.event?.hasCarpoolFeature && (
-                <button
-                  onClick={() => setShowCarpoolManagementModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
-                  title="จัดการ Carpool"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-                  </svg>
-                  <span className="hidden sm:inline">จัดการ Carpool</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowCarpoolManagementModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                    title="จัดการ Carpool"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                    </svg>
+                    <span className="hidden sm:inline">จัดการ Carpool</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowCarNumberAssignmentModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+                    title="จัดเลขรถ"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                    </svg>
+                    <span className="hidden sm:inline">จัดเลขรถ</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -5930,6 +5945,14 @@ export default function EventDetailPage() {
       <CarpoolManagementModal
         isOpen={showCarpoolManagementModal}
         onClose={() => setShowCarpoolManagementModal(false)}
+        eventId={eventId as string}
+        eventName={eventData?.event?.eventName || ''}
+      />
+
+      {/* Car Number Assignment Modal */}
+      <CarNumberAssignmentModal
+        isOpen={showCarNumberAssignmentModal}
+        onClose={() => setShowCarNumberAssignmentModal(false)}
         eventId={eventId as string}
         eventName={eventData?.event?.eventName || ''}
       />

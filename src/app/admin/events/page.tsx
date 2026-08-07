@@ -644,14 +644,20 @@ export default function AdminEventsPage() {
     try {
       if (editingEvent) {
         // Update existing event
+        const payload = {
+          eventId: editingEvent.eventId,
+          ...formData,
+          priceTiers: formData.pricingType === 'tiered' ? priceTiers : undefined,
+        };
+
+        // Debug: Log Carpool settings before sending
+        console.log('[Submit Event] hasCarpoolFeature:', payload.hasCarpoolFeature);
+        console.log('[Submit Event] carpoolSettings:', payload.carpoolSettings);
+
         const response = await fetch('/api/admin/events', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            eventId: editingEvent.eventId,
-            ...formData,
-            priceTiers: formData.pricingType === 'tiered' ? priceTiers : undefined,
-          }),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {

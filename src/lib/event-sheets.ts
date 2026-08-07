@@ -89,6 +89,9 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         attendeeTypes: data.attendeeTypes || [],
         // Room allocation (NEW)
         roomTypes: data.roomTypes || [],
+        // Carpool feature (NEW)
+        hasCarpoolFeature: data.hasCarpoolFeature ?? false,
+        carpoolSettings: data.carpoolSettings || undefined,
         // Convert Firestore Timestamps to ISO strings
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
         updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',

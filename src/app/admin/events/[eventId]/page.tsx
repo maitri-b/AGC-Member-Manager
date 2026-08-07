@@ -185,6 +185,15 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
   const [lightboxImage, setLightboxImage] = useState('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  // Helper function to get name from lineUserId for legacy data
+  const getNameFromLineUserId = (lineUserId: string): string | null => {
+    const userMap: Record<string, string> = {
+      'U1f4b2bc103c14c0b853c2cee2c045986': 'ไมค์',
+      'Ua69bd2ac18e79fdde6e1b95b0ccd5c40': "P'Nee",
+    };
+    return userMap[lineUserId] || null;
+  };
+
   useEffect(() => {
     fetchPaymentSlips();
   }, [registrationId]);
@@ -377,10 +386,10 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                       </span>
                     </td>
                     <td className="px-2 py-2 text-left text-[10px] sm:text-xs text-gray-700 hidden sm:table-cell">
-                      {slip.status === 'approved' && slip.reviewedByName ? (
+                      {slip.status === 'approved' ? (
                         <div className="space-y-0.5">
                           <div className="text-green-700 font-medium">
-                            ✓ {slip.reviewedByName}
+                            ✓ {slip.reviewedByName || getNameFromLineUserId(slip.reviewedBy) || 'Admin'}
                           </div>
                           {slip.reviewedAt && (
                             <div className="text-[9px] text-gray-500">
@@ -394,10 +403,10 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                             </div>
                           )}
                         </div>
-                      ) : slip.status === 'rejected' && slip.reviewedByName ? (
+                      ) : slip.status === 'rejected' ? (
                         <div className="space-y-0.5">
                           <div className="text-red-700 font-medium">
-                            ✗ {slip.reviewedByName}
+                            ✗ {slip.reviewedByName || getNameFromLineUserId(slip.reviewedBy) || 'Admin'}
                           </div>
                           {slip.reviewedAt && (
                             <div className="text-[9px] text-gray-500">
@@ -415,6 +424,15 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                         <div className="space-y-0.5">
                           <div className="text-blue-700 font-medium">
                             📤 {slip.uploadedByName}
+                          </div>
+                          <div className="text-[9px] text-gray-500">
+                            (อัพโหลด)
+                          </div>
+                        </div>
+                      ) : slip.uploadedBy ? (
+                        <div className="space-y-0.5">
+                          <div className="text-blue-700 font-medium">
+                            📤 {getNameFromLineUserId(slip.uploadedBy) || 'User'}
                           </div>
                           <div className="text-[9px] text-gray-500">
                             (อัพโหลด)

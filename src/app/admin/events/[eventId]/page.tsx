@@ -185,13 +185,22 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
   const [lightboxImage, setLightboxImage] = useState('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  // Helper function to get name from lineUserId for legacy data
-  const getNameFromLineUserId = (lineUserId: string): string | null => {
+  // Helper function to extract name from adminNotes or lineUserId for legacy data
+  const extractReviewerName = (slip: any): string | null => {
+    // 1. Try to parse from adminNotes (e.g., "อัพโหลดและอนุมัติโดย Admin: ไมตรี-ไมค์ (เต็มจำนวน: 3,999 บาท)")
+    if (slip.adminNotes) {
+      const match = slip.adminNotes.match(/Admin:\s*([^\(]+)/);
+      if (match) {
+        return match[1].trim();
+      }
+    }
+
+    // 2. Fallback to lineUserId mapping
     const userMap: Record<string, string> = {
-      'U1f4b2bc103c14c0b853c2cee2c045986': 'ไมค์',
+      'U1f4b2bc103c14c0b853c2cee2c045986': 'ไมตรี-ไมค์',
       'Ua69bd2ac18e79fdde6e1b95b0ccd5c40': "P'Nee",
     };
-    return userMap[lineUserId] || null;
+    return userMap[slip.reviewedBy || slip.uploadedBy] || null;
   };
 
   useEffect(() => {
@@ -389,7 +398,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                       {slip.status === 'approved' ? (
                         <div className="space-y-0.5">
                           <div className="text-green-700 font-medium">
-                            ✓ {slip.reviewedByName || getNameFromLineUserId(slip.reviewedBy) || 'Admin'}
+                            ✓ {slip.reviewedByName || extractReviewerName(slip) || 'Admin'}
                           </div>
                           {slip.reviewedAt && (
                             <div className="text-[9px] text-gray-500">
@@ -406,7 +415,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                       ) : slip.status === 'rejected' ? (
                         <div className="space-y-0.5">
                           <div className="text-red-700 font-medium">
-                            ✗ {slip.reviewedByName || getNameFromLineUserId(slip.reviewedBy) || 'Admin'}
+                            ✗ {slip.reviewedByName || extractReviewerName(slip) || 'Admin'}
                           </div>
                           {slip.reviewedAt && (
                             <div className="text-[9px] text-gray-500">
@@ -432,7 +441,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                       ) : slip.uploadedBy ? (
                         <div className="space-y-0.5">
                           <div className="text-blue-700 font-medium">
-                            📤 {getNameFromLineUserId(slip.uploadedBy) || 'User'}
+                            📤 {extractReviewerName(slip) || 'User'}
                           </div>
                           <div className="text-[9px] text-gray-500">
                             (อัพโหลด)

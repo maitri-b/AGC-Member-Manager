@@ -1,6 +1,8 @@
 // Event and Attendance Type Definitions
 // Based on Agents Club Google Sheet - Event Registration Data
 
+import { CarpoolSettings } from './carpool';
+
 // Event registration from Google Sheet "10 Yearth Meeting registration"
 export interface EventRegistration {
   // Registration Info
@@ -119,6 +121,9 @@ export interface EventRegistration {
   // Refund Tracking (New - for tracking refunds when money is returned to member)
   refundHistory?: string;           // refund_history - JSON stringified RefundEntry[]
   totalRefunded?: number;           // total_refunded - Total amount refunded to member
+
+  // Carpool (New - for events with shared transportation)
+  carpoolId?: string;               // carpool_id - ID of Carpool that this member joined
 }
 
 // Event metadata (for managing multiple events)
@@ -197,6 +202,10 @@ export interface Event {
 
   // Room Allocation (New - for events with accommodation)
   roomTypes?: RoomType[];           // ประเภทห้องพักและราคา (only when useAttendeeTypePricing is true)
+
+  // Carpool Feature (New - for events with shared transportation)
+  hasCarpoolFeature?: boolean;      // กิจกรรมนี้มีการจัดรถร่วมเดินทาง (Carpool)
+  carpoolSettings?: CarpoolSettings; // การตั้งค่า Carpool
 
   createdAt: string;                // ISO timestamp
   updatedAt: string;                // ISO timestamp
@@ -279,6 +288,10 @@ export interface EventInput {
 
   // Room Allocation (New - for events with accommodation)
   roomTypes?: RoomType[];           // ประเภทห้องพักและราคา (only when useAttendeeTypePricing is true)
+
+  // Carpool Feature (New - for events with shared transportation)
+  hasCarpoolFeature?: boolean;      // กิจกรรมนี้มีการจัดรถร่วมเดินทาง (Carpool)
+  carpoolSettings?: CarpoolSettings; // การตั้งค่า Carpool
 }
 
 // Member attendance summary

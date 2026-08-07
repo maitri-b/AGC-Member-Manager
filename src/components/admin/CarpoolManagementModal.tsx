@@ -46,6 +46,8 @@ export default function CarpoolManagementModal({
     members: [] as CarpoolMember[],
   });
   const [saving, setSaving] = useState(false);
+  const [ownerRegistrationData, setOwnerRegistrationData] = useState<any>(null);
+  const [selectedOwnerMembers, setSelectedOwnerMembers] = useState<string[]>([]);
 
   // Delete confirmation modal
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -123,6 +125,8 @@ export default function CarpoolManagementModal({
       ownerRegistrationId: '',
       members: [],
     });
+    setOwnerRegistrationData(null);
+    setSelectedOwnerMembers([]);
     setShowCarpoolForm(true);
   };
 
@@ -134,6 +138,24 @@ export default function CarpoolManagementModal({
       members: carpool.members,
     });
     setShowCarpoolForm(true);
+  };
+
+  const fetchOwnerRegistration = async (registrationId: string) => {
+    if (!registrationId.trim()) return;
+
+    try {
+      const response = await fetch(`/api/registrations/${registrationId}`);
+      if (!response.ok) {
+        throw new Error('ไม่พบรหัสการจองนี้');
+      }
+
+      const data = await response.json();
+      setOwnerRegistrationData(data.registration);
+    } catch (err) {
+      console.error('Error fetching owner registration:', err);
+      alert(err instanceof Error ? err.message : 'ไม่พบรหัสการจอง');
+      setOwnerRegistrationData(null);
+    }
   };
 
   const handleSaveCarpool = async () => {
@@ -153,12 +175,19 @@ export default function CarpoolManagementModal({
           throw new Error('Failed to update carpool');
         }
       } else {
-        // Create new Carpool
+        // Create new Carpool with selected members
+        const members = selectedOwnerMembers.map((name) => ({
+          registrationId: formData.ownerRegistrationId,
+          lineUserId: ownerRegistrationData?.lineUserId || '',
+          name,
+          isOwner: false, // Will be set by backend or first member
+        }));
+
         const payload = {
           eventId,
           ownerRegistrationId: formData.ownerRegistrationId,
           licensePlate: formData.licensePlate,
-          members: formData.members,
+          members,
         };
 
         const response = await fetch('/api/carpools', {
@@ -711,19 +740,150 @@ export default function CarpoolManagementModal({
               </div>
 
               {!editingCarpoolId && (
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     รหัสการจอง (Owner) *
                   </label>
                   <input
                     type="text"
                     value={formData.ownerRegistrationId}
-                    onChange={(e) => setFormData({ ...formData, ownerRegistrationId: e.target.value })}
-                    placeholder="REG_xxxxx"
+                    onChange={(e) => {
+                      setFormData({ ...formData, ownerRegistrationId: e.target.value });
+                      setShowDropdown(e.target.value.length > 0);
+                      setOwnerRegistrationData(null);
+                      setSelectedOwnerMembers([]);
+                    }}
+                    placeholder="พิมพ์เพื่อค้นหา..."
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    ต้องระบุรหัสการจองสำหรับสร้าง Carpool ใหม่
+                    พิมพ์รหัสจอง, ชื่อบริษัท, ชื่อ LINE, หรือชื่อผู้ร่วมทีม
+                  </p>
+
+                  {/* Enhanced Search Dropdown */}
+                  {showDropdown && formData.ownerRegistrationId && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      {allRegistrations
+                        .filter((reg) => {
+                          const searchLower = formData.ownerRegistrationId.toLowerCase();
+                          return (
+                            reg.registration.registrationId?.toLowerCase().includes(searchLower) ||
+                            reg.registration.companyName?.toLowerCase().includes(searchLower) ||
+                            reg.registration.attendeeNames?.toLowerCase().includes(searchLower) ||
+                            reg.lineProfile?.lineDisplayName?.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .slice(0, 10)
+                        .map((reg) => (
+                          <button
+                            key={reg.registration.registrationId}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, ownerRegistrationId: reg.registration.registrationId });
+                              setShowDropdown(false);
+                              fetchOwnerRegistration(reg.registration.registrationId);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-left border-b last:border-b-0"
+                          >
+                            <img
+                              src={reg.lineProfile?.linePictureUrl || '/default-avatar.png'}
+                              alt={reg.lineProfile?.lineDisplayName || 'User'}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 text-sm truncate">
+                                {reg.lineProfile?.lineDisplayName || 'ไม่มีชื่อ'}
+                              </p>
+                              <p className="text-xs text-gray-600 truncate">
+                                {reg.registration.companyName || 'ไม่มีชื่อบริษัท'}
+                              </p>
+                              <p className="text-xs text-blue-600 truncate">
+                                {reg.registration.registrationId}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      {allRegistrations.filter((reg) => {
+                        const searchLower = formData.ownerRegistrationId.toLowerCase();
+                        return (
+                          reg.registration.registrationId?.toLowerCase().includes(searchLower) ||
+                          reg.registration.companyName?.toLowerCase().includes(searchLower) ||
+                          reg.registration.attendeeNames?.toLowerCase().includes(searchLower) ||
+                          reg.lineProfile?.lineDisplayName?.toLowerCase().includes(searchLower)
+                        );
+                      }).length === 0 && (
+                        <div className="px-4 py-3 text-center text-gray-500 text-sm">
+                          ไม่พบรหัสการจอง
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Member Selection (shown when ownerRegistrationData is loaded) */}
+              {!editingCarpoolId && ownerRegistrationData && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900 text-sm">
+                      เลือกสมาชิกที่จะเข้าร่วม Carpool
+                    </h4>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allNames = ownerRegistrationData.attendeeNames
+                            ?.split(',')
+                            .map((name: string) => name.trim())
+                            .filter((name: string) => name) || [];
+                          setSelectedOwnerMembers(allNames);
+                        }}
+                        className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                      >
+                        เลือกทั้งหมด
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOwnerMembers([])}
+                        className="text-xs px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                      >
+                        ยกเลิกทั้งหมด
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {ownerRegistrationData.attendeeNames
+                      ?.split(',')
+                      .map((name: string) => name.trim())
+                      .filter((name: string) => name)
+                      .map((name: string, index: number) => (
+                        <label
+                          key={index}
+                          className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 hover:bg-blue-50 cursor-pointer transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedOwnerMembers.includes(name)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedOwnerMembers([...selectedOwnerMembers, name]);
+                              } else {
+                                setSelectedOwnerMembers(selectedOwnerMembers.filter((n) => n !== name));
+                              }
+                            }}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-900">{name}</span>
+                        </label>
+                      )) || (
+                      <p className="text-sm text-gray-500 italic text-center">ไม่มีรายชื่อสมาชิก</p>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-gray-600 mt-3">
+                    เลือก {selectedOwnerMembers.length} จาก{' '}
+                    {ownerRegistrationData.attendeeNames?.split(',').filter((n: string) => n.trim()).length || 0} คน
                   </p>
                 </div>
               )}

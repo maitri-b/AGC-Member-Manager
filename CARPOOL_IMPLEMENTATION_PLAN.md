@@ -112,11 +112,13 @@
   - Location: `src/app/admin/events/[eventId]/page.tsx`
   - แสดงเฉพาะเมื่อ `hasCarpoolFeature = true`
 
-### ⏳ Phase 4C: Admin UI - Member Management (PENDING)
-- [ ] เพิ่มฟีเจอร์จัดการสมาชิกใน CarpoolManagementModal
-  - [ ] เพิ่ม/ลดสมาชิกจากรหัสจองเดียวกัน
-  - [ ] ชวนสมาชิกจากรหัสจองอื่น (search by registrationId)
-  - [ ] แสดงสถานะสมาชิกที่อยู่ Carpool แล้ว
+### ✅ Phase 4C: Admin UI - Member Management (COMPLETED - 2026-08-08)
+- [x] เพิ่มฟีเจอร์จัดการสมาชิกใน CarpoolManagementModal
+  - [x] แสดงรายการสมาชิกใน Carpool (expand/collapse)
+  - [x] ลบสมาชิกออกจาก Carpool (ป้องกันไม่ให้ลบเจ้าของ)
+  - [x] เพิ่มสมาชิกจากรหัสจองอื่น (search by registrationId)
+  - [x] แสดงสถานะสมาชิกที่อยู่ Carpool แล้ว (disabled checkbox)
+  - [x] สร้าง API endpoint `/api/registrations/[registrationId]` สำหรับค้นหาการจอง
 
 ### ⏳ Phase 5: Admin UI - Car Number Assignment (PENDING)
 - [ ] สร้างแท็บ "จัดเลขรถ" ในหน้า admin event detail
@@ -207,12 +209,13 @@
 ---
 
 ## Current Status
-**Last Updated:** 2026-08-08 17:00
-**Current Phase:** Phase 4B - Admin UI: Carpool Management ✅ COMPLETED
+**Last Updated:** 2026-08-08 18:30
+**Current Phase:** Phase 4C - Admin UI: Member Management ✅ COMPLETED
 **Completed:**
 - Phase 1: Backend types & lib functions
 - Phase 2: Event interface updates
 - Phase 3: Event settings UI & API integration
 - Phase 4A: API Routes - Carpool CRUD (7 endpoints)
 - Phase 4B: Admin UI - Carpool List & Basic Management
-**Next Task:** Phase 4C - Member Management Features (เพิ่ม/ลบสมาชิก, ชวนจากรหัสอื่น)
+- Phase 4C: Admin UI - Member Management (expand/collapse, add/remove members)
+**Next Task:** Phase 5 - Admin UI: Car Number Assignment

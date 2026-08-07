@@ -548,6 +548,92 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleSearchRegistration = async () => {
+    if (!searchRegistrationId.trim()) {
+      toast.error('กรุณาระบุรหัสการจอง');
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = await fetch(`/api/registrations/${searchRegistrationId}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('ไม่พบรหัสการจองนี้');
+        }
+        throw new Error('ไม่สามารถค้นหาข้อมูลได้');
+      }
+
+      const data = await response.json();
+      setSearchedRegistration(data.registration);
+      setSelectedMembersToInvite([]);
+    } catch (err) {
+      console.error('Error searching registration:', err);
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการค้นหา');
+      setSearchedRegistration(null);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleInviteMembers = async () => {
+    if (!memberCarpool?.carpoolId) {
+      toast.error('ไม่พบข้อมูล Carpool');
+      return;
+    }
+
+    if (selectedMembersToInvite.length === 0) {
+      toast.error('กรุณาเลือกสมาชิกที่ต้องการชวน');
+      return;
+    }
+
+    if (!searchedRegistration) {
+      toast.error('ไม่พบข้อมูลการจอง');
+      return;
+    }
+
+    setInviting(true);
+    try {
+      // Build members array from selected names
+      const attendeeNamesArray = searchedRegistration.attendeeNames
+        ? searchedRegistration.attendeeNames.split(',').map((n: string) => n.trim())
+        : [];
+
+      const membersToAdd = selectedMembersToInvite.map(name => ({
+        registrationId: searchedRegistration.registrationId,
+        lineUserId: searchedRegistration.lineUserId || '',
+        name: name,
+        isOwner: false,
+      }));
+
+      const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}/add-members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members: membersToAdd }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to invite members');
+      }
+
+      toast.success(`ชวนสมาชิก ${selectedMembersToInvite.length} คนสำเร็จ!`);
+      setShowInviteModal(false);
+      setSearchRegistrationId('');
+      setSearchedRegistration(null);
+      setSelectedMembersToInvite([]);
+
+      // Refresh carpool data
+      await fetchMemberCarpool();
+    } catch (err) {
+      console.error('Error inviting members:', err);
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการชวนสมาชิก');
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const handleAttendeeCountChange = (count: number) => {
     setAttendeeCount(count);
     const currentNames = [...attendeeNames];
@@ -1563,6 +1649,18 @@ export default function EventDetailPage() {
                                       </div>
                                     ))}
                                   </div>
+                                </div>
+                              )}
+
+                              {/* Invite button */}
+                              {memberCarpool.ownerRegistrationId === userRegistration?.registrationId && (
+                                <div className="mt-3 pt-2 border-t border-blue-200">
+                                  <button
+                                    onClick={() => setShowInviteModal(true)}
+                                    className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                  >
+                                    + ชวนเพื่อนจากรหัสจองอื่น
+                                  </button>
                                 </div>
                               )}
                             </div>
@@ -3719,6 +3817,152 @@ export default function EventDetailPage() {
                 {creatingCarpool ? 'กำลังสร้าง...' : 'สร้าง Carpool'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite Members Modal */}
+      {showInviteModal && memberCarpool && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">ชวนเพื่อนเข้า Carpool</h3>
+              <button
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setSearchRegistrationId('');
+                  setSearchedRegistration(null);
+                  setSelectedMembersToInvite([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Search Registration */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ค้นหารหัสการจอง
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={searchRegistrationId}
+                    onChange={(e) => setSearchRegistrationId(e.target.value)}
+                    placeholder="เช่น REG_xxxxx"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearchRegistration();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleSearchRegistration}
+                    disabled={searchLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {searchLoading ? 'กำลังค้นหา...' : 'ค้นหา'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Results */}
+              {searchedRegistration && (
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="mb-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">ข้อมูลการจอง</h4>
+                    <div className="space-y-1 text-sm text-gray-600">
+                      <p><strong>บริษัท:</strong> {searchedRegistration.companyName}</p>
+                      <p><strong>ผู้ติดต่อ:</strong> {searchedRegistration.contactName}</p>
+                      <p><strong>รหัสจอง:</strong> {searchedRegistration.registrationId}</p>
+                      <p><strong>จำนวนผู้เข้าร่วม:</strong> {searchedRegistration.attendeeCount} คน</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">เลือกสมาชิกที่ต้องการชวน</h4>
+                    <div className="space-y-2">
+                      {searchedRegistration.attendeeNames ? (
+                        searchedRegistration.attendeeNames.split(',').map((name: string, index: number) => {
+                          const trimmedName = name.trim();
+                          // Check if already in carpool
+                          const isInCarpool = memberCarpool.members?.some(
+                            (m: any) => m.name === trimmedName && m.registrationId === searchedRegistration.registrationId
+                          );
+                          const isSelected = selectedMembersToInvite.includes(trimmedName);
+
+                          return (
+                            <label
+                              key={index}
+                              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                                isInCarpool
+                                  ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
+                                  : isSelected
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-gray-200 hover:bg-gray-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={isInCarpool}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedMembersToInvite([...selectedMembersToInvite, trimmedName]);
+                                  } else {
+                                    setSelectedMembersToInvite(selectedMembersToInvite.filter(n => n !== trimmedName));
+                                  }
+                                }}
+                                className="rounded"
+                              />
+                              <span className={`flex-1 text-sm ${isInCarpool ? 'text-gray-400' : 'text-gray-900'}`}>
+                                {trimmedName}
+                              </span>
+                              {isInCarpool && (
+                                <span className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded">
+                                  อยู่ในรถแล้ว
+                                </span>
+                              )}
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-gray-500 text-center py-4">ไม่มีรายชื่อผู้เข้าร่วม</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {searchedRegistration && (
+              <div className="flex gap-3 p-6 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowInviteModal(false);
+                    setSearchRegistrationId('');
+                    setSearchedRegistration(null);
+                    setSelectedMembersToInvite([]);
+                  }}
+                  disabled={inviting}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleInviteMembers}
+                  disabled={inviting || selectedMembersToInvite.length === 0}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {inviting ? 'กำลังชวน...' : `ชวน ${selectedMembersToInvite.length} คน`}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

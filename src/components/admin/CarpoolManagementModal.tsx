@@ -15,15 +15,27 @@ interface EnrichedCarpool extends Carpool {
   ownerContactName: string;
 }
 
+interface CarSlot {
+  carNumber: number;
+  carpool: EnrichedCarpool | null;
+}
+
 export default function CarpoolManagementModal({
   isOpen,
   onClose,
   eventId,
   eventName,
 }: CarpoolManagementModalProps) {
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'carpools' | 'car-numbers'>('carpools');
+
   const [carpools, setCarpools] = useState<EnrichedCarpool[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Car number assignment state
+  const [totalCars, setTotalCars] = useState(10);
+  const [carSlots, setCarSlots] = useState<CarSlot[]>([]);
 
   // Create/Edit Carpool modal state
   const [showCarpoolForm, setShowCarpoolForm] = useState(false);
@@ -56,6 +68,19 @@ export default function CarpoolManagementModal({
       fetchCarpools();
     }
   }, [isOpen, eventId]);
+
+  // Generate car slots based on totalCars and carpools
+  useEffect(() => {
+    const slots: CarSlot[] = [];
+    for (let i = 1; i <= totalCars; i++) {
+      const assignedCarpool = carpools.find((cp) => cp.assignedCarNumber === i);
+      slots.push({
+        carNumber: i,
+        carpool: assignedCarpool || null,
+      });
+    }
+    setCarSlots(slots);
+  }, [totalCars, carpools]);
 
   const fetchCarpools = async () => {
     setLoading(true);
@@ -282,31 +307,127 @@ export default function CarpoolManagementModal({
     }
   };
 
+  // Car number assignment handlers
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [assigningCarNumber, setAssigningCarNumber] = useState<number | null>(null);
+  const [selectedCarpoolId, setSelectedCarpoolId] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
+
+  const handleAssignClick = (carNumber: number) => {
+    setAssigningCarNumber(carNumber);
+    setSelectedCarpoolId(null);
+    setShowAssignmentModal(true);
+  };
+
+  const handleUnassign = async (carpoolId: string) => {
+    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกเลขรถนี้?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/carpools/${carpoolId}/unassign-car-number`, {
+        method: 'PUT',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unassign car number');
+      }
+
+      // Refresh list
+      await fetchCarpools();
+    } catch (err) {
+      console.error('Error unassigning car number:', err);
+      alert(err instanceof Error ? err.message : 'Failed to unassign car number');
+    }
+  };
+
+  const handleConfirmAssignment = async () => {
+    if (!selectedCarpoolId || !assigningCarNumber) {
+      alert('กรุณาเลือก Carpool');
+      return;
+    }
+
+    setAssigning(true);
+    try {
+      const response = await fetch(`/api/carpools/${selectedCarpoolId}/assign-car-number`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ carNumber: assigningCarNumber }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to assign car number');
+      }
+
+      // Refresh list and close modal
+      await fetchCarpools();
+      setShowAssignmentModal(false);
+      setAssigningCarNumber(null);
+      setSelectedCarpoolId(null);
+    } catch (err) {
+      console.error('Error assigning car number:', err);
+      alert(err instanceof Error ? err.message : 'Failed to assign car number');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const availableCarpools = carpools.filter((cp) => !cp.assignedCarNumber);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">จัดการ Carpool</h2>
-            <p className="text-sm text-gray-600 mt-1">{eventName}</p>
+        <div className="border-b border-gray-200">
+          <div className="flex items-center justify-between p-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">จัดการ Carpool</h2>
+              <p className="text-sm text-gray-600 mt-1">{eventName}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {activeTab === 'carpools' && (
+                <button
+                  onClick={handleCreateCarpool}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  + สร้าง Carpool
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Tabs */}
+          <div className="flex border-t border-gray-200">
             <button
-              onClick={handleCreateCarpool}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              onClick={() => setActiveTab('carpools')}
+              className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'carpools'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
             >
-              + สร้าง Carpool
+              รายการ Carpool
             </button>
             <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={() => setActiveTab('car-numbers')}
+              className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'car-numbers'
+                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              จัดเลขรถ
             </button>
           </div>
         </div>

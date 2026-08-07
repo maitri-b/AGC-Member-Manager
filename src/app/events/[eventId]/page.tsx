@@ -9,6 +9,7 @@ import PaymentSlipUploadModal from '@/components/PaymentSlipUploadModal';
 // TEMP: Hidden until PDF generation is fixed on Vercel
 // import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier } from '@/types/event';
+import { CarpoolSettings } from '@/types/carpool';
 import { formatDeadline, getTimeRemaining, isDeadlinePassed } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass, isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
@@ -70,6 +71,9 @@ interface Event {
   attendeeTypes?: AttendeeType[];
   // Room allocation (New)
   roomTypes?: RoomType[];
+  // Carpool feature (New)
+  hasCarpoolFeature?: boolean;
+  carpoolSettings?: CarpoolSettings;
   createdAt: string;
   updatedAt: string;
 }
@@ -198,6 +202,13 @@ export default function EventDetailPage() {
   const [newCarpoolLicensePlate, setNewCarpoolLicensePlate] = useState('');
   const [selectedMembersForCarpool, setSelectedMembersForCarpool] = useState<number[]>([]);
   const [creatingCarpool, setCreatingCarpool] = useState(false);
+  // Invite members state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [searchRegistrationId, setSearchRegistrationId] = useState('');
+  const [searchedRegistration, setSearchedRegistration] = useState<any>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedMembersToInvite, setSelectedMembersToInvite] = useState<string[]>([]);
+  const [inviting, setInviting] = useState(false);
 
   // Guest registration form state (for Event-Co without memberId)
   const [guestCompanyName, setGuestCompanyName] = useState('');
@@ -487,12 +498,12 @@ export default function EventDetailPage() {
 
   const handleCreateCarpool = async () => {
     if (!newCarpoolLicensePlate.trim()) {
-      toast.addToast('กรุณาระบุเลขทะเบียนรถ', 'error');
+      toast.error('กรุณาระบุเลขทะเบียนรถ');
       return;
     }
 
     if (!userRegistration?.registrationId) {
-      toast.addToast('ไม่พบข้อมูลการลงทะเบียน', 'error');
+      toast.error('ไม่พบข้อมูลการลงทะเบียน');
       return;
     }
 
@@ -522,7 +533,7 @@ export default function EventDetailPage() {
         throw new Error(data.error || 'Failed to create carpool');
       }
 
-      toast.addToast('สร้าง Carpool สำเร็จ!', 'success');
+      toast.success('สร้าง Carpool สำเร็จ!');
       setShowCreateCarpoolModal(false);
       setNewCarpoolLicensePlate('');
       setSelectedMembersForCarpool([]);
@@ -531,7 +542,7 @@ export default function EventDetailPage() {
       await fetchMemberCarpool();
     } catch (err) {
       console.error('Error creating carpool:', err);
-      toast.addToast(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้าง Carpool', 'error');
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้าง Carpool');
     } finally {
       setCreatingCarpool(false);
     }

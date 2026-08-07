@@ -1899,8 +1899,8 @@ export default function AdminEventsPage() {
                   {/* Dynamic room types list */}
                   <div className="space-y-3">
                     {formData.roomTypes?.map((room, index) => (
-                      <div key={room.typeId} className="bg-white p-3 rounded border space-y-2">
-                        {/* First row: Main info */}
+                      <div key={room.typeId} className={`bg-white p-3 rounded border space-y-2 transition-opacity ${!room.isActive ? 'opacity-60' : ''}`}>
+                        {/* First row: Main info with Active toggle */}
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                           <button
                             type="button"
@@ -1915,6 +1915,26 @@ export default function AdminEventsPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
+
+                          {/* Active/Inactive Toggle */}
+                          <div className="flex items-center gap-2">
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={room.isActive !== false}
+                                onChange={(e) => {
+                                  const newRooms = [...formData.roomTypes];
+                                  newRooms[index].isActive = e.target.checked;
+                                  setFormData({ ...formData, roomTypes: newRooms });
+                                }}
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                              <span className={`ml-2 text-xs font-medium ${room.isActive !== false ? 'text-green-600' : 'text-gray-500'}`}>
+                                {room.isActive !== false ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                              </span>
+                            </label>
+                          </div>
 
                           <input
                             type="text"

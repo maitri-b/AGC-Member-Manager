@@ -529,6 +529,8 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   remainingAmountPaid: 'remaining_amount_paid',
   // Room Assignments (New - specific room assignments for each attendee)
   roomAssignments: 'room_assignments',
+  // Carpool (New - for events with shared transportation)
+  carpoolId: 'carpool_id',
 };
 
 // Reverse mapping for sheet to registration conversion

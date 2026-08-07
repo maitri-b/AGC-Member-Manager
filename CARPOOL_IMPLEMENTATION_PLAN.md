@@ -140,26 +140,30 @@
   - ปุ่ม "จัดเลขรถ" (สีม่วง) ถัดจากปุ่ม "จัดการ Carpool"
   - แสดงเฉพาะเมื่อ `hasCarpoolFeature = true`
 
-### ⏳ Phase 6: Member UI - Carpool Section (PENDING)
-- [ ] สร้าง Section Carpool ในหน้า member event detail
+### ✅ Phase 6: Member UI - Carpool Section (COMPLETED - 2026-08-08)
+- [x] สร้าง Section Carpool ในหน้า member event detail
   - Location: `src/app/events/[eventId]/page.tsx`
-  - Features:
-    - [ ] แสดงรายการ Carpool ที่สร้าง
-    - [ ] ปุ่ม "สร้าง Carpool"
-    - [ ] Modal สร้าง Carpool:
-      - [ ] Input เลขทะเบียนรถ
-      - [ ] Checkbox เลือกสมาชิกจากรหัสจองเดียวกัน
-      - [ ] ปุ่ม "เลือกทั้งหมด"
-    - [ ] ปุ่ม "ชวนเพื่อนร่วม Carpool"
-    - [ ] Modal ชวนเพื่อน:
-      - [ ] Input รหัสการจอง
-      - [ ] แสดงข้อมูลบริษัท, จำนวนสมาชิก
-      - [ ] Checkbox เลือกสมาชิกที่จะชวน
-      - [ ] Inactive checkbox สำหรับคนที่อยู่ Carpool แล้ว
-    - [ ] แสดง Icon "Joined Carpool" ที่รายชื่อสมาชิก
-    - [ ] Modal รายละเอียดรถที่ร่วม
-    - [ ] ปุ่ม "ยกเลิกการ Join Carpool"
-    - [ ] แสดงเลขรถ (ถ้า admin เปิด toggle)
+  - Features implemented:
+    - [x] แสดงรายการ Carpool ที่เข้าร่วม (รายละเอียดรถ, เจ้าของ, สมาชิก)
+    - [x] ปุ่ม "สร้าง Carpool" (แสดงเมื่อยังไม่มี Carpool)
+    - [x] Modal สร้าง Carpool:
+      - [x] Input เลขทะเบียนรถ
+      - [x] Checkbox เลือกสมาชิกจากรหัสจองเดียวกัน
+      - [x] ปุ่ม "เลือกทั้งหมด / ยกเลิกทั้งหมด"
+    - [x] ปุ่ม "ชวนเพื่อนจากรหัสจองอื่น" (เจ้าของเท่านั้น)
+    - [x] Modal ชวนเพื่อน:
+      - [x] Input รหัสการจอง + ปุ่มค้นหา
+      - [x] แสดงข้อมูลบริษัท, ผู้ติดต่อ, จำนวนสมาชิก
+      - [x] Checkbox เลือกสมาชิกที่จะชวน
+      - [x] Disabled checkbox + badge "อยู่ในรถแล้ว" สำหรับคนที่อยู่ Carpool แล้ว
+    - [x] แสดงรายชื่อสมาชิกพร้อม badge "เจ้าของ"
+    - [x] ปุ่ม "ออกจาก Carpool" (สมาชิกที่ไม่ใช่เจ้าของ)
+    - [x] แสดงเลขรถที่ได้รับ (ถ้า admin เปิด toggle `showCarNumbersToMembers`)
+- [x] API Integration:
+  - [x] GET `/api/events/[eventId]/my-carpool` - Fetch member's Carpool
+  - [x] POST `/api/carpools` - Create new Carpool
+  - [x] POST `/api/carpools/[carpoolId]/add-members` - Invite members
+  - [x] POST `/api/carpools/[carpoolId]/remove-members` - Leave Carpool
 
 ### ✅ Phase 7: API Routes - Car Number Assignment (COMPLETED - Merged into Phase 5)
 - [x] `PUT /api/carpools/[carpoolId]/assign-car-number` - กำหนดเลขรถ
@@ -219,8 +223,8 @@
 ---
 
 ## Current Status
-**Last Updated:** 2026-08-08 19:00
-**Current Phase:** Phase 5 - Admin UI: Car Number Assignment ✅ COMPLETED
+**Last Updated:** 2026-08-08 21:30
+**Current Phase:** Phase 6 - Member UI ✅ COMPLETED
 **Completed:**
 - Phase 1: Backend types & lib functions
 - Phase 2: Event interface updates
@@ -229,5 +233,6 @@
 - Phase 4B: Admin UI - Carpool List & Basic Management
 - Phase 4C: Admin UI - Member Management (expand/collapse, add/remove members)
 - Phase 5: Admin UI - Car Number Assignment (APIs + UI)
+- Phase 6: Member UI - Carpool Section (create, invite, leave)
 - Phase 7: API Routes - Car Number Assignment (merged into Phase 5)
-**Next Task:** Phase 6 - Member UI: Carpool Section
+**Next Task:** Phase 8 - Testing & Documentation

@@ -42,12 +42,16 @@ export async function PUT(
       return NextResponse.json({ error: 'Payment slip not found' }, { status: 404 });
     }
 
+    // Get reviewer name from session
+    const reviewerName = session.user.displayName || session.user.name || session.user.email || 'Admin';
+
     // Reject the slip
     await rejectPaymentSlip(
       slipId,
       session.user.lineUserId || session.user.id || 'unknown',
       rejectionReason,
-      adminNotes
+      adminNotes,
+      reviewerName
     );
 
     return NextResponse.json({

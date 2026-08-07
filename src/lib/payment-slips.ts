@@ -179,7 +179,8 @@ export async function createPaymentSlip(
 export async function approvePaymentSlip(
   slipId: string,
   reviewerId: string,
-  adminNotes?: string
+  adminNotes?: string,
+  reviewerName?: string
 ): Promise<void> {
   const db = adminDb();
   const reviewedAt = new Date().toISOString();
@@ -192,16 +193,23 @@ export async function approvePaymentSlip(
   const slip = slipDoc.data() as PaymentSlip;
 
   // 2. Update payment slip status
+  const updateData: Record<string, any> = {
+    status: 'approved',
+    reviewedBy: reviewerId,
+    reviewedAt,
+    adminNotes: adminNotes || null,
+    updatedAt: reviewedAt,
+  };
+
+  // Add reviewer name if provided
+  if (reviewerName) {
+    updateData.reviewedByName = reviewerName;
+  }
+
   await db
     .collection('paymentSlips')
     .doc(slipId)
-    .update({
-      status: 'approved',
-      reviewedBy: reviewerId,
-      reviewedAt,
-      adminNotes: adminNotes || null,
-      updatedAt: reviewedAt,
-    });
+    .update(updateData);
 
   // 3. Update eventRegistrations record to reflect payment approval
   const registrationsRef = db.collection('eventRegistrations');
@@ -537,7 +545,8 @@ export async function rejectPaymentSlip(
   slipId: string,
   reviewerId: string,
   rejectionReason: string,
-  adminNotes?: string
+  adminNotes?: string,
+  reviewerName?: string
 ): Promise<void> {
   const db = adminDb();
   const reviewedAt = new Date().toISOString();
@@ -550,17 +559,24 @@ export async function rejectPaymentSlip(
   const slip = slipDoc.data() as PaymentSlip;
 
   // 2. Update payment slip status
+  const updateData: Record<string, any> = {
+    status: 'rejected',
+    reviewedBy: reviewerId,
+    reviewedAt,
+    rejectionReason,
+    adminNotes: adminNotes || null,
+    updatedAt: reviewedAt,
+  };
+
+  // Add reviewer name if provided
+  if (reviewerName) {
+    updateData.reviewedByName = reviewerName;
+  }
+
   await db
     .collection('paymentSlips')
     .doc(slipId)
-    .update({
-      status: 'rejected',
-      reviewedBy: reviewerId,
-      reviewedAt,
-      rejectionReason,
-      adminNotes: adminNotes || null,
-      updatedAt: reviewedAt,
-    });
+    .update(updateData);
 
   // 3. Update eventRegistrations record to reflect rejection
   // Reset to "pending review" status so user knows they need to upload again

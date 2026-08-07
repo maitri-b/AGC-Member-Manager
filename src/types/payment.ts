@@ -21,10 +21,12 @@ export interface PaymentSlip {
   slipUrl: string;                  // Google Drive URL or other storage
   uploadedAt: string;               // ISO timestamp when slip was uploaded
   uploadedBy: string;               // userId or lineUserId
+  uploadedByName?: string;          // Name of uploader (for admin uploaded slips)
 
   // Admin approval workflow
   status: PaymentStatus;            // Current status of this payment
   reviewedBy?: string;              // Admin who reviewed (optional)
+  reviewedByName?: string;          // Name of reviewer (optional)
   reviewedAt?: string;              // ISO timestamp when reviewed (optional)
   rejectionReason?: string;         // Reason if rejected (optional)
 

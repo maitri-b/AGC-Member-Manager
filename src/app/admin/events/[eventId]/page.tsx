@@ -333,6 +333,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                 <th className="px-2 py-1.5 text-left text-[10px] sm:text-xs font-semibold text-gray-700">ประเภท</th>
                 <th className="px-2 py-1.5 text-right text-[10px] sm:text-xs font-semibold text-gray-700">ยอดเงิน</th>
                 <th className="px-2 py-1.5 text-center text-[10px] sm:text-xs font-semibold text-gray-700">สถานะ</th>
+                <th className="px-2 py-1.5 text-left text-[10px] sm:text-xs font-semibold text-gray-700 hidden sm:table-cell">ผู้ดำเนินการ</th>
                 <th className="px-2 py-1.5 text-center text-[10px] sm:text-xs font-semibold text-gray-700">จัดการ</th>
               </tr>
             </thead>
@@ -374,6 +375,54 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                            slip.status === 'approved' ? '✓' : '✗'}
                         </span>
                       </span>
+                    </td>
+                    <td className="px-2 py-2 text-left text-[10px] sm:text-xs text-gray-700 hidden sm:table-cell">
+                      {slip.status === 'approved' && slip.reviewedByName ? (
+                        <div className="space-y-0.5">
+                          <div className="text-green-700 font-medium">
+                            ✓ {slip.reviewedByName}
+                          </div>
+                          {slip.reviewedAt && (
+                            <div className="text-[9px] text-gray-500">
+                              {new Date(slip.reviewedAt).toLocaleDateString('th-TH', {
+                                year: '2-digit',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ) : slip.status === 'rejected' && slip.reviewedByName ? (
+                        <div className="space-y-0.5">
+                          <div className="text-red-700 font-medium">
+                            ✗ {slip.reviewedByName}
+                          </div>
+                          {slip.reviewedAt && (
+                            <div className="text-[9px] text-gray-500">
+                              {new Date(slip.reviewedAt).toLocaleDateString('th-TH', {
+                                year: '2-digit',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ) : slip.uploadedByName ? (
+                        <div className="space-y-0.5">
+                          <div className="text-blue-700 font-medium">
+                            📤 {slip.uploadedByName}
+                          </div>
+                          <div className="text-[9px] text-gray-500">
+                            (อัพโหลด)
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </td>
                     <td className="px-2 py-2 text-center">
                       <div className="flex items-center justify-center gap-2">

@@ -219,6 +219,7 @@ export async function POST(request: NextRequest) {
         slipUrl,
         uploadedAt: new Date().toISOString(),
         uploadedBy: session.user.lineUserId || session.user.id || 'unknown',
+        uploadedByName: session.user.displayName || session.user.name || session.user.email || 'User',
         status: 'pending', // All new uploads start as pending
       };
 

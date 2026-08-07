@@ -601,6 +601,18 @@ export default function EventDetailPage() {
   });
   const [confirmingPayment, setConfirmingPayment] = useState(false);
 
+  // Post-upload approval confirmation modal state
+  const [approvalConfirmModalOpen, setApprovalConfirmModalOpen] = useState(false);
+  const [uploadedSlipData, setUploadedSlipData] = useState<{
+    slipId: string;
+    slipUrl: string;
+    registrationId: string;
+    eventId: string;
+    amount: number;
+    paymentType: string;
+  } | null>(null);
+  const [processingApprovalChoice, setProcessingApprovalChoice] = useState(false);
+
   // Payment slips validation state (for Admin modal)
   const [adminPaymentSlips, setAdminPaymentSlips] = useState<any[]>([]);
   const [loadingAdminSlips, setLoadingAdminSlips] = useState(false);
@@ -1962,7 +1974,7 @@ export default function EventDetailPage() {
         console.log('[Client] Uploading payment slip with eventId:', eventId, 'Type:', typeof eventId);
         console.log('[Client] RegistrationId:', paymentFormData.registrationId);
 
-        // Upload via admin API
+        // ✅ CHANGED: Upload with autoApprove=false first, then ask admin
         const uploadResponse = await fetch('/api/admin/payments/upload-for-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1975,6 +1987,7 @@ export default function EventDetailPage() {
             fileName: paymentFormData.slipFile.name,
             mimeType: paymentFormData.slipFile.type,
             description: `อัพโหลดโดย Admin`,
+            autoApprove: false, // ✅ Don't auto-approve yet
           }),
         });
 
@@ -1992,14 +2005,17 @@ export default function EventDetailPage() {
 
         console.log('[Client] Upload successful:', uploadData);
 
-        // ✅ Admin upload API already auto-approves and updates registration
-        // No need to call additional API - just show success and refresh
-        setActionMessage({ type: 'success', text: uploadData.message || 'อัพโหลดและอนุมัติสลิปเรียบร้อยแล้ว' });
-        setTimeout(() => setActionMessage(null), 3000);
+        // ✅ Show confirmation modal asking admin whether to approve immediately or keep as pending
+        setUploadedSlipData({
+          slipId: uploadData.slip.slipId,
+          slipUrl: uploadData.slipUrl,
+          registrationId: paymentFormData.registrationId,
+          eventId: eventId,
+          amount: paymentFormData.amount,
+          paymentType: paymentFormData.paymentType,
+        });
+        setApprovalConfirmModalOpen(true);
         handleClosePaymentModal();
-        await fetchEventData(); // Refresh data
-        // ✅ Force PaymentDetailsModal to refresh payment slips list
-        setPaymentDetailsRefreshKey(prev => prev + 1);
       } else {
         // No file to upload - this shouldn't happen for admin uploads
         throw new Error('กรุณาเลือกไฟล์สลิปที่จะอัพโหลด');
@@ -2012,6 +2028,90 @@ export default function EventDetailPage() {
     } finally {
       setConfirmingPayment(false);
       setPaymentFormData({ ...paymentFormData, uploadingFile: false });
+    }
+  };
+
+  // Approval confirmation modal handlers
+  const handleApproveImmediately = async () => {
+    if (!uploadedSlipData) return;
+
+    setProcessingApprovalChoice(true);
+    setActionMessage(null);
+
+    try {
+      // Call approve API
+      const response = await fetch(`/api/payments/${uploadedSlipData.slipId}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminNotes: `อัพโหลดและอนุมัติโดย Admin (${uploadedSlipData.paymentType}: ${uploadedSlipData.amount.toLocaleString()} บาท)`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to approve slip');
+      }
+
+      setActionMessage({ type: 'success', text: 'อัพโหลดและอนุมัติสลิปเรียบร้อยแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      setApprovalConfirmModalOpen(false);
+      setUploadedSlipData(null);
+      await fetchEventData();
+      setPaymentDetailsRefreshKey(prev => prev + 1);
+    } catch (error) {
+      setActionMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการอนุมัติสลิป'
+      });
+    } finally {
+      setProcessingApprovalChoice(false);
+    }
+  };
+
+  const handleKeepPending = async () => {
+    // Just close modal - slip is already uploaded with pending status
+    setActionMessage({ type: 'success', text: 'อัพโหลดสลิปเรียบร้อยแล้ว รอการตรวจสอบ' });
+    setTimeout(() => setActionMessage(null), 3000);
+    setApprovalConfirmModalOpen(false);
+    setUploadedSlipData(null);
+    await fetchEventData();
+    setPaymentDetailsRefreshKey(prev => prev + 1);
+  };
+
+  const handleCancelUpload = async () => {
+    if (!uploadedSlipData) return;
+
+    setProcessingApprovalChoice(true);
+    setActionMessage(null);
+
+    try {
+      // Call reject API to delete the slip
+      const response = await fetch(`/api/payments/${uploadedSlipData.slipId}/reject`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rejectionReason: 'ยกเลิกการอัพโหลดโดย Admin',
+          adminNotes: 'Admin ยกเลิกการอัพโหลดสลิปนี้',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel upload');
+      }
+
+      setActionMessage({ type: 'success', text: 'ยกเลิกการอัพโหลดสลิปแล้ว' });
+      setTimeout(() => setActionMessage(null), 3000);
+      setApprovalConfirmModalOpen(false);
+      setUploadedSlipData(null);
+      await fetchEventData();
+      setPaymentDetailsRefreshKey(prev => prev + 1);
+    } catch (error) {
+      setActionMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการยกเลิก'
+      });
+    } finally {
+      setProcessingApprovalChoice(false);
     }
   };
 
@@ -5308,6 +5408,97 @@ export default function EventDetailPage() {
               >
                 ยกเลิก
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Confirmation Modal - After Upload */}
+      {approvalConfirmModalOpen && uploadedSlipData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              อัพโหลดสลิปสำเร็จ
+            </h2>
+
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700">
+                สลิปการชำระเงินได้ถูกอัพโหลดเรียบร้อยแล้ว<br />
+                คุณต้องการดำเนินการอย่างไร?
+              </p>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="text-sm text-gray-700">
+                  <div className="flex justify-between mb-1">
+                    <span className="font-medium">ประเภท:</span>
+                    <span>{uploadedSlipData.paymentType}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">จำนวนเงิน:</span>
+                    <span>{uploadedSlipData.amount.toLocaleString()} บาท</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleApproveImmediately}
+                  disabled={processingApprovalChoice}
+                  className="w-full px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {processingApprovalChoice ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>กำลังดำเนินการ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>✓</span>
+                      <span>อนุมัติทันที</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleKeepPending}
+                  disabled={processingApprovalChoice}
+                  className="w-full px-4 py-3 bg-yellow-600 text-white font-medium rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <span>⏳</span>
+                  <span>รอตรวจสอบ</span>
+                </button>
+
+                <button
+                  onClick={handleCancelUpload}
+                  disabled={processingApprovalChoice}
+                  className="w-full px-4 py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {processingApprovalChoice ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>กำลังยกเลิก...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>✗</span>
+                      <span>ยกเลิกการอัพโหลด</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-2">
+                <strong>คำอธิบาย:</strong><br />
+                • <strong>อนุมัติทันที</strong>: อนุมัติสลิปและอัพเดทสถานะการชำระเงินทันที<br />
+                • <strong>รอตรวจสอบ</strong>: สลิปจะอยู่ในสถานะรอตรวจสอบ สามารถอนุมัติทีหลังได้<br />
+                • <strong>ยกเลิก</strong>: ลบสลิปที่อัพโหลดออกจากระบบ
+              </p>
             </div>
           </div>
         </div>

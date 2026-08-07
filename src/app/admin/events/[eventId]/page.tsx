@@ -4022,16 +4022,18 @@ export default function EventDetailPage() {
                             </label>
                             <div className="space-y-2">
                               {eventData.event.roomTypes
-                                .filter((rt: any) => rt.isActive)
                                 .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
                                 .map((roomType: any) => {
                                   const allocation = editFormData.roomAllocations?.find(ra => ra.roomTypeId === roomType.typeId);
                                   const roomCount = allocation?.roomCount || 0;
                                   const subtotal = roomType.price * roomCount;
+                                  const isInactive = roomType.isActive === false;
                                   return (
-                                    <div key={roomType.typeId} className="flex items-center gap-2 bg-white p-2 rounded">
+                                    <div key={roomType.typeId} className={`flex items-center gap-2 bg-white p-2 rounded ${isInactive ? 'opacity-60' : ''}`}>
                                       <span className="text-xs font-medium text-gray-700 flex-1">
-                                        {roomType.typeName} <span className="text-gray-500">({roomType.price.toLocaleString()} บาท/ห้อง, {roomType.capacity} คน/ห้อง)</span>
+                                        {roomType.typeName}
+                                        {isInactive && <span className="ml-1.5 text-xs text-red-600 font-semibold">(ปิดใช้งาน)</span>}
+                                        <span className="text-gray-500"> ({roomType.price.toLocaleString()} บาท/ห้อง, {roomType.capacity} คน/ห้อง)</span>
                                       </span>
                                       <input
                                         type="number"

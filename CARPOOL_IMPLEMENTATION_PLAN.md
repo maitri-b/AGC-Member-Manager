@@ -100,16 +100,17 @@
   - [x] `POST /api/carpools/[carpoolId]/remove-members` - ลบสมาชิกออกจาก Carpool
   - [x] `GET /api/events/[eventId]/carpools` - ดึง Carpool ทั้งหมดของ event (พร้อม enrich ข้อมูลบริษัท)
 
-### ⏳ Phase 4B: Admin UI - Carpool List & Basic Management (PENDING)
-- [ ] สร้าง CarpoolManagementModal component
+### ✅ Phase 4B: Admin UI - Carpool List & Basic Management (COMPLETED - 2026-08-08)
+- [x] สร้าง CarpoolManagementModal component
   - Location: `src/components/admin/CarpoolManagementModal.tsx`
   - Features:
-    - [ ] แสดงรายการ Carpool ทั้งหมด (รหัสจอง, ชื่อบริษัท, ทะเบียนรถ, จำนวนสมาชิก)
-    - [ ] สร้าง Carpool ใหม่ (form modal)
-    - [ ] แก้ไขข้อมูล Carpool (ทะเบียนรถ)
-    - [ ] ลบ Carpool
-- [ ] เพิ่มปุ่มเปิด Modal ในหน้า admin event detail
+    - [x] แสดงรายการ Carpool ทั้งหมด (รหัสจอง, ชื่อบริษัท, ทะเบียนรถ, จำนวนสมาชิก)
+    - [x] สร้าง Carpool ใหม่ (form modal)
+    - [x] แก้ไขข้อมูล Carpool (ทะเบียนรถ)
+    - [x] ลบ Carpool (พร้อม confirmation modal)
+- [x] เพิ่มปุ่มเปิด Modal ในหน้า admin event detail
   - Location: `src/app/admin/events/[eventId]/page.tsx`
+  - แสดงเฉพาะเมื่อ `hasCarpoolFeature = true`
 
 ### ⏳ Phase 4C: Admin UI - Member Management (PENDING)
 - [ ] เพิ่มฟีเจอร์จัดการสมาชิกใน CarpoolManagementModal
@@ -206,11 +207,12 @@
 ---
 
 ## Current Status
-**Last Updated:** 2026-08-08 16:30
-**Current Phase:** Phase 4A - API Routes: Carpool CRUD ✅ COMPLETED
+**Last Updated:** 2026-08-08 17:00
+**Current Phase:** Phase 4B - Admin UI: Carpool Management ✅ COMPLETED
 **Completed:**
 - Phase 1: Backend types & lib functions
 - Phase 2: Event interface updates
 - Phase 3: Event settings UI & API integration
 - Phase 4A: API Routes - Carpool CRUD (7 endpoints)
-**Next Task:** Phase 4B - สร้าง CarpoolManagementModal component และ UI
+- Phase 4B: Admin UI - Carpool List & Basic Management
+**Next Task:** Phase 4C - Member Management Features (เพิ่ม/ลบสมาชิก, ชวนจากรหัสอื่น)

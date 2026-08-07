@@ -26,11 +26,16 @@ export async function POST(request: NextRequest) {
     const body: CreateCarpoolData = await request.json();
 
     // Validate required fields
-    if (!body.eventId || !body.ownerRegistrationId || !body.licensePlate || !body.members || body.members.length === 0) {
+    if (!body.eventId || !body.ownerRegistrationId || !body.licensePlate) {
       return NextResponse.json(
-        { error: 'Missing required fields: eventId, ownerRegistrationId, licensePlate, members' },
+        { error: 'Missing required fields: eventId, ownerRegistrationId, licensePlate' },
         { status: 400 }
       );
+    }
+
+    // Ensure members is an array (allow empty initially)
+    if (!Array.isArray(body.members)) {
+      body.members = [];
     }
 
     // Create the Carpool

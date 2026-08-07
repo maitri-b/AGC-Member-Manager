@@ -107,6 +107,9 @@ export async function GET() {
           attendeeTypes: data.attendeeTypes || [],
           // Room allocation
           roomTypes: data.roomTypes || [],
+          // Carpool feature
+          hasCarpoolFeature: data.hasCarpoolFeature ?? false,
+          carpoolSettings: data.carpoolSettings || undefined,
           // Event status
           status: data.status || 'active',
           // Convert Firestore Timestamps to ISO strings
@@ -215,6 +218,8 @@ export async function POST(request: NextRequest) {
       attendeeTypes: body.attendeeTypes || [],
       // Room allocation
       roomTypes: body.roomTypes || [],
+      // Carpool feature
+      hasCarpoolFeature: body.hasCarpoolFeature ?? false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: session.user.id,
@@ -237,6 +242,10 @@ export async function POST(request: NextRequest) {
 
     if (body.priceTiers && body.priceTiers.length > 0) {
       newEvent.priceTiers = body.priceTiers;
+    }
+
+    if (body.carpoolSettings) {
+      newEvent.carpoolSettings = body.carpoolSettings;
     }
 
     await db.collection('events').doc(eventId).set(newEvent);

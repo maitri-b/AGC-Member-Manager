@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { AttendeeType, RoomType, PriceTier } from '@/types/event';
+import { CarpoolSettings } from '@/types/carpool';
 import { formatEventDateRange } from '@/lib/date-utils';
 
 interface BankAccount {
@@ -144,6 +145,9 @@ interface EventFormData {
   attendeeTypes: AttendeeType[];
   // Room allocation (New)
   roomTypes: RoomType[];
+  // Carpool feature (New)
+  hasCarpoolFeature?: boolean;
+  carpoolSettings?: CarpoolSettings;
 }
 
 const initialFormData: EventFormData = {
@@ -252,6 +256,9 @@ const initialFormData: EventFormData = {
       sortOrder: 4
     }
   ],
+  // Carpool feature (New)
+  hasCarpoolFeature: false,
+  carpoolSettings: undefined,
 };
 
 export default function AdminEventsPage() {
@@ -515,6 +522,9 @@ export default function AdminEventsPage() {
         attendeeTypes: (event as any).attendeeTypes ?? [],
         // Room allocation (New)
         roomTypes: (event as any).roomTypes ?? [],
+        // Carpool feature (New)
+        hasCarpoolFeature: (event as any).hasCarpoolFeature ?? false,
+        carpoolSettings: (event as any).carpoolSettings ?? undefined,
       });
 
       // Load price tiers if available, otherwise initialize defaults
@@ -2035,6 +2045,50 @@ export default function AdminEventsPage() {
                   <p className="text-xs text-blue-600 mt-1">
                     <strong>หมายเหตุ:</strong> ระบบจะตรวจสอบว่าจำนวนห้องพักที่เลือกรองรับจำนวนผู้เข้าร่วมพอดี
                   </p>
+                </div>
+
+                {/* Carpool Feature Configuration (NEW) */}
+                <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <input
+                      type="checkbox"
+                      id="hasCarpoolFeature"
+                      checked={formData.hasCarpoolFeature || false}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        hasCarpoolFeature: e.target.checked,
+                        carpoolSettings: e.target.checked ? {
+                          totalCarNumbers: 0,
+                          showCarNumbersToMembers: false,
+                          maxSeatsPerCar: undefined
+                        } : undefined
+                      })}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="hasCarpoolFeature" className="text-sm font-semibold text-blue-900 cursor-pointer">
+                      กิจกรรมนี้มีการจัดรถร่วมเดินทาง (Carpool)
+                    </label>
+                  </div>
+                  <p className="text-xs text-blue-700 mb-3">
+                    เปิดใช้งานฟีเจอร์ Carpool เพื่อให้สมาชิกสามารถสร้างกลุ่มรถและชวนเพื่อนร่วมเดินทางได้
+                  </p>
+
+                  {formData.hasCarpoolFeature && (
+                    <div className="bg-white p-3 rounded border border-blue-200 space-y-3 mt-3">
+                      <p className="text-xs text-gray-600">
+                        <strong>การตั้งค่า Carpool:</strong> สมาชิกสามารถสร้างกลุ่มรถและชวนเพื่อนจากรหัสลงทะเบียนอื่นได้
+                        Admin สามารถจัดการเลขรถและ assign Carpool ในหน้า Event Detail
+                      </p>
+                      <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                        <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-xs text-gray-700">
+                          การตั้งค่าเพิ่มเติม (จำนวนรถ, แสดงเลขรถ) สามารถทำได้ในหน้า Event Detail หลังสร้างกิจกรรมแล้ว
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Deposit Payment Configuration (NEW) */}

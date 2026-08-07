@@ -71,18 +71,26 @@
   - [x] `getCarpoolByCarNumber()` - ดึง Carpool จากเลขรถ
   - [x] `getMemberCarpool()` - ดึง Carpool ของสมาชิก
 
-### ✅ Phase 2: Event Settings (COMPLETED - 2026-08-08)
+### ✅ Phase 2: Event Settings - Types & Database (COMPLETED - 2026-08-08)
 - [x] อัปเดต Event interface เพื่อรองรับ Carpool settings
   - File: `src/types/event.ts`
   - Added `hasCarpoolFeature?: boolean`
   - Added `carpoolSettings?: CarpoolSettings`
   - Added `carpoolId?: string` in EventRegistration
-- [ ] เพิ่ม checkbox "มีการจัด Carpool" ในหน้าสร้าง/แก้ไขกิจกรรม
+
+### ✅ Phase 3: Event Settings - Admin UI (COMPLETED - 2026-08-08)
+- [x] เพิ่ม checkbox "มีการจัด Carpool" ในหน้าสร้าง/แก้ไขกิจกรรม
   - Location: `src/app/admin/events/page.tsx`
   - UI: Checkbox + Carpool settings section (conditional)
-  - Status: PENDING (Next task)
+  - Form state: Updated EventFormData interface
+  - Event loading: Added Carpool fields to form initialization
+- [x] อัปเดต Event API เพื่อรองรับ Carpool fields
+  - File: `src/app/api/admin/events/route.ts`
+  - GET: Added `hasCarpoolFeature` and `carpoolSettings` to response mapping
+  - POST: Added Carpool fields to event creation
+  - PUT: Carpool fields already supported via spread operator
 
-### ⏳ Phase 3: Admin UI - Carpool Management (PENDING)
+### ⏳ Phase 4: Admin UI - Carpool Management (PENDING)
 - [ ] สร้างแท็บ "จัดการ Carpool" ในหน้า admin event detail
   - Location: `src/app/admin/events/[eventId]/page.tsx`
   - Features:
@@ -92,7 +100,7 @@
     - [ ] เพิ่ม/ลดสมาชิกจากรหัสจองเดียวกัน
     - [ ] เพิ่มสมาชิกจากรหัสจองอื่น
 
-### ⏳ Phase 4: Admin UI - Car Number Assignment (PENDING)
+### ⏳ Phase 5: Admin UI - Car Number Assignment (PENDING)
 - [ ] สร้างแท็บ "จัดเลขรถ" ในหน้า admin event detail
   - Location: `src/app/admin/events/[eventId]/page.tsx`
   - Features:
@@ -104,7 +112,7 @@
     - [ ] Validation: เลขรถไม่ซ้ำ, Carpool ไม่ซ้ำ
     - [ ] Toggle แสดงเลขรถให้ Member เห็น
 
-### ⏳ Phase 5: Member UI - Carpool Section (PENDING)
+### ⏳ Phase 6: Member UI - Carpool Section (PENDING)
 - [ ] สร้าง Section Carpool ในหน้า member event detail
   - Location: `src/app/events/[eventId]/page.tsx`
   - Features:
@@ -125,7 +133,7 @@
     - [ ] ปุ่ม "ยกเลิกการ Join Carpool"
     - [ ] แสดงเลขรถ (ถ้า admin เปิด toggle)
 
-### ⏳ Phase 6: API Routes (PENDING)
+### ⏳ Phase 7: API Routes (PENDING)
 - [ ] `POST /api/carpools` - สร้าง Carpool
 - [ ] `GET /api/carpools/[carpoolId]` - ดึงข้อมูล Carpool
 - [ ] `PUT /api/carpools/[carpoolId]` - อัปเดต Carpool
@@ -135,7 +143,7 @@
 - [ ] `PUT /api/carpools/[carpoolId]/assign-car-number` - กำหนดเลขรถ
 - [ ] `GET /api/events/[eventId]/carpools` - ดึง Carpool ทั้งหมดของ event
 
-### ⏳ Phase 7: Testing & Documentation (PENDING)
+### ⏳ Phase 8: Testing & Documentation (PENDING)
 - [ ] Test Carpool creation flow
 - [ ] Test member invitation flow
 - [ ] Test car number assignment flow
@@ -186,7 +194,10 @@
 ---
 
 ## Current Status
-**Last Updated:** 2026-08-08 14:30
-**Current Phase:** Phase 2 - Event Settings (Completing UI)
-**Completed:** Backend types, lib functions, Event interface updates
-**Next Task:** เพิ่ม Carpool checkbox และ settings UI ในหน้าสร้าง/แก้ไขกิจกรรม (Admin)
+**Last Updated:** 2026-08-08 15:15
+**Current Phase:** Phase 3 - Event Settings UI ✅ COMPLETED
+**Completed:**
+- Phase 1: Backend types & lib functions
+- Phase 2: Event interface updates
+- Phase 3: Event settings UI & API integration
+**Next Task:** Phase 4 - Admin UI: Carpool Management Tab

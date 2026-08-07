@@ -198,7 +198,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
     // 2. Fallback to lineUserId mapping
     const userMap: Record<string, string> = {
       'U1f4b2bc103c14c0b853c2cee2c045986': 'ไมตรี-ไมค์',
-      'Ua69bd2ac18e79fdde6e1b95b0ccd5c40': "P'Nee",
+      'Ubd3593034ce774f031ffdfb07a56d100': "P'Nee",
     };
     return userMap[slip.reviewedBy || slip.uploadedBy] || null;
   };

@@ -224,6 +224,9 @@ export async function GET(
         useAttendeeTypePricing: event.useAttendeeTypePricing || false,
         attendeeTypes: event.attendeeTypes || [],
         roomTypes: event.roomTypes || [],
+        // Carpool feature configuration
+        hasCarpoolFeature: event.hasCarpoolFeature || false,
+        carpoolSettings: event.carpoolSettings || undefined,
       },
       summary: {
         totalRegistrations: summary.totalRegistrations,

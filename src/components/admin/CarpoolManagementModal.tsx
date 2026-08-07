@@ -62,10 +62,13 @@ export default function CarpoolManagementModal({
   const [searchedRegistration, setSearchedRegistration] = useState<any>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedMembersToAdd, setSelectedMembersToAdd] = useState<string[]>([]);
+  const [allRegistrations, setAllRegistrations] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       fetchCarpools();
+      fetchAllRegistrations();
     }
   }, [isOpen, eventId]);
 
@@ -97,6 +100,19 @@ export default function CarpoolManagementModal({
       setError(err instanceof Error ? err.message : 'Failed to load carpools');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllRegistrations = async () => {
+    try {
+      const response = await fetch(`/api/events/${eventId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch registrations');
+      }
+      const data = await response.json();
+      setAllRegistrations(data.attendees || []);
+    } catch (err) {
+      console.error('Error fetching registrations:', err);
     }
   };
 
@@ -233,15 +249,17 @@ export default function CarpoolManagementModal({
     }
   };
 
-  const handleSearchRegistration = async () => {
-    if (!searchRegistrationId.trim()) {
+  const handleSearchRegistration = async (regId?: string) => {
+    const idToSearch = regId || searchRegistrationId;
+    if (!idToSearch.trim()) {
       alert('กรุณาใส่รหัสการจอง');
       return;
     }
 
     setSearchLoading(true);
+    setShowDropdown(false);
     try {
-      const response = await fetch(`/api/registrations/${searchRegistrationId}`);
+      const response = await fetch(`/api/registrations/${idToSearch}`);
       if (!response.ok) {
         throw new Error('ไม่พบรหัสการจองนี้');
       }
@@ -436,20 +454,23 @@ export default function CarpoolManagementModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {loading && (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="text-gray-600 mt-2">กำลังโหลดข้อมูล...</p>
-            </div>
-          )}
+          {/* Tab: Carpools List */}
+          {activeTab === 'carpools' && (
+            <>
+              {loading && (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <p className="text-gray-600 mt-2">กำลังโหลดข้อมูล...</p>
+                </div>
+              )}
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-              {error}
-            </div>
-          )}
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                  {error}
+                </div>
+              )}
 
-          {!loading && !error && carpools.length === 0 && (
+              {!loading && !error && carpools.length === 0 && (
             <div className="text-center py-12">
               <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
@@ -572,6 +593,98 @@ export default function CarpoolManagementModal({
               })}
             </div>
           )}
+            </>
+          )}
+
+          {/* Tab: Car Numbers Assignment */}
+          {activeTab === 'car-numbers' && (
+            <>
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                  <p className="text-gray-600 mt-2">กำลังโหลดข้อมูล...</p>
+                </div>
+              ) : error ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                  {error}
+                </div>
+              ) : (
+                <>
+                  {/* Total Cars Input */}
+                  <div className="mb-6">
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium text-gray-700">จำนวนรถทั้งหมด:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={totalCars}
+                        onChange={(e) => setTotalCars(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                        className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Car Slots Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {carSlots.map((slot) => (
+                      <div
+                        key={slot.carNumber}
+                        className={`border rounded-lg p-4 ${
+                          slot.carpool
+                            ? 'border-purple-300 bg-purple-50'
+                            : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-bold text-gray-900">
+                            🚗 รถคันที่ {slot.carNumber}
+                          </h3>
+                        </div>
+
+                        {slot.carpool ? (
+                          <div>
+                            <div className="space-y-1 text-sm mb-3">
+                              <p className="font-semibold text-gray-900">{slot.carpool.licensePlate}</p>
+                              <p className="text-gray-600">{slot.carpool.ownerCompanyName}</p>
+                              <p className="text-gray-500 text-xs">
+                                {slot.carpool.members.length} คน
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleUnassign(slot.carpool!.carpoolId)}
+                              className="w-full px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                            >
+                              ยกเลิกเลขรถ
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-sm text-gray-500 mb-3 italic">ยังไม่มี Carpool</p>
+                            <button
+                              onClick={() => handleAssignClick(slot.carNumber)}
+                              disabled={availableCarpools.length === 0}
+                              className="w-full px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              กำหนด Carpool
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {availableCarpools.length === 0 && carpools.length > 0 && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        ✅ Carpool ทั้งหมดได้รับเลขรถแล้ว
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -692,28 +805,99 @@ export default function CarpoolManagementModal({
               {/* Search Registration */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ค้นหารหัสการจอง
+                  ค้นหาการจอง (รหัสจอง, ชื่อบริษัท, ชื่อ LINE, ชื่อผู้ร่วมทีม)
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={searchRegistrationId}
-                    onChange={(e) => setSearchRegistrationId(e.target.value)}
-                    placeholder="REG_xxxxx"
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearchRegistration();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={handleSearchRegistration}
-                    disabled={searchLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  >
-                    {searchLoading ? 'กำลังค้นหา...' : 'ค้นหา'}
-                  </button>
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={searchRegistrationId}
+                      onChange={(e) => {
+                        setSearchRegistrationId(e.target.value);
+                        setShowDropdown(e.target.value.length > 0);
+                      }}
+                      onFocus={() => searchRegistrationId && setShowDropdown(true)}
+                      placeholder="พิมพ์เพื่อค้นหา..."
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSearchRegistration();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => handleSearchRegistration()}
+                      disabled={searchLoading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {searchLoading ? 'กำลังค้นหา...' : 'ค้นหา'}
+                    </button>
+                  </div>
+
+                  {/* Dropdown List */}
+                  {showDropdown && searchRegistrationId && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      {allRegistrations
+                        .filter((reg) => {
+                          const searchLower = searchRegistrationId.toLowerCase();
+                          const regId = reg.registration.registrationId?.toLowerCase() || '';
+                          const company = reg.registration.companyName?.toLowerCase() || '';
+                          const attendeeNames = reg.registration.attendeeNames?.toLowerCase() || '';
+                          const lineProfile = reg.lineProfile?.lineDisplayName?.toLowerCase() || '';
+
+                          return (
+                            regId.includes(searchLower) ||
+                            company.includes(searchLower) ||
+                            attendeeNames.includes(searchLower) ||
+                            lineProfile.includes(searchLower)
+                          );
+                        })
+                        .slice(0, 10)
+                        .map((reg, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setSearchRegistrationId(reg.registration.registrationId);
+                              setShowDropdown(false);
+                              handleSearchRegistration(reg.registration.registrationId);
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="flex items-center gap-3">
+                              {reg.lineProfile?.lineProfilePicture && (
+                                <img
+                                  src={reg.lineProfile.lineProfilePicture}
+                                  alt="profile"
+                                  className="w-8 h-8 rounded-full"
+                                />
+                              )}
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {reg.lineProfile?.lineDisplayName || reg.registration.contactName}
+                                  <span className="ml-2 text-xs text-gray-500">
+                                    {reg.registration.registrationId}
+                                  </span>
+                                </p>
+                                <p className="text-xs text-gray-600">{reg.registration.companyName}</p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      {allRegistrations.filter((reg) => {
+                        const searchLower = searchRegistrationId.toLowerCase();
+                        return (
+                          reg.registration.registrationId?.toLowerCase().includes(searchLower) ||
+                          reg.registration.companyName?.toLowerCase().includes(searchLower) ||
+                          reg.registration.attendeeNames?.toLowerCase().includes(searchLower) ||
+                          reg.lineProfile?.lineDisplayName?.toLowerCase().includes(searchLower)
+                        );
+                      }).length === 0 && (
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                          ไม่พบผลลัพธ์
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

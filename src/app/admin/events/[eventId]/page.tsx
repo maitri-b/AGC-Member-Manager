@@ -840,6 +840,9 @@ export default function EventDetailPage() {
       // Debug: Check if roomAssignments are being fetched
       console.log('[Fetch Event Data] Sample attendee:', data.attendees?.[0]?.registration);
       console.log('[Fetch Event Data] Has roomAssignments?:', !!data.attendees?.[0]?.registration?.roomAssignments);
+      // Debug: Check if hasCarpoolFeature is being fetched
+      console.log('[Fetch Event Data] hasCarpoolFeature:', data.event?.hasCarpoolFeature);
+      console.log('[Fetch Event Data] carpoolSettings:', data.event?.carpoolSettings);
 
       setEventData(data);
     } catch (err) {

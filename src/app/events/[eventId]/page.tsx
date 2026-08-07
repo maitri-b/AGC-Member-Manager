@@ -191,6 +191,14 @@ export default function EventDetailPage() {
   const [roomValidationError, setRoomValidationError] = useState<string | null>(null);
   const [calculatedRoomFee, setCalculatedRoomFee] = useState(0);
 
+  // Carpool state (New)
+  const [memberCarpool, setMemberCarpool] = useState<any>(null);
+  const [carpoolLoading, setCarpoolLoading] = useState(false);
+  const [showCreateCarpoolModal, setShowCreateCarpoolModal] = useState(false);
+  const [newCarpoolLicensePlate, setNewCarpoolLicensePlate] = useState('');
+  const [selectedMembersForCarpool, setSelectedMembersForCarpool] = useState<number[]>([]);
+  const [creatingCarpool, setCreatingCarpool] = useState(false);
+
   // Guest registration form state (for Event-Co without memberId)
   const [guestCompanyName, setGuestCompanyName] = useState('');
   const [guestLicenseNumber, setGuestLicenseNumber] = useState('');
@@ -243,6 +251,12 @@ export default function EventDetailPage() {
       fetchEventDetail();
     }
   }, [eventId]);
+
+  useEffect(() => {
+    if (event?.hasCarpoolFeature && userRegistration) {
+      fetchMemberCarpool();
+    }
+  }, [event?.hasCarpoolFeature, userRegistration]);
 
   // Fetch LINE OA URL from settings
   useEffect(() => {
@@ -449,6 +463,77 @@ export default function EventDetailPage() {
       console.error('Error fetching event:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMemberCarpool = async () => {
+    if (!event?.hasCarpoolFeature || !userRegistration) {
+      return;
+    }
+
+    setCarpoolLoading(true);
+    try {
+      const response = await fetch(`/api/events/${eventId}/my-carpool`);
+      if (response.ok) {
+        const data = await response.json();
+        setMemberCarpool(data.carpool);
+      }
+    } catch (err) {
+      console.error('Error fetching member carpool:', err);
+    } finally {
+      setCarpoolLoading(false);
+    }
+  };
+
+  const handleCreateCarpool = async () => {
+    if (!newCarpoolLicensePlate.trim()) {
+      toast.addToast('กรุณาระบุเลขทะเบียนรถ', 'error');
+      return;
+    }
+
+    if (!userRegistration?.registrationId) {
+      toast.addToast('ไม่พบข้อมูลการลงทะเบียน', 'error');
+      return;
+    }
+
+    setCreatingCarpool(true);
+    try {
+      // Build members array from selected attendees
+      const members = selectedMembersForCarpool.map(index => ({
+        registrationId: userRegistration.registrationId,
+        lineUserId: session?.user?.lineUserId || '',
+        name: attendeeNames[index] || '',
+        isOwner: index === 0, // First person is owner
+      }));
+
+      const response = await fetch('/api/carpools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId,
+          ownerRegistrationId: userRegistration.registrationId,
+          licensePlate: newCarpoolLicensePlate,
+          members,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to create carpool');
+      }
+
+      toast.addToast('สร้าง Carpool สำเร็จ!', 'success');
+      setShowCreateCarpoolModal(false);
+      setNewCarpoolLicensePlate('');
+      setSelectedMembersForCarpool([]);
+
+      // Refresh carpool data
+      await fetchMemberCarpool();
+    } catch (err) {
+      console.error('Error creating carpool:', err);
+      toast.addToast(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้าง Carpool', 'error');
+    } finally {
+      setCreatingCarpool(false);
     }
   };
 
@@ -1404,6 +1489,80 @@ export default function EventDetailPage() {
                             })}
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Carpool Section */}
+                    {event.hasCarpoolFeature && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            🚗 Carpool
+                          </label>
+                          {!memberCarpool && (
+                            <button
+                              onClick={() => setShowCreateCarpoolModal(true)}
+                              className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              + สร้าง Carpool
+                            </button>
+                          )}
+                        </div>
+
+                        {carpoolLoading ? (
+                          <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
+                            กำลังโหลด...
+                          </div>
+                        ) : memberCarpool ? (
+                          <div className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold text-blue-900">
+                                    🚗 {memberCarpool.licensePlate}
+                                  </p>
+                                  <p className="text-xs text-blue-700">
+                                    เจ้าของ: {memberCarpool.ownerCompanyName}
+                                  </p>
+                                </div>
+                                {memberCarpool.assignedCarNumber && event.carpoolSettings?.showCarNumbersToMembers && (
+                                  <div className="text-right">
+                                    <p className="text-xs text-blue-600">เลขรถ</p>
+                                    <p className="text-lg font-bold text-blue-900">
+                                      {memberCarpool.assignedCarNumber}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-xs text-blue-700">
+                                จำนวนสมาชิก: {memberCarpool.members?.length || 0} คน
+                              </div>
+                              {memberCarpool.members && memberCarpool.members.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-blue-200">
+                                  <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิก:</p>
+                                  <div className="space-y-1">
+                                    {memberCarpool.members.map((member: any, idx: number) => (
+                                      <div key={idx} className="text-xs text-blue-700 flex items-center gap-2">
+                                        <span>• {member.name}</span>
+                                        {member.isOwner && (
+                                          <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded text-[10px]">
+                                            เจ้าของ
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
+                            <p className="text-sm text-gray-500 italic">
+                              ยังไม่มี Carpool
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -3448,6 +3607,110 @@ export default function EventDetailPage() {
           }}
         />
       )} */}
+
+      {/* Create Carpool Modal */}
+      {showCreateCarpoolModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">สร้าง Carpool ใหม่</h3>
+              <button
+                onClick={() => {
+                  setShowCreateCarpoolModal(false);
+                  setNewCarpoolLicensePlate('');
+                  setSelectedMembersForCarpool([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* License Plate */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  เลขทะเบียนรถ *
+                </label>
+                <input
+                  type="text"
+                  value={newCarpoolLicensePlate}
+                  onChange={(e) => setNewCarpoolLicensePlate(e.target.value)}
+                  placeholder="กท 1234"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Select Members */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  เลือกสมาชิกที่จะร่วมเดินทาง (จากการลงทะเบียนนี้)
+                </label>
+                <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
+                  {attendeeNames.map((name, index) => (
+                    <label
+                      key={index}
+                      className="flex items-center gap-2 py-2 hover:bg-gray-50 rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedMembersForCarpool.includes(index)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedMembersForCarpool([...selectedMembersForCarpool, index]);
+                          } else {
+                            setSelectedMembersForCarpool(selectedMembersForCarpool.filter(i => i !== index));
+                          }
+                        }}
+                        className="rounded"
+                      />
+                      <span className="text-sm text-gray-900">
+                        {name || `ผู้เข้าร่วมคนที่ ${index + 1}`}
+                        {index === 0 && ' (คุณ)'}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    if (selectedMembersForCarpool.length === attendeeNames.length) {
+                      setSelectedMembersForCarpool([]);
+                    } else {
+                      setSelectedMembersForCarpool(attendeeNames.map((_, i) => i));
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-700 mt-1"
+                >
+                  {selectedMembersForCarpool.length === attendeeNames.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCreateCarpoolModal(false);
+                  setNewCarpoolLicensePlate('');
+                  setSelectedMembersForCarpool([]);
+                }}
+                disabled={creatingCarpool}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleCreateCarpool}
+                disabled={creatingCarpool || !newCarpoolLicensePlate.trim()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {creatingCarpool ? 'กำลังสร้าง...' : 'สร้าง Carpool'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

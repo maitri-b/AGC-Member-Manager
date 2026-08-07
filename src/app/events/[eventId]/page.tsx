@@ -634,6 +634,46 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleLeaveCarpool = async () => {
+    if (!memberCarpool?.carpoolId) {
+      toast.error('ไม่พบข้อมูล Carpool');
+      return;
+    }
+
+    if (!session?.user?.lineUserId) {
+      toast.error('ไม่พบข้อมูลผู้ใช้');
+      return;
+    }
+
+    // Confirm before leaving
+    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการออกจาก Carpool นี้?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}/remove-members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lineUserIds: [session.user.lineUserId],
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to leave carpool');
+      }
+
+      toast.success('ออกจาก Carpool สำเร็จ');
+
+      // Refresh carpool data
+      await fetchMemberCarpool();
+    } catch (err) {
+      console.error('Error leaving carpool:', err);
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการออกจาก Carpool');
+    }
+  };
+
   const handleAttendeeCountChange = (count: number) => {
     setAttendeeCount(count);
     const currentNames = [...attendeeNames];
@@ -1652,17 +1692,28 @@ export default function EventDetailPage() {
                                 </div>
                               )}
 
-                              {/* Invite button */}
-                              {memberCarpool.ownerRegistrationId === userRegistration?.registrationId && (
-                                <div className="mt-3 pt-2 border-t border-blue-200">
+                              {/* Action buttons */}
+                              <div className="mt-3 pt-2 border-t border-blue-200 space-y-2">
+                                {/* Invite button - only for owner */}
+                                {memberCarpool.ownerRegistrationId === userRegistration?.registrationId && (
                                   <button
                                     onClick={() => setShowInviteModal(true)}
                                     className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                   >
                                     + ชวนเพื่อนจากรหัสจองอื่น
                                   </button>
-                                </div>
-                              )}
+                                )}
+
+                                {/* Leave button - only for non-owners */}
+                                {memberCarpool.ownerRegistrationId !== userRegistration?.registrationId && (
+                                  <button
+                                    onClick={handleLeaveCarpool}
+                                    className="w-full text-xs px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                                  >
+                                    ออกจาก Carpool
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ) : (

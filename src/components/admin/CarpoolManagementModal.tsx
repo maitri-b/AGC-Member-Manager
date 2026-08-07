@@ -138,15 +138,20 @@ export default function CarpoolManagementModal({
         }
       } else {
         // Create new Carpool
+        const payload = {
+          eventId,
+          ownerRegistrationId: formData.ownerRegistrationId,
+          licensePlate: formData.licensePlate,
+          members: formData.members,
+        };
+
+        console.log('[Create Carpool] Payload:', payload);
+        console.log('[Create Carpool] Members:', payload.members);
+
         const response = await fetch('/api/carpools', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            eventId,
-            ownerRegistrationId: formData.ownerRegistrationId,
-            licensePlate: formData.licensePlate,
-            members: formData.members,
-          }),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {

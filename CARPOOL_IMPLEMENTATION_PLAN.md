@@ -90,15 +90,32 @@
   - POST: Added Carpool fields to event creation
   - PUT: Carpool fields already supported via spread operator
 
-### ⏳ Phase 4: Admin UI - Carpool Management (PENDING)
-- [ ] สร้างแท็บ "จัดการ Carpool" ในหน้า admin event detail
-  - Location: `src/app/admin/events/[eventId]/page.tsx`
+### ✅ Phase 4A: API Routes - Carpool CRUD (COMPLETED - 2026-08-08)
+- [x] สร้าง API endpoints สำหรับ Carpool Management
+  - [x] `POST /api/carpools` - สร้าง Carpool ใหม่
+  - [x] `GET /api/carpools/[carpoolId]` - ดึงข้อมูล Carpool ตาม ID
+  - [x] `PUT /api/carpools/[carpoolId]` - อัปเดตข้อมูล Carpool
+  - [x] `DELETE /api/carpools/[carpoolId]` - ลบ Carpool
+  - [x] `POST /api/carpools/[carpoolId]/add-members` - เพิ่มสมาชิกเข้า Carpool
+  - [x] `POST /api/carpools/[carpoolId]/remove-members` - ลบสมาชิกออกจาก Carpool
+  - [x] `GET /api/events/[eventId]/carpools` - ดึง Carpool ทั้งหมดของ event (พร้อม enrich ข้อมูลบริษัท)
+
+### ⏳ Phase 4B: Admin UI - Carpool List & Basic Management (PENDING)
+- [ ] สร้าง CarpoolManagementModal component
+  - Location: `src/components/admin/CarpoolManagementModal.tsx`
   - Features:
-    - [ ] แสดงรายการ Carpool ทั้งหมด (รหัสจอง, ชื่อบริษัท, ทะเบียนรถ)
-    - [ ] สร้าง Carpool ใหม่
-    - [ ] แก้ไข/ลบ Carpool
-    - [ ] เพิ่ม/ลดสมาชิกจากรหัสจองเดียวกัน
-    - [ ] เพิ่มสมาชิกจากรหัสจองอื่น
+    - [ ] แสดงรายการ Carpool ทั้งหมด (รหัสจอง, ชื่อบริษัท, ทะเบียนรถ, จำนวนสมาชิก)
+    - [ ] สร้าง Carpool ใหม่ (form modal)
+    - [ ] แก้ไขข้อมูล Carpool (ทะเบียนรถ)
+    - [ ] ลบ Carpool
+- [ ] เพิ่มปุ่มเปิด Modal ในหน้า admin event detail
+  - Location: `src/app/admin/events/[eventId]/page.tsx`
+
+### ⏳ Phase 4C: Admin UI - Member Management (PENDING)
+- [ ] เพิ่มฟีเจอร์จัดการสมาชิกใน CarpoolManagementModal
+  - [ ] เพิ่ม/ลดสมาชิกจากรหัสจองเดียวกัน
+  - [ ] ชวนสมาชิกจากรหัสจองอื่น (search by registrationId)
+  - [ ] แสดงสถานะสมาชิกที่อยู่ Carpool แล้ว
 
 ### ⏳ Phase 5: Admin UI - Car Number Assignment (PENDING)
 - [ ] สร้างแท็บ "จัดเลขรถ" ในหน้า admin event detail
@@ -133,15 +150,10 @@
     - [ ] ปุ่ม "ยกเลิกการ Join Carpool"
     - [ ] แสดงเลขรถ (ถ้า admin เปิด toggle)
 
-### ⏳ Phase 7: API Routes (PENDING)
-- [ ] `POST /api/carpools` - สร้าง Carpool
-- [ ] `GET /api/carpools/[carpoolId]` - ดึงข้อมูล Carpool
-- [ ] `PUT /api/carpools/[carpoolId]` - อัปเดต Carpool
-- [ ] `DELETE /api/carpools/[carpoolId]` - ลบ Carpool
-- [ ] `POST /api/carpools/[carpoolId]/add-members` - เพิ่มสมาชิก
-- [ ] `POST /api/carpools/[carpoolId]/remove-members` - ลบสมาชิก
+### ⏳ Phase 7: API Routes - Car Number Assignment (PENDING)
 - [ ] `PUT /api/carpools/[carpoolId]/assign-car-number` - กำหนดเลขรถ
-- [ ] `GET /api/events/[eventId]/carpools` - ดึง Carpool ทั้งหมดของ event
+- [ ] `PUT /api/carpools/[carpoolId]/unassign-car-number` - ยกเลิกเลขรถ
+- [ ] `GET /api/events/[eventId]/car-assignments` - ดึงข้อมูลการ assign เลขรถทั้งหมด
 
 ### ⏳ Phase 8: Testing & Documentation (PENDING)
 - [ ] Test Carpool creation flow
@@ -194,10 +206,11 @@
 ---
 
 ## Current Status
-**Last Updated:** 2026-08-08 15:15
-**Current Phase:** Phase 3 - Event Settings UI ✅ COMPLETED
+**Last Updated:** 2026-08-08 16:30
+**Current Phase:** Phase 4A - API Routes: Carpool CRUD ✅ COMPLETED
 **Completed:**
 - Phase 1: Backend types & lib functions
 - Phase 2: Event interface updates
 - Phase 3: Event settings UI & API integration
-**Next Task:** Phase 4 - Admin UI: Carpool Management Tab
+- Phase 4A: API Routes - Carpool CRUD (7 endpoints)
+**Next Task:** Phase 4B - สร้าง CarpoolManagementModal component และ UI

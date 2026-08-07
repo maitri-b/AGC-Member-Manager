@@ -1441,7 +1441,7 @@ export default function AdminEventsPage() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">
                 {editingEvent ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรมใหม่'}
@@ -1899,26 +1899,27 @@ export default function AdminEventsPage() {
                   {/* Dynamic room types list */}
                   <div className="space-y-3">
                     {formData.roomTypes?.map((room, index) => (
-                      <div key={room.typeId} className={`bg-white p-3 rounded border space-y-2 transition-opacity ${!room.isActive ? 'opacity-60' : ''}`}>
-                        {/* First row: Main info with Active toggle */}
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newRooms = formData.roomTypes.filter(rt => rt.typeId !== room.typeId);
-                              setFormData({ ...formData, roomTypes: newRooms });
-                            }}
-                            className="text-red-500 hover:text-red-700 self-start sm:self-center"
-                            title="ลบประเภทห้องนี้"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                      <div key={room.typeId} className={`bg-white p-3 rounded border space-y-3 transition-opacity ${!room.isActive ? 'opacity-60' : ''}`}>
+                        {/* Row 1: Delete button, Toggle, and Room Name */}
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            {/* Delete button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newRooms = formData.roomTypes.filter(rt => rt.typeId !== room.typeId);
+                                setFormData({ ...formData, roomTypes: newRooms });
+                              }}
+                              className="text-red-500 hover:text-red-700 flex-shrink-0"
+                              title="ลบประเภทห้องนี้"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
 
-                          {/* Active/Inactive Toggle */}
-                          <div className="flex items-center gap-2">
-                            <label className="relative inline-flex items-center cursor-pointer">
+                            {/* Active/Inactive Toggle - Compact version */}
+                            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                               <input
                                 type="checkbox"
                                 checked={room.isActive !== false}
@@ -1929,13 +1930,14 @@ export default function AdminEventsPage() {
                                 }}
                                 className="sr-only peer"
                               />
-                              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                              <span className={`ml-2 text-xs font-medium ${room.isActive !== false ? 'text-green-600' : 'text-gray-500'}`}>
-                                {room.isActive !== false ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                              <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                              <span className={`ml-1.5 text-xs font-medium whitespace-nowrap ${room.isActive !== false ? 'text-green-600' : 'text-gray-500'}`}>
+                                {room.isActive !== false ? 'เปิด' : 'ปิด'}
                               </span>
                             </label>
                           </div>
 
+                          {/* Room name input */}
                           <input
                             type="text"
                             value={room.typeName}
@@ -1945,11 +1947,14 @@ export default function AdminEventsPage() {
                               newRooms[index].typeName = e.target.value;
                               setFormData({ ...formData, roomTypes: newRooms });
                             }}
-                            className="w-full sm:w-40 px-3 py-1 border border-gray-300 rounded-md text-sm font-medium"
+                            className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium"
                           />
+                        </div>
 
+                        {/* Row 2: Capacity and Price */}
+                        <div className="flex flex-col sm:flex-row gap-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">รองรับ:</span>
+                            <span className="text-xs text-gray-600 whitespace-nowrap">รองรับ:</span>
                             <input
                               type="number"
                               min="1"
@@ -1960,13 +1965,13 @@ export default function AdminEventsPage() {
                                 newRooms[index].capacity = e.target.value === '' ? 1 : parseInt(e.target.value);
                                 setFormData({ ...formData, roomTypes: newRooms });
                               }}
-                              className="w-16 px-3 py-1 border border-gray-300 rounded-md text-center"
+                              className="w-16 px-2 py-1.5 border border-gray-300 rounded-md text-center text-sm"
                             />
-                            <span className="text-sm text-gray-600">คน</span>
+                            <span className="text-xs text-gray-600">คน</span>
                           </div>
 
-                          <div className="flex items-center gap-2 sm:ml-auto">
-                            <span className="text-sm text-gray-600">ราคาเพิ่ม:</span>
+                          <div className="flex items-center gap-2 sm:flex-1">
+                            <span className="text-xs text-gray-600 whitespace-nowrap">ราคาเพิ่ม:</span>
                             <input
                               type="number"
                               min="0"
@@ -1977,15 +1982,15 @@ export default function AdminEventsPage() {
                                 newRooms[index].price = e.target.value === '' ? 0 : parseFloat(e.target.value);
                                 setFormData({ ...formData, roomTypes: newRooms });
                               }}
-                              className="w-24 px-3 py-1 border border-gray-300 rounded-md text-right"
+                              className="w-24 px-2 py-1.5 border border-gray-300 rounded-md text-right text-sm"
                             />
-                            <span className="text-sm text-gray-600">บาท</span>
+                            <span className="text-xs text-gray-600">บาท</span>
                           </div>
                         </div>
 
-                        {/* Second row: Note field */}
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:pl-8">
-                          <span className="text-xs text-gray-600">หมายเหตุ:</span>
+                        {/* Row 3: Note field */}
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <span className="text-xs text-gray-600 whitespace-nowrap sm:w-20">หมายเหตุ:</span>
                           <input
                             type="text"
                             value={room.note || ''}
@@ -1995,7 +2000,7 @@ export default function AdminEventsPage() {
                               newRooms[index].note = e.target.value;
                               setFormData({ ...formData, roomTypes: newRooms });
                             }}
-                            className="w-full sm:flex-1 px-3 py-1 border border-gray-300 rounded-md text-xs"
+                            className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-xs"
                           />
                         </div>
                       </div>

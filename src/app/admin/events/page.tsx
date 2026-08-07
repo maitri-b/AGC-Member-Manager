@@ -2075,11 +2075,76 @@ export default function AdminEventsPage() {
 
                   {formData.hasCarpoolFeature && (
                     <div className="bg-white p-3 rounded border border-blue-200 space-y-3 mt-3">
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-600 mb-3">
                         <strong>การตั้งค่า Carpool:</strong> สมาชิกสามารถสร้างกลุ่มรถและชวนเพื่อนจากรหัสลงทะเบียนอื่นได้
                         Admin สามารถจัดการเลขรถและ assign Carpool ในหน้า Event Detail
                       </p>
-                      <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+
+                      {/* Carpool Settings Fields */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            จำนวนรถทั้งหมด (ไม่บังคับ)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.carpoolSettings?.totalCarNumbers || 0}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              carpoolSettings: {
+                                ...formData.carpoolSettings!,
+                                totalCarNumbers: parseInt(e.target.value) || 0
+                              }
+                            })}
+                            className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="0 = ไม่จำกัด"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">ระบุ 0 หากไม่ต้องการจำกัด</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            จำนวนที่นั่งต่อรถ (ไม่บังคับ)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.carpoolSettings?.maxSeatsPerCar || ''}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              carpoolSettings: {
+                                ...formData.carpoolSettings!,
+                                maxSeatsPerCar: e.target.value ? parseInt(e.target.value) : undefined
+                              }
+                            })}
+                            className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="ไม่จำกัด"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">ใช้สำหรับเตือนเมื่อเกินที่นั่ง</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          type="checkbox"
+                          id="showCarNumbersToMembers"
+                          checked={formData.carpoolSettings?.showCarNumbersToMembers || false}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            carpoolSettings: {
+                              ...formData.carpoolSettings!,
+                              showCarNumbersToMembers: e.target.checked
+                            }
+                          })}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="showCarNumbersToMembers" className="text-xs font-medium text-gray-700 cursor-pointer">
+                          แสดงเลขรถให้สมาชิกเห็น
+                        </label>
+                      </div>
+
+                      <div className="flex items-center gap-2 p-2 bg-gray-50 rounded mt-3">
                         <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>

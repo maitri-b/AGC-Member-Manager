@@ -36,7 +36,7 @@ export async function PUT(
     }
 
     // Get reviewer name from session
-    const reviewerName = session.user.displayName || session.user.name || session.user.email || 'Admin';
+    const reviewerName = session.user.name || session.user.email || 'Admin';
 
     // Approve the slip
     await approvePaymentSlip(

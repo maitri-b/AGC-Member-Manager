@@ -4958,6 +4958,16 @@ export default function EventDetailPage() {
                             displayName = trimmedName.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
                           }
 
+                          // Helper function to clean member name for comparison
+                          const cleanMemberName = (name: string) => {
+                            try {
+                              const parsed = JSON.parse(name);
+                              return Array.isArray(parsed) ? parsed[0] : parsed;
+                            } catch {
+                              return name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                            }
+                          };
+
                           // Find the carpool we're inviting to
                           const targetCarpool = allCarpools.find(cp => cp.carpoolId === invitingToCarpoolId);
 
@@ -4971,18 +4981,20 @@ export default function EventDetailPage() {
                           });
 
                           // Check if already in the carpool we're inviting to
-                          const isInCurrentCarpool = targetCarpool?.members?.some(
-                            (m: any) => m.name === displayName && m.registrationId === searchedRegistration.registrationId
-                          );
+                          const isInCurrentCarpool = targetCarpool?.members?.some((m: any) => {
+                            const cleanedMemberName = cleanMemberName(m.name);
+                            return cleanedMemberName === displayName && m.registrationId === searchedRegistration.registrationId;
+                          });
 
                           // Check if already in any other active carpool (exclude deleted/cancelled)
                           // Match by registrationId + name (since members from different registrations have different lineUserIds)
                           const isInOtherCarpool = !isInCurrentCarpool && allCarpools.some(cp =>
                             cp.carpoolId !== invitingToCarpoolId &&
                             cp.status !== 'deleted' && cp.status !== 'cancelled' &&
-                            cp.members?.some((m: any) =>
-                              m.registrationId === searchedRegistration.registrationId && m.name === displayName
-                            )
+                            cp.members?.some((m: any) => {
+                              const cleanedMemberName = cleanMemberName(m.name);
+                              return m.registrationId === searchedRegistration.registrationId && cleanedMemberName === displayName;
+                            })
                           );
                           const isInCarpool = isInCurrentCarpool || isInOtherCarpool;
 

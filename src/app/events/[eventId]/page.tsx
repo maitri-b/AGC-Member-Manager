@@ -4298,6 +4298,8 @@ export default function EventDetailPage() {
 
                         const data = await response.json();
                         console.log('[Join Search] Response data:', data);
+                        console.log('[Join Search] Carpool members:', data.carpool?.members);
+                        console.log('[Join Search] Members length:', data.carpool?.members?.length);
 
                         if (!data.carpool) {
                           toast.error(`รหัสการจอง "${joinRegistrationId}" ยังไม่ได้สร้าง Carpool กรุณาติดต่อเจ้าของรหัสจองนี้เพื่อให้สร้าง Carpool ก่อน`);

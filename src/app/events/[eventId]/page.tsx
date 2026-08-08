@@ -645,6 +645,16 @@ export default function EventDetailPage() {
       return;
     }
 
+    // Find current member in the Carpool
+    const currentMember = memberCarpool.members?.find(
+      (m: any) => m.lineUserId === session.user.lineUserId
+    );
+
+    if (!currentMember) {
+      toast.error('ไม่พบข้อมูลสมาชิกของคุณใน Carpool');
+      return;
+    }
+
     // Confirm before leaving
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการออกจาก Carpool นี้?')) {
       return;
@@ -655,7 +665,7 @@ export default function EventDetailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lineUserIds: [session.user.lineUserId],
+          lineUserIds: [session.user.lineUserId], // Legacy format - will remove all members with this lineUserId
         }),
       });
 

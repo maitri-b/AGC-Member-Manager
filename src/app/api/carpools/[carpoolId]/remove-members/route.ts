@@ -31,10 +31,28 @@ export async function POST(
       return NextResponse.json({ error: 'Carpool ID is required' }, { status: 400 });
     }
 
-    const body: { lineUserIds: string[] } = await request.json();
+    const body: {
+      lineUserIds?: string[];  // Legacy support
+      members?: Array<{ lineUserId: string; name: string }>;  // New format
+    } = await request.json();
 
-    if (!body.lineUserIds || !Array.isArray(body.lineUserIds) || body.lineUserIds.length === 0) {
-      return NextResponse.json({ error: 'lineUserIds array is required and cannot be empty' }, { status: 400 });
+    // Support both old format (lineUserIds) and new format (members)
+    let membersToRemove: Array<{ lineUserId: string; name: string }>;
+
+    if (body.members && Array.isArray(body.members) && body.members.length > 0) {
+      // New format: members with lineUserId + name
+      membersToRemove = body.members;
+    } else if (body.lineUserIds && Array.isArray(body.lineUserIds) && body.lineUserIds.length > 0) {
+      // Legacy format: just lineUserIds (for backward compatibility with member UI)
+      membersToRemove = body.lineUserIds.map(lineUserId => ({
+        lineUserId,
+        name: '', // Will match any name for this lineUserId
+      }));
+    } else {
+      return NextResponse.json(
+        { error: 'Either members array or lineUserIds array is required' },
+        { status: 400 }
+      );
     }
 
     // Check if Carpool exists
@@ -44,7 +62,7 @@ export async function POST(
     }
 
     // Remove members from Carpool
-    await removeMembersFromCarpool(carpoolId, body.lineUserIds);
+    await removeMembersFromCarpool(carpoolId, membersToRemove);
 
     // Fetch updated Carpool
     const updatedCarpool = await getCarpoolById(carpoolId);

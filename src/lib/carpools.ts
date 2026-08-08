@@ -113,8 +113,13 @@ export async function addMembersToCarpool(
   }
 
   // Filter out members that are already in the carpool
-  const existingLineUserIds = new Set(carpool.members.map(m => m.lineUserId));
-  const membersToAdd = newMembers.filter(m => !existingLineUserIds.has(m.lineUserId));
+  // Use combination of lineUserId + name to identify unique members
+  const existingMemberKeys = new Set(
+    carpool.members.map(m => `${m.lineUserId}::${m.name}`)
+  );
+  const membersToAdd = newMembers.filter(
+    m => !existingMemberKeys.has(`${m.lineUserId}::${m.name}`)
+  );
 
   if (membersToAdd.length === 0) {
     return; // No new members to add
@@ -133,10 +138,11 @@ export async function addMembersToCarpool(
 
 /**
  * Remove members from Carpool
+ * @param membersToRemove - Array of members to remove (with lineUserId + name)
  */
 export async function removeMembersFromCarpool(
   carpoolId: string,
-  lineUserIds: string[]
+  membersToRemove: Array<{ lineUserId: string; name: string }>
 ): Promise<void> {
   const db = adminDb();
   const carpool = await getCarpoolById(carpoolId);
@@ -145,16 +151,34 @@ export async function removeMembersFromCarpool(
     throw new Error('Carpool not found');
   }
 
-  const lineUserIdSet = new Set(lineUserIds);
-  const updatedMembers = carpool.members.filter(m => !lineUserIdSet.has(m.lineUserId));
+  // Filter members to remove
+  // If name is empty string, remove all members with that lineUserId (legacy support)
+  // Otherwise, remove only the specific member with lineUserId + name
+  const updatedMembers = carpool.members.filter((member) => {
+    for (const toRemove of membersToRemove) {
+      if (toRemove.name === '') {
+        // Legacy: remove all members with this lineUserId
+        if (member.lineUserId === toRemove.lineUserId) {
+          return false;
+        }
+      } else {
+        // New: remove specific member by lineUserId + name
+        if (member.lineUserId === toRemove.lineUserId && member.name === toRemove.name) {
+          return false;
+        }
+      }
+    }
+    return true;
+  });
 
   await db.collection('carpools').doc(carpoolId).update({
     members: updatedMembers,
     updatedAt: new Date().toISOString(),
   });
 
-  // Clear carpoolId in eventRegistrations for removed members
-  await clearMembersCarpoolId(lineUserIds);
+  // Clear carpoolId in eventRegistrations for removed members (only unique lineUserIds)
+  const uniqueLineUserIds = Array.from(new Set(membersToRemove.map(m => m.lineUserId)));
+  await clearMembersCarpoolId(uniqueLineUserIds);
 }
 
 /**

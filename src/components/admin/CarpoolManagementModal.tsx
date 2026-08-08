@@ -254,7 +254,7 @@ export default function CarpoolManagementModal({
     setExpandedCarpoolId(expandedCarpoolId === carpoolId ? null : carpoolId);
   };
 
-  const handleRemoveMember = async (carpoolId: string, lineUserId: string) => {
+  const handleRemoveMember = async (carpoolId: string, lineUserId: string, name: string) => {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบสมาชิกคนนี้ออกจาก Carpool?')) {
       return;
     }
@@ -263,7 +263,9 @@ export default function CarpoolManagementModal({
       const response = await fetch(`/api/carpools/${carpoolId}/remove-members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lineUserIds: [lineUserId] }),
+        body: JSON.stringify({
+          members: [{ lineUserId, name }],
+        }),
       });
 
       if (!response.ok) {
@@ -605,7 +607,7 @@ export default function CarpoolManagementModal({
                                 </div>
                                 {!member.isOwner && (
                                   <button
-                                    onClick={() => handleRemoveMember(carpool.carpoolId, member.lineUserId)}
+                                    onClick={() => handleRemoveMember(carpool.carpoolId, member.lineUserId, member.name)}
                                     className="text-xs text-red-600 hover:text-red-800 transition-colors"
                                   >
                                     ลบ

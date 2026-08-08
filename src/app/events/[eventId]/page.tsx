@@ -204,16 +204,17 @@ export default function EventDetailPage() {
   const [creatingCarpool, setCreatingCarpool] = useState(false);
 
   // Derived state: separate owned and joined carpools
-  const ownedCarpool = memberCarpools.find(cp => cp.ownerRegistrationId === userRegistration?.registrationId);
+  const ownedCarpools = memberCarpools.filter(cp => cp.ownerRegistrationId === userRegistration?.registrationId);
   const joinedCarpools = memberCarpools.filter(cp => cp.ownerRegistrationId !== userRegistration?.registrationId);
 
   // For backward compatibility - use first owned carpool as "memberCarpool"
-  const memberCarpool = ownedCarpool || null;
+  const memberCarpool = ownedCarpools[0] || null;
 
   // Fee breakdown toggle state (New)
   const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
   // Invite members state
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [invitingToCarpoolId, setInvitingToCarpoolId] = useState<string | null>(null);
   const [searchRegistrationId, setSearchRegistrationId] = useState('');
   const [searchedRegistration, setSearchedRegistration] = useState<any>(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -637,7 +638,7 @@ export default function EventDetailPage() {
   };
 
   const handleInviteMembers = async () => {
-    if (!memberCarpool?.carpoolId) {
+    if (!invitingToCarpoolId) {
       toast.error('ไม่พบข้อมูล Carpool');
       return;
     }
@@ -665,7 +666,7 @@ export default function EventDetailPage() {
         name: name,
       }));
 
-      const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}/add-members`, {
+      const response = await fetch(`/api/carpools/${invitingToCarpoolId}/add-members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ members: membersToAdd }),
@@ -678,6 +679,7 @@ export default function EventDetailPage() {
 
       toast.success(`ชวนสมาชิก ${selectedMembersToInvite.length} คนสำเร็จ!`);
       setShowInviteModal(false);
+      setInvitingToCarpoolId(null);
       setSearchRegistrationId('');
       setSearchedRegistration(null);
       setSelectedMembersToInvite([]);
@@ -1835,16 +1837,15 @@ export default function EventDetailPage() {
                           </div>
                           <p className="text-xs text-gray-600 mb-3">
                             กรุณาสร้าง Carpool หากคุณจะขับรถไปเอง คุณสามารถเชิญสมาชิกจากรหัสลงทะเบียนอื่นร่วมไปด้วยได้<br />
-                            กรณีไม่ได้ขับไปเอง แต่จะร่วมไปรถของรหัสลงทะเบียนคนอื่น กรุณากด Join รถคนอื่นในการ์ด "รายชื่อจัดการรถ"
+                            กรณีไม่ได้ขับไปเอง แต่จะร่วมไปรถของรหัสลงทะเบียนคนอื่น กรุณากด Join รถคนอื่นในการ์ด "รายชื่อจัดการรถ"<br />
+                            <span className="text-purple-600 font-medium">สามารถสร้าง Carpool ได้มากกว่า 1 คัน</span>
                           </p>
-                          {!memberCarpool && (
-                            <button
-                              onClick={() => setShowCreateCarpoolModal(true)}
-                              className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              + สร้าง Carpool
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setShowCreateCarpoolModal(true)}
+                            className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            + สร้าง Carpool
+                          </button>
                         </div>
 
                         {/* Members Status Overview - Show only members NOT in any carpool */}
@@ -1908,11 +1909,13 @@ export default function EventDetailPage() {
                           </div>
                         ) : memberCarpools.length > 0 ? (
                           <div className="space-y-3">
-                            {/* Owned Carpool Section */}
-                            {ownedCarpool && (
+                            {/* Owned Carpools Section */}
+                            {ownedCarpools.length > 0 && (
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-2">Carpool ของคุณ</p>
-                                <div className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
+                                <p className="text-xs font-medium text-gray-700 mb-2">Carpool ของคุณ ({ownedCarpools.length} คัน)</p>
+                                <div className="space-y-2">
+                                  {ownedCarpools.map((ownedCarpool) => (
+                                    <div key={ownedCarpool.carpoolId} className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
                                   <div className="space-y-2">
                                     <div className="flex items-center justify-between">
                                       <div className="flex-1">
@@ -2044,16 +2047,20 @@ export default function EventDetailPage() {
                                       </div>
                                     )}
 
-                                    {/* Action buttons */}
-                                    <div className="mt-3 pt-2 border-t border-blue-200">
-                                      <button
-                                        onClick={() => setShowInviteModal(true)}
-                                        className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                      >
-                                        + ชวนเพื่อนจากรหัสลงทะเบียนอื่น
-                                      </button>
+                                      {/* Action buttons */}
+                                      <div className="mt-3 pt-2 border-t border-blue-200">
+                                        <button
+                                          onClick={() => {
+                                            setInvitingToCarpoolId(ownedCarpool.carpoolId);
+                                            setShowInviteModal(true);
+                                          }}
+                                          className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                          + ชวนเพื่อนจากรหัสลงทะเบียนอื่น
+                                        </button>
+                                      </div>
                                     </div>
-                                  </div>
+                                  ))}
                                 </div>
                               </div>
                             )}
@@ -4866,7 +4873,7 @@ export default function EventDetailPage() {
       )}
 
       {/* Invite Members Modal */}
-      {showInviteModal && memberCarpool && (
+      {showInviteModal && invitingToCarpoolId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -4874,6 +4881,7 @@ export default function EventDetailPage() {
               <button
                 onClick={() => {
                   setShowInviteModal(false);
+                  setInvitingToCarpoolId(null);
                   setSearchRegistrationId('');
                   setSearchedRegistration(null);
                   setSelectedMembersToInvite([]);
@@ -5008,6 +5016,7 @@ export default function EventDetailPage() {
                 <button
                   onClick={() => {
                     setShowInviteModal(false);
+                    setInvitingToCarpoolId(null);
                     setSearchRegistrationId('');
                     setSearchedRegistration(null);
                     setSelectedMembersToInvite([]);

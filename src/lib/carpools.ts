@@ -359,7 +359,7 @@ export async function getCarpoolByRegistrationId(registrationId: string, eventId
 }
 
 /**
- * Get Carpool for a specific member
+ * Get Carpool for a specific member (from registration's carpoolId)
  */
 export async function getMemberCarpool(lineUserId: string, eventId: string): Promise<Carpool | null> {
   const db = adminDb();
@@ -383,4 +383,32 @@ export async function getMemberCarpool(lineUserId: string, eventId: string): Pro
   }
 
   return await getCarpoolById(registration.carpoolId);
+}
+
+/**
+ * Get ALL Carpools where a member has any team member participating
+ * Returns all carpools where any member with the same lineUserId exists
+ */
+export async function getAllMemberCarpools(lineUserId: string, eventId: string): Promise<Carpool[]> {
+  const db = adminDb();
+
+  // Get all active carpools for this event
+  const snapshot = await db
+    .collection('carpools')
+    .where('eventId', '==', eventId)
+    .get();
+
+  // Filter carpools that have members with matching lineUserId
+  const carpools = snapshot.docs
+    .map(doc => doc.data() as Carpool)
+    .filter(cp => {
+      // Exclude deleted/cancelled carpools
+      if (cp.status === 'deleted' || cp.status === 'cancelled') {
+        return false;
+      }
+      // Check if any member has matching lineUserId
+      return cp.members?.some(m => m.lineUserId === lineUserId) || false;
+    });
+
+  return carpools;
 }

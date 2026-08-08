@@ -196,7 +196,7 @@ export default function EventDetailPage() {
   const [calculatedRoomFee, setCalculatedRoomFee] = useState(0);
 
   // Carpool state (New)
-  const [memberCarpool, setMemberCarpool] = useState<any>(null);
+  const [memberCarpools, setMemberCarpools] = useState<any[]>([]);
   const [carpoolLoading, setCarpoolLoading] = useState(false);
   const [showCreateCarpoolModal, setShowCreateCarpoolModal] = useState(false);
   const [newCarpoolLicensePlate, setNewCarpoolLicensePlate] = useState('');
@@ -506,10 +506,10 @@ export default function EventDetailPage() {
       const response = await fetch(`/api/events/${eventId}/my-carpool`);
       if (response.ok) {
         const data = await response.json();
-        setMemberCarpool(data.carpool);
+        setMemberCarpools(data.carpools || []);
       }
     } catch (err) {
-      console.error('Error fetching member carpool:', err);
+      console.error('Error fetching member carpools:', err);
     } finally {
       setCarpoolLoading(false);
     }

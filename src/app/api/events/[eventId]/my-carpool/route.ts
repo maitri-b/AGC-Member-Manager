@@ -1,13 +1,13 @@
-// API Route: Get Member's Carpool for an Event
+// API Route: Get Member's Carpools for an Event
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-import { getMemberCarpool } from '@/lib/carpools';
+import { getAllMemberCarpools } from '@/lib/carpools';
 import { getEventAttendanceSummary } from '@/lib/event-sheets';
 
 /**
  * GET /api/events/[eventId]/my-carpool
- * Get the authenticated member's Carpool for this event
+ * Get all carpools where the authenticated member has team members participating
  */
 export async function GET(
   request: NextRequest,
@@ -29,28 +29,30 @@ export async function GET(
       return NextResponse.json({ error: 'LINE user ID not found' }, { status: 400 });
     }
 
-    // Get member's Carpool
-    const carpool = await getMemberCarpool(lineUserId, eventId);
+    // Get ALL carpools where member has team members
+    const carpools = await getAllMemberCarpools(lineUserId, eventId);
 
-    if (!carpool) {
-      return NextResponse.json({ carpool: null });
+    if (carpools.length === 0) {
+      return NextResponse.json({ carpools: [] });
     }
 
-    // Enrich Carpool with owner registration data
+    // Enrich Carpools with owner registration data
     const { attendees } = await getEventAttendanceSummary(eventId);
-    const ownerReg = attendees.find(a => a.registration.registrationId === carpool.ownerRegistrationId);
 
-    const enrichedCarpool = {
-      ...carpool,
-      ownerCompanyName: ownerReg?.registration.companyName || '',
-      ownerContactName: ownerReg?.registration.contactName || '',
-    };
+    const enrichedCarpools = carpools.map(carpool => {
+      const ownerReg = attendees.find(a => a.registration.registrationId === carpool.ownerRegistrationId);
+      return {
+        ...carpool,
+        ownerCompanyName: ownerReg?.registration.companyName || '',
+        ownerContactName: ownerReg?.registration.contactName || '',
+      };
+    });
 
-    return NextResponse.json({ carpool: enrichedCarpool });
+    return NextResponse.json({ carpools: enrichedCarpools });
   } catch (error) {
-    console.error('Error fetching member carpool:', error);
+    console.error('Error fetching member carpools:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch carpool', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to fetch carpools', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

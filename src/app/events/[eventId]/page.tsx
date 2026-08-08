@@ -1829,45 +1829,46 @@ export default function EventDetailPage() {
                           </div>
                         </div>
 
-                        {/* Members Status Overview */}
-                        {userRegistration && attendeeNames.length > 0 && !carpoolLoading && (
-                          <div className="mb-4 px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg">
-                            <p className="text-xs font-semibold text-gray-700 mb-2">สถานะสมาชิกในรหัสลงทะเบียนนี้:</p>
-                            <div className="space-y-1">
-                              {attendeeNames.map((name, index) => {
-                                // Find which carpool this member is in
-                                let carpoolInfo: string | null = null;
-                                let carpoolColor = 'text-gray-600';
+                        {/* Members Status Overview - Show only members NOT in any carpool */}
+                        {userRegistration && attendeeNames.length > 0 && !carpoolLoading && (() => {
+                          // Filter to show only members who are NOT in any carpool
+                          const membersNotInCarpool = attendeeNames.filter((name) => {
+                            let isInCarpool = false;
 
-                                memberCarpools.forEach(cp => {
-                                  const member = cp.members?.find((m: any) => {
-                                    const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
-                                    return cleanName === name || m.name === name;
-                                  });
+                            memberCarpools.forEach(cp => {
+                              const member = cp.members?.find((m: any) => {
+                                const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                return cleanName === name || m.name === name;
+                              });
+                              if (member) {
+                                isInCarpool = true;
+                              }
+                            });
 
-                                  if (member) {
-                                    if (cp.ownerRegistrationId === userRegistration.registrationId) {
-                                      carpoolInfo = `รถของคุณ (${cp.licensePlate})`;
-                                      carpoolColor = 'text-blue-700';
-                                    } else {
-                                      carpoolInfo = `ร่วมรถ ${cp.ownerCompanyName} (${cp.licensePlate})`;
-                                      carpoolColor = 'text-green-700';
-                                    }
-                                  }
-                                });
+                            return !isInCarpool;
+                          });
 
-                                return (
+                          // Only show the card if there are members not in any carpool
+                          if (membersNotInCarpool.length === 0) {
+                            return null;
+                          }
+
+                          return (
+                            <div className="mb-4 px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg">
+                              <p className="text-xs font-semibold text-gray-700 mb-2">สถานะสมาชิกในรหัสลงทะเบียนนี้:</p>
+                              <div className="space-y-1">
+                                {membersNotInCarpool.map((name, index) => (
                                   <div key={index} className="flex items-center justify-between text-xs">
                                     <span className="font-medium text-gray-800">{name}</span>
-                                    <span className={carpoolInfo ? carpoolColor : 'text-gray-500 italic'}>
-                                      {carpoolInfo || 'ยังไม่ได้ร่วมไปกับรถคันไหน'}
+                                    <span className="text-gray-500 italic">
+                                      ยังไม่ได้ร่วมไปกับรถคันไหน
                                     </span>
                                   </div>
-                                );
-                              })}
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
 
                         {carpoolLoading ? (
                           <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
@@ -4192,41 +4193,101 @@ export default function EventDetailPage() {
                   เลือกสมาชิกที่จะร่วมเดินทาง (จากการลงทะเบียนนี้)
                 </label>
                 <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
-                  {attendeeNames.map((name, index) => (
-                    <label
-                      key={index}
-                      className="flex items-center gap-2 py-2 hover:bg-gray-50 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedMembersForCarpool.includes(index)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedMembersForCarpool([...selectedMembersForCarpool, index]);
-                          } else {
-                            setSelectedMembersForCarpool(selectedMembersForCarpool.filter(i => i !== index));
-                          }
-                        }}
-                        className="rounded"
-                      />
-                      <span className="text-sm text-gray-900">
-                        {name || `ผู้เข้าร่วมคนที่ ${index + 1}`}
-                        {index === 0 && ' (คุณ)'}
-                      </span>
-                    </label>
-                  ))}
+                  {attendeeNames.map((name, index) => {
+                    // Check if this member is already in a carpool
+                    let isInCarpool = false;
+                    let carpoolInfo = '';
+
+                    memberCarpools.forEach(cp => {
+                      const member = cp.members?.find((m: any) => {
+                        const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                        return cleanName === name || m.name === name;
+                      });
+                      if (member) {
+                        isInCarpool = true;
+                        if (cp.ownerRegistrationId === userRegistration?.registrationId) {
+                          carpoolInfo = `อยู่ในรถของคุณแล้ว (${cp.licensePlate})`;
+                        } else {
+                          carpoolInfo = `ร่วมรถ ${cp.ownerCompanyName} แล้ว`;
+                        }
+                      }
+                    });
+
+                    return (
+                      <label
+                        key={index}
+                        className={`flex items-center gap-2 py-2 rounded ${isInCarpool ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedMembersForCarpool.includes(index)}
+                          disabled={isInCarpool}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedMembersForCarpool([...selectedMembersForCarpool, index]);
+                            } else {
+                              setSelectedMembersForCarpool(selectedMembersForCarpool.filter(i => i !== index));
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm text-gray-900 flex-1">
+                          {name || `ผู้เข้าร่วมคนที่ ${index + 1}`}
+                          {index === 0 && ' (คุณ)'}
+                          {isInCarpool && (
+                            <span className="text-xs text-orange-600 ml-2 italic">
+                              ({carpoolInfo})
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
                 <button
                   onClick={() => {
-                    if (selectedMembersForCarpool.length === attendeeNames.length) {
+                    // Get indices of members who are NOT in any carpool
+                    const availableIndices = attendeeNames
+                      .map((name, index) => {
+                        let isInCarpool = false;
+                        memberCarpools.forEach(cp => {
+                          const member = cp.members?.find((m: any) => {
+                            const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                            return cleanName === name || m.name === name;
+                          });
+                          if (member) {
+                            isInCarpool = true;
+                          }
+                        });
+                        return isInCarpool ? -1 : index;
+                      })
+                      .filter(i => i !== -1);
+
+                    if (selectedMembersForCarpool.length === availableIndices.length && availableIndices.length > 0) {
                       setSelectedMembersForCarpool([]);
                     } else {
-                      setSelectedMembersForCarpool(attendeeNames.map((_, i) => i));
+                      setSelectedMembersForCarpool(availableIndices);
                     }
                   }}
                   className="text-xs text-blue-600 hover:text-blue-700 mt-1"
                 >
-                  {selectedMembersForCarpool.length === attendeeNames.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                  {(() => {
+                    const availableCount = attendeeNames.filter((name) => {
+                      let isInCarpool = false;
+                      memberCarpools.forEach(cp => {
+                        const member = cp.members?.find((m: any) => {
+                          const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                          return cleanName === name || m.name === name;
+                        });
+                        if (member) {
+                          isInCarpool = true;
+                        }
+                      });
+                      return !isInCarpool;
+                    }).length;
+
+                    return selectedMembersForCarpool.length === availableCount && availableCount > 0 ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด';
+                  })()}
                 </button>
               </div>
             </div>

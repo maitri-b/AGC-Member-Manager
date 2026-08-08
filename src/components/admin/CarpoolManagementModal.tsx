@@ -1022,7 +1022,22 @@ export default function CarpoolManagementModal({
                             allNames = rawNames?.split(',').map((n: string) => n.trim()).filter((n: string) => n) || [];
                           }
 
-                          setSelectedOwnerMembers(allNames);
+                          // Filter to only include members NOT already in a carpool
+                          const availableNames = allNames.filter((name) => {
+                            let isInCarpool = false;
+                            carpools.forEach(cp => {
+                              const member = cp.members?.find((m: any) => {
+                                const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                return cleanName === name || m.name === name;
+                              });
+                              if (member && member.registrationId === formData.ownerRegistrationId) {
+                                isInCarpool = true;
+                              }
+                            });
+                            return !isInCarpool;
+                          });
+
+                          setSelectedOwnerMembers(availableNames);
                         }}
                         className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                       >
@@ -1052,26 +1067,55 @@ export default function CarpoolManagementModal({
                         names = rawNames?.split(',').map((n: string) => n.trim()).filter((n: string) => n) || [];
                       }
 
-                      return names.map((name: string, index: number) => (
-                        <label
-                          key={index}
-                          className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 hover:bg-blue-50 cursor-pointer transition-colors"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedOwnerMembers.includes(name)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedOwnerMembers([...selectedOwnerMembers, name]);
-                              } else {
-                                setSelectedOwnerMembers(selectedOwnerMembers.filter((n) => n !== name));
-                              }
-                            }}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-900">{name}</span>
-                        </label>
-                      ));
+                      return names.map((name: string, index: number) => {
+                        // Check if this member is already in a carpool
+                        let isInCarpool = false;
+                        let carpoolInfo = '';
+
+                        carpools.forEach(cp => {
+                          const member = cp.members?.find((m: any) => {
+                            const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                            return cleanName === name || m.name === name;
+                          });
+                          if (member && member.registrationId === formData.ownerRegistrationId) {
+                            isInCarpool = true;
+                            carpoolInfo = `อยู่ใน Carpool ${cp.licensePlate} แล้ว`;
+                          }
+                        });
+
+                        return (
+                          <label
+                            key={index}
+                            className={`flex items-center gap-2 p-2 rounded border ${
+                              isInCarpool
+                                ? 'bg-gray-100 border-gray-300 opacity-50 cursor-not-allowed'
+                                : 'bg-white border-gray-200 hover:bg-blue-50 cursor-pointer'
+                            } transition-colors`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedOwnerMembers.includes(name)}
+                              disabled={isInCarpool}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedOwnerMembers([...selectedOwnerMembers, name]);
+                                } else {
+                                  setSelectedOwnerMembers(selectedOwnerMembers.filter((n) => n !== name));
+                                }
+                              }}
+                              className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-900 flex-1">
+                              {name}
+                              {isInCarpool && (
+                                <span className="text-xs text-orange-600 ml-2 italic">
+                                  ({carpoolInfo})
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      });
                     })() || (
                       <p className="text-sm text-gray-500 italic text-center">ไม่มีรายชื่อสมาชิก</p>
                     )}

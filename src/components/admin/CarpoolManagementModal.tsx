@@ -671,8 +671,8 @@ export default function CarpoolManagementModal({
                 </div>
               ) : (
                 <>
-                  {/* Total Cars Input */}
-                  <div className="mb-6">
+                  {/* Total Cars Input & Settings */}
+                  <div className="mb-6 space-y-3">
                     <div className="flex items-center gap-3">
                       <label className="text-sm font-medium text-gray-700">จำนวนรถทั้งหมด:</label>
                       <input
@@ -690,6 +690,43 @@ export default function CarpoolManagementModal({
                         บันทึกจำนวนรถ
                       </button>
                       <span className="text-xs text-gray-500">(จะบันทึกลง Event Settings)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="showCarNumbersCheckbox"
+                        checked={carpoolSettings?.showCarNumbersToMembers ?? false}
+                        onChange={async (e) => {
+                          const newValue = e.target.checked;
+                          try {
+                            const response = await fetch(`/api/admin/events`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                eventId,
+                                carpoolSettings: {
+                                  ...carpoolSettings,
+                                  showCarNumbersToMembers: newValue,
+                                },
+                              }),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to update setting');
+                            }
+
+                            // Update local state via window.location.reload or parent callback
+                            window.location.reload();
+                          } catch (err) {
+                            console.error('Error updating showCarNumbersToMembers:', err);
+                            alert('เกิดข้อผิดพลาดในการบันทึกการตั้งค่า');
+                          }
+                        }}
+                        className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                      />
+                      <label htmlFor="showCarNumbersCheckbox" className="text-sm text-gray-700 cursor-pointer">
+                        แสดงเลขรถให้สมาชิกเห็น
+                      </label>
                     </div>
                   </div>
 

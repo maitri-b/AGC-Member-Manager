@@ -4078,7 +4078,7 @@ export default function EventDetailPage() {
 
                       return (
                         <div
-                          key={index}
+                          key={`${session?.user?.lineUserId}-${name}`}
                           className={`p-4 border rounded-lg ${
                             isInMyCarpool ? 'bg-blue-50 border-blue-300' : 'border-gray-200'
                           }`}

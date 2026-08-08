@@ -1764,7 +1764,7 @@ export default function EventDetailPage() {
                                     </div>
                                   ) : (
                                     <div className="flex items-center gap-2">
-                                      <p className="text-sm font-semibold text-blue-900">
+                                      <p className="text-lg font-semibold text-blue-900">
                                         🚗 {memberCarpool.licensePlate}
                                       </p>
                                       {memberCarpool.ownerRegistrationId === userRegistration?.registrationId && (

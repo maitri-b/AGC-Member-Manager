@@ -1678,10 +1678,13 @@ export default function EventDetailPage() {
                     {/* Carpool Section */}
                     {event.hasCarpoolFeature && (
                       <div className="mt-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-sm font-medium text-gray-700">
+                        <div className="mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
                             🚗 รายละเอียดรถ Carpool
                           </label>
+                          <p className="text-xs text-gray-600 mb-3">
+                            หากคุณจะขับรถไปงานด้วยตัวเอง กรุณาสร้าง Carpool เพื่อให้สมาชิกท่านอื่นสามารถขอร่วมเดินทางกับคุณได้ หรือหากต้องการร่วมเดินทางกับผู้อื่น สามารถกดปุ่ม "เข้าร่วมรถของคนอื่น" เพื่อค้นหาและเข้าร่วม Carpool ที่มีอยู่
+                          </p>
                           <div className="flex gap-2">
                             {!memberCarpool && (
                               <button

@@ -690,7 +690,6 @@ export default function CarpoolManagementModal({
                         max="100"
                         value={totalCars}
                         onChange={(e) => setTotalCars(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                        onBlur={handleSaveTotalCars}
                         className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                       <button
@@ -1212,8 +1211,7 @@ export default function CarpoolManagementModal({
                             </label>
                           );
                         });
-                      })()
-                      ) : (
+                      })() : (
                         <p className="text-sm text-gray-500 italic">ไม่มีรายชื่อผู้เข้าร่วม</p>
                       )}
                     </div>
@@ -1252,6 +1250,72 @@ export default function CarpoolManagementModal({
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Assignment Modal - Select Carpool for Car Number */}
+      {showAssignmentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                เลือก Carpool สำหรับรถคันที่ {assigningCarNumber}
+              </h3>
+
+              {availableCarpools.length === 0 ? (
+                <p className="text-sm text-gray-500">ไม่มี Carpool ที่ว่างให้เลือก</p>
+              ) : (
+                <div className="space-y-2 mb-6">
+                  {availableCarpools.map((carpool) => (
+                    <label
+                      key={carpool.carpoolId}
+                      className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                        selectedCarpoolId === carpool.carpoolId
+                          ? 'bg-purple-50 border-purple-500'
+                          : 'hover:bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="carpool"
+                        checked={selectedCarpoolId === carpool.carpoolId}
+                        onChange={() => setSelectedCarpoolId(carpool.carpoolId)}
+                        className="w-4 h-4 text-purple-600"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          🚗 {carpool.licensePlate}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {carpool.ownerCompanyName} • {carpool.members.length} สมาชิก
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAssignmentModal(false);
+                    setSelectedCarpoolId(null);
+                    setAssigningCarNumber(null);
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleConfirmAssignment}
+                  disabled={!selectedCarpoolId || assigning}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {assigning ? 'กำลังบันทึก...' : 'ยืนยัน'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

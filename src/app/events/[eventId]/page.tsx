@@ -1649,7 +1649,7 @@ export default function EventDetailPage() {
                       <div className="mt-4">
                         <div className="flex items-center justify-between mb-2">
                           <label className="block text-sm font-medium text-gray-700">
-                            🚗 Carpool
+                            🚗 รายละเอียดรถ Carpool
                           </label>
                           {!memberCarpool && (
                             <button
@@ -1687,7 +1687,7 @@ export default function EventDetailPage() {
                                 )}
                               </div>
                               <div className="text-xs text-blue-700">
-                                จำนวนสมาชิก: {memberCarpool.members?.length || 0} คน
+                                จำนวนสมาชิกร่วมรถคันนี้: {memberCarpool.members?.length || 0} คน
                               </div>
                               {memberCarpool.members && memberCarpool.members.length > 0 && (
                                 <div className="mt-2 pt-2 border-t border-blue-200">
@@ -1698,10 +1698,21 @@ export default function EventDetailPage() {
                                       const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
                                       const isMe = member.lineUserId === session?.user?.lineUserId;
 
+                                      // Clean member name - remove JSON formatting if present
+                                      let displayName = member.name;
+                                      try {
+                                        // If name is JSON string like '["Name"]', parse it
+                                        const parsed = JSON.parse(member.name);
+                                        displayName = Array.isArray(parsed) ? parsed[0] : parsed;
+                                      } catch {
+                                        // Not JSON, use as-is but remove quotes/brackets
+                                        displayName = member.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                      }
+
                                       return (
                                         <div key={idx} className="text-xs text-blue-700 flex items-center justify-between gap-2">
                                           <div className="flex items-center gap-2">
-                                            <span>• {member.name}</span>
+                                            <span>• {displayName}</span>
                                             {member.isOwner && (
                                               <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded text-[10px]">
                                                 เจ้าของ

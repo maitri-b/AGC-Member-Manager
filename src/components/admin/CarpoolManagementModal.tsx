@@ -73,6 +73,12 @@ export default function CarpoolManagementModal({
   const [allRegistrations, setAllRegistrations] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Change car number modal state
+  const [showChangeCarNumberModal, setShowChangeCarNumberModal] = useState(false);
+  const [changingCarpool, setChangingCarpool] = useState<EnrichedCarpool | null>(null);
+  const [newCarNumber, setNewCarNumber] = useState<number>(0);
+  const [changingCarNumber, setChangingCarNumber] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       fetchCarpools();
@@ -756,12 +762,24 @@ export default function CarpoolManagementModal({
                                 {slot.carpool.members.length} คน
                               </p>
                             </div>
-                            <button
-                              onClick={() => handleUnassign(slot.carpool!.carpoolId)}
-                              className="w-full px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                            >
-                              ยกเลิกเลขรถ
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setChangingCarpool(slot.carpool);
+                                  setNewCarNumber(0);
+                                  setShowChangeCarNumberModal(true);
+                                }}
+                                className="flex-1 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                              >
+                                เปลี่ยนเลขรถ
+                              </button>
+                              <button
+                                onClick={() => handleUnassign(slot.carpool!.carpoolId)}
+                                className="flex-1 px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                              >
+                                ยกเลิกเลขรถ
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div>
@@ -1341,6 +1359,99 @@ export default function CarpoolManagementModal({
                   className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {assigning ? 'กำลังบันทึก...' : 'ยืนยัน'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Car Number Modal */}
+      {showChangeCarNumberModal && changingCarpool && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                เปลี่ยนเลขรถสำหรับ {changingCarpool.licensePlate}
+              </h3>
+
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-900">
+                  <strong>เลขรถปัจจุบัน:</strong> {changingCarpool.assignedCarNumber || '-'}
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  {changingCarpool.ownerCompanyName} • {changingCarpool.members.length} สมาชิก
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  เลือกเลขรถใหม่
+                </label>
+                <select
+                  value={newCarNumber}
+                  onChange={(e) => setNewCarNumber(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={0}>-- เลือกเลขรถ --</option>
+                  {carSlots
+                    .filter(slot => !slot.carpool || slot.carpool.carpoolId === changingCarpool.carpoolId)
+                    .map(slot => (
+                      <option key={slot.carNumber} value={slot.carNumber}>
+                        รถคันที่ {slot.carNumber}
+                        {slot.carpool?.carpoolId === changingCarpool.carpoolId ? ' (ปัจจุบัน)' : ''}
+                      </option>
+                    ))
+                  }
+                </select>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowChangeCarNumberModal(false);
+                    setChangingCarpool(null);
+                    setNewCarNumber(0);
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={async () => {
+                    if (newCarNumber === 0 || newCarNumber === changingCarpool.assignedCarNumber) {
+                      alert('กรุณาเลือกเลขรถใหม่');
+                      return;
+                    }
+
+                    setChangingCarNumber(true);
+                    try {
+                      const response = await fetch(`/api/carpools/${changingCarpool.carpoolId}/assign-car-number`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ carNumber: newCarNumber }),
+                      });
+
+                      if (!response.ok) {
+                        throw new Error('Failed to change car number');
+                      }
+
+                      alert('เปลี่ยนเลขรถสำเร็จ!');
+                      setShowChangeCarNumberModal(false);
+                      setChangingCarpool(null);
+                      setNewCarNumber(0);
+                      await fetchCarpools();
+                    } catch (err) {
+                      console.error('Error changing car number:', err);
+                      alert('เกิดข้อผิดพลาดในการเปลี่ยนเลขรถ');
+                    } finally {
+                      setChangingCarNumber(false);
+                    }
+                  }}
+                  disabled={changingCarNumber || newCarNumber === 0}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {changingCarNumber ? 'กำลังบันทึก...' : 'ยืนยัน'}
                 </button>
               </div>
             </div>

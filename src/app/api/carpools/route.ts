@@ -18,10 +18,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Require admin:access permission
-    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    // Allow both admins and regular members to create carpools
+    // Members can create carpools for their own registrations
 
     const body: CreateCarpoolData = await request.json();
 

@@ -522,7 +522,6 @@ export default function EventDetailPage() {
         registrationId: userRegistration.registrationId,
         lineUserId: session?.user?.lineUserId || '',
         name: attendeeNames[index] || '',
-        isOwner: index === 0, // First person is owner
       }));
 
       const response = await fetch('/api/carpools', {
@@ -612,7 +611,6 @@ export default function EventDetailPage() {
         registrationId: searchedRegistration.registrationId,
         lineUserId: searchedRegistration.lineUserId || '',
         name: name,
-        isOwner: false,
       }));
 
       const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}/add-members`, {
@@ -1729,21 +1727,9 @@ export default function EventDetailPage() {
 
                                       return (
                                         <div key={idx} className="text-xs text-blue-700 flex items-center justify-between gap-2">
-                                          <div className="flex items-center gap-2">
-                                            <span>• {displayName}</span>
-                                            {member.isOwner && (
-                                              <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded text-[10px]">
-                                                เจ้าของ
-                                              </span>
-                                            )}
-                                            {isMe && !member.isOwner && (
-                                              <span className="px-1.5 py-0.5 bg-gray-400 text-white rounded text-[10px]">
-                                                คุณ
-                                              </span>
-                                            )}
-                                          </div>
-                                          {/* Remove button - only for own team members who are not owners */}
-                                          {isMyTeamMember && !member.isOwner && (
+                                          <span>• {displayName}</span>
+                                          {/* Remove button - only for own team members */}
+                                          {isMyTeamMember && (
                                             <button
                                               onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
                                               className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
@@ -4028,7 +4014,6 @@ export default function EventDetailPage() {
                                             registrationId: userRegistration.registrationId,
                                             lineUserId: session?.user?.lineUserId || '',
                                             name,
-                                            isOwner: false,
                                           }],
                                         }),
                                       });

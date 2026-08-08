@@ -3,7 +3,6 @@ export interface CarpoolMember {
   registrationId: string;
   lineUserId: string;
   name: string;
-  isOwner: boolean;
 }
 
 export interface Carpool {

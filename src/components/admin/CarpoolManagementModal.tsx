@@ -193,7 +193,6 @@ export default function CarpoolManagementModal({
           registrationId: formData.ownerRegistrationId,
           lineUserId: ownerRegistrationData?.lineUserId || '',
           name,
-          isOwner: false, // Will be set by backend or first member
         }));
 
         const payload = {
@@ -343,7 +342,6 @@ export default function CarpoolManagementModal({
           registrationId: searchedRegistration.registrationId,
           lineUserId: searchedRegistration.lineUserId,
           name: attendeeNames[index] || `ผู้เข้าร่วมคนที่ ${index + 1}`,
-          isOwner: false,
         };
       });
 
@@ -635,23 +633,16 @@ export default function CarpoolManagementModal({
                                   <span className="text-sm font-medium text-gray-900">
                                     {member.name}
                                   </span>
-                                  {member.isOwner && (
-                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                                      เจ้าของ
-                                    </span>
-                                  )}
                                   <span className="text-xs text-gray-500">
                                     ({member.registrationId})
                                   </span>
                                 </div>
-                                {!member.isOwner && (
-                                  <button
-                                    onClick={() => handleRemoveMember(carpool.carpoolId, member.lineUserId, member.name)}
-                                    className="text-xs text-red-600 hover:text-red-800 transition-colors"
-                                  >
-                                    ลบ
-                                  </button>
-                                )}
+                                <button
+                                  onClick={() => handleRemoveMember(carpool.carpoolId, member.lineUserId, member.name)}
+                                  className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                                >
+                                  ลบ
+                                </button>
                               </div>
                             ))}
                           </div>

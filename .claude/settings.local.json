@@ -68,7 +68,9 @@
       "Bash(tee:*)",
       "Bash(npx eslint:*)",
       "Bash(npx next lint:*)",
-      "Bash(dir /b \"d:\\\\OneDrive\\\\95-Agent Club\\\\Agentsclub-Member-Manager\\\\src\\\\components\\\\admin\")"
+      "Bash(dir /b \"d:\\\\OneDrive\\\\95-Agent Club\\\\Agentsclub-Member-Manager\\\\src\\\\components\\\\admin\")",
+      "Bash(git checkout:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

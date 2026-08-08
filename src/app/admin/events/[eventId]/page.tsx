@@ -3729,7 +3729,7 @@ export default function EventDetailPage() {
                       {/* Attendee names if multiple */}
                       {attendee.registration.attendeeNames && attendee.registration.attendeeCount > 1 && (
                         <p className="text-xs text-gray-500 mt-1 truncate">
-                          ผู้ร่วม: {attendee.registration.attendeeNames}
+                          ผู้ร่วม: {attendee.registration.attendeeNames.split(',').map((n: string) => n.trim()).filter((n: string) => n).join(', ')}
                         </p>
                       )}
                     </div>

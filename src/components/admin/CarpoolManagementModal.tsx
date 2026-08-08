@@ -881,10 +881,18 @@ export default function CarpoolManagementModal({
                       <button
                         type="button"
                         onClick={() => {
-                          const allNames = ownerRegistrationData.attendeeNames
-                            ?.split(',')
-                            .map((name: string) => name.trim())
-                            .filter((name: string) => name) || [];
+                          let allNames: string[] = [];
+                          const rawNames = ownerRegistrationData.attendeeNames;
+
+                          // Try to parse as JSON first
+                          try {
+                            const parsed = JSON.parse(rawNames);
+                            allNames = Array.isArray(parsed) ? parsed : [rawNames];
+                          } catch {
+                            // If not JSON, split by comma
+                            allNames = rawNames?.split(',').map((n: string) => n.trim()).filter((n: string) => n) || [];
+                          }
+
                           setSelectedOwnerMembers(allNames);
                         }}
                         className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
@@ -902,11 +910,20 @@ export default function CarpoolManagementModal({
                   </div>
 
                   <div className="space-y-2">
-                    {ownerRegistrationData.attendeeNames
-                      ?.split(',')
-                      .map((name: string) => name.trim())
-                      .filter((name: string) => name)
-                      .map((name: string, index: number) => (
+                    {(() => {
+                      let names: string[] = [];
+                      const rawNames = ownerRegistrationData.attendeeNames;
+
+                      // Try to parse as JSON first (handles ["name1", "name2"] format)
+                      try {
+                        const parsed = JSON.parse(rawNames);
+                        names = Array.isArray(parsed) ? parsed : [rawNames];
+                      } catch {
+                        // If not JSON, split by comma
+                        names = rawNames?.split(',').map((n: string) => n.trim()).filter((n: string) => n) || [];
+                      }
+
+                      return names.map((name: string, index: number) => (
                         <label
                           key={index}
                           className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200 hover:bg-blue-50 cursor-pointer transition-colors"
@@ -925,14 +942,23 @@ export default function CarpoolManagementModal({
                           />
                           <span className="text-sm text-gray-900">{name}</span>
                         </label>
-                      )) || (
+                      ));
+                    })() || (
                       <p className="text-sm text-gray-500 italic text-center">ไม่มีรายชื่อสมาชิก</p>
                     )}
                   </div>
 
                   <p className="text-xs text-gray-600 mt-3">
                     เลือก {selectedOwnerMembers.length} จาก{' '}
-                    {ownerRegistrationData.attendeeNames?.split(',').filter((n: string) => n.trim()).length || 0} คน
+                    {(() => {
+                      const rawNames = ownerRegistrationData.attendeeNames;
+                      try {
+                        const parsed = JSON.parse(rawNames);
+                        return Array.isArray(parsed) ? parsed.length : 1;
+                      } catch {
+                        return rawNames?.split(',').filter((n: string) => n.trim()).length || 0;
+                      }
+                    })()} คน
                   </p>
                 </div>
               )}
@@ -1126,9 +1152,20 @@ export default function CarpoolManagementModal({
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">เลือกสมาชิกที่ต้องการเพิ่ม</h4>
                     <div className="space-y-2">
-                      {searchedRegistration.attendeeNames ? (
-                        searchedRegistration.attendeeNames.split(',').map((name: string, index: number) => {
-                          const trimmedName = name.trim();
+                      {searchedRegistration.attendeeNames ? (() => {
+                        let names: string[] = [];
+                        const rawNames = searchedRegistration.attendeeNames;
+
+                        // Try to parse as JSON first
+                        try {
+                          const parsed = JSON.parse(rawNames);
+                          names = Array.isArray(parsed) ? parsed : [rawNames];
+                        } catch {
+                          // If not JSON, split by comma
+                          names = rawNames.split(',').map((n: string) => n.trim()).filter((n: string) => n);
+                        }
+
+                        return names.map((trimmedName: string, index: number) => {
                           const isSelected = selectedMembersToAdd.includes(index.toString());
                           // Check if this member is already in any Carpool
                           const isInCarpool = carpools.some((cp) =>
@@ -1174,7 +1211,8 @@ export default function CarpoolManagementModal({
                               )}
                             </label>
                           );
-                        })
+                        });
+                      })()
                       ) : (
                         <p className="text-sm text-gray-500 italic">ไม่มีรายชื่อผู้เข้าร่วม</p>
                       )}

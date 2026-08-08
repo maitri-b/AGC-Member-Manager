@@ -41,6 +41,8 @@ export default function CarpoolManagementModal({
 
   // Car number assignment state - initialized from carpoolSettings
   const [totalCars, setTotalCars] = useState(carpoolSettings?.totalCarNumbers || 10);
+  const [showCarNumbers, setShowCarNumbers] = useState(carpoolSettings?.showCarNumbersToMembers ?? false);
+  const [carpoolActive, setCarpoolActive] = useState(carpoolSettings?.carpoolActive ?? true); // New: Active/Inactive toggle
   const [carSlots, setCarSlots] = useState<CarSlot[]>([]);
 
   // Create/Edit Carpool modal state
@@ -86,12 +88,14 @@ export default function CarpoolManagementModal({
     }
   }, [isOpen, eventId]);
 
-  // Sync totalCars with carpoolSettings when it changes
+  // Sync settings with carpoolSettings when it changes
   useEffect(() => {
     if (carpoolSettings?.totalCarNumbers) {
       setTotalCars(carpoolSettings.totalCarNumbers);
     }
-  }, [carpoolSettings?.totalCarNumbers]);
+    setShowCarNumbers(carpoolSettings?.showCarNumbersToMembers ?? false);
+    setCarpoolActive(carpoolSettings?.carpoolActive ?? true);
+  }, [carpoolSettings?.totalCarNumbers, carpoolSettings?.showCarNumbersToMembers, carpoolSettings?.carpoolActive]);
 
   // Generate car slots based on totalCars and carpools
   useEffect(() => {
@@ -443,9 +447,9 @@ export default function CarpoolManagementModal({
 
   const availableCarpools = carpools.filter((cp) => !cp.assignedCarNumber);
 
-  const handleSaveTotalCars = async () => {
+  const handleSaveSettings = async () => {
     try {
-      // Update event carpoolSettings with new totalCarNumbers
+      // Update event carpoolSettings with all settings
       const response = await fetch(`/api/admin/events`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -454,18 +458,21 @@ export default function CarpoolManagementModal({
           carpoolSettings: {
             ...carpoolSettings,
             totalCarNumbers: totalCars,
+            showCarNumbersToMembers: showCarNumbers,
+            carpoolActive: carpoolActive,
           },
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save total cars');
+        throw new Error('Failed to save settings');
       }
 
-      alert(`บันทึกจำนวนรถ ${totalCars} คันสำเร็จ`);
+      alert(`บันทึกการตั้งค่า Carpool สำเร็จ`);
+      window.location.reload();
     } catch (err) {
-      console.error('Error saving total cars:', err);
-      alert(err instanceof Error ? err.message : 'Failed to save total cars');
+      console.error('Error saving settings:', err);
+      alert(err instanceof Error ? err.message : 'Failed to save settings');
     }
   };
 
@@ -690,62 +697,79 @@ export default function CarpoolManagementModal({
                 </div>
               ) : (
                 <>
-                  {/* Total Cars Input & Settings */}
-                  <div className="mb-6 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <label className="text-sm font-medium text-gray-700">จำนวนรถทั้งหมด:</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={totalCars}
-                        onChange={(e) => setTotalCars(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                        className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                      <button
-                        onClick={handleSaveTotalCars}
-                        className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        บันทึกจำนวนรถ
-                      </button>
-                      <span className="text-xs text-gray-500">(จะบันทึกลง Event Settings)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="showCarNumbersCheckbox"
-                        checked={carpoolSettings?.showCarNumbersToMembers ?? false}
-                        onChange={async (e) => {
-                          const newValue = e.target.checked;
-                          try {
-                            const response = await fetch(`/api/admin/events`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                eventId,
-                                carpoolSettings: {
-                                  ...carpoolSettings,
-                                  showCarNumbersToMembers: newValue,
-                                },
-                              }),
-                            });
+                  {/* Carpool Settings */}
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="space-y-4">
+                      {/* Active/Inactive Toggle */}
+                      <div className="flex items-center justify-between pb-3 border-b border-gray-300">
+                        <div className="flex items-center gap-3">
+                          <label className="text-sm font-semibold text-gray-800">สถานะ Carpool:</label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setCarpoolActive(!carpoolActive)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                carpoolActive ? 'bg-green-600' : 'bg-gray-300'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  carpoolActive ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                              />
+                            </button>
+                            <span className={`text-sm font-medium ${carpoolActive ? 'text-green-700' : 'text-gray-600'}`}>
+                              {carpoolActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                        </div>
+                        {!carpoolActive && (
+                          <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full font-medium">
+                            เห็นเฉพาะ Admin
+                          </span>
+                        )}
+                      </div>
 
-                            if (!response.ok) {
-                              throw new Error('Failed to update setting');
-                            }
+                      {/* Total Cars & Show Numbers */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <label className="text-sm font-medium text-gray-700 w-40">จำนวนรถทั้งหมด:</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={totalCars}
+                            onChange={(e) => setTotalCars(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                            className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                          <span className="text-xs text-gray-500">คัน</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <label className="text-sm font-medium text-gray-700 w-40">แสดงเลขรถให้สมาชิก:</label>
+                          <input
+                            type="checkbox"
+                            id="showCarNumbersCheckbox"
+                            checked={showCarNumbers}
+                            onChange={(e) => setShowCarNumbers(e.target.checked)}
+                            className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                          />
+                          <label htmlFor="showCarNumbersCheckbox" className="text-sm text-gray-600 cursor-pointer">
+                            เปิดใช้งาน
+                          </label>
+                        </div>
+                      </div>
 
-                            // Update local state via window.location.reload or parent callback
-                            window.location.reload();
-                          } catch (err) {
-                            console.error('Error updating showCarNumbersToMembers:', err);
-                            alert('เกิดข้อผิดพลาดในการบันทึกการตั้งค่า');
-                          }
-                        }}
-                        className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-                      />
-                      <label htmlFor="showCarNumbersCheckbox" className="text-sm text-gray-700 cursor-pointer">
-                        แสดงเลขรถให้สมาชิกเห็น
-                      </label>
+                      {/* Save Button */}
+                      <div className="pt-3 border-t border-gray-300">
+                        <button
+                          onClick={handleSaveSettings}
+                          className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        >
+                          💾 บันทึกการตั้งค่าทั้งหมด
+                        </button>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                          การตั้งค่าจะถูกบันทึกลง Event Settings
+                        </p>
+                      </div>
                     </div>
                   </div>
 

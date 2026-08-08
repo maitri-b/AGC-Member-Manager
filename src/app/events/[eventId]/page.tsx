@@ -1688,13 +1688,18 @@ export default function EventDetailPage() {
                     )}
 
                     {/* Carpool Section */}
-                    {event.hasCarpoolFeature && (
+                    {event.hasCarpoolFeature && (event.carpoolSettings?.carpoolActive !== false || isCommitteeOrAdmin) && (
                       <div className="mt-4">
                         <div className="mb-2">
                           <div className="flex items-center gap-2 mb-1">
                             <label className="text-sm font-medium text-gray-700">
                               🚗 รายละเอียดรถ Carpool
                             </label>
+                            {event.carpoolSettings?.carpoolActive === false && isCommitteeOrAdmin && (
+                              <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium border border-yellow-300">
+                                Inactive - เห็นเฉพาะ Admin
+                              </span>
+                            )}
                             <div className="relative">
                               <button
                                 type="button"

@@ -21,6 +21,7 @@ export interface CarpoolSettings {
   totalCarNumbers: number;
   showCarNumbersToMembers: boolean;
   maxSeatsPerCar?: number;
+  carpoolActive?: boolean; // If false, Carpool is only visible to admin
 }
 
 export interface CreateCarpoolData {

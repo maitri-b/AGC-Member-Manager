@@ -104,7 +104,7 @@ export default function CarpoolManagementModal({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/events/${eventId}/carpools`);
+      const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/carpools`);
       if (!response.ok) {
         throw new Error('Failed to fetch carpools');
       }
@@ -120,7 +120,7 @@ export default function CarpoolManagementModal({
 
   const fetchAllRegistrations = async () => {
     try {
-      const response = await fetch(`/api/events/${eventId}`);
+      const response = await fetch(`/api/events/${encodeURIComponent(eventId)}`);
       if (!response.ok) {
         throw new Error('Failed to fetch registrations');
       }
@@ -442,7 +442,7 @@ export default function CarpoolManagementModal({
   const handleSaveTotalCars = async () => {
     try {
       // Update event carpoolSettings with new totalCarNumbers
-      const response = await fetch(`/api/admin/events/${eventId}`, {
+      const response = await fetch(`/api/admin/events/${encodeURIComponent(eventId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

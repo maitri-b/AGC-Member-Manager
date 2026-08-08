@@ -193,8 +193,7 @@ export async function GET(
       };
     });
 
-    // Find user's registration if logged in
-    const session = await getServerSession(authOptions);
+    // Find user's registration if logged in (session already retrieved at line 15)
     let userRegistration = null;
 
     if (session?.user?.lineUserId) {

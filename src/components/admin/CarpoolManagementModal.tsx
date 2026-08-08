@@ -8,6 +8,11 @@ interface CarpoolManagementModalProps {
   onClose: () => void;
   eventId: string;
   eventName: string;
+  carpoolSettings?: {
+    totalCarNumbers: number;
+    maxSeatsPerCar?: number;
+    showCarNumbersToMembers?: boolean;
+  };
 }
 
 interface EnrichedCarpool extends Carpool {
@@ -25,6 +30,7 @@ export default function CarpoolManagementModal({
   onClose,
   eventId,
   eventName,
+  carpoolSettings,
 }: CarpoolManagementModalProps) {
   // Tab state
   const [activeTab, setActiveTab] = useState<'carpools' | 'car-numbers'>('carpools');
@@ -33,8 +39,8 @@ export default function CarpoolManagementModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Car number assignment state
-  const [totalCars, setTotalCars] = useState(10);
+  // Car number assignment state - initialized from carpoolSettings
+  const [totalCars, setTotalCars] = useState(carpoolSettings?.totalCarNumbers || 10);
   const [carSlots, setCarSlots] = useState<CarSlot[]>([]);
 
   // Create/Edit Carpool modal state
@@ -73,6 +79,13 @@ export default function CarpoolManagementModal({
       fetchAllRegistrations();
     }
   }, [isOpen, eventId]);
+
+  // Sync totalCars with carpoolSettings when it changes
+  useEffect(() => {
+    if (carpoolSettings?.totalCarNumbers) {
+      setTotalCars(carpoolSettings.totalCarNumbers);
+    }
+  }, [carpoolSettings?.totalCarNumbers]);
 
   // Generate car slots based on totalCars and carpools
   useEffect(() => {

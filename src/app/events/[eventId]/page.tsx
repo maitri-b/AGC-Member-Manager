@@ -1868,8 +1868,8 @@ export default function EventDetailPage() {
                                 {membersNotInCarpool.map((name, index) => (
                                   <div key={index} className="flex items-center justify-between text-xs">
                                     <span className="font-medium text-gray-800">{name}</span>
-                                    <span className="text-gray-500 italic">
-                                      ยังไม่ได้ร่วมไปกับรถคันไหน
+                                    <span className="text-rose-400 italic">
+                                      ยังไม่ระบุรถ
                                     </span>
                                   </div>
                                 ))}

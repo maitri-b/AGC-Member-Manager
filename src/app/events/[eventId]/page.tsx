@@ -2060,6 +2060,7 @@ export default function EventDetailPage() {
                                         </button>
                                       </div>
                                     </div>
+                                    </div>
                                   ))}
                                 </div>
                               </div>

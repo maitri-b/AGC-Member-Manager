@@ -222,6 +222,10 @@ export default function EventDetailPage() {
   const [joinSearchLoading, setJoinSearchLoading] = useState(false);
   const [selectedMembersToJoin, setSelectedMembersToJoin] = useState<number[]>([]);
   const [joining, setJoining] = useState(false);
+  // Edit license plate state
+  const [editingLicensePlate, setEditingLicensePlate] = useState(false);
+  const [newLicensePlate, setNewLicensePlate] = useState('');
+  const [savingLicensePlate, setSavingLicensePlate] = useState(false);
 
   // Guest registration form state (for Event-Co without memberId)
   const [guestCompanyName, setGuestCompanyName] = useState('');
@@ -1704,10 +1708,78 @@ export default function EventDetailPage() {
                           <div className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm font-semibold text-blue-900">
-                                    🚗 {memberCarpool.licensePlate}
-                                  </p>
+                                <div className="flex-1">
+                                  {editingLicensePlate && memberCarpool.ownerRegistrationId === userRegistration?.registrationId ? (
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="text"
+                                        value={newLicensePlate}
+                                        onChange={(e) => setNewLicensePlate(e.target.value)}
+                                        placeholder="เลขทะเบียนรถ"
+                                        className="px-3 py-1 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
+                                      />
+                                      <button
+                                        onClick={async () => {
+                                          if (!newLicensePlate.trim()) {
+                                            toast.error('กรุณาระบุเลขทะเบียนรถ');
+                                            return;
+                                          }
+
+                                          setSavingLicensePlate(true);
+                                          try {
+                                            const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}`, {
+                                              method: 'PUT',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({ licensePlate: newLicensePlate }),
+                                            });
+
+                                            if (!response.ok) {
+                                              throw new Error('Failed to update license plate');
+                                            }
+
+                                            toast.success('แก้ไขเลขทะเบียนรถสำเร็จ!');
+                                            setEditingLicensePlate(false);
+                                            await fetchMemberCarpool();
+                                          } catch (err) {
+                                            console.error('Error updating license plate:', err);
+                                            toast.error('เกิดข้อผิดพลาดในการแก้ไขเลขทะเบียนรถ');
+                                          } finally {
+                                            setSavingLicensePlate(false);
+                                          }
+                                        }}
+                                        disabled={savingLicensePlate}
+                                        className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300"
+                                      >
+                                        {savingLicensePlate ? 'กำลังบันทึก...' : 'บันทึก'}
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEditingLicensePlate(false);
+                                          setNewLicensePlate(memberCarpool.licensePlate);
+                                        }}
+                                        className="px-3 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                                      >
+                                        ยกเลิก
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-semibold text-blue-900">
+                                        🚗 {memberCarpool.licensePlate}
+                                      </p>
+                                      {memberCarpool.ownerRegistrationId === userRegistration?.registrationId && (
+                                        <button
+                                          onClick={() => {
+                                            setEditingLicensePlate(true);
+                                            setNewLicensePlate(memberCarpool.licensePlate);
+                                          }}
+                                          className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                        >
+                                          ✏️ แก้ไข
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                   <p className="text-xs text-blue-700">
                                     เจ้าของ: {memberCarpool.ownerCompanyName}
                                   </p>

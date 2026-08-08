@@ -4957,20 +4957,25 @@ export default function EventDetailPage() {
                             displayName = trimmedName.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
                           }
 
-                          // Check if already in current carpool
-                          const isInCurrentCarpool = memberCarpool.members?.some(
-                            (m: any) => m.name === trimmedName && m.registrationId === searchedRegistration.registrationId
+                          // Find the carpool we're inviting to
+                          const targetCarpool = allCarpools.find(cp => cp.carpoolId === invitingToCarpoolId);
+
+                          // Check if already in the carpool we're inviting to
+                          const isInCurrentCarpool = targetCarpool?.members?.some(
+                            (m: any) => m.name === displayName && m.registrationId === searchedRegistration.registrationId
                           );
+
                           // Check if already in any other active carpool (exclude deleted/cancelled)
                           // Match by registrationId + name (since members from different registrations have different lineUserIds)
                           const isInOtherCarpool = !isInCurrentCarpool && allCarpools.some(cp =>
+                            cp.carpoolId !== invitingToCarpoolId &&
                             cp.status !== 'deleted' && cp.status !== 'cancelled' &&
                             cp.members?.some((m: any) =>
-                              m.registrationId === searchedRegistration.registrationId && m.name === trimmedName
+                              m.registrationId === searchedRegistration.registrationId && m.name === displayName
                             )
                           );
                           const isInCarpool = isInCurrentCarpool || isInOtherCarpool;
-                          const isSelected = selectedMembersToInvite.includes(trimmedName);
+                          const isSelected = selectedMembersToInvite.includes(displayName);
 
                           return (
                             <label
@@ -4989,9 +4994,9 @@ export default function EventDetailPage() {
                                 disabled={isInCarpool}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setSelectedMembersToInvite([...selectedMembersToInvite, trimmedName]);
+                                    setSelectedMembersToInvite([...selectedMembersToInvite, displayName]);
                                   } else {
-                                    setSelectedMembersToInvite(selectedMembersToInvite.filter(n => n !== trimmedName));
+                                    setSelectedMembersToInvite(selectedMembersToInvite.filter(n => n !== displayName));
                                   }
                                 }}
                                 className="rounded"

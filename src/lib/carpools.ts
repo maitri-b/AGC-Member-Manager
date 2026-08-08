@@ -183,9 +183,16 @@ export async function removeMembersFromCarpool(
     updatedAt: new Date().toISOString(),
   });
 
-  // Clear carpoolId in eventRegistrations for removed members (only unique lineUserIds)
+  // Clear carpoolId in eventRegistrations ONLY for lineUserIds that have NO remaining members in the carpool
   const uniqueLineUserIds = Array.from(new Set(membersToRemove.map(m => m.lineUserId)));
-  await clearMembersCarpoolId(uniqueLineUserIds);
+  const lineUserIdsToRemove = uniqueLineUserIds.filter(lineUserId => {
+    // Check if this lineUserId still has any members in the updated carpool
+    return !updatedMembers.some(m => m.lineUserId === lineUserId);
+  });
+
+  if (lineUserIdsToRemove.length > 0) {
+    await clearMembersCarpoolId(lineUserIdsToRemove);
+  }
 }
 
 /**

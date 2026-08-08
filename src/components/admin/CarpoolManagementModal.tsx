@@ -12,6 +12,7 @@ interface CarpoolManagementModalProps {
     totalCarNumbers: number;
     maxSeatsPerCar?: number;
     showCarNumbersToMembers?: boolean;
+    carpoolActive?: boolean;
   };
 }
 

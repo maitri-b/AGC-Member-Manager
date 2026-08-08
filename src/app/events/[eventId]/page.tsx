@@ -158,7 +158,7 @@ export default function EventDetailPage() {
   const router = useRouter();
   const params = useParams();
   const toast = useToast();
-  const eventId = params.eventId as string;
+  const eventId = decodeURIComponent(params.eventId as string);
 
   const [event, setEvent] = useState<Event | null>(null);
   const [summary, setSummary] = useState<EventSummary | null>(null);
@@ -1738,9 +1738,9 @@ export default function EventDetailPage() {
                                       </ol>
                                     </div>
                                     <div className="pt-2 border-t border-gray-200">
-                                      <p className="font-semibold text-orange-700 mb-1">🚶 วิธีร่วมรถคนอื่น (สำหรับผู้โดยสาร)</p>
+                                      <p className="font-semibold text-orange-700 mb-1">👥 วิธีร่วมรถคนอื่น (สำหรับผู้โดยสาร)</p>
                                       <ol className="list-decimal list-inside space-y-1 ml-2">
-                                        <li>กดปุ่ม "🚗 เข้าร่วมรถของคนอื่น"</li>
+                                        <li>กดปุ่ม "👥 เข้าร่วมรถของคนอื่น"</li>
                                         <li>ใส่รหัสจองของเจ้าของรถ</li>
                                         <li>เลือกสมาชิกในทีมที่จะไปด้วย</li>
                                         <li>กดยืนยัน - เข้าร่วมสำเร็จ!</li>
@@ -1782,7 +1782,7 @@ export default function EventDetailPage() {
                               }}
                               className="text-sm px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                             >
-                              🚗 เข้าร่วมรถของคนอื่น
+                              👥 เข้าร่วมรถของคนอื่น
                             </button>
                           </div>
                         </div>
@@ -1796,7 +1796,7 @@ export default function EventDetailPage() {
                             {/* Owned Carpool Section */}
                             {ownedCarpool && (
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-2">🚗 Carpool ของคุณ</p>
+                                <p className="text-xs font-medium text-gray-700 mb-2">Carpool ของคุณ</p>
                                 <div className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
                                   <div className="space-y-2">
                                     <div className="flex items-center justify-between">
@@ -1857,7 +1857,7 @@ export default function EventDetailPage() {
                                         ) : (
                                           <div className="flex items-center gap-2">
                                             <p className="text-lg font-semibold text-blue-900">
-                                              🚗 {ownedCarpool.licensePlate}
+                                              {ownedCarpool.licensePlate}
                                             </p>
                                             <button
                                               onClick={() => {
@@ -1941,7 +1941,7 @@ export default function EventDetailPage() {
                             {/* Joined Carpools Section */}
                             {joinedCarpools.length > 0 && (
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-2">👥 Carpools ที่เข้าร่วม</p>
+                                <p className="text-xs font-medium text-gray-700 mb-2">Carpools ที่เข้าร่วม</p>
                                 <div className="space-y-2">
                                   {joinedCarpools.map((carpool) => (
                                     <div key={carpool.carpoolId} className="px-4 py-3 bg-green-50 border border-green-300 rounded-lg">
@@ -1949,7 +1949,7 @@ export default function EventDetailPage() {
                                         <div className="flex items-center justify-between">
                                           <div className="flex-1">
                                             <p className="text-lg font-semibold text-green-900">
-                                              🚗 {carpool.licensePlate}
+                                              {carpool.licensePlate}
                                             </p>
                                             <p className="text-xs text-green-700">
                                               เจ้าของ: {carpool.ownerCompanyName}

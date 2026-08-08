@@ -634,29 +634,14 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleLeaveCarpool = async () => {
+  const handleRemoveTeamMember = async (lineUserId: string, name: string) => {
     if (!memberCarpool?.carpoolId) {
       toast.error('ไม่พบข้อมูล Carpool');
       return;
     }
 
-    if (!session?.user?.lineUserId) {
-      toast.error('ไม่พบข้อมูลผู้ใช้');
-      return;
-    }
-
-    // Find current member in the Carpool
-    const currentMember = memberCarpool.members?.find(
-      (m: any) => m.lineUserId === session.user.lineUserId
-    );
-
-    if (!currentMember) {
-      toast.error('ไม่พบข้อมูลสมาชิกของคุณใน Carpool');
-      return;
-    }
-
-    // Confirm before leaving
-    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการออกจาก Carpool นี้?')) {
+    // Confirm before removing
+    if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบ "${name}" ออกจาก Carpool นี้?`)) {
       return;
     }
 
@@ -665,22 +650,22 @@ export default function EventDetailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lineUserIds: [session.user.lineUserId], // Legacy format - will remove all members with this lineUserId
+          members: [{ lineUserId, name }], // New format - remove specific member
         }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to leave carpool');
+        throw new Error(data.error || 'Failed to remove member');
       }
 
-      toast.success('ออกจาก Carpool สำเร็จ');
+      toast.success(`ลบ ${name} ออกจาก Carpool สำเร็จ`);
 
       // Refresh carpool data
       await fetchMemberCarpool();
     } catch (err) {
-      console.error('Error leaving carpool:', err);
-      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการออกจาก Carpool');
+      console.error('Error removing team member:', err);
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบสมาชิก');
     }
   };
 
@@ -1688,16 +1673,38 @@ export default function EventDetailPage() {
                                 <div className="mt-2 pt-2 border-t border-blue-200">
                                   <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิก:</p>
                                   <div className="space-y-1">
-                                    {memberCarpool.members.map((member: any, idx: number) => (
-                                      <div key={idx} className="text-xs text-blue-700 flex items-center gap-2">
-                                        <span>• {member.name}</span>
-                                        {member.isOwner && (
-                                          <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded text-[10px]">
-                                            เจ้าของ
-                                          </span>
-                                        )}
-                                      </div>
-                                    ))}
+                                    {memberCarpool.members.map((member: any, idx: number) => {
+                                      // Check if this member is from current user's registration
+                                      const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
+                                      const isMe = member.lineUserId === session?.user?.lineUserId;
+
+                                      return (
+                                        <div key={idx} className="text-xs text-blue-700 flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2">
+                                            <span>• {member.name}</span>
+                                            {member.isOwner && (
+                                              <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded text-[10px]">
+                                                เจ้าของ
+                                              </span>
+                                            )}
+                                            {isMe && !member.isOwner && (
+                                              <span className="px-1.5 py-0.5 bg-gray-400 text-white rounded text-[10px]">
+                                                คุณ
+                                              </span>
+                                            )}
+                                          </div>
+                                          {/* Remove button - only for own team members who are not owners */}
+                                          {isMyTeamMember && !member.isOwner && (
+                                            <button
+                                              onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
+                                              className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                                            >
+                                              ลบ
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
@@ -1711,16 +1718,6 @@ export default function EventDetailPage() {
                                     className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                   >
                                     + ชวนเพื่อนจากรหัสจองอื่น
-                                  </button>
-                                )}
-
-                                {/* Leave button - only for non-owners */}
-                                {memberCarpool.ownerRegistrationId !== userRegistration?.registrationId && (
-                                  <button
-                                    onClick={handleLeaveCarpool}
-                                    className="w-full text-xs px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-                                  >
-                                    ออกจาก Carpool
                                   </button>
                                 )}
                               </div>

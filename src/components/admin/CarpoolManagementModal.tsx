@@ -442,10 +442,11 @@ export default function CarpoolManagementModal({
   const handleSaveTotalCars = async () => {
     try {
       // Update event carpoolSettings with new totalCarNumbers
-      const response = await fetch(`/api/admin/events/${encodeURIComponent(eventId)}`, {
+      const response = await fetch(`/api/admin/events`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          eventId, // eventId must be in body, not URL
           carpoolSettings: {
             ...carpoolSettings,
             totalCarNumbers: totalCars,

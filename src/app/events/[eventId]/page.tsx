@@ -264,7 +264,9 @@ export default function EventDetailPage() {
   }, [eventId]);
 
   useEffect(() => {
+    console.log('[Carpool Debug] hasCarpoolFeature:', event?.hasCarpoolFeature, 'userRegistration:', userRegistration);
     if (event?.hasCarpoolFeature && userRegistration) {
+      console.log('[Carpool Debug] Fetching member carpool...');
       fetchMemberCarpool();
     }
   }, [event?.hasCarpoolFeature, userRegistration]);

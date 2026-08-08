@@ -118,6 +118,9 @@ export async function GET(
       attendeeTypes: eventData?.attendeeTypes || [],
       // Room allocation (New)
       roomTypes: eventData?.roomTypes || [],
+      // Carpool feature (New)
+      hasCarpoolFeature: eventData?.hasCarpoolFeature ?? false,
+      carpoolSettings: eventData?.carpoolSettings || undefined,
     };
 
     // Get registration summary

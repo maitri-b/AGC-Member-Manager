@@ -203,6 +203,13 @@ export default function EventDetailPage() {
   const [selectedMembersForCarpool, setSelectedMembersForCarpool] = useState<number[]>([]);
   const [creatingCarpool, setCreatingCarpool] = useState(false);
 
+  // Derived state: separate owned and joined carpools
+  const ownedCarpool = memberCarpools.find(cp => cp.ownerRegistrationId === userRegistration?.registrationId);
+  const joinedCarpools = memberCarpools.filter(cp => cp.ownerRegistrationId !== userRegistration?.registrationId);
+
+  // For backward compatibility - use first owned carpool as "memberCarpool"
+  const memberCarpool = ownedCarpool || null;
+
   // Fee breakdown toggle state (New)
   const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
   // Invite members state
@@ -651,8 +658,11 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleRemoveTeamMember = async (lineUserId: string, name: string) => {
-    if (!memberCarpool?.carpoolId) {
+  const handleRemoveTeamMember = async (lineUserId: string, name: string, carpoolId?: string) => {
+    // Find which carpool this member belongs to
+    const targetCarpoolId = carpoolId || memberCarpool?.carpoolId;
+
+    if (!targetCarpoolId) {
       toast.error('ไม่พบข้อมูล Carpool');
       return;
     }
@@ -663,7 +673,7 @@ export default function EventDetailPage() {
     }
 
     try {
-      const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}/remove-members`, {
+      const response = await fetch(`/api/carpools/${targetCarpoolId}/remove-members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1714,161 +1724,221 @@ export default function EventDetailPage() {
                           <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
                             กำลังโหลด...
                           </div>
-                        ) : memberCarpool ? (
-                          <div className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  {editingLicensePlate && memberCarpool.ownerRegistrationId === userRegistration?.registrationId ? (
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="text"
-                                        value={newLicensePlate}
-                                        onChange={(e) => setNewLicensePlate(e.target.value)}
-                                        placeholder="เลขทะเบียนรถ"
-                                        className="px-3 py-1 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
-                                      />
-                                      <button
-                                        onClick={async () => {
-                                          if (!newLicensePlate.trim()) {
-                                            toast.error('กรุณาระบุเลขทะเบียนรถ');
-                                            return;
-                                          }
+                        ) : memberCarpools.length > 0 ? (
+                          <div className="space-y-3">
+                            {/* Owned Carpool Section */}
+                            {ownedCarpool && (
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-2">🚗 Carpool ของคุณ</p>
+                                <div className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        {editingLicensePlate ? (
+                                          <div className="flex items-center gap-2">
+                                            <input
+                                              type="text"
+                                              value={newLicensePlate}
+                                              onChange={(e) => setNewLicensePlate(e.target.value)}
+                                              placeholder="เลขทะเบียนรถ"
+                                              className="px-3 py-1 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <button
+                                              onClick={async () => {
+                                                if (!newLicensePlate.trim()) {
+                                                  toast.error('กรุณาระบุเลขทะเบียนรถ');
+                                                  return;
+                                                }
 
-                                          setSavingLicensePlate(true);
-                                          try {
-                                            const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}`, {
-                                              method: 'PUT',
-                                              headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({ licensePlate: newLicensePlate }),
-                                            });
+                                                setSavingLicensePlate(true);
+                                                try {
+                                                  const response = await fetch(`/api/carpools/${ownedCarpool.carpoolId}`, {
+                                                    method: 'PUT',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ licensePlate: newLicensePlate }),
+                                                  });
 
-                                            if (!response.ok) {
-                                              throw new Error('Failed to update license plate');
-                                            }
+                                                  if (!response.ok) {
+                                                    throw new Error('Failed to update license plate');
+                                                  }
 
-                                            toast.success('แก้ไขเลขทะเบียนรถสำเร็จ!');
-                                            setEditingLicensePlate(false);
-                                            await fetchMemberCarpool();
-                                          } catch (err) {
-                                            console.error('Error updating license plate:', err);
-                                            toast.error('เกิดข้อผิดพลาดในการแก้ไขเลขทะเบียนรถ');
-                                          } finally {
-                                            setSavingLicensePlate(false);
-                                          }
-                                        }}
-                                        disabled={savingLicensePlate}
-                                        className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300"
-                                      >
-                                        {savingLicensePlate ? 'กำลังบันทึก...' : 'บันทึก'}
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setEditingLicensePlate(false);
-                                          setNewLicensePlate(memberCarpool.licensePlate);
-                                        }}
-                                        className="px-3 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                                      >
-                                        ยกเลิก
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-lg font-semibold text-blue-900">
-                                        🚗 {memberCarpool.licensePlate}
-                                      </p>
-                                      {memberCarpool.ownerRegistrationId === userRegistration?.registrationId && (
-                                        <button
-                                          onClick={() => {
-                                            setEditingLicensePlate(true);
-                                            setNewLicensePlate(memberCarpool.licensePlate);
-                                          }}
-                                          className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                                        >
-                                          ✏️ แก้ไข
-                                        </button>
+                                                  toast.success('แก้ไขเลขทะเบียนรถสำเร็จ!');
+                                                  setEditingLicensePlate(false);
+                                                  await fetchMemberCarpool();
+                                                } catch (err) {
+                                                  console.error('Error updating license plate:', err);
+                                                  toast.error('เกิดข้อผิดพลาดในการแก้ไขเลขทะเบียนรถ');
+                                                } finally {
+                                                  setSavingLicensePlate(false);
+                                                }
+                                              }}
+                                              disabled={savingLicensePlate}
+                                              className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300"
+                                            >
+                                              {savingLicensePlate ? 'กำลังบันทึก...' : 'บันทึก'}
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                setEditingLicensePlate(false);
+                                                setNewLicensePlate(ownedCarpool.licensePlate);
+                                              }}
+                                              className="px-3 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                                            >
+                                              ยกเลิก
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-2">
+                                            <p className="text-lg font-semibold text-blue-900">
+                                              🚗 {ownedCarpool.licensePlate}
+                                            </p>
+                                            <button
+                                              onClick={() => {
+                                                setEditingLicensePlate(true);
+                                                setNewLicensePlate(ownedCarpool.licensePlate);
+                                              }}
+                                              className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                            >
+                                              ✏️ แก้ไข
+                                            </button>
+                                          </div>
+                                        )}
+                                        <p className="text-xs text-blue-700">
+                                          เจ้าของ: {ownedCarpool.ownerCompanyName}
+                                        </p>
+                                      </div>
+                                      {ownedCarpool.assignedCarNumber && event.carpoolSettings?.showCarNumbersToMembers && (
+                                        <div className="text-right">
+                                          <p className="text-xs text-blue-600">เลขรถ</p>
+                                          <p className="text-lg font-bold text-blue-900">
+                                            {ownedCarpool.assignedCarNumber}
+                                          </p>
+                                        </div>
                                       )}
                                     </div>
-                                  )}
-                                  <p className="text-xs text-blue-700">
-                                    เจ้าของ: {memberCarpool.ownerCompanyName}
-                                  </p>
-                                </div>
-                                {memberCarpool.assignedCarNumber && event.carpoolSettings?.showCarNumbersToMembers && (
-                                  <div className="text-right">
-                                    <p className="text-xs text-blue-600">เลขรถ</p>
-                                    <p className="text-lg font-bold text-blue-900">
-                                      {memberCarpool.assignedCarNumber}
-                                    </p>
+                                    <div className="text-xs text-blue-700">
+                                      จำนวนสมาชิกร่วมรถคันนี้: {ownedCarpool.members?.length || 0} คน
+                                    </div>
+                                    {ownedCarpool.members && ownedCarpool.members.length > 0 && (
+                                      <div className="mt-2 pt-2 border-t border-blue-200">
+                                        <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิก:</p>
+                                        <div className="space-y-1">
+                                          {ownedCarpool.members.map((member: any, idx: number) => {
+                                            const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
+
+                                            // Clean member name
+                                            let displayName = member.name;
+                                            try {
+                                              const parsed = JSON.parse(member.name);
+                                              displayName = Array.isArray(parsed) ? parsed[0] : parsed;
+                                            } catch {
+                                              displayName = member.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                            }
+
+                                            return (
+                                              <div key={`${member.lineUserId}-${member.name}`} className="text-xs text-blue-700 flex items-center justify-between gap-2">
+                                                <span>• {displayName}</span>
+                                                <button
+                                                  onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
+                                                  className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                                                >
+                                                  ลบ
+                                                </button>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Action buttons */}
+                                    <div className="mt-3 pt-2 border-t border-blue-200 space-y-2">
+                                      <button
+                                        onClick={() => setShowManageCarpoolModal(true)}
+                                        className="w-full text-xs px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                      >
+                                        ⚙️ จัดการ Carpool
+                                      </button>
+                                      <button
+                                        onClick={() => setShowInviteModal(true)}
+                                        className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                      >
+                                        + ชวนเพื่อนจากรหัสจองอื่น
+                                      </button>
+                                    </div>
                                   </div>
-                                )}
+                                </div>
                               </div>
-                              <div className="text-xs text-blue-700">
-                                จำนวนสมาชิกร่วมรถคันนี้: {memberCarpool.members?.length || 0} คน
-                              </div>
-                              {memberCarpool.members && memberCarpool.members.length > 0 && (
-                                <div className="mt-2 pt-2 border-t border-blue-200">
-                                  <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิก:</p>
-                                  <div className="space-y-1">
-                                    {memberCarpool.members.map((member: any, idx: number) => {
-                                      // Check if this member is from current user's registration
-                                      const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
-                                      const isMe = member.lineUserId === session?.user?.lineUserId;
+                            )}
 
-                                      // Clean member name - remove JSON formatting if present
-                                      let displayName = member.name;
-                                      try {
-                                        // If name is JSON string like '["Name"]', parse it
-                                        const parsed = JSON.parse(member.name);
-                                        displayName = Array.isArray(parsed) ? parsed[0] : parsed;
-                                      } catch {
-                                        // Not JSON, use as-is but remove quotes/brackets
-                                        displayName = member.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
-                                      }
-
-                                      // Check if current user is the carpool owner
-                                      const isOwner = memberCarpool.ownerRegistrationId === userRegistration?.registrationId;
-
-                                      return (
-                                        <div key={`${member.lineUserId}-${member.name}`} className="text-xs text-blue-700 flex items-center justify-between gap-2">
-                                          <span>• {displayName}</span>
-                                          {/* Remove button - for carpool owner (can remove anyone) or for own team members */}
-                                          {(isOwner || isMyTeamMember) && (
-                                            <button
-                                              onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
-                                              className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                                            >
-                                              ลบ
-                                            </button>
+                            {/* Joined Carpools Section */}
+                            {joinedCarpools.length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-2">👥 Carpools ที่เข้าร่วม</p>
+                                <div className="space-y-2">
+                                  {joinedCarpools.map((carpool) => (
+                                    <div key={carpool.carpoolId} className="px-4 py-3 bg-green-50 border border-green-300 rounded-lg">
+                                      <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex-1">
+                                            <p className="text-lg font-semibold text-green-900">
+                                              🚗 {carpool.licensePlate}
+                                            </p>
+                                            <p className="text-xs text-green-700">
+                                              เจ้าของ: {carpool.ownerCompanyName}
+                                            </p>
+                                          </div>
+                                          {carpool.assignedCarNumber && event.carpoolSettings?.showCarNumbersToMembers && (
+                                            <div className="text-right">
+                                              <p className="text-xs text-green-600">เลขรถ</p>
+                                              <p className="text-lg font-bold text-green-900">
+                                                {carpool.assignedCarNumber}
+                                              </p>
+                                            </div>
                                           )}
                                         </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
+                                        <div className="text-xs text-green-700">
+                                          จำนวนสมาชิกร่วมรถคันนี้: {carpool.members?.length || 0} คน
+                                        </div>
+                                        {carpool.members && carpool.members.length > 0 && (
+                                          <div className="mt-2 pt-2 border-t border-green-200">
+                                            <p className="text-xs font-medium text-green-800 mb-1">รายชื่อสมาชิก:</p>
+                                            <div className="space-y-1">
+                                              {carpool.members.map((member: any, idx: number) => {
+                                                const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
 
-                              {/* Action buttons */}
-                              <div className="mt-3 pt-2 border-t border-blue-200 space-y-2">
-                                {/* Manage Carpool button - only for owner */}
-                                {memberCarpool.ownerRegistrationId === userRegistration?.registrationId && (
-                                  <>
-                                    <button
-                                      onClick={() => setShowManageCarpoolModal(true)}
-                                      className="w-full text-xs px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                                    >
-                                      ⚙️ จัดการ Carpool
-                                    </button>
-                                    <button
-                                      onClick={() => setShowInviteModal(true)}
-                                      className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                    >
-                                      + ชวนเพื่อนจากรหัสจองอื่น
-                                    </button>
-                                  </>
-                                )}
+                                                // Clean member name
+                                                let displayName = member.name;
+                                                try {
+                                                  const parsed = JSON.parse(member.name);
+                                                  displayName = Array.isArray(parsed) ? parsed[0] : parsed;
+                                                } catch {
+                                                  displayName = member.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                                }
+
+                                                return (
+                                                  <div key={`${member.lineUserId}-${member.name}`} className="text-xs text-green-700 flex items-center justify-between gap-2">
+                                                    <span>• {displayName}</span>
+                                                    {isMyTeamMember && (
+                                                      <button
+                                                        onClick={() => handleRemoveTeamMember(member.lineUserId, member.name, carpool.carpoolId)}
+                                                        className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                                                      >
+                                                        ลบ
+                                                      </button>
+                                                    )}
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         ) : (
                           <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-center">

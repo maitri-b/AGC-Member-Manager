@@ -533,6 +533,11 @@ export default function EventDetailPage() {
       return;
     }
 
+    if (selectedMembersForCarpool.length === 0) {
+      toast.error('กรุณาเลือกสมาชิกในรถอย่างน้อย 1 คน');
+      return;
+    }
+
     if (!userRegistration?.registrationId) {
       toast.error('ไม่พบข้อมูลการลงทะเบียน');
       return;
@@ -580,7 +585,7 @@ export default function EventDetailPage() {
 
   const handleSearchRegistration = async () => {
     if (!searchRegistrationId.trim()) {
-      toast.error('กรุณาระบุรหัสการจอง');
+      toast.error('กรุณาระบุรหัสลงทะเบียน');
       return;
     }
 
@@ -590,7 +595,7 @@ export default function EventDetailPage() {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error('ไม่พบรหัสการจองนี้');
+          throw new Error('ไม่พบรหัสลงทะเบียนนี้');
         }
         throw new Error('ไม่สามารถค้นหาข้อมูลได้');
       }
@@ -1766,10 +1771,10 @@ export default function EventDetailPage() {
                                       </ol>
                                     </div>
                                     <div className="pt-2 border-t border-gray-200">
-                                      <p className="font-semibold text-purple-700 mb-1">👥 วิธีเชิญเพื่อนจากรหัสจองอื่น</p>
+                                      <p className="font-semibold text-purple-700 mb-1">👥 วิธีเชิญเพื่อนจากรหัสลงทะเบียนอื่น</p>
                                       <ol className="list-decimal list-inside space-y-1 ml-2">
-                                        <li>คลิกปุ่ม "+ ชวนเพื่อนจากรหัสจองอื่น"</li>
-                                        <li>ใส่รหัสจองของเพื่อน</li>
+                                        <li>คลิกปุ่ม "+ ชวนเพื่อนจากรหัสลงทะเบียนอื่น"</li>
+                                        <li>ใส่รหัสลงทะเบียนของเพื่อน</li>
                                         <li>เลือกสมาชิกที่ต้องการชวน</li>
                                         <li>กดยืนยัน - เพื่อนจะเข้ามาในรถคุณ!</li>
                                       </ol>
@@ -1778,7 +1783,7 @@ export default function EventDetailPage() {
                                       <p className="font-semibold text-orange-700 mb-1">👥 วิธีร่วมรถคนอื่น (สำหรับผู้โดยสาร)</p>
                                       <ol className="list-decimal list-inside space-y-1 ml-2">
                                         <li>กดปุ่ม "👥 เข้าร่วมรถของคนอื่น"</li>
-                                        <li>ใส่รหัสจองของเจ้าของรถ</li>
+                                        <li>ใส่รหัสลงทะเบียนของเจ้าของรถ</li>
                                         <li>เลือกสมาชิกในทีมที่จะไปด้วย</li>
                                         <li>กดยืนยัน - เข้าร่วมสำเร็จ!</li>
                                       </ol>
@@ -1797,8 +1802,8 @@ export default function EventDetailPage() {
                             </div>
                           </div>
                           <p className="text-xs text-gray-600 mb-3">
-                            กรุณาสร้าง Carpool หากคุณจะขับรถไปเอง คุณสามารถเชิญสมาชิกจากรหัสจองอื่นร่วมไปด้วยได้<br />
-                            กรณีไม่ได้ขับไปเอง แต่จะร่วมไปรถของรหัสจองคนอื่น กรุณาเลือกเข้าร่วมรถของคนอื่น
+                            กรุณาสร้าง Carpool หากคุณจะขับรถไปเอง คุณสามารถเชิญสมาชิกจากรหัสลงทะเบียนอื่นร่วมไปด้วยได้<br />
+                            กรณีไม่ได้ขับไปเอง แต่จะร่วมไปรถของรหัสลงทะเบียนคนอื่น กรุณาเลือกเข้าร่วมรถของคนอื่น
                           </p>
                           <div className="flex gap-2">
                             {!memberCarpool && (
@@ -1823,6 +1828,46 @@ export default function EventDetailPage() {
                             </button>
                           </div>
                         </div>
+
+                        {/* Members Status Overview */}
+                        {userRegistration && attendeeNames.length > 0 && !carpoolLoading && (
+                          <div className="mb-4 px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg">
+                            <p className="text-xs font-semibold text-gray-700 mb-2">สถานะสมาชิกในรหัสลงทะเบียนนี้:</p>
+                            <div className="space-y-1">
+                              {attendeeNames.map((name, index) => {
+                                // Find which carpool this member is in
+                                let carpoolInfo: string | null = null;
+                                let carpoolColor = 'text-gray-600';
+
+                                memberCarpools.forEach(cp => {
+                                  const member = cp.members?.find((m: any) => {
+                                    const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                    return cleanName === name || m.name === name;
+                                  });
+
+                                  if (member) {
+                                    if (cp.ownerRegistrationId === userRegistration.registrationId) {
+                                      carpoolInfo = `รถของคุณ (${cp.licensePlate})`;
+                                      carpoolColor = 'text-blue-700';
+                                    } else {
+                                      carpoolInfo = `ร่วมรถ ${cp.ownerCompanyName} (${cp.licensePlate})`;
+                                      carpoolColor = 'text-green-700';
+                                    }
+                                  }
+                                });
+
+                                return (
+                                  <div key={index} className="flex items-center justify-between text-xs">
+                                    <span className="font-medium text-gray-800">{name}</span>
+                                    <span className={carpoolInfo ? carpoolColor : 'text-gray-500 italic'}>
+                                      {carpoolInfo || 'ยังไม่ได้ร่วมไปกับรถคันไหน'}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
 
                         {carpoolLoading ? (
                           <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
@@ -1967,7 +2012,7 @@ export default function EventDetailPage() {
                                         onClick={() => setShowInviteModal(true)}
                                         className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                       >
-                                        + ชวนเพื่อนจากรหัสจองอื่น
+                                        + ชวนเพื่อนจากรหัสลงทะเบียนอื่น
                                       </button>
                                     </div>
                                   </div>
@@ -4425,21 +4470,21 @@ export default function EventDetailPage() {
               {/* Instructions */}
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-900">
-                  <strong>คำแนะนำ:</strong> หากต้องการเดินทางร่วมกับรถของคนอื่น กรุณาขอรหัสการจองจากเจ้าของรถที่ต้องการเข้าร่วม
+                  <strong>คำแนะนำ:</strong> หากต้องการเดินทางร่วมกับรถของคนอื่น กรุณาขอรหัสลงทะเบียนจากเจ้าของรถที่ต้องการเข้าร่วม
                 </p>
               </div>
 
               {/* Search Registration ID */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  รหัสการจอง
+                  รหัสลงทะเบียน
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={joinRegistrationId}
                     onChange={(e) => setJoinRegistrationId(e.target.value)}
-                    placeholder="ใส่รหัสการจอง"
+                    placeholder="ใส่รหัสลงทะเบียน"
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
@@ -4449,7 +4494,7 @@ export default function EventDetailPage() {
                       console.log('[Join Search] joinRegistrationId:', joinRegistrationId);
 
                       if (!joinRegistrationId.trim()) {
-                        toast.error('กรุณาระบุรหัสการจอง');
+                        toast.error('กรุณาระบุรหัสลงทะเบียน');
                         return;
                       }
 
@@ -4476,7 +4521,7 @@ export default function EventDetailPage() {
                         console.log('[Join Search] Members length:', data.carpool?.members?.length);
 
                         if (!data.carpool) {
-                          toast.error(`รหัสการจอง "${joinRegistrationId}" ยังไม่ได้สร้าง Carpool กรุณาติดต่อเจ้าของรหัสจองนี้เพื่อให้สร้าง Carpool ก่อน`);
+                          toast.error(`รหัสลงทะเบียน "${joinRegistrationId}" ยังไม่ได้สร้าง Carpool กรุณาติดต่อเจ้าของรหัสลงทะเบียนนี้เพื่อให้สร้าง Carpool ก่อน`);
                         } else {
                           setJoinSearchedCarpool(data.carpool);
                           toast.success('พบ Carpool แล้ว!');
@@ -4742,7 +4787,7 @@ export default function EventDetailPage() {
               {/* Search Registration */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ค้นหารหัสการจอง
+                  ค้นหารหัสลงทะเบียน
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -4771,11 +4816,11 @@ export default function EventDetailPage() {
               {searchedRegistration && (
                 <div className="border border-gray-200 rounded-lg p-4">
                   <div className="mb-4">
-                    <h4 className="font-semibold text-gray-900 mb-2">ข้อมูลการจอง</h4>
+                    <h4 className="font-semibold text-gray-900 mb-2">ข้อมูลการลงทะเบียน</h4>
                     <div className="space-y-1 text-sm text-gray-600">
                       <p><strong>บริษัท:</strong> {searchedRegistration.companyName}</p>
                       <p><strong>ผู้ติดต่อ:</strong> {searchedRegistration.contactName}</p>
-                      <p><strong>รหัสจอง:</strong> {searchedRegistration.registrationId}</p>
+                      <p><strong>รหัสลงทะเบียน:</strong> {searchedRegistration.registrationId}</p>
                       <p><strong>จำนวนผู้เข้าร่วม:</strong> {searchedRegistration.attendeeCount} คน</p>
                     </div>
                   </div>

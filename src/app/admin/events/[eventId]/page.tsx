@@ -2884,8 +2884,8 @@ export default function EventDetailPage() {
                   className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
                   title="จัดการ Carpool"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M5 11L6.5 6.5C6.86 5.6 7.69 5 8.62 5H15.38C16.31 5 17.14 5.6 17.5 6.5L19 11M5 11V17C5 17.55 5.45 18 6 18H6.5C7.05 18 7.5 17.55 7.5 17V16H16.5V17C16.5 17.55 16.95 18 17.5 18H18C18.55 18 19 17.55 19 17V11M5 11H19M7 13.5C7 14.33 6.33 15 5.5 15C4.67 15 4 14.33 4 13.5C4 12.67 4.67 12 5.5 12C6.33 12 7 12.67 7 13.5ZM20 13.5C20 14.33 19.33 15 18.5 15C17.67 15 17 14.33 17 13.5C17 12.67 17.67 12 18.5 12C19.33 12 20 12.67 20 13.5Z"/>
                   </svg>
                   <span className="hidden sm:inline">จัดการ Carpool</span>
                 </button>
@@ -3073,73 +3073,36 @@ export default function EventDetailPage() {
             {/* Registration Status Filter */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2">สถานะการลงทะเบียน</label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setFilter('all')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filter === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  ทั้งหมด ({eventData.attendees.length})
-                </button>
-                <button
-                  onClick={() => setFilter('confirmed')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filter === 'confirmed'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  ยืนยันแล้ว ({eventData.summary.confirmedCount})
-                </button>
-                <button
-                  onClick={() => setFilter('pending')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filter === 'pending'
-                      ? 'bg-orange-600 text-white'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  รอดำเนินการ ({(() => {
-                    const cancelledCount = eventData.attendees.filter(a => {
-                      const status = String(a.registration.status || '').toLowerCase();
-                      return status === 'cancelled' || a.registration.status?.includes('ยกเลิก');
-                    }).length;
-                    return eventData.attendees.length - eventData.summary.confirmedCount - cancelledCount;
-                  })()})
-                </button>
-                <button
-                  onClick={() => setFilter('cancelled')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filter === 'cancelled'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  ยกเลิก ({eventData.attendees.filter(a => {
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as 'all' | 'confirmed' | 'pending' | 'cancelled')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">ทั้งหมด ({eventData.attendees.length})</option>
+                <option value="confirmed">ยืนยันแล้ว ({eventData.summary.confirmedCount})</option>
+                <option value="pending">รอดำเนินการ ({(() => {
+                  const cancelledCount = eventData.attendees.filter(a => {
                     const status = String(a.registration.status || '').toLowerCase();
                     return status === 'cancelled' || a.registration.status?.includes('ยกเลิก');
-                  }).length})
-                </button>
-              </div>
+                  }).length;
+                  return eventData.attendees.length - eventData.summary.confirmedCount - cancelledCount;
+                })()})</option>
+                <option value="cancelled">ยกเลิก ({eventData.attendees.filter(a => {
+                  const status = String(a.registration.status || '').toLowerCase();
+                  return status === 'cancelled' || a.registration.status?.includes('ยกเลิก');
+                }).length})</option>
+              </select>
             </div>
 
             {/* Payment Status Filter */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2">สถานะการชำระเงิน</label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setPaymentFilter('all')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    paymentFilter === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  ทั้งหมด
-                </button>
+              <select
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">ทั้งหมด</option>
                 {(() => {
                   // Get unique payment statuses from attendees (exclude cancelled registrations)
                   const nonCancelledAttendees = eventData.attendees.filter(a => {
@@ -3158,76 +3121,28 @@ export default function EventDetailPage() {
 
                   return paymentStatuses.map(status => {
                     const count = nonCancelledAttendees.filter(a => a.registration.paymentStatus === status).length;
-
-                    // Get darker color for selected filter button
-                    const getFilterButtonClass = (status: string) => {
-                      // Success states - dark green
-                      if (status === 'ชำระครบแล้ว' || status === 'ชำระเต็มจำนวนแล้ว' || status.includes('ยืนยัน')) {
-                        return 'bg-green-600 text-white border-2 border-green-700';
-                      }
-                      // Overpayment - dark cyan
-                      if (status === 'ชำระเกินจำนวน') {
-                        return 'bg-cyan-600 text-white border-2 border-cyan-700';
-                      }
-                      // Pending verification - dark purple
-                      if (status === 'รอตรวจสอบสลิป' || status === 'รอตรวจสอบ' || status === 'รอตรวจสอบมัดจำ' || status === 'รอตรวจสอบยอดคงเหลือ') {
-                        return 'bg-purple-600 text-white border-2 border-purple-700';
-                      }
-                      // Rejected/Overdue - dark red
-                      if (status.includes('ปฏิเสธ') || status === 'พ้นกำหนด') {
-                        return 'bg-red-600 text-white border-2 border-red-700';
-                      }
-                      // Waiting for payment - dark yellow
-                      if (status === 'รอชำระมัดจำ' || status === 'รอชำระเงิน' || status === 'รอชำระเงินเพิ่มเติม') {
-                        return 'bg-yellow-600 text-white border-2 border-yellow-700';
-                      }
-                      // Partial payment - dark blue
-                      if (status === 'รอชำระยอดที่เหลือ') {
-                        return 'bg-blue-600 text-white border-2 border-blue-700';
-                      }
-                      // Additional payment pending - dark purple
-                      if (status === 'รอตรวจสอบเงินเพิ่มเติม') {
-                        return 'bg-purple-600 text-white border-2 border-purple-700';
-                      }
-                      // Default - dark gray
-                      return 'bg-gray-600 text-white border-2 border-gray-700';
-                    };
-
                     return (
-                      <button
-                        key={status}
-                        onClick={() => setPaymentFilter(status)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                          paymentFilter === status
-                            ? getFilterButtonClass(status)
-                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                        }`}
-                      >
+                      <option key={status} value={status}>
                         {status} ({count})
-                      </button>
+                      </option>
                     );
                   });
                 })()}
-              </div>
+              </select>
             </div>
 
             {/* Room Type Filter - Only show if event has room types configured */}
             {eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0 && (
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-2">ประเภทการใช้ห้อง</label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setRoomTypeFilter('all')}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      roomTypeFilter === 'all'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                    }`}
-                  >
-                    ทั้งหมด
-                  </button>
+                <select
+                  value={roomTypeFilter}
+                  onChange={(e) => setRoomTypeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">ทั้งหมด</option>
 
-                  {/* Unassigned Room Filter */}
+                  {/* Unassigned Room Option */}
                   {(() => {
                     // Count registrations with no room allocations
                     const unassignedCount = eventData.attendees.reduce((count, attendee) => {
@@ -3289,16 +3204,9 @@ export default function EventDetailPage() {
                     }, 0);
 
                     return (
-                      <button
-                        onClick={() => setRoomTypeFilter('unassigned')}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                          roomTypeFilter === 'unassigned'
-                            ? 'bg-orange-600 text-white border-2 border-orange-700'
-                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                        }`}
-                      >
+                      <option value="unassigned">
                         ยังไม่ระบุห้อง ({unassignedCount})
-                      </button>
+                      </option>
                     );
                   })()}
 
@@ -3363,20 +3271,12 @@ export default function EventDetailPage() {
                       }, 0);
 
                       return (
-                        <button
-                          key={roomType.typeId}
-                          onClick={() => setRoomTypeFilter(roomType.typeId)}
-                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                            roomTypeFilter === roomType.typeId
-                              ? 'bg-indigo-600 text-white border-2 border-indigo-700'
-                              : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                          }`}
-                        >
+                        <option key={roomType.typeId} value={roomType.typeId}>
                           {roomType.typeName} ({totalRooms})
-                        </button>
+                        </option>
                       );
                     })}
-                </div>
+                </select>
               </div>
             )}
           </div>
@@ -3384,8 +3284,8 @@ export default function EventDetailPage() {
 
         {/* Attendees List */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center gap-3 mb-3">
               {/* Select All Checkbox */}
               <input
                 type="checkbox"
@@ -3406,7 +3306,7 @@ export default function EventDetailPage() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Refresh Rooms Button */}
               <button
                 onClick={() => fetchAllRooms()}
@@ -3468,29 +3368,6 @@ export default function EventDetailPage() {
                   </>
                 )}
               </button>
-              {/* Admin only: Recalculate deadlines button */}
-              {session?.user?.permissions?.includes('admin:access') && (
-                <button
-                  onClick={handleRecalculateDeadlines}
-                  disabled={recalculateLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="คำนวณ Deadline ใหม่สำหรับทุกรายการ"
-                >
-                  {recalculateLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                      <span className="hidden sm:inline">กำลังคำนวณ...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <span className="hidden sm:inline">คำนวณ Deadline</span>
-                    </>
-                  )}
-                </button>
-              )}
               {session?.user?.permissions?.includes('events:register-on-behalf') && (
                 <button
                   onClick={() => setShowRegisterModal(true)}

@@ -202,6 +202,9 @@ export default function EventDetailPage() {
   const [newCarpoolLicensePlate, setNewCarpoolLicensePlate] = useState('');
   const [selectedMembersForCarpool, setSelectedMembersForCarpool] = useState<number[]>([]);
   const [creatingCarpool, setCreatingCarpool] = useState(false);
+
+  // Fee breakdown toggle state (New)
+  const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
   // Invite members state
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [searchRegistrationId, setSearchRegistrationId] = useState('');
@@ -1201,7 +1204,21 @@ export default function EventDetailPage() {
 
                       {/* Fee Breakdown */}
                       <div className="mt-3 pt-3 border-t border-green-200">
-                        <p className="text-sm font-semibold text-green-800 mb-2">รายละเอียดค่าใช้จ่าย:</p>
+                        <button
+                          onClick={() => setShowFeeBreakdown(!showFeeBreakdown)}
+                          className="w-full flex items-center justify-between text-sm font-semibold text-green-800 mb-2 hover:text-green-900 transition-colors"
+                        >
+                          <span>รายละเอียดค่าใช้จ่าย</span>
+                          <svg
+                            className={`w-5 h-5 transform transition-transform ${showFeeBreakdown ? 'rotate-180' : ''}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {showFeeBreakdown && (
                         <div className="text-sm text-green-700 space-y-1">
                           {event.useAttendeeTypePricing ? (
                             // Attendee Type Pricing Breakdown
@@ -1403,6 +1420,7 @@ export default function EventDetailPage() {
                             </div>
                           )}
                         </div>
+                        )}
                       </div>
 
                       {/* Admin Contact Message */}

@@ -4960,6 +4960,15 @@ export default function EventDetailPage() {
                           // Find the carpool we're inviting to
                           const targetCarpool = allCarpools.find(cp => cp.carpoolId === invitingToCarpoolId);
 
+                          console.log('Debug validation:', {
+                            displayName,
+                            invitingToCarpoolId,
+                            targetCarpoolFound: !!targetCarpool,
+                            targetCarpoolMembers: targetCarpool?.members,
+                            allCarpoolsCount: allCarpools.length,
+                            searchedRegistrationId: searchedRegistration.registrationId
+                          });
+
                           // Check if already in the carpool we're inviting to
                           const isInCurrentCarpool = targetCarpool?.members?.some(
                             (m: any) => m.name === displayName && m.registrationId === searchedRegistration.registrationId
@@ -4975,6 +4984,13 @@ export default function EventDetailPage() {
                             )
                           );
                           const isInCarpool = isInCurrentCarpool || isInOtherCarpool;
+
+                          console.log('Validation result:', {
+                            displayName,
+                            isInCurrentCarpool,
+                            isInOtherCarpool,
+                            isInCarpool
+                          });
                           const isSelected = selectedMembersToInvite.includes(displayName);
 
                           return (

@@ -4938,7 +4938,7 @@ export default function EventDetailPage() {
       )}
 
       {/* Toast notifications */}
-      <Toast />
+      <Toast toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );
 }

@@ -4273,7 +4273,8 @@ export default function EventDetailPage() {
                       setJoinSearchedCarpool(null);
                       try {
                         // Search for carpool by registration ID
-                        const url = `/api/events/${encodeURIComponent(eventId)}/carpools/search?registrationId=${encodeURIComponent(joinRegistrationId)}`;
+                        // Note: eventId is already decoded from params, don't encode it again
+                        const url = `/api/events/${eventId}/carpools/search?registrationId=${encodeURIComponent(joinRegistrationId)}`;
                         console.log('[Join Search] Fetching URL:', url);
 
                         const response = await fetch(url);

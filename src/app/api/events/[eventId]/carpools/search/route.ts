@@ -24,12 +24,25 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const registrationId = searchParams.get('registrationId');
 
+    console.log('[Carpool Search API] eventId:', eventId);
+    console.log('[Carpool Search API] registrationId:', registrationId);
+
     if (!registrationId) {
       return NextResponse.json({ error: 'Registration ID is required' }, { status: 400 });
     }
 
     // Search for carpool by registration ID
     const carpool = await getCarpoolByRegistrationId(registrationId, eventId);
+    console.log('[Carpool Search API] Found carpool:', carpool ? 'YES' : 'NO');
+    if (carpool) {
+      console.log('[Carpool Search API] Carpool details:', {
+        carpoolId: carpool.carpoolId,
+        ownerRegistrationId: carpool.ownerRegistrationId,
+        licensePlate: carpool.licensePlate,
+        memberCount: carpool.members?.length || 0,
+        status: carpool.status
+      });
+    }
 
     if (!carpool) {
       return NextResponse.json({ carpool: null });

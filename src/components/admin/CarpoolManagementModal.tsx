@@ -439,6 +439,31 @@ export default function CarpoolManagementModal({
 
   const availableCarpools = carpools.filter((cp) => !cp.assignedCarNumber);
 
+  const handleSaveTotalCars = async () => {
+    try {
+      // Update event carpoolSettings with new totalCarNumbers
+      const response = await fetch(`/api/admin/events/${eventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carpoolSettings: {
+            ...carpoolSettings,
+            totalCarNumbers: totalCars,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save total cars');
+      }
+
+      alert(`บันทึกจำนวนรถ ${totalCars} คันสำเร็จ`);
+    } catch (err) {
+      console.error('Error saving total cars:', err);
+      alert(err instanceof Error ? err.message : 'Failed to save total cars');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -664,8 +689,16 @@ export default function CarpoolManagementModal({
                         max="100"
                         value={totalCars}
                         onChange={(e) => setTotalCars(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                        onBlur={handleSaveTotalCars}
                         className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
+                      <button
+                        onClick={handleSaveTotalCars}
+                        className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        บันทึกจำนวนรถ
+                      </button>
+                      <span className="text-xs text-gray-500">(จะบันทึกลง Event Settings)</span>
                     </div>
                   </div>
 

@@ -25,6 +25,7 @@ export async function createCarpool(data: CreateCarpoolData): Promise<Carpool> {
     ownerRegistrationId: data.ownerRegistrationId,
     licensePlate: data.licensePlate,
     members: data.members,
+    status: 'active',
     createdAt: now,
     updatedAt: now,
   };
@@ -61,7 +62,10 @@ export async function getCarpoolsByEvent(eventId: string): Promise<Carpool[]> {
     .where('eventId', '==', eventId)
     .get();
 
-  return snapshot.docs.map(doc => doc.data() as Carpool);
+  // Filter out deleted/cancelled carpools
+  return snapshot.docs
+    .map(doc => doc.data() as Carpool)
+    .filter(cp => cp.status !== 'deleted' && cp.status !== 'cancelled');
 }
 
 /**
@@ -74,7 +78,10 @@ export async function getCarpoolsByOwner(ownerRegistrationId: string): Promise<C
     .where('ownerRegistrationId', '==', ownerRegistrationId)
     .get();
 
-  return snapshot.docs.map(doc => doc.data() as Carpool);
+  // Filter out deleted/cancelled carpools
+  return snapshot.docs
+    .map(doc => doc.data() as Carpool)
+    .filter(cp => cp.status !== 'deleted' && cp.status !== 'cancelled');
 }
 
 /**
@@ -182,7 +189,7 @@ export async function removeMembersFromCarpool(
 }
 
 /**
- * Delete Carpool
+ * Soft delete Carpool (mark as deleted)
  */
 export async function deleteCarpool(carpoolId: string): Promise<void> {
   const db = adminDb();
@@ -196,7 +203,29 @@ export async function deleteCarpool(carpoolId: string): Promise<void> {
   const lineUserIds = carpool.members.map(m => m.lineUserId);
   await clearMembersCarpoolId(lineUserIds);
 
-  // Delete the carpool document
+  // Soft delete: mark as deleted instead of removing document
+  await db.collection('carpools').doc(carpoolId).update({
+    status: 'deleted',
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+/**
+ * Hard delete Carpool (permanently remove document)
+ */
+export async function hardDeleteCarpool(carpoolId: string): Promise<void> {
+  const db = adminDb();
+  const carpool = await getCarpoolById(carpoolId);
+
+  if (!carpool) {
+    throw new Error('Carpool not found');
+  }
+
+  // Clear carpoolId in eventRegistrations for all members
+  const lineUserIds = carpool.members.map(m => m.lineUserId);
+  await clearMembersCarpoolId(lineUserIds);
+
+  // Permanently delete the carpool document
   await db.collection('carpools').doc(carpoolId).delete();
 }
 

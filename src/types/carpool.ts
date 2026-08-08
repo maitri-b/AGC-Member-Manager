@@ -12,6 +12,7 @@ export interface Carpool {
   licensePlate: string;
   members: CarpoolMember[];
   assignedCarNumber?: number;
+  status?: 'active' | 'cancelled' | 'deleted';
   createdAt: string;
   updatedAt: string;
 }

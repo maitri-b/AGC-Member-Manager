@@ -690,7 +690,11 @@ export default function EventDetailPage() {
       const response = await fetch(`/api/events/${encodeURIComponent(eventId as string)}/carpools`);
       if (response.ok) {
         const data = await response.json();
-        setAllCarpools(data.carpools || []);
+        // Filter out deleted/cancelled carpools
+        const activeCarpools = (data.carpools || []).filter(
+          (cp: any) => cp.status !== 'deleted' && cp.status !== 'cancelled'
+        );
+        setAllCarpools(activeCarpools);
       }
     } catch (err) {
       console.error('Error fetching all carpools:', err);
@@ -3990,9 +3994,10 @@ export default function EventDetailPage() {
                         (m: any) => m.name === name && m.registrationId === userRegistration.registrationId
                       );
 
-                      // Check if in another carpool
+                      // Check if in another active carpool (exclude deleted/cancelled)
                       const otherCarpool = allCarpools.find((cp) =>
                         cp.carpoolId !== memberCarpool.carpoolId &&
+                        cp.status !== 'deleted' && cp.status !== 'cancelled' &&
                         cp.members?.some((m: any) => m.name === name && m.lineUserId === session?.user?.lineUserId)
                       );
 
@@ -4250,8 +4255,9 @@ export default function EventDetailPage() {
                       return (
                         <div className="space-y-2">
                           {names.map((name, index) => {
-                            // Check if this person is already in any carpool
+                            // Check if this person is already in any active carpool (exclude deleted/cancelled)
                             const isInCarpool = allCarpools.some(cp =>
+                              cp.status !== 'deleted' && cp.status !== 'cancelled' &&
                               cp.members?.some((m: any) =>
                                 m.lineUserId === session?.user?.lineUserId && m.name === name
                               )

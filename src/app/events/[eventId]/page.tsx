@@ -2057,6 +2057,7 @@ export default function EventDetailPage() {
                                           onClick={() => {
                                             setInvitingToCarpoolId(ownedCarpool.carpoolId);
                                             setShowInviteModal(true);
+                                            fetchAllCarpools(); // Fetch all carpools for validation
                                           }}
                                           className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                         >

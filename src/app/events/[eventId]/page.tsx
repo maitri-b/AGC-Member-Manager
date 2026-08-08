@@ -212,6 +212,9 @@ export default function EventDetailPage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedMembersToInvite, setSelectedMembersToInvite] = useState<string[]>([]);
   const [inviting, setInviting] = useState(false);
+  // Manage Carpool modal state
+  const [showManageCarpoolModal, setShowManageCarpoolModal] = useState(false);
+  const [allCarpools, setAllCarpools] = useState<any[]>([]);
 
   // Guest registration form state (for Event-Co without memberId)
   const [guestCompanyName, setGuestCompanyName] = useState('');
@@ -671,6 +674,21 @@ export default function EventDetailPage() {
     } catch (err) {
       console.error('Error removing team member:', err);
       toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบสมาชิก');
+    }
+  };
+
+  // Fetch all carpools for the event (to check member status)
+  const fetchAllCarpools = async () => {
+    if (!eventId) return;
+
+    try {
+      const response = await fetch(`/api/events/${encodeURIComponent(eventId as string)}/carpools`);
+      if (response.ok) {
+        const data = await response.json();
+        setAllCarpools(data.carpools || []);
+      }
+    } catch (err) {
+      console.error('Error fetching all carpools:', err);
     }
   };
 
@@ -1742,14 +1760,22 @@ export default function EventDetailPage() {
 
                               {/* Action buttons */}
                               <div className="mt-3 pt-2 border-t border-blue-200 space-y-2">
-                                {/* Invite button - only for owner */}
+                                {/* Manage Carpool button - only for owner */}
                                 {memberCarpool.ownerRegistrationId === userRegistration?.registrationId && (
-                                  <button
-                                    onClick={() => setShowInviteModal(true)}
-                                    className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                  >
-                                    + ชวนเพื่อนจากรหัสจองอื่น
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={() => setShowManageCarpoolModal(true)}
+                                      className="w-full text-xs px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                    >
+                                      ⚙️ จัดการ Carpool
+                                    </button>
+                                    <button
+                                      onClick={() => setShowInviteModal(true)}
+                                      className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                      + ชวนเพื่อนจากรหัสจองอื่น
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -3904,6 +3930,206 @@ export default function EventDetailPage() {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 {creatingCarpool ? 'กำลังสร้าง...' : 'สร้าง Carpool'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Carpool Modal - Manage own team members */}
+      {showManageCarpoolModal && memberCarpool && userRegistration && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={() => {
+            setShowManageCarpoolModal(false);
+            setAllCarpools([]);
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">จัดการสมาชิกในทีม</h3>
+              <button
+                onClick={() => {
+                  setShowManageCarpoolModal(false);
+                  setAllCarpools([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              <p className="text-sm text-gray-600 mb-4">
+                เลือกสมาชิกจากทีมของคุณที่ต้องการเพิ่มเข้า Carpool หรือยกเลิกการ join รถคันอื่น
+              </p>
+
+              {(() => {
+                // Parse attendee names
+                let names: string[] = [];
+                try {
+                  const parsed = JSON.parse(userRegistration.attendeeNames || '[]');
+                  names = Array.isArray(parsed) ? parsed : [];
+                } catch {
+                  names = userRegistration.attendeeNames?.split(',').map((n: string) => n.trim()).filter((n: string) => n) || [];
+                }
+
+                if (allCarpools.length === 0) {
+                  fetchAllCarpools();
+                }
+
+                return (
+                  <div className="space-y-3">
+                    {names.map((name, index) => {
+                      // Check if this member is in current carpool
+                      const isInMyCarpool = memberCarpool.members?.some(
+                        (m: any) => m.name === name && m.registrationId === userRegistration.registrationId
+                      );
+
+                      // Check if in another carpool
+                      const otherCarpool = allCarpools.find((cp) =>
+                        cp.carpoolId !== memberCarpool.carpoolId &&
+                        cp.members?.some((m: any) => m.name === name && m.lineUserId === session?.user?.lineUserId)
+                      );
+
+                      return (
+                        <div
+                          key={index}
+                          className={`p-4 border rounded-lg ${
+                            isInMyCarpool ? 'bg-blue-50 border-blue-300' : 'border-gray-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{name}</p>
+                              {isInMyCarpool && (
+                                <p className="text-xs text-blue-600 mt-1">✓ อยู่ในรถคันนี้แล้ว</p>
+                              )}
+                              {otherCarpool && (
+                                <p className="text-xs text-orange-600 mt-1">
+                                  ⚠️ อยู่ในรถคันอื่น ({otherCarpool.licensePlate})
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex gap-2">
+                              {!isInMyCarpool && !otherCarpool && (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}/add-members`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          members: [{
+                                            registrationId: userRegistration.registrationId,
+                                            lineUserId: session?.user?.lineUserId || '',
+                                            name,
+                                            isOwner: false,
+                                          }],
+                                        }),
+                                      });
+
+                                      if (!response.ok) throw new Error('Failed to add member');
+
+                                      toast.success(`เพิ่ม ${name} เข้า Carpool สำเร็จ`);
+                                      await fetchMemberCarpool();
+                                      await fetchAllCarpools();
+                                    } catch (err) {
+                                      toast.error('เกิดข้อผิดพลาดในการเพิ่มสมาชิก');
+                                    }
+                                  }}
+                                  className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                >
+                                  เพิ่มเข้ารถ
+                                </button>
+                              )}
+
+                              {isInMyCarpool && (
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm(`ต้องการลบ ${name} ออกจาก Carpool หรือไม่?`)) return;
+
+                                    try {
+                                      const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}/remove-members`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          members: [{
+                                            lineUserId: session?.user?.lineUserId || '',
+                                            name,
+                                          }],
+                                        }),
+                                      });
+
+                                      if (!response.ok) throw new Error('Failed to remove member');
+
+                                      toast.success(`ลบ ${name} ออกจาก Carpool สำเร็จ`);
+                                      await fetchMemberCarpool();
+                                      await fetchAllCarpools();
+                                    } catch (err) {
+                                      toast.error('เกิดข้อผิดพลาดในการลบสมาชิก');
+                                    }
+                                  }}
+                                  className="text-xs px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                                >
+                                  ลบออก
+                                </button>
+                              )}
+
+                              {otherCarpool && (
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm(`ต้องการยกเลิกการ join รถคัน ${otherCarpool.licensePlate} หรือไม่?`)) return;
+
+                                    try {
+                                      const response = await fetch(`/api/carpools/${otherCarpool.carpoolId}/remove-members`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          members: [{
+                                            lineUserId: session?.user?.lineUserId || '',
+                                            name,
+                                          }],
+                                        }),
+                                      });
+
+                                      if (!response.ok) throw new Error('Failed to leave carpool');
+
+                                      toast.success(`ยกเลิกการ join รถคัน ${otherCarpool.licensePlate} สำเร็จ`);
+                                      await fetchMemberCarpool();
+                                      await fetchAllCarpools();
+                                    } catch (err) {
+                                      toast.error('เกิดข้อผิดพลาดในการยกเลิก');
+                                    }
+                                  }}
+                                  className="text-xs px-3 py-1.5 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
+                                >
+                                  ยกเลิก Join
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowManageCarpoolModal(false);
+                  setAllCarpools([]);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                ปิด
               </button>
             </div>
           </div>

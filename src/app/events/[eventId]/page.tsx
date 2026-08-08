@@ -1695,7 +1695,13 @@ export default function EventDetailPage() {
                               </button>
                             )}
                             <button
-                              onClick={() => setShowJoinCarpoolModal(true)}
+                              onClick={() => {
+                                setShowJoinCarpoolModal(true);
+                                // Fetch all carpools to check if members are already in other carpools
+                                if (allCarpools.length === 0) {
+                                  fetchAllCarpools();
+                                }
+                              }}
                               className="text-sm px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                             >
                               🚗 เข้าร่วมรถของคนอื่น
@@ -4347,12 +4353,25 @@ export default function EventDetailPage() {
                         <div className="space-y-2">
                           {names.map((name, index) => {
                             // Check if this person is already in any active carpool (exclude deleted/cancelled)
-                            const isInCarpool = allCarpools.some(cp =>
-                              cp.status !== 'deleted' && cp.status !== 'cancelled' &&
-                              cp.members?.some((m: any) =>
+                            // Check both allCarpools AND memberCarpool
+                            let isInCarpool = false;
+
+                            // Check in memberCarpool (own carpool)
+                            if (memberCarpool && memberCarpool.status !== 'deleted' && memberCarpool.status !== 'cancelled') {
+                              isInCarpool = memberCarpool.members?.some((m: any) =>
                                 m.lineUserId === session?.user?.lineUserId && m.name === name
-                              )
-                            );
+                              ) || false;
+                            }
+
+                            // If not found in memberCarpool, check in allCarpools (other carpools)
+                            if (!isInCarpool) {
+                              isInCarpool = allCarpools.some(cp =>
+                                cp.status !== 'deleted' && cp.status !== 'cancelled' &&
+                                cp.members?.some((m: any) =>
+                                  m.lineUserId === session?.user?.lineUserId && m.name === name
+                                )
+                              );
+                            }
 
                             return (
                               <label

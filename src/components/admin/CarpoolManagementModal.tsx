@@ -186,6 +186,14 @@ export default function CarpoolManagementModal({
   };
 
   const handleSaveCarpool = async () => {
+    // Validate for new carpool creation
+    if (!editingCarpoolId) {
+      if (selectedOwnerMembers.length === 0) {
+        alert('กรุณาเลือกสมาชิกในรถอย่างน้อย 1 คน');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       if (editingCarpoolId) {

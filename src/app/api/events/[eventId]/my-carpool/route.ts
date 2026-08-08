@@ -36,15 +36,26 @@ export async function GET(
       return NextResponse.json({ carpools: [] });
     }
 
-    // Enrich Carpools with owner registration data
+    // Enrich Carpools with owner registration data and member company names
     const { attendees } = await getEventAttendanceSummary(eventId);
 
     const enrichedCarpools = carpools.map(carpool => {
       const ownerReg = attendees.find(a => a.registration.registrationId === carpool.ownerRegistrationId);
+
+      // Enrich each member with their company name
+      const enrichedMembers = carpool.members?.map(member => {
+        const memberReg = attendees.find(a => a.registration.registrationId === member.registrationId);
+        return {
+          ...member,
+          companyName: memberReg?.registration.companyName || '',
+        };
+      }) || [];
+
       return {
         ...carpool,
         ownerCompanyName: ownerReg?.registration.companyName || '',
         ownerContactName: ownerReg?.registration.contactName || '',
+        members: enrichedMembers,
       };
     });
 

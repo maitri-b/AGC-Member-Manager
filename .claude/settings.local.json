@@ -67,7 +67,8 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Thai date formatting for event dates with date range support\n\nFeatures Added:\n1. Enhanced formatEventDateRange in date-utils.ts\n   - Added support for ISO format \\(YYYY-MM-DD\\) in addition to Thai format \\(DD/MM/YYYY\\)\n   - Handles single dates and date ranges intelligently\n   - Same month: \"25-27 สิงหาคม 2569\"\n   - Different month: \"25 สิงหาคม - 2 กันยายน 2569\"\n   - Different year: \"25 สิงหาคม 2569 - 2 มกราคม 2570\"\n\n2. Updated Events List Page \\(admin/events/page.tsx\\)\n   - Import formatEventDateRange function\n   - Display event date with calendar icon in event cards\n   - Shows properly formatted Thai date range for all events\n\n3. Updated Event Detail Page \\(admin/events/[eventId]/page.tsx\\)\n   - Import formatEventDateRange function\n   - Display event date prominently under event name\n   - Consistent Thai date formatting across all pages\n\nBenefits:\n- Supports both legacy Thai format and new ISO format\n- User-friendly display with proper Thai month names\n- Automatically handles date ranges for multi-day events\n- Consistent formatting across the entire application\n\n🤖 Generated with Claude Code\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(tee:*)",
       "Bash(npx eslint:*)",
-      "Bash(npx next lint:*)"
+      "Bash(npx next lint:*)",
+      "Bash(dir /b \"d:\\\\OneDrive\\\\95-Agent Club\\\\Agentsclub-Member-Manager\\\\src\\\\components\\\\admin\")"
     ]
   }
 }

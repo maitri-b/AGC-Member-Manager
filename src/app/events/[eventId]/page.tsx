@@ -1970,7 +1970,7 @@ export default function EventDetailPage() {
                                     </div>
                                     {ownedCarpool.members && ownedCarpool.members.length > 0 && (
                                       <div className="mt-2 pt-2 border-t border-blue-200">
-                                        <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิก:</p>
+                                        <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิก Carpool นี้:</p>
                                         <div className="space-y-1">
                                           {ownedCarpool.members.map((member: any, idx: number) => {
                                             const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
@@ -1986,7 +1986,12 @@ export default function EventDetailPage() {
 
                                             return (
                                               <div key={`${member.lineUserId}-${member.name}`} className="text-xs text-blue-700 flex items-center justify-between gap-2">
-                                                <span>• {displayName}</span>
+                                                <span>
+                                                  • {displayName}
+                                                  {!isMyTeamMember && member.companyName && (
+                                                    <span className="italic font-light text-blue-500"> ({member.companyName}) - joined</span>
+                                                  )}
+                                                </span>
                                                 <button
                                                   onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
                                                   className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
@@ -2051,7 +2056,7 @@ export default function EventDetailPage() {
                                         </div>
                                         {carpool.members && carpool.members.length > 0 && (
                                           <div className="mt-2 pt-2 border-t border-green-200">
-                                            <p className="text-xs font-medium text-green-800 mb-1">รายชื่อสมาชิก:</p>
+                                            <p className="text-xs font-medium text-green-800 mb-1">รายชื่อสมาชิก Carpool นี้:</p>
                                             <div className="space-y-1">
                                               {carpool.members.map((member: any, idx: number) => {
                                                 const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
@@ -2067,7 +2072,12 @@ export default function EventDetailPage() {
 
                                                 return (
                                                   <div key={`${member.lineUserId}-${member.name}`} className="text-xs text-green-700 flex items-center justify-between gap-2">
-                                                    <span>• {displayName}</span>
+                                                    <span>
+                                                      • {displayName}
+                                                      {!isMyTeamMember && member.companyName && (
+                                                        <span className="italic font-light text-green-500"> ({member.companyName}) - joined</span>
+                                                      )}
+                                                    </span>
                                                     {isMyTeamMember && (
                                                       <button
                                                         onClick={() => handleRemoveTeamMember(member.lineUserId, member.name, carpool.carpoolId)}
@@ -4926,6 +4936,9 @@ export default function EventDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Toast notifications */}
+      <Toast />
     </div>
   );
 }

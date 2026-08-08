@@ -630,27 +630,40 @@ export default function CarpoolManagementModal({
                           <p className="text-sm text-gray-500 italic">ยังไม่มีสมาชิก</p>
                         ) : (
                           <div className="space-y-2">
-                            {carpool.members.map((member, index) => (
-                              <div
-                                key={`${member.lineUserId}-${index}`}
-                                className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {member.name}
-                                  </span>
-                                  <span className="text-xs text-gray-500">
-                                    ({member.registrationId})
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={() => handleRemoveMember(carpool.carpoolId, member.lineUserId, member.name)}
-                                  className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                            {carpool.members.map((member, index) => {
+                              // Clean member name - remove JSON formatting if present
+                              let displayName = member.name;
+                              try {
+                                // If name is JSON string like '["Name"]', parse it
+                                const parsed = JSON.parse(member.name);
+                                displayName = Array.isArray(parsed) ? parsed[0] : parsed;
+                              } catch {
+                                // Not JSON, use as-is but remove quotes/brackets
+                                displayName = member.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                              }
+
+                              return (
+                                <div
+                                  key={`${member.lineUserId}-${index}`}
+                                  className="flex items-center justify-between p-2 bg-gray-50 rounded"
                                 >
-                                  ลบ
-                                </button>
-                              </div>
-                            ))}
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {displayName}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      ({member.registrationId})
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => handleRemoveMember(carpool.carpoolId, member.lineUserId, member.name)}
+                                    className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                                  >
+                                    ลบ
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>

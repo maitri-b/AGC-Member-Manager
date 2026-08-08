@@ -2075,8 +2075,8 @@ export default function EventDetailPage() {
                                                   <div key={`${member.lineUserId}-${member.name}`} className="text-xs text-green-700 flex items-center justify-between gap-2">
                                                     <span>
                                                       • {displayName}
-                                                      {!isMyTeamMember && member.companyName && (
-                                                        <span className="italic font-light text-green-500"> ({member.companyName}) - joined</span>
+                                                      {isMyTeamMember && (
+                                                        <span className="italic font-light text-green-500"> - joined</span>
                                                       )}
                                                     </span>
                                                     {isMyTeamMember && (

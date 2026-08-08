@@ -59,6 +59,11 @@ interface Event {
   requireAttendeeNames?: boolean;
   // Carpool feature
   hasCarpoolFeature?: boolean;
+  carpoolSettings?: {
+    totalCarNumbers: number;
+    maxSeatsPerCar?: number;
+    showCarNumbersToMembers?: boolean;
+  };
 }
 
 interface Attendee {

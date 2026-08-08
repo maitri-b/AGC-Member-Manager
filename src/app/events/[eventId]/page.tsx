@@ -1816,11 +1816,14 @@ export default function EventDetailPage() {
                                         displayName = member.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
                                       }
 
+                                      // Check if current user is the carpool owner
+                                      const isOwner = memberCarpool.ownerRegistrationId === userRegistration?.registrationId;
+
                                       return (
                                         <div key={`${member.lineUserId}-${member.name}`} className="text-xs text-blue-700 flex items-center justify-between gap-2">
                                           <span>• {displayName}</span>
-                                          {/* Remove button - only for own team members */}
-                                          {isMyTeamMember && (
+                                          {/* Remove button - for carpool owner (can remove anyone) or for own team members */}
+                                          {(isOwner || isMyTeamMember) && (
                                             <button
                                               onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
                                               className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
@@ -4257,6 +4260,10 @@ export default function EventDetailPage() {
                   />
                   <button
                     onClick={async () => {
+                      console.log('[Join Search] Button clicked');
+                      console.log('[Join Search] eventId:', eventId);
+                      console.log('[Join Search] joinRegistrationId:', joinRegistrationId);
+
                       if (!joinRegistrationId.trim()) {
                         toast.error('กรุณาระบุรหัสการจอง');
                         return;
@@ -4266,21 +4273,29 @@ export default function EventDetailPage() {
                       setJoinSearchedCarpool(null);
                       try {
                         // Search for carpool by registration ID
-                        const response = await fetch(`/api/events/${encodeURIComponent(eventId as string)}/carpools/search?registrationId=${encodeURIComponent(joinRegistrationId)}`);
+                        const url = `/api/events/${encodeURIComponent(eventId)}/carpools/search?registrationId=${encodeURIComponent(joinRegistrationId)}`;
+                        console.log('[Join Search] Fetching URL:', url);
+
+                        const response = await fetch(url);
+                        console.log('[Join Search] Response status:', response.status);
 
                         if (!response.ok) {
+                          const errorData = await response.json();
+                          console.error('[Join Search] Error response:', errorData);
                           throw new Error('Failed to search carpool');
                         }
 
                         const data = await response.json();
+                        console.log('[Join Search] Response data:', data);
 
                         if (!data.carpool) {
                           toast.error(`รหัสการจอง "${joinRegistrationId}" ยังไม่ได้สร้าง Carpool กรุณาติดต่อเจ้าของรหัสจองนี้เพื่อให้สร้าง Carpool ก่อน`);
                         } else {
                           setJoinSearchedCarpool(data.carpool);
+                          toast.success('พบ Carpool แล้ว!');
                         }
                       } catch (err) {
-                        console.error('Error searching carpool:', err);
+                        console.error('[Join Search] Error searching carpool:', err);
                         toast.error('เกิดข้อผิดพลาดในการค้นหา Carpool');
                       } finally {
                         setJoinSearchLoading(false);
@@ -4523,10 +4538,19 @@ export default function EventDetailPage() {
                       {searchedRegistration.attendeeNames ? (
                         searchedRegistration.attendeeNames.split(',').map((name: string, index: number) => {
                           const trimmedName = name.trim();
-                          // Check if already in carpool
-                          const isInCarpool = memberCarpool.members?.some(
+                          // Check if already in current carpool
+                          const isInCurrentCarpool = memberCarpool.members?.some(
                             (m: any) => m.name === trimmedName && m.registrationId === searchedRegistration.registrationId
                           );
+                          // Check if already in any other active carpool (exclude deleted/cancelled)
+                          // Match by registrationId + name (since members from different registrations have different lineUserIds)
+                          const isInOtherCarpool = !isInCurrentCarpool && allCarpools.some(cp =>
+                            cp.status !== 'deleted' && cp.status !== 'cancelled' &&
+                            cp.members?.some((m: any) =>
+                              m.registrationId === searchedRegistration.registrationId && m.name === trimmedName
+                            )
+                          );
+                          const isInCarpool = isInCurrentCarpool || isInOtherCarpool;
                           const isSelected = selectedMembersToInvite.includes(trimmedName);
 
                           return (
@@ -4558,7 +4582,7 @@ export default function EventDetailPage() {
                               </span>
                               {isInCarpool && (
                                 <span className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded">
-                                  อยู่ในรถแล้ว
+                                  {isInCurrentCarpool ? 'อยู่ในรถแล้ว' : 'Joined คันอื่นแล้ว'}
                                 </span>
                               )}
                             </label>

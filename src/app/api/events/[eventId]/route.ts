@@ -193,6 +193,19 @@ export async function GET(
       };
     });
 
+    // Find user's registration if logged in
+    const session = await getServerSession(authOptions);
+    let userRegistration = null;
+
+    if (session?.user?.lineUserId) {
+      const userAttendee = attendeesWithProfile.find(
+        (a: any) => a.registration.lineUserId === session.user.lineUserId
+      );
+      if (userAttendee) {
+        userRegistration = userAttendee.registration;
+      }
+    }
+
     return NextResponse.json({
       event: {
         eventId: event.eventId,
@@ -237,6 +250,7 @@ export async function GET(
         verifiedMemberCount, // Members who verified identity through LINE
       },
       attendees: attendeesWithProfile,
+      userRegistration, // User's registration if logged in
     });
   } catch (error) {
     console.error('Error fetching event details:', error);

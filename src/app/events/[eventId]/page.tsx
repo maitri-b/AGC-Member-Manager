@@ -583,6 +583,30 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleDeleteCarpool = async (carpoolId: string) => {
+    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบ Carpool นี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/carpools/${carpoolId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete carpool');
+      }
+
+      toast.success('ลบ Carpool สำเร็จ!');
+
+      // Refresh carpool data
+      await fetchMemberCarpool();
+    } catch (err) {
+      console.error('Error deleting carpool:', err);
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบ Carpool');
+    }
+  };
+
   const handleSearchRegistration = async () => {
     if (!searchRegistrationId.trim()) {
       toast.error('กรุณาระบุรหัสลงทะเบียน');

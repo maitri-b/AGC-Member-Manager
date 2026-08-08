@@ -576,6 +576,7 @@ export default function EventDetailPage() {
 
       // Refresh carpool data
       await fetchMemberCarpool();
+      await fetchAllCarpools();
     } catch (err) {
       console.error('Error creating carpool:', err);
       toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้าง Carpool');
@@ -602,6 +603,7 @@ export default function EventDetailPage() {
 
       // Refresh carpool data
       await fetchMemberCarpool();
+      await fetchAllCarpools();
     } catch (err) {
       console.error('Error deleting carpool:', err);
       toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบ Carpool');
@@ -686,6 +688,7 @@ export default function EventDetailPage() {
 
       // Refresh carpool data
       await fetchMemberCarpool();
+      await fetchAllCarpools();
     } catch (err) {
       console.error('Error inviting members:', err);
       toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการชวนสมาชิก');
@@ -746,6 +749,7 @@ export default function EventDetailPage() {
 
       // Refresh carpool data
       await fetchMemberCarpool();
+      await fetchAllCarpools();
     } catch (err) {
       console.error('Error removing team member:', err);
       toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบสมาชิก');
@@ -4735,7 +4739,7 @@ export default function EventDetailPage() {
                                 </span>
                                 {isInCarpool && (
                                   <span className="ml-auto text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded">
-                                    อยู่ใน Carpool แล้ว
+                                    joined Carpool แล้ว
                                   </span>
                                 )}
                               </label>
@@ -4997,7 +5001,7 @@ export default function EventDetailPage() {
                               </span>
                               {isInCarpool && (
                                 <span className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded">
-                                  {isInCurrentCarpool ? 'อยู่ในรถแล้ว' : 'Joined คันอื่นแล้ว'}
+                                  {isInCurrentCarpool ? 'joined รถแล้ว' : 'joined คันอื่นแล้ว'}
                                 </span>
                               )}
                             </label>

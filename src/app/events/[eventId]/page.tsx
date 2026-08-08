@@ -4831,6 +4831,16 @@ export default function EventDetailPage() {
                       {searchedRegistration.attendeeNames ? (
                         searchedRegistration.attendeeNames.split(',').map((name: string, index: number) => {
                           const trimmedName = name.trim();
+
+                          // Clean member name - remove JSON formatting if present
+                          let displayName = trimmedName;
+                          try {
+                            const parsed = JSON.parse(trimmedName);
+                            displayName = Array.isArray(parsed) ? parsed[0] : parsed;
+                          } catch {
+                            displayName = trimmedName.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                          }
+
                           // Check if already in current carpool
                           const isInCurrentCarpool = memberCarpool.members?.some(
                             (m: any) => m.name === trimmedName && m.registrationId === searchedRegistration.registrationId
@@ -4871,7 +4881,7 @@ export default function EventDetailPage() {
                                 className="rounded"
                               />
                               <span className={`flex-1 text-sm ${isInCarpool ? 'text-gray-400' : 'text-gray-900'}`}>
-                                {trimmedName}
+                                {displayName}
                               </span>
                               {isInCarpool && (
                                 <span className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded">

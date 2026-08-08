@@ -235,6 +235,9 @@ export default function EventDetailPage() {
   const [savingLicensePlate, setSavingLicensePlate] = useState(false);
   // Carpool info tooltip state
   const [showCarpoolTooltip, setShowCarpoolTooltip] = useState(false);
+  // Delete last member confirmation modal
+  const [showDeleteCarpoolConfirmModal, setShowDeleteCarpoolConfirmModal] = useState(false);
+  const [pendingMemberRemoval, setPendingMemberRemoval] = useState<{lineUserId: string; name: string; carpoolId: string} | null>(null);
 
   // Guest registration form state (for Event-Co without memberId)
   const [guestCompanyName, setGuestCompanyName] = useState('');
@@ -669,17 +672,37 @@ export default function EventDetailPage() {
       return;
     }
 
-    // Confirm before removing
+    // Find the carpool to check member count
+    const targetCarpool = memberCarpools.find(cp => cp.carpoolId === targetCarpoolId);
+
+    if (!targetCarpool) {
+      toast.error('ไม่พบข้อมูล Carpool');
+      return;
+    }
+
+    // Check if this is the last member
+    if (targetCarpool.members && targetCarpool.members.length === 1) {
+      // Show confirmation modal for deleting entire carpool
+      setPendingMemberRemoval({ lineUserId, name, carpoolId: targetCarpoolId });
+      setShowDeleteCarpoolConfirmModal(true);
+      return;
+    }
+
+    // Normal confirmation for removing member
     if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบ "${name}" ออกจาก Carpool นี้?`)) {
       return;
     }
 
+    await executeRemoveMember(targetCarpoolId, lineUserId, name);
+  };
+
+  const executeRemoveMember = async (carpoolId: string, lineUserId: string, name: string) => {
     try {
-      const response = await fetch(`/api/carpools/${targetCarpoolId}/remove-members`, {
+      const response = await fetch(`/api/carpools/${carpoolId}/remove-members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          members: [{ lineUserId, name }], // New format - remove specific member
+          members: [{ lineUserId, name }],
         }),
       });
 
@@ -696,6 +719,20 @@ export default function EventDetailPage() {
       console.error('Error removing team member:', err);
       toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบสมาชิก');
     }
+  };
+
+  const handleConfirmDeleteCarpool = async () => {
+    if (!pendingMemberRemoval) return;
+
+    await executeRemoveMember(
+      pendingMemberRemoval.carpoolId,
+      pendingMemberRemoval.lineUserId,
+      pendingMemberRemoval.name
+    );
+
+    // Close modal and clear pending state
+    setShowDeleteCarpoolConfirmModal(false);
+    setPendingMemberRemoval(null);
   };
 
   // Fetch all carpools for the event (to check member status)
@@ -4628,6 +4665,54 @@ export default function EventDetailPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Carpool Confirmation Modal */}
+      {showDeleteCarpoolConfirmModal && pendingMemberRemoval && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">ยืนยันการลบ Carpool</h3>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-sm text-gray-700 mb-3">
+                  <strong>"{pendingMemberRemoval.name}"</strong> เป็นสมาชิกคนสุดท้ายในรถคันนี้
+                </p>
+                <p className="text-sm text-gray-600">
+                  Carpool จะต้องมีสมาชิกในรถอย่างน้อย 1 คน หากต้องการลบสมาชิกคนนี้ออกจากรถ
+                  <strong className="text-red-600"> Carpool ทั้งคันจะถูกลบด้วย</strong>
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteCarpoolConfirmModal(false);
+                    setPendingMemberRemoval(null);
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleConfirmDeleteCarpool}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  ยืนยันลบ Carpool
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -215,6 +215,13 @@ export default function EventDetailPage() {
   // Manage Carpool modal state
   const [showManageCarpoolModal, setShowManageCarpoolModal] = useState(false);
   const [allCarpools, setAllCarpools] = useState<any[]>([]);
+  // Join Carpool modal state
+  const [showJoinCarpoolModal, setShowJoinCarpoolModal] = useState(false);
+  const [joinRegistrationId, setJoinRegistrationId] = useState('');
+  const [joinSearchedCarpool, setJoinSearchedCarpool] = useState<any>(null);
+  const [joinSearchLoading, setJoinSearchLoading] = useState(false);
+  const [selectedMembersToJoin, setSelectedMembersToJoin] = useState<number[]>([]);
+  const [joining, setJoining] = useState(false);
 
   // Guest registration form state (for Event-Co without memberId)
   const [guestCompanyName, setGuestCompanyName] = useState('');
@@ -1667,14 +1674,22 @@ export default function EventDetailPage() {
                           <label className="block text-sm font-medium text-gray-700">
                             🚗 รายละเอียดรถ Carpool
                           </label>
-                          {!memberCarpool && (
+                          <div className="flex gap-2">
+                            {!memberCarpool && (
+                              <button
+                                onClick={() => setShowCreateCarpoolModal(true)}
+                                className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                + สร้าง Carpool
+                              </button>
+                            )}
                             <button
-                              onClick={() => setShowCreateCarpoolModal(true)}
-                              className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              onClick={() => setShowJoinCarpoolModal(true)}
+                              className="text-sm px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                             >
-                              + สร้าง Carpool
+                              🚗 เข้าร่วมรถของคนอื่น
                             </button>
-                          )}
+                          </div>
                         </div>
 
                         {carpoolLoading ? (
@@ -1726,7 +1741,7 @@ export default function EventDetailPage() {
                                       }
 
                                       return (
-                                        <div key={idx} className="text-xs text-blue-700 flex items-center justify-between gap-2">
+                                        <div key={`${member.lineUserId}-${member.name}`} className="text-xs text-blue-700 flex items-center justify-between gap-2">
                                           <span>• {displayName}</span>
                                           {/* Remove button - only for own team members */}
                                           {isMyTeamMember && (
@@ -4117,6 +4132,246 @@ export default function EventDetailPage() {
                 ปิด
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Join Carpool Modal */}
+      {showJoinCarpoolModal && userRegistration && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">เข้าร่วมรถของคนอื่น</h3>
+              <button
+                onClick={() => {
+                  setShowJoinCarpoolModal(false);
+                  setJoinRegistrationId('');
+                  setJoinSearchedCarpool(null);
+                  setSelectedMembersToJoin([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Instructions */}
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-900">
+                  <strong>คำแนะนำ:</strong> หากต้องการเดินทางร่วมกับรถของคนอื่น กรุณาขอรหัสการจองจากเจ้าของรถที่ต้องการเข้าร่วม
+                </p>
+              </div>
+
+              {/* Search Registration ID */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  รหัสการจอง
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={joinRegistrationId}
+                    onChange={(e) => setJoinRegistrationId(e.target.value)}
+                    placeholder="ใส่รหัสการจอง"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!joinRegistrationId.trim()) {
+                        toast.error('กรุณาระบุรหัสการจอง');
+                        return;
+                      }
+
+                      setJoinSearchLoading(true);
+                      setJoinSearchedCarpool(null);
+                      try {
+                        // Search for carpool by registration ID
+                        const response = await fetch(`/api/events/${encodeURIComponent(eventId as string)}/carpools/search?registrationId=${encodeURIComponent(joinRegistrationId)}`);
+
+                        if (!response.ok) {
+                          throw new Error('Failed to search carpool');
+                        }
+
+                        const data = await response.json();
+
+                        if (!data.carpool) {
+                          toast.error(`รหัสการจอง "${joinRegistrationId}" ยังไม่ได้สร้าง Carpool กรุณาติดต่อเจ้าของรหัสจองนี้เพื่อให้สร้าง Carpool ก่อน`);
+                        } else {
+                          setJoinSearchedCarpool(data.carpool);
+                        }
+                      } catch (err) {
+                        console.error('Error searching carpool:', err);
+                        toast.error('เกิดข้อผิดพลาดในการค้นหา Carpool');
+                      } finally {
+                        setJoinSearchLoading(false);
+                      }
+                    }}
+                    disabled={joinSearchLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {joinSearchLoading ? 'กำลังค้นหา...' : 'ค้นหา'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Results */}
+              {joinSearchedCarpool && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">ข้อมูลรถ Carpool</h4>
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm font-semibold text-green-900 mb-2">
+                      🚗 {joinSearchedCarpool.licensePlate}
+                    </p>
+                    <p className="text-xs text-green-700">
+                      เจ้าของ: {joinSearchedCarpool.ownerCompanyName || 'N/A'}
+                    </p>
+                    <p className="text-xs text-green-700">
+                      จำนวนสมาชิก: {joinSearchedCarpool.members?.length || 0} คน
+                    </p>
+                  </div>
+
+                  {/* Select Team Members to Join */}
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">เลือกสมาชิกที่ต้องการเข้าร่วม</h4>
+                    {(() => {
+                      // Parse attendee names
+                      let names: string[] = [];
+                      try {
+                        const parsed = JSON.parse(userRegistration.attendeeNames || '[]');
+                        names = Array.isArray(parsed) ? parsed : [];
+                      } catch {
+                        names = userRegistration.attendeeNames?.split(',').map((n: string) => n.trim()).filter((n: string) => n) || [];
+                      }
+
+                      // Get all carpools to check if members are already in other carpools
+                      return (
+                        <div className="space-y-2">
+                          {names.map((name, index) => {
+                            // Check if this person is already in any carpool
+                            const isInCarpool = allCarpools.some(cp =>
+                              cp.members?.some((m: any) =>
+                                m.lineUserId === session?.user?.lineUserId && m.name === name
+                              )
+                            );
+
+                            return (
+                              <label
+                                key={index}
+                                className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                                  isInCarpool
+                                    ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
+                                    : selectedMembersToJoin.includes(index)
+                                    ? 'bg-blue-50 border-blue-500'
+                                    : 'bg-white border-gray-200 hover:border-blue-300'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedMembersToJoin.includes(index)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedMembersToJoin([...selectedMembersToJoin, index]);
+                                    } else {
+                                      setSelectedMembersToJoin(selectedMembersToJoin.filter(i => i !== index));
+                                    }
+                                  }}
+                                  disabled={isInCarpool}
+                                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                />
+                                <span className={`text-sm ${isInCarpool ? 'text-gray-400' : 'text-gray-900'}`}>
+                                  {name}
+                                </span>
+                                {isInCarpool && (
+                                  <span className="ml-auto text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded">
+                                    อยู่ใน Carpool แล้ว
+                                  </span>
+                                )}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {joinSearchedCarpool && (
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+                <button
+                  onClick={() => {
+                    setShowJoinCarpoolModal(false);
+                    setJoinRegistrationId('');
+                    setJoinSearchedCarpool(null);
+                    setSelectedMembersToJoin([]);
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={async () => {
+                    if (selectedMembersToJoin.length === 0) {
+                      toast.error('กรุณาเลือกสมาชิกอย่างน้อย 1 คน');
+                      return;
+                    }
+
+                    setJoining(true);
+                    try {
+                      // Parse attendee names
+                      let names: string[] = [];
+                      try {
+                        const parsed = JSON.parse(userRegistration.attendeeNames || '[]');
+                        names = Array.isArray(parsed) ? parsed : [];
+                      } catch {
+                        names = userRegistration.attendeeNames?.split(',').map((n: string) => n.trim()).filter((n: string) => n) || [];
+                      }
+
+                      // Build members array
+                      const membersToAdd = selectedMembersToJoin.map(index => ({
+                        registrationId: userRegistration.registrationId,
+                        lineUserId: session?.user?.lineUserId || '',
+                        name: names[index] || '',
+                      }));
+
+                      const response = await fetch(`/api/carpools/${joinSearchedCarpool.carpoolId}/add-members`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ members: membersToAdd }),
+                      });
+
+                      if (!response.ok) {
+                        throw new Error('Failed to join carpool');
+                      }
+
+                      toast.success('เข้าร่วม Carpool สำเร็จ!');
+                      setShowJoinCarpoolModal(false);
+                      setJoinRegistrationId('');
+                      setJoinSearchedCarpool(null);
+                      setSelectedMembersToJoin([]);
+
+                      // Refresh data
+                      await fetchMemberCarpool();
+                      await fetchAllCarpools();
+                    } catch (err) {
+                      console.error('Error joining carpool:', err);
+                      toast.error('เกิดข้อผิดพลาดในการเข้าร่วม Carpool');
+                    } finally {
+                      setJoining(false);
+                    }
+                  }}
+                  disabled={joining || selectedMembersToJoin.length === 0}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  {joining ? 'กำลังเข้าร่วม...' : 'เข้าร่วม Carpool'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

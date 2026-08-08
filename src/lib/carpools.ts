@@ -299,6 +299,30 @@ async function clearMembersCarpoolId(lineUserIds: string[]): Promise<void> {
 }
 
 /**
+ * Get Carpool by owner's registration ID
+ */
+export async function getCarpoolByRegistrationId(registrationId: string, eventId: string): Promise<Carpool | null> {
+  const db = adminDb();
+
+  const snapshot = await db
+    .collection('carpools')
+    .where('eventId', '==', eventId)
+    .where('ownerRegistrationId', '==', registrationId)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const doc = snapshot.docs[0];
+  return {
+    carpoolId: doc.id,
+    ...doc.data(),
+  } as Carpool;
+}
+
+/**
  * Get Carpool for a specific member
  */
 export async function getMemberCarpool(lineUserId: string, eventId: string): Promise<Carpool | null> {

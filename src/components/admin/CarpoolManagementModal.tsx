@@ -399,6 +399,7 @@ export default function CarpoolManagementModal({
           registrationId: searchedRegistration.registrationId,
           lineUserId: searchedRegistration.lineUserId,
           name: attendeeNames[index] || `ผู้เข้าร่วมคนที่ ${index + 1}`,
+          attendeeIndex: index,
         };
       });
 

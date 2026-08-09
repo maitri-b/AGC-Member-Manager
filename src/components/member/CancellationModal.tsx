@@ -8,6 +8,8 @@ type CancellationRegistration = Pick<EventRegistration, 'registrationId'> & {
   paidAmount?: number;
   totalAmount?: number;
   attendeeCount?: number;
+  carpoolId?: string;
+  roomAssignments?: string;
 };
 
 interface CancellationModalProps {

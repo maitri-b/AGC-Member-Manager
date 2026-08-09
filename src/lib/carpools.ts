@@ -178,10 +178,20 @@ export async function removeMembersFromCarpool(
     return true;
   });
 
-  await db.collection('carpools').doc(carpoolId).update({
-    members: updatedMembers,
-    updatedAt: new Date().toISOString(),
-  });
+  // If no members left after removal, mark carpool as cancelled
+  if (updatedMembers.length === 0) {
+    console.log(`[Carpool] No members left in ${carpoolId}, marking as cancelled`);
+    await db.collection('carpools').doc(carpoolId).update({
+      members: updatedMembers,
+      status: 'cancelled',
+      updatedAt: new Date().toISOString(),
+    });
+  } else {
+    await db.collection('carpools').doc(carpoolId).update({
+      members: updatedMembers,
+      updatedAt: new Date().toISOString(),
+    });
+  }
 
   // Clear carpoolId in eventRegistrations ONLY for lineUserIds that have NO remaining members in the carpool
   const uniqueLineUserIds = Array.from(new Set(membersToRemove.map(m => m.lineUserId)));

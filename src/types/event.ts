@@ -131,7 +131,11 @@ export interface EventRegistration {
   totalRefunded?: number;           // total_refunded - Total amount refunded to member
 
   // Carpool (New - for events with shared transportation)
-  carpoolId?: string;               // carpool_id - ID of Carpool that this member joined
+  // NOTE: This field is DEPRECATED and not fully reliable because:
+  // - A single registration can have members in MULTIPLE carpools (each person can join different cars)
+  // - The actual source of truth is the Carpool.members array (using attendeeIndex + registrationId)
+  // - This field is kept for legacy compatibility but should NOT be used for carpool membership checks
+  carpoolId?: string;               // carpool_id - DEPRECATED: ID of Carpool (unreliable for multi-carpool registrations)
 }
 
 // Event metadata (for managing multiple events)

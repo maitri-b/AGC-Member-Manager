@@ -1744,6 +1744,70 @@ export default function EventDetailPage() {
                       )}
                     </div>
 
+                    {/* Action Buttons - Show only when editing */}
+                    {isEditingNames && (
+                      <div className="flex gap-3 pt-4 mt-4 border-t border-gray-200">
+                        <button
+                          onClick={async () => {
+                            if (!event) return;
+
+                            // Validate attendee names (conditional based on requireAttendeeNames)
+                            if (event.requireAttendeeNames === true) {
+                              const filledNames = tempAttendeeNames.filter(name => name.trim());
+                              if (filledNames.length !== attendeeCount) {
+                                toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
+                                return;
+                              }
+                            }
+
+                            setUpdating(true);
+                            try {
+                              const response = await fetch(`/api/events/${eventId}/update-registration`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  attendeeCount,
+                                  attendeeNames: tempAttendeeNames,
+                                  specialRequests: tempSpecialRequests,
+                                }),
+                              });
+
+                              const data = await response.json();
+
+                              if (!response.ok) {
+                                throw new Error(data.error || 'ไม่สามารถอัพเดทข้อมูลได้');
+                              }
+
+                              toast.success(data.message || 'อัพเดทข้อมูลเรียบร้อยแล้ว');
+                              setIsEditingNames(false);
+                              setAttendeeNames([...tempAttendeeNames]);
+                              setSpecialRequests(tempSpecialRequests);
+                              fetchEventDetail(); // Refresh data
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+                            } finally {
+                              setUpdating(false);
+                            }
+                          }}
+                          disabled={updating}
+                          className="flex-1 py-2 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {updating ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingNames(false);
+                            setTempAttendeeNames([...attendeeNames]);
+                            setTempSpecialRequests(specialRequests || '');
+                          }}
+                          disabled={updating}
+                          className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                        >
+                          ยกเลิก
+                        </button>
+                      </div>
+                    )}
+
                     {/* Room Allocation Display */}
                     {event.roomTypes && event.roomTypes.length > 0 && roomAllocations && roomAllocations.length > 0 && (
                       <div className="mt-4">

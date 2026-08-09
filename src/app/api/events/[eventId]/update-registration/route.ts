@@ -247,7 +247,7 @@ export async function PUT(
             .where('status', 'in', ['active', null])
             .get();
 
-          const carpoolUpdates: Promise<void>[] = [];
+          const carpoolUpdates: Promise<any>[] = [];
 
           carpoolsSnapshot.docs.forEach(carpoolDoc => {
             const carpoolData = carpoolDoc.data();

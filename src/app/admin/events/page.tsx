@@ -264,6 +264,8 @@ const initialFormData: EventFormData = {
   // Carpool feature (New)
   hasCarpoolFeature: false,
   carpoolSettings: undefined,
+  // Cancellation policy (New)
+  cancellationPolicy: undefined,
 };
 
 export default function AdminEventsPage() {
@@ -530,6 +532,8 @@ export default function AdminEventsPage() {
         // Carpool feature (New)
         hasCarpoolFeature: (event as any).hasCarpoolFeature ?? false,
         carpoolSettings: (event as any).carpoolSettings ?? undefined,
+        // Cancellation policy (New)
+        cancellationPolicy: event.cancellationPolicy ?? undefined,
       });
 
       // Load price tiers if available, otherwise initialize defaults

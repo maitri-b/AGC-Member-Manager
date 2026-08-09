@@ -3,10 +3,17 @@
 import { useState, useEffect } from 'react';
 import { Event, EventRegistration, calculateRefundAmount } from '@/types/event';
 
+// Flexible registration type that works with both EventRegistration and UserRegistration
+type CancellationRegistration = Pick<EventRegistration, 'registrationId'> & {
+  paidAmount?: number;
+  totalAmount?: number;
+  attendeeCount?: number;
+};
+
 interface CancellationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  registration: EventRegistration;
+  registration: CancellationRegistration;
   event: Event;
   onSuccess: () => void;
 }
@@ -26,7 +33,34 @@ export default function CancellationModal({
   // Calculate refund when modal opens
   useEffect(() => {
     if (isOpen) {
-      const calculation = calculateRefundAmount(registration, event);
+      // Create a minimal EventRegistration object for refund calculation
+      const registrationForCalculation = {
+        ...registration,
+        // Add required fields that calculateRefundAmount doesn't actually use
+        registrationDate: new Date().toISOString(),
+        eventId: event.eventId,
+        companyName: '',
+        licenseNumber: '',
+        contactName: '',
+        contactPhone: '',
+        contactEmail: '',
+        lineUserId: '',
+        memberId: '',
+        hasClubRep: false,
+        lineRepName: '',
+        attendeeCount: registration.attendeeCount || 1,
+        attendeeNames: '',
+        shirtCount: 0,
+        shirtSizes: '',
+        shirtReceived: false,
+        eventFee: 0,
+        shirtFee: 0,
+        totalAmount: registration.totalAmount || 0,
+        slipUrl: '',
+        status: '',
+      } as EventRegistration;
+
+      const calculation = calculateRefundAmount(registrationForCalculation, event);
       setRefundCalculation(calculation);
       setCancellationReason('');
       setError(null);

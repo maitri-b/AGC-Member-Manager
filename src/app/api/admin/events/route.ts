@@ -110,6 +110,8 @@ export async function GET() {
           // Carpool feature
           hasCarpoolFeature: data.hasCarpoolFeature ?? false,
           carpoolSettings: data.carpoolSettings || undefined,
+          // Cancellation policy
+          cancellationPolicy: data.cancellationPolicy || undefined,
           // Event status
           status: data.status || 'active',
           // Convert Firestore Timestamps to ISO strings

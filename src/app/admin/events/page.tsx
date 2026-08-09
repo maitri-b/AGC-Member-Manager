@@ -468,8 +468,6 @@ export default function AdminEventsPage() {
 
   const handleOpenModal = (event?: Event) => {
     if (event) {
-      console.log('[handleOpenModal] Event data:', event);
-      console.log('[handleOpenModal] cancellationPolicy:', event.cancellationPolicy);
       setEditingEvent(event);
       setFormData({
         eventName: event.eventName,

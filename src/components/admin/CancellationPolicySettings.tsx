@@ -16,8 +16,6 @@ export default function CancellationPolicySettings({
 }: CancellationPolicySettingsProps) {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  console.log('[CancellationPolicySettings] Received value:', value);
-
   // Initialize default policy if not provided
   const policy: CancellationPolicy = value || {
     enabled: false,
@@ -28,8 +26,6 @@ export default function CancellationPolicySettings({
     dateBasedPolicies: [],
     sendLineNotification: true
   };
-
-  console.log('[CancellationPolicySettings] Using policy:', policy);
 
   // Update policy and notify parent
   const updatePolicy = (updates: Partial<CancellationPolicy>) => {

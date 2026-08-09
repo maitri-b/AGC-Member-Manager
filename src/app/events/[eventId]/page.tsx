@@ -4392,7 +4392,6 @@ export default function EventDetailPage() {
                         />
                         <span className="text-sm text-gray-900 flex-1">
                           {name || `ผู้เข้าร่วมคนที่ ${index + 1}`}
-                          {index === 0 && ' (คุณ)'}
                           {isInCarpool && (
                             <span className="text-xs text-orange-600 ml-2 italic">
                               ({carpoolInfo})

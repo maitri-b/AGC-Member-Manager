@@ -670,12 +670,28 @@ export default function AdminEventsPage() {
           throw new Error(data.error || 'Failed to update event');
         }
 
+        const updatedEventData = await response.json();
+
         // ✅ If user wants to update existing pending registrations
         if (applyToExisting === 'all' && deadlineChangeType) {
           await updateExistingDeadlines();
         }
 
+        // ✅ In-place update: Update the event in the local state
+        setEvents(prevEvents =>
+          prevEvents.map(event =>
+            event.eventId === editingEvent.eventId
+              ? { ...event, ...updatedEventData.event }
+              : event
+          )
+        );
+
         setSuccess('อัพเดทกิจกรรมเรียบร้อยแล้ว');
+
+        // ✅ Close modal after a short delay to show success message
+        setTimeout(() => {
+          handleCloseModal();
+        }, 800);
       } else {
         // Create new event
         const response = await fetch('/api/admin/events', {
@@ -692,11 +708,18 @@ export default function AdminEventsPage() {
           throw new Error(data.error || 'Failed to create event');
         }
 
-        setSuccess('สร้างกิจกรรมใหม่เรียบร้อยแล้ว');
-      }
+        const newEventData = await response.json();
 
-      handleCloseModal();
-      fetchEvents();
+        // ✅ In-place update: Add new event to the list
+        setEvents(prevEvents => [newEventData.event, ...prevEvents]);
+
+        setSuccess('สร้างกิจกรรมใหม่เรียบร้อยแล้ว');
+
+        // ✅ Close modal after a short delay to show success message
+        setTimeout(() => {
+          handleCloseModal();
+        }, 800);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
     } finally {

@@ -14,8 +14,6 @@ export default function CancellationPolicySettings({
   onChange,
   eventDate
 }: CancellationPolicySettingsProps) {
-  const [editingRule, setEditingRule] = useState<DateBasedCancellationRule | null>(null);
-  const [showRuleForm, setShowRuleForm] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Initialize default policy if not provided
@@ -32,6 +30,17 @@ export default function CancellationPolicySettings({
   // Update policy and notify parent
   const updatePolicy = (updates: Partial<CancellationPolicy>) => {
     const newPolicy = { ...policy, ...updates };
+
+    // Validate dates when updating policies
+    if (updates.dateBasedPolicies) {
+      const validation = validateCancellationPolicyDates(updates.dateBasedPolicies);
+      if (!validation.valid) {
+        setValidationErrors(validation.errors);
+      } else {
+        setValidationErrors([]);
+      }
+    }
+
     onChange(newPolicy);
   };
 
@@ -39,6 +48,7 @@ export default function CancellationPolicySettings({
   const handleToggleEnabled = (enabled: boolean) => {
     if (!enabled) {
       onChange(undefined); // Clear policy when disabled
+      setValidationErrors([]);
     } else {
       onChange({
         enabled: true,
@@ -69,31 +79,30 @@ export default function CancellationPolicySettings({
     });
   };
 
-  // Add or update date-based rule
-  const handleSaveRule = (rule: DateBasedCancellationRule) => {
-    let updatedRules: DateBasedCancellationRule[];
+  // Add new empty rule
+  const handleAddRule = () => {
+    const newRule: DateBasedCancellationRule = {
+      ruleId: `RULE_${Date.now()}`,
+      ruleName: '',
+      cancelBeforeDate: '',
+      refundType: 'percentage',
+      refundValue: 0,
+      description: '',
+      active: true,
+      createdAt: new Date().toISOString()
+    };
 
-    if (editingRule) {
-      // Update existing rule
-      updatedRules = policy.dateBasedPolicies.map(r =>
-        r.ruleId === rule.ruleId ? rule : r
-      );
-    } else {
-      // Add new rule
-      updatedRules = [...policy.dateBasedPolicies, rule];
-    }
+    updatePolicy({
+      dateBasedPolicies: [...policy.dateBasedPolicies, newRule]
+    });
+  };
 
-    // Validate dates
-    const validation = validateCancellationPolicyDates(updatedRules);
-    if (!validation.valid) {
-      setValidationErrors(validation.errors);
-      return;
-    }
-
-    setValidationErrors([]);
+  // Update rule
+  const handleUpdateRule = (ruleId: string, updates: Partial<DateBasedCancellationRule>) => {
+    const updatedRules = policy.dateBasedPolicies.map(r =>
+      r.ruleId === ruleId ? { ...r, ...updates } : r
+    );
     updatePolicy({ dateBasedPolicies: updatedRules });
-    setShowRuleForm(false);
-    setEditingRule(null);
   };
 
   // Delete rule
@@ -104,36 +113,16 @@ export default function CancellationPolicySettings({
 
   // Toggle rule active status
   const handleToggleRuleActive = (ruleId: string, active: boolean) => {
-    const updatedRules = policy.dateBasedPolicies.map(r =>
-      r.ruleId === ruleId ? { ...r, active } : r
-    );
-    updatePolicy({ dateBasedPolicies: updatedRules });
-  };
-
-  // Open form for new rule
-  const handleAddRule = () => {
-    setEditingRule(null);
-    setShowRuleForm(true);
-    setValidationErrors([]);
-  };
-
-  // Open form for editing rule
-  const handleEditRule = (rule: DateBasedCancellationRule) => {
-    setEditingRule(rule);
-    setShowRuleForm(true);
-    setValidationErrors([]);
-  };
-
-  // Cancel rule form
-  const handleCancelRuleForm = () => {
-    setShowRuleForm(false);
-    setEditingRule(null);
-    setValidationErrors([]);
+    handleUpdateRule(ruleId, { active });
   };
 
   // Sort rules by date (earliest first)
   const sortedRules = [...policy.dateBasedPolicies].sort(
-    (a, b) => new Date(a.cancelBeforeDate).getTime() - new Date(b.cancelBeforeDate).getTime()
+    (a, b) => {
+      if (!a.cancelBeforeDate) return 1;
+      if (!b.cancelBeforeDate) return -1;
+      return new Date(a.cancelBeforeDate).getTime() - new Date(b.cancelBeforeDate).getTime();
+    }
   );
 
   return (
@@ -216,16 +205,24 @@ export default function CancellationPolicySettings({
               </div>
             )}
 
-            {/* Rules list */}
+            {/* Rules list (inline editable) */}
             {sortedRules.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {sortedRules.map((rule) => (
-                  <RuleItem
+                  <RuleInlineForm
                     key={rule.ruleId}
                     rule={rule}
-                    onEdit={handleEditRule}
-                    onDelete={handleDeleteRule}
+                    onUpdate={(updates) => handleUpdateRule(rule.ruleId, updates)}
+                    onDelete={() => {
+                      if (confirm(`ต้องการลบเงื่อนไข "${rule.ruleName || 'ไม่มีชื่อ'}" ใช่หรือไม่?`)) {
+                        handleDeleteRule(rule.ruleId);
+                      }
+                    }}
                     onToggleActive={handleToggleRuleActive}
+                    existingDates={policy.dateBasedPolicies
+                      .filter(r => r.ruleId !== rule.ruleId)
+                      .map(r => r.cancelBeforeDate)
+                      .filter(d => d)} // Filter out empty dates
                   />
                 ))}
               </div>
@@ -251,32 +248,49 @@ export default function CancellationPolicySettings({
           </div>
         </div>
       )}
-
-      {/* Rule Form Modal */}
-      {showRuleForm && (
-        <RuleFormModal
-          rule={editingRule}
-          existingDates={policy.dateBasedPolicies
-            .filter(r => !editingRule || r.ruleId !== editingRule.ruleId)
-            .map(r => r.cancelBeforeDate)}
-          eventDate={eventDate}
-          onSave={handleSaveRule}
-          onCancel={handleCancelRuleForm}
-        />
-      )}
     </div>
   );
 }
 
-// Rule Item Component
-interface RuleItemProps {
+// Inline Rule Form Component
+interface RuleInlineFormProps {
   rule: DateBasedCancellationRule;
-  onEdit: (rule: DateBasedCancellationRule) => void;
-  onDelete: (ruleId: string) => void;
+  onUpdate: (updates: Partial<DateBasedCancellationRule>) => void;
+  onDelete: () => void;
   onToggleActive: (ruleId: string, active: boolean) => void;
+  existingDates: string[];
 }
 
-function RuleItem({ rule, onEdit, onDelete, onToggleActive }: RuleItemProps) {
+function RuleInlineForm({ rule, onUpdate, onDelete, onToggleActive, existingDates }: RuleInlineFormProps) {
+  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+
+  const handleChange = (field: keyof DateBasedCancellationRule, value: any) => {
+    // Clear local error for this field
+    if (localErrors[field]) {
+      setLocalErrors({ ...localErrors, [field]: '' });
+    }
+
+    // Validate on change
+    if (field === 'cancelBeforeDate' && value && existingDates.includes(value)) {
+      setLocalErrors({ ...localErrors, [field]: 'วันที่นี้ถูกใช้งานแล้ว' });
+      return; // Don't update if duplicate
+    }
+
+    if (field === 'refundValue') {
+      const numValue = parseFloat(value) || 0;
+      if (rule.refundType === 'percentage' && numValue > 100) {
+        setLocalErrors({ ...localErrors, [field]: 'เปอร์เซ็นต์ต้องไม่เกิน 100' });
+        return;
+      }
+      if (numValue < 0) {
+        setLocalErrors({ ...localErrors, [field]: 'ต้องเป็นจำนวนบวก' });
+        return;
+      }
+    }
+
+    onUpdate({ [field]: value });
+  };
+
   const getRefundText = () => {
     if (rule.refundType === 'percentage') {
       return `คืน ${rule.refundValue}%`;
@@ -288,286 +302,129 @@ function RuleItem({ rule, onEdit, onDelete, onToggleActive }: RuleItemProps) {
   };
 
   return (
-    <div className={`p-3 border rounded-lg ${rule.active ? 'border-gray-300 bg-white' : 'border-gray-200 bg-gray-50'}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 flex-1">
-          <input
-            type="checkbox"
-            checked={rule.active}
-            onChange={(e) => onToggleActive(rule.ruleId, e.target.checked)}
-            className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-          />
-          <div className="flex-1">
-            <h5 className={`font-medium ${rule.active ? 'text-gray-900' : 'text-gray-500'}`}>
-              {rule.ruleName}
-            </h5>
-            <div className="flex items-center gap-2 mt-1 text-sm">
-              <span className={rule.active ? 'text-gray-600' : 'text-gray-400'}>
-                ยกเลิกก่อน: {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </span>
-              <span className="text-gray-300">•</span>
-              <span className={`font-medium ${rule.active ? 'text-blue-600' : 'text-gray-400'}`}>
-                {getRefundText()}
-              </span>
-            </div>
-            {rule.description && (
-              <p className={`mt-1 text-xs ${rule.active ? 'text-gray-500' : 'text-gray-400'}`}>
-                {rule.description}
-              </p>
-            )}
+    <div className={`p-4 border rounded-lg ${rule.active ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
+      <div className="space-y-3">
+        {/* Header with toggle and delete */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={rule.active}
+              onChange={(e) => onToggleActive(rule.ruleId, e.target.checked)}
+              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+            />
+            <span className="text-xs font-semibold text-gray-600">
+              {rule.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+            </span>
           </div>
-        </div>
-        <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => onEdit(rule)}
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            แก้ไข
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm(`ต้องการลบเงื่อนไข "${rule.ruleName}" ใช่หรือไม่?`)) {
-                onDelete(rule.ruleId);
-              }
-            }}
+            onClick={onDelete}
             className="text-red-600 hover:text-red-700 text-sm font-medium"
           >
             ลบ
           </button>
         </div>
-      </div>
-    </div>
-  );
-}
 
-// Rule Form Modal Component
-interface RuleFormModalProps {
-  rule: DateBasedCancellationRule | null;
-  existingDates: string[];
-  eventDate?: string;
-  onSave: (rule: DateBasedCancellationRule) => void;
-  onCancel: () => void;
-}
+        {/* Rule Name */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            ชื่อเงื่อนไข <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={rule.ruleName || ''}
+            onChange={(e) => handleChange('ruleName', e.target.value)}
+            placeholder="เช่น: ยกเลิกก่อน 30 วัน"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
 
-function RuleFormModal({ rule, existingDates, eventDate, onSave, onCancel }: RuleFormModalProps) {
-  const [formData, setFormData] = useState<Partial<DateBasedCancellationRule>>(
-    rule || {
-      ruleId: `RULE_${Date.now()}`,
-      ruleName: '',
-      cancelBeforeDate: '',
-      refundType: 'percentage',
-      refundValue: 0,
-      description: '',
-      active: true,
-      createdAt: new Date().toISOString()
-    }
-  );
-  const [errors, setErrors] = useState<Record<string, string>>({});
+        {/* Cancel Before Date */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            ยกเลิกก่อนวันที่ <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            value={rule.cancelBeforeDate || ''}
+            onChange={(e) => handleChange('cancelBeforeDate', e.target.value)}
+            className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 ${
+              localErrors.cancelBeforeDate ? 'border-red-500' : 'border-gray-300'
+            }`}
+          />
+          {localErrors.cancelBeforeDate && (
+            <p className="mt-1 text-xs text-red-600">{localErrors.cancelBeforeDate}</p>
+          )}
+        </div>
 
-  const handleChange = (field: keyof DateBasedCancellationRule, value: any) => {
-    setFormData({ ...formData, [field]: value });
-    // Clear error for this field
-    if (errors[field]) {
-      setErrors({ ...errors, [field]: '' });
-    }
-  };
-
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.ruleName?.trim()) {
-      newErrors.ruleName = 'กรุณาระบุชื่อเงื่อนไข';
-    }
-
-    if (!formData.cancelBeforeDate) {
-      newErrors.cancelBeforeDate = 'กรุณาเลือกวันที่';
-    } else if (existingDates.includes(formData.cancelBeforeDate)) {
-      newErrors.cancelBeforeDate = 'วันที่นี้ถูกใช้งานแล้ว';
-    }
-
-    if (formData.refundType !== 'none' && (!formData.refundValue || formData.refundValue <= 0)) {
-      newErrors.refundValue = 'กรุณาระบุจำนวนเงินหรือเปอร์เซ็นต์';
-    }
-
-    if (formData.refundType === 'percentage' && formData.refundValue! > 100) {
-      newErrors.refundValue = 'เปอร์เซ็นต์ต้องไม่เกิน 100';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validate()) {
-      onSave(formData as DateBasedCancellationRule);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {rule ? 'แก้ไขเงื่อนไข' : 'เพิ่มเงื่อนไขใหม่'}
-          </h3>
-
-          {/* Rule Name */}
+        {/* Refund Type and Value (on same row) */}
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              ชื่อเงื่อนไข <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.ruleName || ''}
-              onChange={(e) => handleChange('ruleName', e.target.value)}
-              placeholder="เช่น: ยกเลิกก่อน 30 วัน"
-              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 ${
-                errors.ruleName ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            {errors.ruleName && <p className="mt-1 text-xs text-red-600">{errors.ruleName}</p>}
-          </div>
-
-          {/* Cancel Before Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              ยกเลิกก่อนวันที่ <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              value={formData.cancelBeforeDate || ''}
-              onChange={(e) => handleChange('cancelBeforeDate', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 ${
-                errors.cancelBeforeDate ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            {errors.cancelBeforeDate && <p className="mt-1 text-xs text-red-600">{errors.cancelBeforeDate}</p>}
-            <p className="mt-1 text-xs text-gray-500">
-              ต้องยกเลิกภายใน 23:59 น. ของวันก่อนหน้า
-            </p>
-          </div>
-
-          {/* Refund Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               ประเภทการคืนเงิน <span className="text-red-500">*</span>
             </label>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="refundType"
-                  value="percentage"
-                  checked={formData.refundType === 'percentage'}
-                  onChange={() => handleChange('refundType', 'percentage')}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span className="text-sm text-gray-700">คืนเป็นเปอร์เซ็นต์ (%)</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="refundType"
-                  value="fixed"
-                  checked={formData.refundType === 'fixed'}
-                  onChange={() => handleChange('refundType', 'fixed')}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span className="text-sm text-gray-700">คืนจำนวนเงินคงที่ (บาท)</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="refundType"
-                  value="none"
-                  checked={formData.refundType === 'none'}
-                  onChange={() => handleChange('refundType', 'none')}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span className="text-sm text-gray-700">เก็บเงินเต็มจำนวน (ไม่คืน)</span>
-              </label>
-            </div>
+            <select
+              value={rule.refundType}
+              onChange={(e) => handleChange('refundType', e.target.value as 'percentage' | 'fixed' | 'none')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="percentage">เปอร์เซ็นต์ (%)</option>
+              <option value="fixed">จำนวนเงิน (บาท)</option>
+              <option value="none">ไม่คืนเงิน</option>
+            </select>
           </div>
 
-          {/* Refund Value */}
-          {formData.refundType !== 'none' && (
+          {rule.refundType !== 'none' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {formData.refundType === 'percentage' ? 'เปอร์เซ็นต์ที่คืน' : 'จำนวนเงินที่คืน'}{' '}
-                <span className="text-red-500">*</span>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                {rule.refundType === 'percentage' ? 'เปอร์เซ็นต์' : 'จำนวนเงิน'} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
                   type="number"
-                  value={formData.refundValue || ''}
+                  value={rule.refundValue || ''}
                   onChange={(e) => handleChange('refundValue', parseFloat(e.target.value) || 0)}
                   min="0"
-                  max={formData.refundType === 'percentage' ? '100' : undefined}
-                  step={formData.refundType === 'percentage' ? '1' : '100'}
+                  max={rule.refundType === 'percentage' ? '100' : undefined}
+                  step={rule.refundType === 'percentage' ? '1' : '100'}
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 ${
-                    errors.refundValue ? 'border-red-500' : 'border-gray-300'
+                    localErrors.refundValue ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
-                <span className="absolute right-3 top-2 text-sm text-gray-500">
-                  {formData.refundType === 'percentage' ? '%' : 'บาท'}
+                <span className="absolute right-3 top-2 text-xs text-gray-500">
+                  {rule.refundType === 'percentage' ? '%' : '฿'}
                 </span>
               </div>
-              {errors.refundValue && <p className="mt-1 text-xs text-red-600">{errors.refundValue}</p>}
+              {localErrors.refundValue && (
+                <p className="mt-1 text-xs text-red-600">{localErrors.refundValue}</p>
+              )}
             </div>
           )}
+        </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              คำอธิบายเพิ่มเติม (ถ้ามี)
-            </label>
-            <textarea
-              value={formData.description || ''}
-              onChange={(e) => handleChange('description', e.target.value)}
-              rows={2}
-              placeholder="เช่น: สำหรับการยกเลิกล่วงหน้า"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        {/* Description (optional) */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            คำอธิบายเพิ่มเติม (ถ้ามี)
+          </label>
+          <textarea
+            value={rule.description || ''}
+            onChange={(e) => handleChange('description', e.target.value)}
+            rows={2}
+            placeholder="เช่น: สำหรับผู้ที่ยกเลิกล่วงหน้า 30 วัน"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
 
-          {/* Active Status */}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="rule-active"
-              checked={formData.active || false}
-              onChange={(e) => handleChange('active', e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="rule-active" className="text-sm text-gray-700">
-              เปิดใช้งานเงื่อนไขนี้
-            </label>
+        {/* Summary (if valid) */}
+        {rule.ruleName && rule.cancelBeforeDate && (
+          <div className="pt-2 border-t border-gray-200">
+            <p className="text-xs text-gray-600">
+              <span className="font-semibold">{rule.ruleName}:</span> {getRefundText()}
+            </p>
           </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {rule ? 'บันทึก' : 'เพิ่มเงื่อนไข'}
-            </button>
-          </div>
-        </form>
+        )}
       </div>
     </div>
   );

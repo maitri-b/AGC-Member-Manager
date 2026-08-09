@@ -1217,120 +1217,101 @@ export default function EventDetailPage() {
             )}
 
             {/* Cancellation Policy */}
-            {event.cancellationPolicy?.enabled && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">เงื่อนไขการยกเลิกและคืนเงิน</h2>
+            {(() => {
+              // Hide cancellation policy section on event day or after
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const eventStartDate = new Date(event.eventDate);
+              eventStartDate.setHours(0, 0, 0, 0);
 
-                {/* No Refund Policy */}
-                {event.cancellationPolicy.noRefundPolicy?.active && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div>
-                        <p className="font-semibold text-red-900 text-sm">ไม่คืนเงินในทุกกรณี</p>
-                        {event.cancellationPolicy.noRefundPolicy.description && (
-                          <p className="text-sm text-red-700 mt-1">{event.cancellationPolicy.noRefundPolicy.description}</p>
-                        )}
+              // Don't show if event has started (today or past)
+              if (today >= eventStartDate) {
+                return null;
+              }
+
+              return event.cancellationPolicy?.enabled && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">เงื่อนไขการยกเลิกและคืนเงิน</h2>
+
+                  {/* No Refund Policy */}
+                  {event.cancellationPolicy.noRefundPolicy?.active && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                          <p className="font-semibold text-red-900 text-sm">ไม่คืนเงินในทุกกรณี</p>
+                          {event.cancellationPolicy.noRefundPolicy.description && (
+                            <p className="text-sm text-red-700 mt-1">{event.cancellationPolicy.noRefundPolicy.description}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Date-based Policies */}
-                {event.cancellationPolicy.dateBasedPolicies &&
-                 event.cancellationPolicy.dateBasedPolicies.filter(p => p.active).length > 0 && (
-                  <div className="space-y-3">
-                    {event.cancellationPolicy.dateBasedPolicies
-                      .filter(p => p.active)
-                      .sort((a, b) => new Date(a.cancelBeforeDate).getTime() - new Date(b.cancelBeforeDate).getTime())
-                      .map((rule) => {
-                        const refundText =
-                          rule.refundType === 'percentage'
-                            ? rule.refundValue === 0
-                              ? 'ไม่คืนเงิน'
-                              : `คืน ${rule.refundValue}%`
-                            : rule.refundType === 'fixed'
+                  {/* Date-based Policies */}
+                  {event.cancellationPolicy.dateBasedPolicies &&
+                   event.cancellationPolicy.dateBasedPolicies.filter(p => p.active).length > 0 && (
+                    <div className="space-y-1">
+                      {event.cancellationPolicy.dateBasedPolicies
+                        .filter(p => p.active)
+                        .sort((a, b) => new Date(a.cancelBeforeDate).getTime() - new Date(b.cancelBeforeDate).getTime())
+                        .map((rule) => {
+                          const refundText =
+                            rule.refundType === 'percentage'
                               ? rule.refundValue === 0
                                 ? 'ไม่คืนเงิน'
-                                : `คืน ${rule.refundValue.toLocaleString()} บาท`
-                              : 'ไม่คืนเงิน';
+                                : `คืน ${rule.refundValue}%`
+                              : rule.refundType === 'fixed'
+                                ? rule.refundValue === 0
+                                  ? 'ไม่คืนเงิน'
+                                  : `คืน ${rule.refundValue.toLocaleString()} บาท`
+                                : 'ไม่คืนเงิน';
 
-                        const finalRuleText = rule.isFinalRule
-                          ? rule.finalRuleRefundType === 'none' || (rule.finalRuleRefundValue === 0)
-                            ? 'ไม่คืนเงิน'
-                            : rule.finalRuleRefundType === 'percentage'
-                              ? `คืน ${rule.finalRuleRefundValue}%`
-                              : `คืน ${(rule.finalRuleRefundValue || 0).toLocaleString()} บาท`
-                          : '';
+                          const finalRuleText = rule.isFinalRule
+                            ? rule.finalRuleRefundType === 'none' || (rule.finalRuleRefundValue === 0)
+                              ? 'ไม่คืนเงิน'
+                              : rule.finalRuleRefundType === 'percentage'
+                                ? `คืน ${rule.finalRuleRefundValue}%`
+                                : `คืน ${(rule.finalRuleRefundValue || 0).toLocaleString()} บาท`
+                            : '';
 
-                        return (
-                          <div key={rule.ruleId} className="space-y-2">
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1">
-                                  <p className="font-semibold text-gray-900 text-sm">
-                                    ยกเลิกก่อน {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
-                                      year: 'numeric',
-                                      month: 'long',
-                                      day: 'numeric'
-                                    })}
-                                  </p>
-                                  {rule.description && (
-                                    <p className="text-xs text-gray-600 mt-1">{rule.description}</p>
-                                  )}
-                                </div>
-                                <div className={`text-sm font-bold px-3 py-1 rounded-full ${
-                                  rule.refundValue === 0
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-green-100 text-green-700'
-                                }`}>
+                          return (
+                            <div key={rule.ruleId}>
+                              {/* Regular rule */}
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">ยกเลิกก่อน {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}:</span>{' '}
+                                <span className={refundText === 'ไม่คืนเงิน' ? 'text-red-600 font-medium' : ''}>
                                   {refundText}
-                                </div>
-                              </div>
-                            </div>
+                                </span>
+                              </p>
 
-                            {/* Final Rule */}
-                            {rule.isFinalRule && (
-                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="flex-1">
-                                    <p className="font-semibold text-gray-900 text-sm">
-                                      ยกเลิกตั้งแต่ {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                      })} เป็นต้นไป
-                                    </p>
-                                    <p className="text-xs text-gray-600 mt-1">เงื่อนไขสุดท้าย (ครอบคลุมถึงวันกิจกรรม)</p>
-                                  </div>
-                                  <div className={`text-sm font-bold px-3 py-1 rounded-full ${
-                                    rule.finalRuleRefundType === 'none' || rule.finalRuleRefundValue === 0
-                                      ? 'bg-red-100 text-red-700'
-                                      : 'bg-green-100 text-green-700'
-                                  }`}>
+                              {/* Final Rule */}
+                              {rule.isFinalRule && (
+                                <p className="text-sm text-gray-700">
+                                  <span className="font-medium">ยกเลิกตั้งแต่ {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })} เป็นต้นไป:</span>{' '}
+                                  <span className={finalRuleText === 'ไม่คืนเงิน' ? 'text-red-600 font-medium' : ''}>
                                     {finalRuleText}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-
-                {/* Contact Info */}
-                {event.cancellationPolicy.sendLineNotification && (
-                  <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <p className="text-xs text-gray-600">
-                      💡 เมื่อยกเลิกการจอง ระบบจะแจ้งเตือนผ่าน LINE และดำเนินการคืนเงินตามเงื่อนไขภายใน 7-14 วันทำการ
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+                                  </span>
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Document Download */}
             {event.documentUrl && (

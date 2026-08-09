@@ -172,12 +172,12 @@ export default function CancellationModal({
                   </span>
                 </div>
 
-                {refundCalculation.refundPercentage > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">เปอร์เซ็นต์คืน:</span>
-                    <span className="font-medium text-green-600">{refundCalculation.refundPercentage}%</span>
-                  </div>
-                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">เปอร์เซ็นต์คืน:</span>
+                  <span className={refundCalculation.refundPercentage > 0 ? "font-medium text-green-600" : "font-medium text-red-600"}>
+                    {refundCalculation.refundPercentage}%
+                  </span>
+                </div>
 
                 <div className="pt-3 border-t border-gray-200">
                   <div className="flex justify-between text-sm mb-2">

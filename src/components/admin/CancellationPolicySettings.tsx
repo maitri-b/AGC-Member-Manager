@@ -81,6 +81,13 @@ export default function CancellationPolicySettings({
 
   // Add new empty rule
   const handleAddRule = () => {
+    // Check if there's already a final rule
+    const hasFinalRule = policy.dateBasedPolicies.some(r => r.isFinalRule);
+    if (hasFinalRule) {
+      alert('ไม่สามารถเพิ่มเงื่อนไขใหม่ได้ เนื่องจากมีเงื่อนไขสุดท้ายอยู่แล้ว กรุณายกเลิกการเป็นเงื่อนไขสุดท้ายก่อน');
+      return;
+    }
+
     const newRule: DateBasedCancellationRule = {
       ruleId: `RULE_${Date.now()}`,
       ruleName: '',
@@ -426,12 +433,114 @@ function RuleInlineForm({ rule, onUpdate, onDelete, onToggleActive, existingDate
           />
         </div>
 
+        {/* Final Rule Checkbox */}
+        {rule.cancelBeforeDate && (
+          <div className="pt-3 border-t border-gray-200">
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id={`final-rule-${rule.ruleId}`}
+                checked={rule.isFinalRule || false}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    // Set default final rule values
+                    onUpdate({
+                      isFinalRule: true,
+                      finalRuleRefundType: 'none',
+                      finalRuleRefundValue: 0
+                    });
+                  } else {
+                    // Clear final rule fields
+                    onUpdate({
+                      isFinalRule: false,
+                      finalRuleRefundType: undefined,
+                      finalRuleRefundValue: undefined
+                    });
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-0.5"
+              />
+              <label htmlFor={`final-rule-${rule.ruleId}`} className="text-xs font-medium text-gray-700 cursor-pointer">
+                เงื่อนไขสุดท้าย (ครอบคลุมตั้งแต่วันที่นี้เป็นต้นไป)
+              </label>
+            </div>
+
+            {rule.isFinalRule && (
+              <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+                <p className="text-xs text-amber-900 font-medium">
+                  📅 ยกเลิกตั้งแต่ {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })} เป็นต้นไป
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      ประเภทการคืนเงิน
+                    </label>
+                    <select
+                      value={rule.finalRuleRefundType || 'none'}
+                      onChange={(e) => onUpdate({ finalRuleRefundType: e.target.value as 'percentage' | 'fixed' | 'none' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="percentage">เปอร์เซ็นต์ (%)</option>
+                      <option value="fixed">จำนวนเงิน (บาท)</option>
+                      <option value="none">ไม่คืนเงิน</option>
+                    </select>
+                  </div>
+
+                  {rule.finalRuleRefundType !== 'none' && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        {rule.finalRuleRefundType === 'percentage' ? 'เปอร์เซ็นต์' : 'จำนวนเงิน'}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={rule.finalRuleRefundValue ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            onUpdate({ finalRuleRefundValue: val === '' ? 0 : parseFloat(val) });
+                          }}
+                          min="0"
+                          max={rule.finalRuleRefundType === 'percentage' ? '100' : undefined}
+                          step={rule.finalRuleRefundType === 'percentage' ? '1' : '100'}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="absolute right-3 top-2 text-xs text-gray-500">
+                          {rule.finalRuleRefundType === 'percentage' ? '%' : '฿'}
+                        </span>
+                      </div>
+                      {rule.finalRuleRefundValue === 0 && (
+                        <p className="mt-1 text-xs text-orange-600 font-medium">
+                          💡 ใส่ 0 = ไม่คืนเงิน
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Summary (if valid) */}
         {rule.ruleName && rule.cancelBeforeDate && (
           <div className="pt-2 border-t border-gray-200">
             <p className="text-xs text-gray-600">
               <span className="font-semibold">{rule.ruleName}:</span> {getRefundText()}
             </p>
+            {rule.isFinalRule && (
+              <p className="text-xs text-amber-700 mt-1">
+                + เงื่อนไขสุดท้าย: {rule.finalRuleRefundType === 'none' || rule.finalRuleRefundValue === 0
+                  ? 'ไม่คืนเงิน'
+                  : rule.finalRuleRefundType === 'percentage'
+                    ? `คืน ${rule.finalRuleRefundValue}%`
+                    : `คืน ${(rule.finalRuleRefundValue || 0).toLocaleString()} บาท`}
+              </p>
+            )}
           </div>
         )}
       </div>

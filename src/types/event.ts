@@ -852,6 +852,10 @@ export interface DateBasedCancellationRule {
   description?: string;                // คำอธิบายเพิ่มเติม (optional)
   active: boolean;                     // เปิด/ปิดใช้งาน
   createdAt: string;                   // ISO timestamp
+  // Final rule fields (covers remaining dates until event start)
+  isFinalRule?: boolean;               // เงื่อนไขสุดท้าย (ยกเลิกตั้งแต่วันที่นี้เป็นต้นไป)
+  finalRuleRefundType?: 'percentage' | 'fixed' | 'none'; // ประเภทการคืนเงินสำหรับเงื่อนไขสุดท้าย
+  finalRuleRefundValue?: number;       // ค่าคืนเงินสำหรับเงื่อนไขสุดท้าย
 }
 
 // Refund calculation result
@@ -862,6 +866,7 @@ export interface RefundCalculationResult {
   ruleName: string;                    // ชื่อเงื่อนไขที่ใช้
   cancelBeforeDate?: string;           // วันที่ที่ต้องยกเลิกก่อน (for display)
   chargeAmount: number;                // จำนวนเงินที่หัก (totalPaid - refundAmount)
+  isAfterFinalRule?: boolean;          // ใช้เงื่อนไขสุดท้าย (ยกเลิกตั้งแต่วันที่...เป็นต้นไป)
 }
 
 /**
@@ -952,8 +957,46 @@ export function calculateRefundAmount(
     }
   }
 
-  // No matching rule = no refund (past all deadlines)
+  // No matching rule found - check if there's a final rule
   if (!applicableRule) {
+    // Check if the last rule has a final rule configuration
+    const finalRule = activePolicies.find(r => r.isFinalRule);
+
+    if (finalRule && finalRule.isFinalRule) {
+      // Use final rule refund settings (covers from finalRule.cancelBeforeDate onwards)
+      const deadlineDate = new Date(finalRule.cancelBeforeDate);
+      deadlineDate.setHours(0, 0, 0, 0);
+
+      // Final rule applies if cancellation is on or after the deadline date
+      if (cancellationDate >= deadlineDate) {
+        let refundAmount = 0;
+        let refundPercentage = 0;
+
+        if (finalRule.finalRuleRefundType === 'percentage') {
+          refundPercentage = finalRule.finalRuleRefundValue || 0;
+          refundAmount = Math.round(totalPaid * (refundPercentage / 100));
+        } else if (finalRule.finalRuleRefundType === 'fixed') {
+          refundAmount = Math.min(finalRule.finalRuleRefundValue || 0, totalPaid);
+          refundPercentage = totalPaid > 0 ? Math.round((refundAmount / totalPaid) * 100) : 0;
+        } else {
+          // 'none' = no refund
+          refundAmount = 0;
+          refundPercentage = 0;
+        }
+
+        return {
+          refundAmount,
+          refundPercentage,
+          appliedRule: finalRule,
+          ruleName: `ยกเลิกตั้งแต่ ${finalRule.cancelBeforeDate} เป็นต้นไป`,
+          cancelBeforeDate: finalRule.cancelBeforeDate,
+          chargeAmount: totalPaid - refundAmount,
+          isAfterFinalRule: true
+        };
+      }
+    }
+
+    // No final rule or past event date = no refund
     return {
       refundAmount: 0,
       refundPercentage: 0,

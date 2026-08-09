@@ -156,13 +156,19 @@ export default function CancellationModal({
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">เงื่อนไขที่ใช้:</span>
                   <span className="font-medium text-gray-900">
-                    {refundCalculation.cancelBeforeDate
-                      ? `ยกเลิกก่อน ${new Date(refundCalculation.cancelBeforeDate).toLocaleDateString('th-TH', {
+                    {refundCalculation.isAfterFinalRule && refundCalculation.cancelBeforeDate
+                      ? `ยกเลิกตั้งแต่ ${new Date(refundCalculation.cancelBeforeDate).toLocaleDateString('th-TH', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric'
-                        })}`
-                      : refundCalculation.ruleName}
+                        })} เป็นต้นไป`
+                      : refundCalculation.cancelBeforeDate
+                        ? `ยกเลิกก่อน ${new Date(refundCalculation.cancelBeforeDate).toLocaleDateString('th-TH', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}`
+                        : refundCalculation.ruleName}
                   </span>
                 </div>
 

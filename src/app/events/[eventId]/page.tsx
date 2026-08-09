@@ -8,7 +8,7 @@ import { Toast, useToast } from '@/components/Toast';
 import PaymentSlipUploadModal from '@/components/PaymentSlipUploadModal';
 // TEMP: Hidden until PDF generation is fixed on Vercel
 // import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
-import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier } from '@/types/event';
+import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier, CancellationPolicy } from '@/types/event';
 import { CarpoolSettings } from '@/types/carpool';
 import { formatDeadline, getTimeRemaining, isDeadlinePassed } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass, isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
@@ -74,6 +74,8 @@ interface Event {
   // Carpool feature (New)
   hasCarpoolFeature?: boolean;
   carpoolSettings?: CarpoolSettings;
+  // Cancellation policy (New)
+  cancellationPolicy?: CancellationPolicy;
   createdAt: string;
   updatedAt: string;
 }

@@ -121,6 +121,8 @@ export async function GET(
       // Carpool feature (New)
       hasCarpoolFeature: eventData?.hasCarpoolFeature ?? false,
       carpoolSettings: eventData?.carpoolSettings || undefined,
+      // Cancellation policy (New)
+      cancellationPolicy: eventData?.cancellationPolicy || undefined,
     };
 
     // Get registration summary

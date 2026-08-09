@@ -18,7 +18,7 @@ import RoomManagementModal from '@/components/admin/RoomManagementModal';
 import CarpoolManagementModal from '@/components/admin/CarpoolManagementModal';
 import CarNumberAssignmentModal from '@/components/admin/CarNumberAssignmentModal';
 import AdminCancellationModal from '@/components/admin/AdminCancellationModal';
-import { Event as EventType, EventRegistration } from '@/types/event';
+import { Event as EventType, EventRegistration, CancellationPolicy } from '@/types/event';
 
 interface Event {
   eventId: string;
@@ -66,6 +66,8 @@ interface Event {
     maxSeatsPerCar?: number;
     showCarNumbersToMembers?: boolean;
   };
+  // Cancellation policy
+  cancellationPolicy?: CancellationPolicy;
 }
 
 interface Attendee {

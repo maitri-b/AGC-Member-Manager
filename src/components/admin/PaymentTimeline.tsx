@@ -8,7 +8,7 @@ export interface PaymentSlip {
   registrationId: string;
   eventId: string;
   amount: number;
-  paymentType: 'full' | 'deposit' | 'remaining' | 'additional';
+  paymentType: 'full' | 'deposit' | 'remaining' | 'additional' | 'refund';
   description?: string;
   slipUrl: string;
   uploadedAt: string;
@@ -34,6 +34,7 @@ const PaymentTypeLabels: Record<PaymentSlip['paymentType'], string> = {
   deposit: 'ชำระมัดจำ',
   remaining: 'ชำระยอดคงเหลือ',
   additional: 'ชำระเพิ่มเติม',
+  refund: 'คืนเงิน',
 };
 
 const StatusBadges: Record<PaymentSlip['status'], { bg: string; text: string; label: string }> = {
@@ -108,16 +109,17 @@ export default function PaymentTimeline({ slips, onApprove, onReject, readonly =
       <div className="space-y-3">
         {slips.map((slip, index) => {
           const statusBadge = StatusBadges[slip.status];
+          const isRefund = slip.paymentType === 'refund';
 
           return (
             <div
               key={slip.slipId}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              className={`bg-white border rounded-lg p-4 hover:shadow-md transition-shadow ${isRefund ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-semibold text-gray-900">
+                    <span className={`font-semibold ${isRefund ? 'text-red-900' : 'text-gray-900'}`}>
                       {index + 1}. {PaymentTypeLabels[slip.paymentType]}
                     </span>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>
@@ -126,7 +128,7 @@ export default function PaymentTimeline({ slips, onApprove, onReject, readonly =
                   </div>
 
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p>จำนวนเงิน: <span className="font-semibold text-gray-900">{slip.amount.toLocaleString()} บาท</span></p>
+                    <p>จำนวนเงิน: <span className={`font-semibold ${isRefund ? 'text-red-700' : 'text-gray-900'}`}>{isRefund ? '-' : ''}{slip.amount.toLocaleString()} บาท</span></p>
                     <p>อัพโหลดเมื่อ: {formatDate(slip.uploadedAt)}</p>
                     {slip.description && <p>หมายเหตุ: {slip.description}</p>}
                     {slip.reviewedAt && (

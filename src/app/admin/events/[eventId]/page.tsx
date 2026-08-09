@@ -17,6 +17,8 @@ import MessageTemplateModal from '@/components/admin/MessageTemplateModal';
 import RoomManagementModal from '@/components/admin/RoomManagementModal';
 import CarpoolManagementModal from '@/components/admin/CarpoolManagementModal';
 import CarNumberAssignmentModal from '@/components/admin/CarNumberAssignmentModal';
+import AdminCancellationModal from '@/components/admin/AdminCancellationModal';
+import { Event as EventType, EventRegistration } from '@/types/event';
 
 interface Event {
   eventId: string;
@@ -650,7 +652,7 @@ export default function EventDetailPage() {
           isCurrentTypeAvailable = available.canUploadAdditional;
           break;
         case 'refund':
-          isCurrentTypeAvailable = available.canUploadRefund;
+          isCurrentTypeAvailable = available.canUploadRefund || false;
           break;
       }
 
@@ -711,7 +713,12 @@ export default function EventDetailPage() {
   });
   const [addingDiscount, setAddingDiscount] = useState(false);
 
-  // Cancellation modal state
+  // Admin Cancellation modal state (NEW - using new cancellation system)
+  const [showAdminCancellationModal, setShowAdminCancellationModal] = useState(false);
+  const [selectedRegistrationForCancellation, setSelectedRegistrationForCancellation] = useState<(EventRegistration & { companyName?: string; contactName?: string }) | null>(null);
+  const [selectedEventForCancellation, setSelectedEventForCancellation] = useState<EventType | null>(null);
+
+  // Old cancellation modal state (DEPRECATED - keeping for backward compatibility)
   const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
 
   // Payment warning modal state (for cancellations with approved payments)
@@ -1612,36 +1619,40 @@ export default function EventDetailPage() {
   const handleOpenCancellationModal = (registrationId: string) => {
     // Find registration
     const attendee = eventData?.attendees.find(a => a.registration.registrationId === registrationId);
-    if (!attendee) return;
+    if (!attendee || !eventData) return;
 
-    // Check for approved payments
-    const { hasPayment, totalPaid } = hasApprovedPayments(attendee.registration);
+    // Prepare event data for cancellation modal
+    const event: EventType = {
+      eventId: eventData.event.eventId,
+      eventName: eventData.event.eventName,
+      eventNameEN: eventData.event.eventNameEN || '',
+      eventDate: eventData.event.eventDate,
+      eventEndDate: eventData.event.eventEndDate,
+      location: eventData.event.location,
+      description: eventData.event.description || '',
+      year: eventData.event.year,
+      isActive: eventData.event.isActive,
+      isPublished: eventData.event.isPublished,
+      countsAttendance: true,
+      maxCapacity: eventData.event.maxCapacity,
+      maxPerCompany: eventData.event.maxPerCompany || 0,
+      registrationFee: 0,
+      registrationOpen: eventData.event.registrationOpen,
+      cancellationPolicy: (eventData.event as any).cancellationPolicy,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-    // ✅ DEBUG: Log payment data
-    console.log('[Delete Modal Debug]', {
-      registrationId,
-      paidAmount: attendee.registration.paidAmount,
-      totalAmount: attendee.registration.totalAmount,
-      fullPaymentAmountPaid: (attendee.registration as any).fullPaymentAmountPaid,
-      hasPayment,
-      totalPaid,
-    });
+    // Prepare registration data
+    const registration = {
+      ...attendee.registration,
+      companyName: attendee.registration.companyName,
+      contactName: attendee.registration.contactName,
+    } as EventRegistration & { companyName?: string; contactName?: string };
 
-    if (hasPayment) {
-      // Show payment warning modal first
-      setPaymentWarningModal({
-        isOpen: true,
-        totalPaid,
-        registrationId,
-      });
-    } else {
-      // Proceed to standard cancellation modal
-      setCancellationFormData({
-        registrationId,
-        reason: '',
-      });
-      setCancellationModalOpen(true);
-    }
+    setSelectedEventForCancellation(event);
+    setSelectedRegistrationForCancellation(registration);
+    setShowAdminCancellationModal(true);
   };
 
   const handleConfirmCancellationWithPayment = () => {
@@ -1708,9 +1719,9 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleOpenPaymentModal = async (attendee: Attendee, paymentType?: 'deposit' | 'remaining' | 'full') => {
+  const handleOpenPaymentModal = async (attendee: Attendee, paymentType?: 'deposit' | 'remaining' | 'full' | 'refund') => {
     // ✅ FIX: Auto-detect paymentType from event configuration if not specified
-    let finalPaymentType: 'deposit' | 'remaining' | 'full' = paymentType || 'deposit';
+    let finalPaymentType: 'deposit' | 'remaining' | 'full' | 'refund' = paymentType || 'deposit';
 
     // If event is in Full Payment Mode, default to 'full' instead of 'deposit'
     if (!paymentType && eventData?.event?.paymentMode === 'full') {
@@ -1787,6 +1798,10 @@ export default function EventDetailPage() {
             break;
           case 'full':
             isCurrentTypeAvailable = !hasActiveFull;
+            break;
+          case 'refund':
+            // Refund is always handled separately by getAdminAvailablePaymentTypes
+            isCurrentTypeAvailable = true;
             break;
         }
 
@@ -1867,18 +1882,24 @@ export default function EventDetailPage() {
     const totalAmount = attendee?.registration.totalAmount || 0;
     const isOverpaid = totalPaid > totalAmount;
 
+    // ✅ Check if registration is cancelled with refund amount
+    const status = String(attendee?.registration.status || '').toLowerCase();
+    const isCancelled = status === 'cancelled' || attendee?.registration.status?.includes('ยกเลิก');
+    const refundAmount = (attendee?.registration as any)?.refundAmount || 0;
+    const hasRefundDue = isCancelled && refundAmount > 0;
+
     return {
       canUploadDeposit: !hasActiveFull && !hasActiveDeposit,
       canUploadRemaining: !hasActiveFull && !hasActiveRemaining && hasActiveDeposit,
       canUploadFull: !hasActiveFull,
       canUploadAdditional: true, // Always allow additional payments
-      canUploadRefund: !hasPendingSlips && isOverpaid, // Only allow refund if no pending slips AND overpaid
+      canUploadRefund: !hasPendingSlips && (isOverpaid || hasRefundDue), // ✅ Allow refund if overpaid OR cancelled with refund due
       hasWarnings: {
         deposit: hasActiveDeposit,
         remaining: hasActiveRemaining,
         full: hasActiveFull,
       },
-      refundReason: !isOverpaid ? 'ยังไม่มีการชำระเกิน' : ''
+      refundReason: (!isOverpaid && !hasRefundDue) ? 'ยังไม่มีการชำระเกินหรือยอดคืนเงิน' : ''
     };
   };
 
@@ -1919,7 +1940,22 @@ export default function EventDetailPage() {
         return Math.max(0, totalAmount - totalPaid);
 
       case 'refund':
-        // Suggest overpaid amount (if any)
+        // ✅ For cancelled registrations, suggest the refundAmount field
+        const status = String(attendee.registration.status || '').toLowerCase();
+        const isCancelled = status === 'cancelled' || attendee.registration.status?.includes('ยกเลิก');
+        const refundAmount = (attendee.registration as any)?.refundAmount || 0;
+
+        if (isCancelled && refundAmount > 0) {
+          // Already refunded slips
+          const refundedSlips = adminPaymentSlips.filter((slip: any) =>
+            slip.paymentType === 'refund' && slip.status === 'approved'
+          );
+          const alreadyRefunded = refundedSlips.reduce((sum: number, slip: any) => sum + (slip.amount || 0), 0);
+          // Suggest remaining refund amount
+          return Math.max(0, refundAmount - alreadyRefunded);
+        }
+
+        // Suggest overpaid amount (if any) for non-cancelled registrations
         const overpaid = totalPaid - totalAmount;
         return Math.max(0, overpaid);
 
@@ -5006,6 +5042,83 @@ export default function EventDetailPage() {
                         </button>
                       </div>
                     )}
+
+                    {/* Refund Information Section (for cancelled registrations) */}
+                    {isCancelled && (attendee.registration as any).refundAmount !== undefined && (attendee.registration as any).refundAmount > 0 && (
+                      <div className="mt-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          ข้อมูลการคืนเงิน
+                        </h4>
+
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">ยอดคืนเงิน:</span>
+                            <span className="font-semibold text-green-600">{((attendee.registration as any).refundAmount || 0).toLocaleString()} บาท</span>
+                          </div>
+
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">สถานะ:</span>
+                            <span className={`font-medium ${
+                              (attendee.registration as any).refundStatus === 'completed' ? 'text-green-600' :
+                              (attendee.registration as any).refundStatus === 'processing' ? 'text-blue-600' :
+                              'text-orange-600'
+                            }`}>
+                              {(attendee.registration as any).refundStatus === 'completed' ? 'คืนเงินแล้ว' :
+                               (attendee.registration as any).refundStatus === 'processing' ? 'กำลังดำเนินการ' :
+                               'รอดำเนินการ'}
+                            </span>
+                          </div>
+
+                          {(attendee.registration as any).cancelledAt && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">ยกเลิกเมื่อ:</span>
+                              <span className="text-gray-900">{formatThaiDateTime((attendee.registration as any).cancelledAt)}</span>
+                            </div>
+                          )}
+
+                          {(attendee.registration as any).cancellationReason && (
+                            <div className="pt-2 border-t border-yellow-200">
+                              <span className="text-gray-600">เหตุผล:</span>
+                              <p className="text-gray-900 mt-1">{(attendee.registration as any).cancellationReason}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Refund Upload Button - Show if not completed */}
+                        {(attendee.registration as any).refundStatus !== 'completed' && (
+                          <div className="mt-3 pt-3 border-t border-yellow-200">
+                            <button
+                              onClick={() => handleOpenPaymentModal(attendee, 'refund')}
+                              className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                              อัพโหลดสลิปคืนเงิน
+                            </button>
+                            <p className="text-xs text-gray-600 mt-2 text-center">
+                              อัพโหลดสลิปการโอนเงินคืนให้ลูกค้า
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Show Payment History link */}
+                        <div className="mt-3 pt-3 border-t border-yellow-200">
+                          <button
+                            onClick={() => handleOpenPaymentDetailsModal(attendee)}
+                            className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            ดูประวัติการชำระเงินและการคืนเงิน
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     </div>
                   )}
                 </div>
@@ -5832,6 +5945,27 @@ export default function EventDetailPage() {
         eventId={eventId as string}
         eventName={eventData?.event?.eventName || ''}
       />
+
+      {/* Admin Cancellation Modal (NEW) */}
+      {showAdminCancellationModal && selectedRegistrationForCancellation && selectedEventForCancellation && (
+        <AdminCancellationModal
+          isOpen={showAdminCancellationModal}
+          onClose={() => {
+            setShowAdminCancellationModal(false);
+            setSelectedRegistrationForCancellation(null);
+            setSelectedEventForCancellation(null);
+          }}
+          registration={selectedRegistrationForCancellation}
+          event={selectedEventForCancellation}
+          onSuccess={() => {
+            setShowAdminCancellationModal(false);
+            setSelectedRegistrationForCancellation(null);
+            setSelectedEventForCancellation(null);
+            fetchEventData(); // Refresh data
+            setActionMessage({ type: 'success', text: 'ยกเลิกการจองสำเร็จ' });
+          }}
+        />
+      )}
 
       {/* Edit Deadline Modal */}
       {editDeadlineModalOpen && (

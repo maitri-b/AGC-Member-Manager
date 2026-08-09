@@ -5,6 +5,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import CancellationModal from '@/components/member/CancellationModal';
+import { Event } from '@/types/event';
 
 interface Registration {
   eventId: string;
@@ -18,6 +20,16 @@ interface Registration {
   totalAmount: number;
   paymentStatus: string;
   status: string;
+  // Cancellation fields
+  paidAmount?: number;
+  refundAmount?: number;
+  refundPercentage?: number;
+  refundStatus?: 'pending' | 'completed' | 'not_applicable';
+  cancelledAt?: string;
+  cancellationReason?: string;
+  // Carpool & Room info
+  carpoolId?: string;
+  roomAssignments?: string;
 }
 
 interface RegistrationCardProps {
@@ -25,6 +37,7 @@ interface RegistrationCardProps {
   formatEventDate: (date: string) => string;
   getPaymentStatusBadgeClass: (status: string) => string;
   getStatusBadgeClass: (status: string) => string;
+  onCancelClick: (reg: Registration) => void;
 }
 
 export default function MyRegistrationsPage() {
@@ -33,6 +46,9 @@ export default function MyRegistrationsPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCancellationModal, setShowCancellationModal] = useState(false);
+  const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -65,6 +81,31 @@ export default function MyRegistrationsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancelClick = async (reg: Registration) => {
+    // Fetch full event data
+    try {
+      const response = await fetch(`/api/events/${reg.eventId}`);
+      if (!response.ok) {
+        throw new Error('ไม่สามารถโหลดข้อมูลกิจกรรมได้');
+      }
+      const data = await response.json();
+      setSelectedEvent(data.event);
+      setSelectedRegistration(reg);
+      setShowCancellationModal(true);
+    } catch (err) {
+      console.error('Error fetching event:', err);
+      alert('ไม่สามารถโหลดข้อมูลกิจกรรมได้ กรุณาลองใหม่อีกครั้ง');
+    }
+  };
+
+  const handleCancellationSuccess = () => {
+    // Refresh registrations list
+    fetchMyRegistrations();
+    setShowCancellationModal(false);
+    setSelectedRegistration(null);
+    setSelectedEvent(null);
   };
 
   const getStatusBadgeClass = (status: string): string => {
@@ -228,7 +269,14 @@ export default function MyRegistrationsPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {categorizedRegistrations.active.map((reg) => (
-                    <RegistrationCard key={reg.registrationId} reg={reg} formatEventDate={formatEventDate} getPaymentStatusBadgeClass={getPaymentStatusBadgeClass} getStatusBadgeClass={getStatusBadgeClass} />
+                    <RegistrationCard
+                      key={reg.registrationId}
+                      reg={reg}
+                      formatEventDate={formatEventDate}
+                      getPaymentStatusBadgeClass={getPaymentStatusBadgeClass}
+                      getStatusBadgeClass={getStatusBadgeClass}
+                      onCancelClick={handleCancelClick}
+                    />
                   ))}
                 </div>
               </div>
@@ -243,7 +291,14 @@ export default function MyRegistrationsPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {categorizedRegistrations.completed.map((reg) => (
-                    <RegistrationCard key={reg.registrationId} reg={reg} formatEventDate={formatEventDate} getPaymentStatusBadgeClass={getPaymentStatusBadgeClass} getStatusBadgeClass={getStatusBadgeClass} />
+                    <RegistrationCard
+                      key={reg.registrationId}
+                      reg={reg}
+                      formatEventDate={formatEventDate}
+                      getPaymentStatusBadgeClass={getPaymentStatusBadgeClass}
+                      getStatusBadgeClass={getStatusBadgeClass}
+                      onCancelClick={handleCancelClick}
+                    />
                   ))}
                 </div>
               </div>
@@ -258,7 +313,14 @@ export default function MyRegistrationsPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {categorizedRegistrations.cancelled.map((reg) => (
-                    <RegistrationCard key={reg.registrationId} reg={reg} formatEventDate={formatEventDate} getPaymentStatusBadgeClass={getPaymentStatusBadgeClass} getStatusBadgeClass={getStatusBadgeClass} />
+                    <RegistrationCard
+                      key={reg.registrationId}
+                      reg={reg}
+                      formatEventDate={formatEventDate}
+                      getPaymentStatusBadgeClass={getPaymentStatusBadgeClass}
+                      getStatusBadgeClass={getStatusBadgeClass}
+                      onCancelClick={handleCancelClick}
+                    />
                   ))}
                 </div>
               </div>
@@ -266,87 +328,140 @@ export default function MyRegistrationsPage() {
           </div>
         )}
       </main>
+
+      {/* Cancellation Modal */}
+      {showCancellationModal && selectedRegistration && selectedEvent && (
+        <CancellationModal
+          isOpen={showCancellationModal}
+          onClose={() => setShowCancellationModal(false)}
+          registration={selectedRegistration as any}
+          event={selectedEvent}
+          onSuccess={handleCancellationSuccess}
+        />
+      )}
     </div>
   );
 }
 
-function RegistrationCard({ reg, formatEventDate, getPaymentStatusBadgeClass, getStatusBadgeClass }: RegistrationCardProps) {
+function RegistrationCard({ reg, formatEventDate, getPaymentStatusBadgeClass, getStatusBadgeClass, onCancelClick }: RegistrationCardProps) {
+  const isCancelled = reg.status?.toLowerCase().includes('cancelled') || reg.status?.toLowerCase().includes('ยกเลิก');
+  const canCancel = !isCancelled;
+
   return (
     <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                  {/* Event Cover Image */}
-                  <div className="relative h-40 sm:h-48 bg-gradient-to-br from-blue-100 to-indigo-100">
-                    {reg.coverImageUrl ? (
-                      <Image
-                        src={reg.coverImageUrl}
-                        alt={reg.eventName}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <svg className="w-16 h-16 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+      {/* Event Cover Image */}
+      <div className="relative h-40 sm:h-48 bg-gradient-to-br from-blue-100 to-indigo-100">
+        {reg.coverImageUrl ? (
+          <Image
+            src={reg.coverImageUrl}
+            alt={reg.eventName}
+            fill
+            className="object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg className="w-16 h-16 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )}
+      </div>
 
-                  {/* Content */}
-                  <div className="p-4">
-                    {/* Event Name */}
-                    <h3 className="font-semibold text-gray-900 text-base sm:text-lg mb-1 line-clamp-2">
-                      {reg.eventName}
-                    </h3>
+      {/* Content */}
+      <div className="p-4">
+        {/* Event Name */}
+        <h3 className="font-semibold text-gray-900 text-base sm:text-lg mb-1 line-clamp-2">
+          {reg.eventName}
+        </h3>
 
-                    {/* Event Date */}
-                    <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      {formatEventDate(reg.eventDate)}
-                    </p>
+        {/* Event Date */}
+        <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          {formatEventDate(reg.eventDate)}
+        </p>
 
-                    {/* Registration Info */}
-                    <div className="space-y-2 mb-4">
-                      {/* Attendee Count */}
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">จำนวนผู้เข้าร่วม:</span>
-                        <span className="font-semibold text-gray-900">{reg.attendeeCount} คน</span>
-                      </div>
+        {/* Registration Info */}
+        <div className="space-y-2 mb-4">
+          {/* Attendee Count */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">จำนวนผู้เข้าร่วม:</span>
+            <span className="font-semibold text-gray-900">{reg.attendeeCount} คน</span>
+          </div>
 
-                      {/* Total Amount */}
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">ยอดเงินรวม:</span>
-                        <span className="font-semibold text-gray-900">
-                          {reg.totalAmount.toLocaleString()} บาท
-                        </span>
-                      </div>
+          {/* Total Amount */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">ยอดเงินรวม:</span>
+            <span className="font-semibold text-gray-900">
+              {reg.totalAmount.toLocaleString()} บาท
+            </span>
+          </div>
 
-                      {/* Payment Status */}
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">สถานะการชำระ:</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPaymentStatusBadgeClass(reg.paymentStatus)}`}>
-                          {reg.paymentStatus}
-                        </span>
-                      </div>
+          {/* Payment Status */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">สถานะการชำระ:</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPaymentStatusBadgeClass(reg.paymentStatus)}`}>
+              {reg.paymentStatus}
+            </span>
+          </div>
 
-                      {/* Registration Status */}
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">สถานะการจอง:</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeClass(reg.status)}`}>
-                          {reg.status}
-                        </span>
-                      </div>
-                    </div>
+          {/* Registration Status */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">สถานะการจอง:</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeClass(reg.status)}`}>
+              {reg.status}
+            </span>
+          </div>
 
-                    {/* Action Button */}
-                    <Link
-                      href={`/events/${reg.eventId}`}
-                      className="block w-full text-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      ดูรายละเอียด
-                    </Link>
-                  </div>
+          {/* Refund Info (if cancelled) */}
+          {isCancelled && (
+            <>
+              {reg.refundAmount !== undefined && reg.refundAmount > 0 && (
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-200">
+                  <span className="text-gray-600">ยอดคืน:</span>
+                  <span className="font-semibold text-green-600">
+                    {reg.refundAmount.toLocaleString()} บาท
+                  </span>
+                </div>
+              )}
+              {reg.refundStatus && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">สถานะคืนเงิน:</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    reg.refundStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                    reg.refundStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {reg.refundStatus === 'completed' ? 'คืนแล้ว' :
+                     reg.refundStatus === 'pending' ? 'รอดำเนินการ' :
+                     'ไม่มีการคืนเงิน'}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          <Link
+            href={`/events/${reg.eventId}`}
+            className="block w-full text-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            ดูรายละเอียด
+          </Link>
+
+          {canCancel && (
+            <button
+              onClick={() => onCancelClick(reg)}
+              className="w-full px-4 py-2 bg-white text-red-600 text-sm font-medium rounded-lg border border-red-300 hover:bg-red-50 transition-colors"
+            >
+              ยกเลิกการจอง
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

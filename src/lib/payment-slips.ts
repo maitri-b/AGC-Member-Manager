@@ -9,6 +9,7 @@ import {
   calculatePaymentSummary,
 } from '@/types/payment';
 import { isFullyPaid, parseAdditionalPayments, recalculatePaymentStatus } from './payment-status';
+import { sendRefundCompletedNotification } from './line-messaging';
 
 /**
  * Get all payment slips for a specific registration
@@ -409,6 +410,17 @@ export async function approvePaymentSlip(
       // ✅ Update payment status message
       updateData.paymentStatus = 'คืนเงินแล้ว';
 
+      // ✅ Update refund status for cancelled registrations
+      const refundAmount = registrationData.refundAmount || 0;
+      if (refundAmount > 0) {
+        // Check if full refund amount has been refunded
+        if (totalRefunded >= refundAmount) {
+          updateData.refundStatus = 'completed';
+        } else {
+          updateData.refundStatus = 'processing';
+        }
+      }
+
       // ✅ Proportionally reduce tracked amounts (if using new tracking system)
       if (fullPaymentAmountPaid > 0 || depositAmountPaid > 0 || remainingAmountPaid > 0) {
         // Calculate proportion to deduct
@@ -440,6 +452,30 @@ export async function approvePaymentSlip(
         newPaidAmount,
         totalRefunded,
       });
+
+      // ✅ Send LINE notification if refund is completed
+      if (registrationData.lineUserId && updateData.refundStatus === 'completed') {
+        try {
+          // Get event details for notification
+          const { getEventById } = await import('./event-sheets');
+          const event = await getEventById(slip.eventId);
+
+          if (event) {
+            await sendRefundCompletedNotification(registrationData.lineUserId, {
+              eventName: event.eventName,
+              eventNameEN: event.eventNameEN,
+              registrationId: slip.registrationId,
+              memberName: registrationData.contactName || 'สมาชิก',
+              refundAmount: refundAmount,
+              refundMethod: slip.description || 'โอนเงินคืน',
+              refundDate: reviewedAt,
+            });
+          }
+        } catch (notificationError) {
+          // Log error but don't fail the approval
+          console.error('Failed to send refund notification:', notificationError);
+        }
+      }
     }
 
     // ✅ AUTO-UPDATE REGISTRATION STATUS based on payment completion

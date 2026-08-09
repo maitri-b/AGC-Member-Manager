@@ -639,6 +639,134 @@ LINE: {{lineOfficialAccount}}
   ]);
 }
 
+// Send Event Cancellation Notification
+export async function sendEventCancellationNotification(
+  lineUserId: string,
+  cancellationData: {
+    eventName: string;
+    eventNameEN?: string;
+    eventDate: string;
+    registrationId: string;
+    memberName: string;
+    refundAmount: number;
+    refundPercentage: number;
+    chargeAmount: number;
+    cancelledBy: 'member' | 'admin';
+    cancellationReason?: string;
+    appliedRuleName: string;
+  }
+): Promise<boolean> {
+  const hasRefund = cancellationData.refundAmount > 0;
+
+  let message = `❌ แจ้งการยกเลิกการจอง
+
+สวัสดีครับ คุณ${cancellationData.memberName}
+
+การจองของคุณได้ถูกยกเลิกแล้ว
+
+📋 รายละเอียดกิจกรรม
+${cancellationData.eventName}${cancellationData.eventNameEN ? `\n${cancellationData.eventNameEN}` : ''}
+
+📅 วันที่จัดงาน: ${cancellationData.eventDate}
+🎫 รหัสลงทะเบียน: ${cancellationData.registrationId}`;
+
+  if (cancellationData.cancelledBy === 'admin' && cancellationData.cancellationReason) {
+    message += `
+
+📝 เหตุผลการยกเลิก:
+${cancellationData.cancellationReason}`;
+  }
+
+  if (hasRefund) {
+    message += `
+
+💰 ข้อมูลการคืนเงิน
+• เงื่อนไข: ${cancellationData.appliedRuleName}
+• เปอร์เซ็นต์คืน: ${cancellationData.refundPercentage}%
+• ยอดคืน: ${cancellationData.refundAmount.toLocaleString()} บาท
+• ค่าใช้จ่ายที่หัก: ${cancellationData.chargeAmount.toLocaleString()} บาท
+
+📌 หมายเหตุ: ทีมงานจะดำเนินการคืนเงินให้ท่านโดยเร็วที่สุด
+คุณจะได้รับการแจ้งเตือนอีกครั้งเมื่อมีการโอนเงินคืน`;
+  } else {
+    message += `
+
+💰 การคืนเงิน
+• เงื่อนไข: ${cancellationData.appliedRuleName}
+• ไม่มีการคืนเงิน`;
+  }
+
+  message += `
+
+ขออภัยในความไม่สะดวก
+หากมีข้อสงสัย กรุณาติดต่อทีมงาน Agents Club
+
+ด้วยความเคารพ
+Agents Club - Helping & Sharing`;
+
+  return sendPushMessage(lineUserId, [
+    {
+      type: 'text',
+      text: message,
+    },
+  ]);
+}
+
+// Send Refund Completed Notification
+export async function sendRefundCompletedNotification(
+  lineUserId: string,
+  refundData: {
+    eventName: string;
+    eventNameEN?: string;
+    registrationId: string;
+    memberName: string;
+    refundAmount: number;
+    refundMethod?: string;
+    refundDate: string;
+  }
+): Promise<boolean> {
+  const formatThaiDate = (isoString: string): string => {
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return isoString;
+    }
+  };
+
+  const message = `✅ แจ้งการคืนเงินสำเร็จ
+
+สวัสดีครับ คุณ${refundData.memberName}
+
+ทีมงาน Agents Club ได้ทำการคืนเงินให้ท่านแล้ว
+
+📋 รายละเอียด
+กิจกรรม: ${refundData.eventName}${refundData.eventNameEN ? `\n${refundData.eventNameEN}` : ''}
+รหัสลงทะเบียน: ${refundData.registrationId}
+
+💰 ข้อมูลการคืนเงิน
+• ยอดคืน: ${refundData.refundAmount.toLocaleString()} บาท
+• วันที่โอนคืน: ${formatThaiDate(refundData.refundDate)}
+${refundData.refundMethod ? `• วิธีการคืนเงิน: ${refundData.refundMethod}` : ''}
+
+กรุณาตรวจสอบบัญชีของท่าน
+หากมีข้อสงสัย กรุณาติดต่อทีมงาน
+
+ขอบคุณที่ใช้บริการ Agents Club
+Helping & Sharing`;
+
+  return sendPushMessage(lineUserId, [
+    {
+      type: 'text',
+      text: message,
+    },
+  ]);
+}
+
 // Send Event Registration Confirmation (Admin-Assisted Registration)
 export async function sendEventRegistrationConfirmationOnBehalf(
   lineUserId: string,

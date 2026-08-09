@@ -5,9 +5,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { AttendeeType, RoomType, PriceTier } from '@/types/event';
+import { AttendeeType, RoomType, PriceTier, CancellationPolicy } from '@/types/event';
 import { CarpoolSettings } from '@/types/carpool';
 import { formatEventDateRange } from '@/lib/date-utils';
+import CancellationPolicySettings from '@/components/admin/CancellationPolicySettings';
 
 interface BankAccount {
   id: string;
@@ -70,6 +71,8 @@ interface Event {
   useAttendeeTypePricing?: boolean;
   attendeeTypes?: AttendeeType[];
   roomTypes?: RoomType[];
+  // Cancellation policy (New)
+  cancellationPolicy?: CancellationPolicy;
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
@@ -148,6 +151,8 @@ interface EventFormData {
   // Carpool feature (New)
   hasCarpoolFeature?: boolean;
   carpoolSettings?: CarpoolSettings;
+  // Cancellation policy (New)
+  cancellationPolicy?: CancellationPolicy;
 }
 
 const initialFormData: EventFormData = {
@@ -2160,6 +2165,25 @@ export default function AdminEventsPage() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* Cancellation Policy Configuration (NEW) */}
+                <div className="md:col-span-2 bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                  <h3 className="text-sm font-semibold text-yellow-900 mb-3 flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    นโยบายการยกเลิกและคืนเงิน (Cancellation Policy)
+                  </h3>
+                  <p className="text-xs text-yellow-700 mb-3">
+                    กำหนดเงื่อนไขการยกเลิกและการคืนเงินสำหรับกิจกรรมนี้
+                  </p>
+
+                  <CancellationPolicySettings
+                    value={formData.cancellationPolicy}
+                    onChange={(policy) => setFormData({ ...formData, cancellationPolicy: policy })}
+                    eventDate={formData.eventDate}
+                  />
                 </div>
 
                 {/* Deposit Payment Configuration (NEW) */}

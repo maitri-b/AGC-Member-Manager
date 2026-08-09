@@ -732,7 +732,7 @@ export default function EventDetailPage() {
     // Calculate how many members will remain after removing this specific member
     // Use lineUserId + name combination to identify the specific member (same as removal logic)
     const remainingMembers = targetCarpool.members.filter(
-      m => !(m.lineUserId === lineUserId && m.name === name)
+      (m: any) => !(m.lineUserId === lineUserId && m.name === name)
     );
 
     // Check if this is the last member

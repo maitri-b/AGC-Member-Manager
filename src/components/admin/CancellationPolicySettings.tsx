@@ -277,13 +277,13 @@ function RuleInlineForm({ rule, onUpdate, onDelete, onToggleActive, existingDate
     }
 
     if (field === 'refundValue') {
-      const numValue = parseFloat(value) || 0;
-      if (rule.refundType === 'percentage' && numValue > 100) {
-        setLocalErrors({ ...localErrors, [field]: 'เปอร์เซ็นต์ต้องไม่เกิน 100' });
+      const numValue = typeof value === 'number' ? value : parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        setLocalErrors({ ...localErrors, [field]: 'ต้องเป็นจำนวน 0 หรือมากกว่า' });
         return;
       }
-      if (numValue < 0) {
-        setLocalErrors({ ...localErrors, [field]: 'ต้องเป็นจำนวนบวก' });
+      if (rule.refundType === 'percentage' && numValue > 100) {
+        setLocalErrors({ ...localErrors, [field]: 'เปอร์เซ็นต์ต้องไม่เกิน 100' });
         return;
       }
     }
@@ -383,8 +383,12 @@ function RuleInlineForm({ rule, onUpdate, onDelete, onToggleActive, existingDate
               <div className="relative">
                 <input
                   type="number"
-                  value={rule.refundValue || ''}
-                  onChange={(e) => handleChange('refundValue', parseFloat(e.target.value) || 0)}
+                  value={rule.refundValue ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Allow empty string or parse as number (including 0)
+                    handleChange('refundValue', val === '' ? 0 : parseFloat(val));
+                  }}
                   min="0"
                   max={rule.refundType === 'percentage' ? '100' : undefined}
                   step={rule.refundType === 'percentage' ? '1' : '100'}
@@ -398,6 +402,11 @@ function RuleInlineForm({ rule, onUpdate, onDelete, onToggleActive, existingDate
               </div>
               {localErrors.refundValue && (
                 <p className="mt-1 text-xs text-red-600">{localErrors.refundValue}</p>
+              )}
+              {rule.refundValue === 0 && (
+                <p className="mt-1 text-xs text-orange-600 font-medium">
+                  💡 ใส่ 0 = ไม่คืนเงินตามเงื่อนไขนี้
+                </p>
               )}
             </div>
           )}

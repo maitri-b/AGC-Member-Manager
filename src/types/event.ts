@@ -860,6 +860,7 @@ export interface RefundCalculationResult {
   refundPercentage: number;            // เปอร์เซ็นต์ที่คืน (for display)
   appliedRule: DateBasedCancellationRule | null; // เงื่อนไขที่ใช้
   ruleName: string;                    // ชื่อเงื่อนไขที่ใช้
+  cancelBeforeDate?: string;           // วันที่ที่ต้องยกเลิกก่อน (for display)
   chargeAmount: number;                // จำนวนเงินที่หัก (totalPaid - refundAmount)
 }
 
@@ -983,6 +984,7 @@ export function calculateRefundAmount(
     refundPercentage,
     appliedRule: applicableRule,
     ruleName: applicableRule.ruleName,
+    cancelBeforeDate: applicableRule.cancelBeforeDate,
     chargeAmount: totalPaid - refundAmount
   };
 }

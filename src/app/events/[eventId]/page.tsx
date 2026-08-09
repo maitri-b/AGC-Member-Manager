@@ -1210,6 +1210,87 @@ export default function EventDetailPage() {
               </div>
             )}
 
+            {/* Cancellation Policy */}
+            {event.cancellationPolicy?.enabled && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">เงื่อนไขการยกเลิกและคืนเงิน</h2>
+
+                {/* No Refund Policy */}
+                {event.cancellationPolicy.noRefundPolicy?.active && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div>
+                        <p className="font-semibold text-red-900 text-sm">ไม่คืนเงินในทุกกรณี</p>
+                        {event.cancellationPolicy.noRefundPolicy.description && (
+                          <p className="text-sm text-red-700 mt-1">{event.cancellationPolicy.noRefundPolicy.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Date-based Policies */}
+                {event.cancellationPolicy.dateBasedPolicies &&
+                 event.cancellationPolicy.dateBasedPolicies.filter(p => p.active).length > 0 && (
+                  <div className="space-y-3">
+                    {event.cancellationPolicy.dateBasedPolicies
+                      .filter(p => p.active)
+                      .sort((a, b) => new Date(a.cancelBeforeDate).getTime() - new Date(b.cancelBeforeDate).getTime())
+                      .map((rule) => {
+                        const refundText =
+                          rule.refundType === 'percentage'
+                            ? rule.refundValue === 0
+                              ? 'ไม่คืนเงิน'
+                              : `คืน ${rule.refundValue}%`
+                            : rule.refundType === 'fixed'
+                              ? rule.refundValue === 0
+                                ? 'ไม่คืนเงิน'
+                                : `คืน ${rule.refundValue.toLocaleString()} บาท`
+                              : 'ไม่คืนเงิน';
+
+                        return (
+                          <div key={rule.ruleId} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <p className="font-semibold text-gray-900 text-sm">
+                                  ยกเลิกก่อน {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </p>
+                                {rule.description && (
+                                  <p className="text-xs text-gray-600 mt-1">{rule.description}</p>
+                                )}
+                              </div>
+                              <div className={`text-sm font-bold px-3 py-1 rounded-full ${
+                                rule.refundValue === 0
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-green-100 text-green-700'
+                              }`}>
+                                {refundText}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+
+                {/* Contact Info */}
+                {event.cancellationPolicy.sendLineNotification && (
+                  <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-xs text-gray-600">
+                      💡 เมื่อยกเลิกการจอง ระบบจะแจ้งเตือนผ่าน LINE และดำเนินการคืนเงินตามเงื่อนไขภายใน 7-14 วันทำการ
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Document Download */}
             {event.documentUrl && (
               <div className="bg-white rounded-lg shadow p-6">
@@ -2445,110 +2526,6 @@ export default function EventDetailPage() {
                           </div>
                         </div>
                       )}
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-3 pt-2">
-                        {(event.allowMemberEdit ?? true) ? (
-                          <>
-                            <button
-                              onClick={async () => {
-                                if (!event) return;
-
-                                // Validate attendee names (conditional based on requireAttendeeNames)
-                                // Only validate if requireAttendeeNames is explicitly true
-                                if (event.requireAttendeeNames === true) {
-                                  const filledNames = attendeeNames.filter(name => name.trim());
-                                  if (filledNames.length !== attendeeCount) {
-                                    toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
-                                    return;
-                                  }
-                                }
-
-                                // Validate room allocation (required for all pricing types when room types are configured)
-                                if (event.roomTypes && event.roomTypes.length > 0) {
-                                  if (roomAllocations.length === 0) {
-                                    toast.error('กรุณาเลือกประเภทห้องพัก');
-                                    return;
-                                  }
-
-                                  // Calculate total capacity
-                                  let totalCapacity = 0;
-                                  for (const alloc of roomAllocations) {
-                                    const rt = event.roomTypes?.find((r: RoomType) => r.typeId === alloc.roomTypeId);
-                                    if (rt) {
-                                      totalCapacity += rt.capacity * alloc.roomCount;
-                                    }
-                                  }
-
-                                  if (totalCapacity !== attendeeCount) {
-                                    toast.error(`จำนวนผู้เข้าพักในห้องไม่ตรงกับจำนวนผู้เข้าร่วม (รองรับ ${totalCapacity} คน แต่ลงทะเบียน ${attendeeCount} คน)`);
-                                    return;
-                                  }
-                                }
-
-                                setUpdating(true);
-                                try {
-                                  const response = await fetch(`/api/events/${eventId}/update-registration`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      attendeeCount,
-                                      attendeeNames: attendeeNames,
-                                      specialRequests,
-                                      attendeeTypeSelections, // Add attendee type selections
-                                      roomAllocations, // Add room allocations
-                                      requestNameChange: false,
-                                    }),
-                                  });
-
-                                  const data = await response.json();
-
-                                  if (!response.ok) {
-                                    throw new Error(data.error || 'ไม่สามารถอัพเดทข้อมูลได้');
-                                  }
-
-                                  toast.success(data.message || 'อัพเดทข้อมูลเรียบร้อยแล้ว');
-                                  setIsEditing(false);
-                                  fetchEventDetail(); // Refresh data
-                                } catch (err) {
-                                  toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
-                                } finally {
-                                  setUpdating(false);
-                                }
-                              }}
-                              disabled={updating}
-                              className="flex-1 py-2 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {updating ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
-                            </button>
-                            <button
-                              onClick={() => {
-                                setIsEditing(false);
-                                setAttendeeCount(userRegistration.attendeeCount);
-                                try {
-                                  const names = JSON.parse(userRegistration.attendeeNames || '[]');
-                                  setAttendeeNames(Array.isArray(names) ? names : [userRegistration.attendeeNames || '']);
-                                } catch {
-                                  setAttendeeNames([userRegistration.attendeeNames || '']);
-                                }
-                              }}
-                              disabled={updating}
-                              className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
-                            >
-                              ยกเลิก
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setIsEditing(false);
-                            }}
-                            className="w-full py-2 px-4 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors"
-                          >
-                            ปิด
-                          </button>
-                        )}
-                      </div>
                     </div>
                   )}
 

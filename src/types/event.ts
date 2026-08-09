@@ -107,9 +107,17 @@ export interface EventRegistration {
   // Discounts (New - admin can give discounts to specific registrations)
   discounts?: string;               // discounts (JSON stringified Discount[])
 
-  // Cancellation Info (New - for tracking cancellation details)
+  // Cancellation Info (Enhanced - for tracking cancellation details)
   cancellationReason?: string;      // cancellation_reason - Reason for cancellation
   cancelledAt?: string;             // cancelled_at - ISO timestamp when cancelled
+  cancelledBy?: string;             // cancelled_by - Who cancelled (lineUserId or admin email)
+  cancellationMethod?: 'member' | 'admin'; // cancellation_method - Cancelled by member or admin
+  appliedCancellationRule?: string; // applied_cancellation_rule - ruleId of the rule that was applied
+  refundAmount?: number;            // refund_amount - Amount to be refunded (calculated)
+  refundPercentage?: number;        // refund_percentage - Percentage refunded (for display)
+  refundStatus?: 'pending' | 'completed' | 'not_applicable'; // refund_status - Status of refund
+  previousRoomInfo?: string;        // previous_room_info - JSON string of previously selected rooms
+  previousCarpoolInfo?: string;     // previous_carpool_info - JSON string of previously joined carpool
 
   // Payment Tracking (New - for tracking total paid amount and additional payments)
   paidAmount?: number;              // paid_amount - Total amount paid so far (deposit + remaining + additional)
@@ -207,6 +215,9 @@ export interface Event {
   hasCarpoolFeature?: boolean;      // กิจกรรมนี้มีการจัดรถร่วมเดินทาง (Carpool)
   carpoolSettings?: CarpoolSettings; // การตั้งค่า Carpool
 
+  // Cancellation Policy (New - for event cancellation rules)
+  cancellationPolicy?: CancellationPolicy; // นโยบายการยกเลิกและคืนเงิน
+
   createdAt: string;                // ISO timestamp
   updatedAt: string;                // ISO timestamp
   createdBy?: string;               // User ID who created the event
@@ -292,6 +303,9 @@ export interface EventInput {
   // Carpool Feature (New - for events with shared transportation)
   hasCarpoolFeature?: boolean;      // กิจกรรมนี้มีการจัดรถร่วมเดินทาง (Carpool)
   carpoolSettings?: CarpoolSettings; // การตั้งค่า Carpool
+
+  // Cancellation Policy (New - for event cancellation rules)
+  cancellationPolicy?: CancellationPolicy; // นโยบายการยกเลิกและคืนเงิน
 }
 
 // Member attendance summary
@@ -507,9 +521,17 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   specialCharges: 'special_charges',
   // Discounts (New)
   discounts: 'discounts',
-  // Cancellation info (New)
+  // Cancellation info (Enhanced - for tracking cancellation details)
   cancellationReason: 'cancellation_reason',
   cancelledAt: 'cancelled_at',
+  cancelledBy: 'cancelled_by',
+  cancellationMethod: 'cancellation_method',
+  appliedCancellationRule: 'applied_cancellation_rule',
+  refundAmount: 'refund_amount',
+  refundPercentage: 'refund_percentage',
+  refundStatus: 'refund_status',
+  previousRoomInfo: 'previous_room_info',
+  previousCarpoolInfo: 'previous_carpool_info',
   // Payment tracking (New - for additional payments)
   paidAmount: 'paid_amount',
   additionalPayments: 'additional_payments',
@@ -802,4 +824,165 @@ export interface RoomAssignment {
   attendeeIndex: number;       // Index in the attendeeNames array (0-based)
   companyName: string;         // Company name for reference
   registrationId: string;      // Registration ID for reference
+}
+
+/**
+ * Cancellation Policy Types
+ * For managing event cancellation rules and refund calculations
+ */
+
+// Cancellation Policy Configuration
+export interface CancellationPolicy {
+  enabled: boolean;                    // เปิดใช้งานระบบยกเลิก
+  noRefundPolicy?: {
+    active: boolean;                   // เปิดใช้งานเงื่อนไข "ไม่คืนเงินในทุกกรณี"
+    description?: string;              // คำอธิบายเพิ่มเติม (optional)
+  };
+  dateBasedPolicies: DateBasedCancellationRule[]; // เงื่อนไขตามวันที่
+  sendLineNotification: boolean;       // ส่ง LINE แจ้งเตือนเมื่อยกเลิก (default: true)
+}
+
+// Date-based cancellation rule
+export interface DateBasedCancellationRule {
+  ruleId: string;                      // Unique ID (auto-generated)
+  ruleName: string;                    // ชื่อเงื่อนไข เช่น "ยกเลิกก่อน 30 วัน"
+  cancelBeforeDate: string;            // วันที่ที่ต้องยกเลิกก่อน (YYYY-MM-DD) - วันที่แน่นอน
+  refundType: 'percentage' | 'fixed' | 'none'; // ประเภทการคืนเงิน
+  refundValue: number;                 // ค่าคืนเงิน (% หรือจำนวนเงิน)
+  description?: string;                // คำอธิบายเพิ่มเติม (optional)
+  active: boolean;                     // เปิด/ปิดใช้งาน
+  createdAt: string;                   // ISO timestamp
+}
+
+// Refund calculation result
+export interface RefundCalculationResult {
+  refundAmount: number;                // จำนวนเงินที่ต้องคืน
+  refundPercentage: number;            // เปอร์เซ็นต์ที่คืน (for display)
+  appliedRule: DateBasedCancellationRule | null; // เงื่อนไขที่ใช้
+  ruleName: string;                    // ชื่อเงื่อนไขที่ใช้
+  chargeAmount: number;                // จำนวนเงินที่หัก (totalPaid - refundAmount)
+}
+
+/**
+ * Cancellation Policy Helper Functions
+ */
+
+// Validate that no two rules have the same cancelBeforeDate
+export function validateCancellationPolicyDates(
+  policies: DateBasedCancellationRule[]
+): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const dates = new Set<string>();
+
+  // Check for duplicate dates
+  for (const policy of policies) {
+    if (dates.has(policy.cancelBeforeDate)) {
+      errors.push(`วันที่ซ้ำกัน: ${policy.cancelBeforeDate} (${policy.ruleName})`);
+    }
+    dates.add(policy.cancelBeforeDate);
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+// Calculate refund amount based on cancellation date and event policy
+export function calculateRefundAmount(
+  registration: EventRegistration,
+  event: Event,
+  cancellationDate: Date = new Date()
+): RefundCalculationResult {
+  const totalPaid = registration.paidAmount || 0;
+
+  // If no payment made, no refund needed
+  if (totalPaid === 0) {
+    return {
+      refundAmount: 0,
+      refundPercentage: 0,
+      appliedRule: null,
+      ruleName: 'ไม่มียอดชำระ',
+      chargeAmount: 0
+    };
+  }
+
+  const policy = event.cancellationPolicy;
+
+  // If no cancellation policy, assume no refund
+  if (!policy || !policy.enabled) {
+    return {
+      refundAmount: 0,
+      refundPercentage: 0,
+      appliedRule: null,
+      ruleName: 'ไม่มีนโยบายคืนเงิน',
+      chargeAmount: totalPaid
+    };
+  }
+
+  // Check no refund policy first
+  if (policy.noRefundPolicy?.active) {
+    return {
+      refundAmount: 0,
+      refundPercentage: 0,
+      appliedRule: null,
+      ruleName: 'ไม่คืนเงินในทุกกรณี',
+      chargeAmount: totalPaid
+    };
+  }
+
+  // Find applicable date-based policy
+  const activePolicies = policy.dateBasedPolicies
+    .filter(p => p.active)
+    .sort((a, b) => new Date(a.cancelBeforeDate).getTime() - new Date(b.cancelBeforeDate).getTime());
+
+  let applicableRule: DateBasedCancellationRule | null = null;
+
+  for (const rule of activePolicies) {
+    // "ยกเลิกก่อนวันที่ X" = must cancel before 23:59 of day before
+    // Example: "ยกเลิกก่อนวันที่ 2026-03-01" = must cancel by 2026-02-28 23:59
+    const deadlineDate = new Date(rule.cancelBeforeDate);
+    deadlineDate.setHours(0, 0, 0, 0); // Start of the specified date
+
+    // Must cancel before this date (i.e., by 23:59 of previous day)
+    if (cancellationDate < deadlineDate) {
+      applicableRule = rule;
+      break;
+    }
+  }
+
+  // No matching rule = no refund (past all deadlines)
+  if (!applicableRule) {
+    return {
+      refundAmount: 0,
+      refundPercentage: 0,
+      appliedRule: null,
+      ruleName: 'เกินกำหนดเวลายกเลิก',
+      chargeAmount: totalPaid
+    };
+  }
+
+  // Calculate refund based on rule type
+  let refundAmount = 0;
+  let refundPercentage = 0;
+
+  if (applicableRule.refundType === 'percentage') {
+    refundPercentage = applicableRule.refundValue;
+    refundAmount = Math.round(totalPaid * (refundPercentage / 100));
+  } else if (applicableRule.refundType === 'fixed') {
+    refundAmount = Math.min(applicableRule.refundValue, totalPaid);
+    refundPercentage = Math.round((refundAmount / totalPaid) * 100);
+  } else {
+    // 'none' = no refund
+    refundAmount = 0;
+    refundPercentage = 0;
+  }
+
+  return {
+    refundAmount,
+    refundPercentage,
+    appliedRule: applicableRule,
+    ruleName: applicableRule.ruleName,
+    chargeAmount: totalPaid - refundAmount
+  };
 }

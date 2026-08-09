@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Toast, useToast } from '@/components/Toast';
 import PaymentSlipUploadModal from '@/components/PaymentSlipUploadModal';
+import CancellationModal from '@/components/member/CancellationModal';
 // TEMP: Hidden until PDF generation is fixed on Vercel
 // import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier, CancellationPolicy } from '@/types/event';
@@ -272,6 +273,9 @@ export default function EventDetailPage() {
   // TEMP: Hidden until PDF generation is fixed on Vercel
   // Receipt certificate modal state
   // const [showReceiptModal, setShowReceiptModal] = useState(false);
+
+  // Cancellation modal state
+  const [showCancellationModal, setShowCancellationModal] = useState(false);
 
   // Copy to clipboard helper
   const copyToClipboard = async (text: string, label: string) => {
@@ -2571,6 +2575,31 @@ export default function EventDetailPage() {
                         </div>
                       )}
 
+                      {/* Cancel Registration Button */}
+                      {event.cancellationPolicy?.enabled &&
+                       userRegistration.status !== 'cancelled' &&
+                       userRegistration.status !== 'ยกเลิกแล้ว' && (
+                        <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <svg className="w-6 h-6 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              <div>
+                                <p className="font-semibold text-gray-900">ต้องการยกเลิกการจอง?</p>
+                                <p className="text-sm text-gray-600">คุณสามารถยกเลิกการจองได้ตามเงื่อนไขการคืนเงิน</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setShowCancellationModal(true)}
+                              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                            >
+                              ยกเลิกการจอง
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {/* TEMP: Hidden until PDF generation is fixed on Vercel */}
                       {/* Download Receipt Certificate Button */}
                       {/* {userRegistration.paymentStatus === 'ชำระครบแล้ว' && (
@@ -4182,6 +4211,21 @@ export default function EventDetailPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Cancellation Modal */}
+      {userRegistration && event && (
+        <CancellationModal
+          isOpen={showCancellationModal}
+          onClose={() => setShowCancellationModal(false)}
+          registration={userRegistration}
+          event={event}
+          onSuccess={() => {
+            // Refresh event detail after successful cancellation
+            fetchEventDetail();
+            setShowCancellationModal(false);
+          }}
+        />
       )}
 
       {/* TEMP: Hidden until PDF generation is fixed on Vercel */}

@@ -557,6 +557,7 @@ export default function EventDetailPage() {
         registrationId: userRegistration.registrationId,
         lineUserId: session?.user?.lineUserId || '',
         name: attendeeNames[index] || '',
+        attendeeIndex: index,  // Store index as stable identifier
       }));
 
       const response = await fetch('/api/carpools', {
@@ -668,11 +669,15 @@ export default function EventDetailPage() {
         ? searchedRegistration.attendeeNames.split(',').map((n: string) => n.trim())
         : [];
 
-      const membersToAdd = selectedMembersToInvite.map(name => ({
-        registrationId: searchedRegistration.registrationId,
-        lineUserId: searchedRegistration.lineUserId || '',
-        name: name,
-      }));
+      const membersToAdd = selectedMembersToInvite.map(name => {
+        const index = attendeeNamesArray.indexOf(name);
+        return {
+          registrationId: searchedRegistration.registrationId,
+          lineUserId: searchedRegistration.lineUserId || '',
+          name: name,
+          attendeeIndex: index,  // Store index as stable identifier
+        };
+      });
 
       const response = await fetch(`/api/carpools/${invitingToCarpoolId}/add-members`, {
         method: 'POST',
@@ -1861,11 +1866,16 @@ export default function EventDetailPage() {
                         {/* Members Status Overview - Show only members NOT in any carpool */}
                         {userRegistration && attendeeNames.length > 0 && !carpoolLoading && (() => {
                           // Filter to show only members who are NOT in any carpool
-                          const membersNotInCarpool = attendeeNames.filter((name) => {
+                          const membersNotInCarpool = attendeeNames.filter((name, index) => {
                             let isInCarpool = false;
 
                             memberCarpools.forEach(cp => {
                               const member = cp.members?.find((m: any) => {
+                                // Use attendeeIndex for stable identification (if available)
+                                if (m.attendeeIndex !== undefined && m.registrationId === userRegistration.registrationId) {
+                                  return m.attendeeIndex === index;
+                                }
+                                // Fallback to name matching (for old data)
                                 const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
                                 return cleanName === name || m.name === name;
                               });
@@ -4291,6 +4301,11 @@ export default function EventDetailPage() {
 
                     memberCarpools.forEach(cp => {
                       const member = cp.members?.find((m: any) => {
+                        // Use attendeeIndex for stable identification (if available)
+                        if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
+                          return m.attendeeIndex === index;
+                        }
+                        // Fallback to name matching (for old data)
                         const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
                         return cleanName === name || m.name === name;
                       });
@@ -4343,6 +4358,11 @@ export default function EventDetailPage() {
                         let isInCarpool = false;
                         memberCarpools.forEach(cp => {
                           const member = cp.members?.find((m: any) => {
+                            // Use attendeeIndex for stable identification (if available)
+                            if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
+                              return m.attendeeIndex === index;
+                            }
+                            // Fallback to name matching (for old data)
                             const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
                             return cleanName === name || m.name === name;
                           });
@@ -4363,10 +4383,15 @@ export default function EventDetailPage() {
                   className="text-xs text-blue-600 hover:text-blue-700 mt-1"
                 >
                   {(() => {
-                    const availableCount = attendeeNames.filter((name) => {
+                    const availableCount = attendeeNames.filter((name, index) => {
                       let isInCarpool = false;
                       memberCarpools.forEach(cp => {
                         const member = cp.members?.find((m: any) => {
+                          // Use attendeeIndex for stable identification (if available)
+                          if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
+                            return m.attendeeIndex === index;
+                          }
+                          // Fallback to name matching (for old data)
                           const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
                           return cleanName === name || m.name === name;
                         });
@@ -4837,6 +4862,7 @@ export default function EventDetailPage() {
                         registrationId: userRegistration.registrationId,
                         lineUserId: session?.user?.lineUserId || '',
                         name: names[index] || '',
+                        attendeeIndex: index,  // Store index as stable identifier
                       }));
 
                       const response = await fetch(`/api/carpools/${joinSearchedCarpool.carpoolId}/add-members`, {

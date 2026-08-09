@@ -3,6 +3,7 @@ export interface CarpoolMember {
   registrationId: string;
   lineUserId: string;
   name: string;
+  attendeeIndex: number;  // Index in the attendeeNames array (0-based) - used as stable identifier
 }
 
 export interface Carpool {

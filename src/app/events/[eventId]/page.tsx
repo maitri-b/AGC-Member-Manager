@@ -729,8 +729,14 @@ export default function EventDetailPage() {
       return;
     }
 
+    // Calculate how many members will remain after removing this specific member
+    // Use lineUserId + name combination to identify the specific member (same as removal logic)
+    const remainingMembers = targetCarpool.members.filter(
+      m => !(m.lineUserId === lineUserId && m.name === name)
+    );
+
     // Check if this is the last member
-    if (targetCarpool.members && targetCarpool.members.length === 1) {
+    if (remainingMembers.length === 0) {
       // Show confirmation modal for deleting entire carpool
       setPendingMemberRemoval({ lineUserId, name, carpoolId: targetCarpoolId });
       setShowDeleteCarpoolConfirmModal(true);
@@ -4582,15 +4588,17 @@ export default function EventDetailPage() {
                   <div className="space-y-3">
                     {names.map((name, index) => {
                       // Check if this member is in current carpool
+                      // Use registrationId + attendeeIndex as unique identifier
                       const isInMyCarpool = memberCarpool.members?.some(
-                        (m: any) => m.name === name && m.registrationId === userRegistration.registrationId
+                        (m: any) => m.registrationId === userRegistration.registrationId && m.attendeeIndex === index
                       );
 
                       // Check if in another active carpool (exclude deleted/cancelled)
+                      // Use registrationId + attendeeIndex as unique identifier
                       const otherCarpool = allCarpools.find((cp) =>
                         cp.carpoolId !== memberCarpool.carpoolId &&
                         cp.status !== 'deleted' && cp.status !== 'cancelled' &&
-                        cp.members?.some((m: any) => m.name === name && m.lineUserId === session?.user?.lineUserId)
+                        cp.members?.some((m: any) => m.registrationId === userRegistration.registrationId && m.attendeeIndex === index)
                       );
 
                       return (
@@ -4863,13 +4871,13 @@ export default function EventDetailPage() {
                         <div className="space-y-2">
                           {names.map((name, index) => {
                             // Check if this person is already in any active carpool (exclude deleted/cancelled)
-                            // Check both allCarpools AND memberCarpool
+                            // Use registrationId + attendeeIndex as unique identifier (NOT lineUserId + name)
                             let isInCarpool = false;
 
                             // Check in memberCarpool (own carpool)
                             if (memberCarpool && memberCarpool.status !== 'deleted' && memberCarpool.status !== 'cancelled') {
                               isInCarpool = memberCarpool.members?.some((m: any) =>
-                                m.lineUserId === session?.user?.lineUserId && m.name === name
+                                m.registrationId === userRegistration?.registrationId && m.attendeeIndex === index
                               ) || false;
                             }
 
@@ -4878,7 +4886,7 @@ export default function EventDetailPage() {
                               isInCarpool = allCarpools.some(cp =>
                                 cp.status !== 'deleted' && cp.status !== 'cancelled' &&
                                 cp.members?.some((m: any) =>
-                                  m.lineUserId === session?.user?.lineUserId && m.name === name
+                                  m.registrationId === userRegistration?.registrationId && m.attendeeIndex === index
                                 )
                               );
                             }

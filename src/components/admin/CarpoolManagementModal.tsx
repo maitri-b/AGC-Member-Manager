@@ -297,8 +297,14 @@ export default function CarpoolManagementModal({
       return;
     }
 
+    // Calculate how many members will remain after removing this specific member
+    // Use lineUserId + name combination to identify the specific member (same as removal logic)
+    const remainingMembers = targetCarpool.members.filter(
+      m => !(m.lineUserId === lineUserId && m.name === name)
+    );
+
     // Check if this is the last member
-    if (targetCarpool.members && targetCarpool.members.length === 1) {
+    if (remainingMembers.length === 0) {
       // Show confirmation modal for deleting entire carpool
       setPendingMemberRemoval({ carpoolId, lineUserId, name });
       setShowDeleteLastMemberModal(true);

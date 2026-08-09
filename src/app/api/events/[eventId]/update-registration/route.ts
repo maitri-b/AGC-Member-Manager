@@ -239,6 +239,53 @@ export async function PUT(
 
       if (newNamesJson !== currentNamesJson) {
         updateData.attendee_names = newNamesJson;
+
+        // ✅ Update names in all carpools that contain members from this registration
+        try {
+          const carpoolsSnapshot = await db.collection('carpools')
+            .where('eventId', '==', eventId)
+            .where('status', 'in', ['active', null])
+            .get();
+
+          const carpoolUpdates: Promise<void>[] = [];
+
+          carpoolsSnapshot.docs.forEach(carpoolDoc => {
+            const carpoolData = carpoolDoc.data();
+            const members = carpoolData.members || [];
+
+            // Check if any members belong to this registration
+            const hasRegistrationMembers = members.some((m: any) => m.registrationId === userReg.registrationId);
+
+            if (hasRegistrationMembers) {
+              // Update member names using attendeeIndex
+              const updatedMembers = members.map((m: any) => {
+                if (m.registrationId === userReg.registrationId && m.attendeeIndex !== undefined) {
+                  // Update name from new attendeeNames array
+                  return {
+                    ...m,
+                    name: attendeeNames[m.attendeeIndex] || m.name, // Use new name from array
+                  };
+                }
+                return m;
+              });
+
+              // Update carpool with new member names
+              carpoolUpdates.push(
+                db.collection('carpools').doc(carpoolDoc.id).update({
+                  members: updatedMembers,
+                  updatedAt: new Date().toISOString(),
+                })
+              );
+            }
+          });
+
+          // Wait for all carpool updates to complete
+          await Promise.all(carpoolUpdates);
+          console.log(`[Update Registration] Updated names in ${carpoolUpdates.length} carpool(s)`);
+        } catch (carpoolError) {
+          console.error('[Update Registration] Error updating carpool names:', carpoolError);
+          // Don't fail the entire update if carpool update fails
+        }
       }
     }
 

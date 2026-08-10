@@ -18,8 +18,92 @@ import { adminDb } from '../src/lib/firebase-admin';
 
 const db = adminDb();
 
-// Test user scenarios
-const TEST_USERS = [
+// Type definition for test user (based on Firestore users collection schema)
+interface TestUser {
+  lineUserId: string;
+  displayName: string;
+  pictureUrl: string;
+  email: string;
+  phone: string;
+  companyName: string;
+  licenseNumber: string;
+  licenseStatus: string;
+  licenseExpiryDate: string;
+  lineGroupStatus: string;
+  membershipStatus: string;
+  role: 'admin' | 'member' | 'guest';
+  memberId?: string; // Required for members who can register for events
+  permissions: string[];
+  assignedEventIds?: string[];
+  lineGroupLeftDate?: string;
+  suspensionReason?: string;
+  suspensionDate?: string;
+  description: string;
+  testAccount: boolean;
+}
+
+/**
+ * Validation rules for test users based on role
+ */
+const VALIDATION_RULES = {
+  member: {
+    requiredFields: ['memberId', 'companyName', 'licenseNumber', 'phone'],
+    description: 'Members who can register for events MUST have memberId, companyName, licenseNumber, and phone'
+  },
+  admin: {
+    requiredFields: ['memberId', 'permissions'],
+    description: 'Admin users MUST have memberId and permissions array'
+  },
+  guest: {
+    requiredFields: [],
+    mustNotHave: ['memberId'],
+    description: 'Guest users should NOT have memberId (they cannot register for events)'
+  }
+};
+
+/**
+ * Validate test user data based on role
+ */
+function validateTestUser(user: Partial<TestUser>): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Basic required fields for all users
+  const basicFields = ['lineUserId', 'displayName', 'role'];
+  for (const field of basicFields) {
+    if (!user[field as keyof TestUser]) {
+      errors.push(`Missing required field: ${field}`);
+    }
+  }
+
+  // Role-specific validation
+  if (user.role) {
+    const rules = VALIDATION_RULES[user.role];
+
+    if (rules.requiredFields) {
+      for (const field of rules.requiredFields) {
+        if (!user[field as keyof TestUser]) {
+          errors.push(`${user.role} MUST have ${field} - ${rules.description}`);
+        }
+      }
+    }
+
+    if (rules.mustNotHave) {
+      for (const field of rules.mustNotHave) {
+        if (user[field as keyof TestUser]) {
+          errors.push(`${user.role} should NOT have ${field} - ${rules.description}`);
+        }
+      }
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+// Test user scenarios (with explicit type annotation)
+const TEST_USERS: TestUser[] = [
   {
     lineUserId: 'test-normal-active',
     displayName: 'Test: Normal Active Member',
@@ -35,6 +119,7 @@ const TEST_USERS = [
     role: 'member',
     memberId: 'TEST-MEMBER-001', // Member ID for event registration
     permissions: [],
+    testAccount: true,
     description: '✅ สถานะปกติ - ใบอนุญาตปกติ, อยู่ในกลุ่ม LINE',
   },
   {
@@ -51,6 +136,7 @@ const TEST_USERS = [
     membershipStatus: 'inactive',
     role: 'guest',
     permissions: [],
+    testAccount: true,
     description: '⚠️ ใบอนุญาตหมดอายุ - สูญเสียสถานะสมาชิก กลับมาเป็น guest',
   },
   {
@@ -69,6 +155,7 @@ const TEST_USERS = [
     membershipStatus: 'suspended',
     role: 'guest',
     permissions: [],
+    testAccount: true,
     description: '🚫 ใบอนุญาตถูกระงับ - สูญเสียสถานะสมาชิก กลับมาเป็น guest',
   },
   {
@@ -87,6 +174,7 @@ const TEST_USERS = [
     role: 'member',
     memberId: 'TEST-MEMBER-004', // Member ID for event registration
     permissions: [],
+    testAccount: true,
     description: '👋 ออกจากกลุ่ม LINE แล้ว - ยังคงเป็นสมาชิก แต่ไม่อยู่ในกลุ่ม LINE',
   },
   {
@@ -104,6 +192,7 @@ const TEST_USERS = [
     role: 'member',
     memberId: 'TEST-MEMBER-005', // Member ID for event registration
     permissions: [],
+    testAccount: true,
     description: '⏳ รออนุมัติ - สมาชิกใหม่รอการอนุมัติ แต่ถือว่าเป็น member แล้ว',
   },
   {
@@ -121,6 +210,7 @@ const TEST_USERS = [
     role: 'admin',
     memberId: 'TEST-MEMBER-006', // Member ID for event registration
     permissions: ['admin:access', 'events:manage', 'members:manage', 'payments:manage'],
+    testAccount: true,
     description: '👑 Admin - มีสิทธิ์เข้าถึงระบบ Admin ทั้งหมด',
   },
   {
@@ -139,6 +229,7 @@ const TEST_USERS = [
     memberId: 'TEST-MEMBER-007', // Member ID for event registration
     permissions: ['events:manage-assigned', 'events:view-registrations'],
     assignedEventIds: [], // Will be populated based on actual events
+    testAccount: true,
     description: '🎫 Event Staff - สมาชิกที่เป็น staff จัดการกิจกรรม',
   },
   {
@@ -157,6 +248,7 @@ const TEST_USERS = [
     suspensionReason: 'Multiple violations',
     role: 'guest',
     permissions: [],
+    testAccount: true,
     description: '❌ หลายปัญหา - ใบอนุญาตหมดอายุ + ออกจากกลุ่ม LINE, สูญเสียสถานะสมาชิก',
   },
   {
@@ -173,6 +265,7 @@ const TEST_USERS = [
     membershipStatus: '',
     role: 'guest',
     permissions: [],
+    testAccount: true,
     description: '👤 Guest - เพิ่ง login ครั้งแรก ยังไม่ได้ยืนยันตัวตน ไม่มีข้อมูลใบอนุญาต',
   },
 ];
@@ -187,12 +280,36 @@ async function seedTestUsers() {
     process.exit(1);
   }
 
+  // ✅ VALIDATE ALL TEST USERS BEFORE SEEDING
+  console.log('🔍 Validating test user data...\n');
+  let hasErrors = false;
+
+  for (const user of TEST_USERS) {
+    const validation = validateTestUser(user);
+    if (!validation.valid) {
+      hasErrors = true;
+      console.error(`❌ Validation FAILED for: ${user.displayName}`);
+      validation.errors.forEach(error => console.error(`   - ${error}`));
+      console.log('');
+    }
+  }
+
+  if (hasErrors) {
+    console.error('\n❌ CANNOT SEED: Test users have validation errors!');
+    console.error('   Please fix the test user definitions above.\n');
+    process.exit(1);
+  }
+
+  console.log('✅ All test users validated successfully!\n');
+
   // Confirm before proceeding
   console.log('📋 Will create the following test users:');
   console.log('─'.repeat(80));
   TEST_USERS.forEach((user, index) => {
-    console.log(`${index + 1}. ${user.displayName}`);
+    const memberIdInfo = user.memberId ? ` [memberId: ${user.memberId}]` : ' [NO memberId - cannot register for events]';
+    console.log(`${index + 1}. ${user.displayName}${memberIdInfo}`);
     console.log(`   LINE ID: ${user.lineUserId}`);
+    console.log(`   Role: ${user.role}`);
     console.log(`   License: ${user.licenseNumber} (${user.licenseStatus})`);
     console.log(`   ${user.description}`);
     console.log('');
@@ -204,14 +321,14 @@ async function seedTestUsers() {
     const timestamp = new Date().toISOString();
 
     for (const user of TEST_USERS) {
-      const userRef = db.collection('members').doc(user.lineUserId);
+      // ✅ Write to 'users' collection (NOT 'members')
+      const userRef = db.collection('users').doc(user.lineUserId);
 
       batch.set(userRef, {
         ...user,
-        testAccount: true, // Mark as test account
         createdAt: timestamp,
         updatedAt: timestamp,
-        lastLogin: timestamp,
+        lastLoginAt: timestamp,
       });
     }
 

@@ -40,6 +40,14 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
 
     const events = eventsSnapshot.docs.map(doc => {
       const data = doc.data();
+
+      // Helper to safely parse boolean from any value
+      const parseBoolean = (value: unknown, defaultValue: boolean): boolean => {
+        if (value === true || value === 'true' || value === 1 || value === '1') return true;
+        if (value === false || value === 'false' || value === 0 || value === '0') return false;
+        return defaultValue;
+      };
+
       return {
         eventId: doc.id,
         eventName: data.eventName || '',
@@ -50,9 +58,9 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         description: data.description || '',
         sheetName: data.sheetName || '',
         year: data.year || 0,
-        isActive: data.isActive ?? true,
-        isPublished: data.isPublished ?? false,
-        countsAttendance: data.countsAttendance ?? true,
+        isActive: parseBoolean(data.isActive, true),
+        isPublished: parseBoolean(data.isPublished, false),
+        countsAttendance: parseBoolean(data.countsAttendance, true),
         maxCapacity: data.maxCapacity ?? 0,
         maxPerCompany: data.maxPerCompany ?? 0,
         registrationFee: data.registrationFee ?? 0,
@@ -61,7 +69,7 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         additionalFeePerPerson: data.additionalFeePerPerson ?? 0,
         priceTiers: data.priceTiers || undefined,
         memberDiscount: data.memberDiscount ?? 0,
-        registrationOpen: data.registrationOpen ?? false,
+        registrationOpen: parseBoolean(data.registrationOpen, false),
         documentName: data.documentName || '',
         documentUrl: data.documentUrl || '',
         mainImageUrl: data.mainImageUrl || '',
@@ -75,7 +83,7 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         paymentMode: data.paymentMode || 'full',
         depositAmount: data.depositAmount ?? 0,
         depositPercentage: data.depositPercentage ?? 0,
-        useDepositPercentage: data.useDepositPercentage ?? false,
+        useDepositPercentage: parseBoolean(data.useDepositPercentage, false),
         depositDeadlineType: data.depositDeadlineType || 'none',
         depositDeadlineFixed: data.depositDeadlineFixed || '',
         depositDeadlineHours: data.depositDeadlineHours ?? 0,
@@ -83,14 +91,14 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         remainingDeadlineFixed: data.remainingDeadlineFixed || '',
         remainingDeadlineHours: data.remainingDeadlineHours ?? 0,
         // Registration edit control
-        allowMemberEdit: data.allowMemberEdit ?? true,
+        allowMemberEdit: parseBoolean(data.allowMemberEdit, true),
         // Attendee type pricing (NEW)
-        useAttendeeTypePricing: data.useAttendeeTypePricing ?? false,
+        useAttendeeTypePricing: parseBoolean(data.useAttendeeTypePricing, false),
         attendeeTypes: data.attendeeTypes || [],
         // Room allocation (NEW)
         roomTypes: data.roomTypes || [],
         // Carpool feature (NEW)
-        hasCarpoolFeature: data.hasCarpoolFeature ?? false,
+        hasCarpoolFeature: parseBoolean(data.hasCarpoolFeature, false),
         carpoolSettings: data.carpoolSettings || undefined,
         // Convert Firestore Timestamps to ISO strings
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',

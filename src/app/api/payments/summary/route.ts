@@ -7,7 +7,7 @@ import {
   getPaymentSummaryForRegistration,
   getEventPaymentStatistics,
 } from '@/lib/payment-slips';
-import { getEventRegistrationByRegistrationId } from '@/lib/event-sheets';
+import { getEventRegistrationByRegistrationId } from '@/lib/events';
 
 export async function GET(request: NextRequest) {
   try {

@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb, adminStorage } from '@/lib/firebase-admin';
 import { getMemberById } from '@/lib/google-sheets';
-import { getEventRegistrationsByEventId, addEventRegistrationToFirestore } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, addEventRegistrationToFirestore } from '@/lib/events';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
 import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline, calculateFullPaymentDeadline } from '@/lib/payment-deadlines';

@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { getMemberById } from '@/lib/google-sheets';
-import { getEventRegistrationsByEventId, addEventRegistrationToFirestore } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, addEventRegistrationToFirestore } from '@/lib/events';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
 import { sendEventRegistrationConfirmationOnBehalf } from '@/lib/line-messaging';
 import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline, calculateFullPaymentDeadline } from '@/lib/payment-deadlines';

@@ -147,7 +147,6 @@ export interface Event {
   eventEndDate?: string;            // วันที่สิ้นสุดกิจกรรม (YYYY-MM-DD or YYYY-MM-DDTHH:mm) - optional, for multi-day events
   location: string;                 // สถานที่จัดกิจกรรม
   description: string;              // รายละเอียด
-  sheetName?: string;               // Google Sheet name for registration data (DEPRECATED - no longer used)
   year: number;                     // ปีของกิจกรรม (พ.ศ.)
   isActive: boolean;                // กิจกรรมที่กำลังดำเนินการ
   isPublished: boolean;             // แสดงในหน้าสมาชิก (เปิด/ปิด)
@@ -236,7 +235,6 @@ export interface EventInput {
   eventEndDate?: string;            // วันที่สิ้นสุดกิจกรรม (DD/MM/YYYY) - optional
   location: string;
   description: string;
-  sheetName?: string;               // DEPRECATED - no longer used with Firestore-only approach
   year: number;
   isActive: boolean;
   isPublished: boolean;             // แสดงในหน้าสมาชิก

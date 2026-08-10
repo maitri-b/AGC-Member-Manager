@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
-import { getTrackedEventsFromFirestore, getEventAttendanceSummary } from '@/lib/event-sheets';
+import { getTrackedEventsFromFirestore, getEventAttendanceSummary } from '@/lib/events';
 import { adminDb } from '@/lib/firebase-admin';
 
 interface EventSummary {

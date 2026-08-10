@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/events';
 import { Event } from '@/types/event';
 import { calculateRemainingDeadline } from '@/lib/payment-deadlines';
 import { determinePaymentStatus } from '@/lib/payment-status';

@@ -1,6 +1,6 @@
 // Debug API to check event data
 import { NextResponse } from 'next/server';
-import { getEventRegistrationsByEventId, getTrackedEventsFromFirestore } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, getTrackedEventsFromFirestore } from '@/lib/events';
 
 export async function GET() {
   try {

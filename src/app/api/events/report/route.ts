@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
-import { getYearlyAttendanceReport } from '@/lib/event-sheets';
+import { getYearlyAttendanceReport } from '@/lib/events';
 
 export async function GET(request: NextRequest) {
   try {

@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-import { getTrackedEventsFromFirestore } from '@/lib/event-sheets';
+import { getTrackedEventsFromFirestore } from '@/lib/events';
 import { getAllMembers } from '@/lib/google-sheets';
 import { google } from 'googleapis';
 import { isWithinLastMonths, parseEventDate } from '@/types/event';

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { getAllMemberCarpools } from '@/lib/carpools';
-import { getEventAttendanceSummary } from '@/lib/event-sheets';
+import { getEventAttendanceSummary } from '@/lib/events';
 
 /**
  * GET /api/events/[eventId]/my-carpool

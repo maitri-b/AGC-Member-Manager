@@ -1,9 +1,7 @@
-// Google Sheets Service for Event Registration Data
-import { google } from 'googleapis';
+// Firestore Service for Event Registration Data
 import {
   Event,
   EventRegistration,
-  COLUMN_TO_EVENT_REGISTRATION_MAP,
   DEFAULT_EVENTS,
   MemberAttendance,
   EventAttendanceRecord,
@@ -13,12 +11,17 @@ import {
 import { getAllMembers } from './google-sheets';
 import { adminDb } from './firebase-admin';
 
-const SHEET_ID = process.env.GOOGLE_SHEET_ID;
-
 // Cache for events from Firestore
 let eventsCache: Event[] | null = null;
 let eventsCacheTime: number = 0;
 const CACHE_TTL = 60000; // 1 minute cache
+
+// Helper to safely parse boolean from any value
+const parseBoolean = (value: unknown, defaultValue: boolean): boolean => {
+  if (value === true || value === 'true' || value === 1 || value === '1') return true;
+  if (value === false || value === 'false' || value === 0 || value === '0') return false;
+  return defaultValue;
+};
 
 // Get events from Firestore (with fallback to default)
 export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
@@ -43,13 +46,6 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
     const events = eventsSnapshot.docs.map(doc => {
       const data = doc.data();
 
-      // Helper to safely parse boolean from any value
-      const parseBoolean = (value: unknown, defaultValue: boolean): boolean => {
-        if (value === true || value === 'true' || value === 1 || value === '1') return true;
-        if (value === false || value === 'false' || value === 0 || value === '0') return false;
-        return defaultValue;
-      };
-
       // Debug raw data for isPublished
       if (doc.id === 'test-event-001' || data.eventName?.includes('ทดสอบ')) {
         console.log(`[getTrackedEventsFromFirestore] Event ${doc.id} raw data:`, {
@@ -68,7 +64,6 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         eventEndDate: data.eventEndDate || '',
         location: data.location || '',
         description: data.description || '',
-        sheetName: data.sheetName || '',
         year: data.year || 0,
         isActive: parseBoolean(data.isActive, true),
         isPublished: parseBoolean(data.isPublished, false),
@@ -104,14 +99,16 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         remainingDeadlineHours: data.remainingDeadlineHours ?? 0,
         // Registration edit control
         allowMemberEdit: parseBoolean(data.allowMemberEdit, true),
-        // Attendee type pricing (NEW)
+        // Attendee type pricing
         useAttendeeTypePricing: parseBoolean(data.useAttendeeTypePricing, false),
         attendeeTypes: data.attendeeTypes || [],
-        // Room allocation (NEW)
+        // Room allocation
         roomTypes: data.roomTypes || [],
-        // Carpool feature (NEW)
+        // Carpool feature
         hasCarpoolFeature: parseBoolean(data.hasCarpoolFeature, false),
         carpoolSettings: data.carpoolSettings || undefined,
+        // Cancellation policy
+        cancellationPolicy: data.cancellationPolicy || undefined,
         // Convert Firestore Timestamps to ISO strings
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || '',
         updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || '',
@@ -134,146 +131,6 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
 export function clearEventsCache() {
   eventsCache = null;
   eventsCacheTime = 0;
-}
-
-// Initialize Google Sheets API
-function getGoogleSheetsClient() {
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-
-  return google.sheets({ version: 'v4', auth });
-}
-
-// Convert sheet row to EventRegistration object
-function rowToEventRegistration(headers: string[], row: string[]): EventRegistration {
-  const registration: Partial<EventRegistration> = {};
-
-  headers.forEach((header, index) => {
-    const value = row[index] || '';
-    const normalizedHeader = header.toLowerCase().trim();
-    const registrationKey = COLUMN_TO_EVENT_REGISTRATION_MAP[normalizedHeader];
-
-    if (registrationKey) {
-      // Skip if value is already set (prefer first occurrence)
-      if ((registration as Record<string, unknown>)[registrationKey]) {
-        return;
-      }
-
-      // Handle boolean fields
-      if (registrationKey === 'hasClubRep' || registrationKey === 'shirtReceived' || registrationKey === 'cardReceived' || registrationKey === 'depositPaid') {
-        (registration as Record<string, unknown>)[registrationKey] =
-          value.toLowerCase() === 'true' || value === '1' || value.toLowerCase() === 'yes';
-      }
-      // Handle number fields
-      else if (['attendeeCount', 'shirtCount', 'eventFee', 'shirtFee', 'totalAmount', 'depositAmount', 'remainingAmount'].includes(registrationKey)) {
-        (registration as Record<string, unknown>)[registrationKey] = parseFloat(value) || 0;
-      }
-      // Handle string fields
-      else {
-        (registration as Record<string, unknown>)[registrationKey] = value;
-      }
-    }
-  });
-
-  return registration as EventRegistration;
-}
-
-// Required column headers for event registration sheets
-const REQUIRED_HEADERS = [
-  'registration_id',
-  'registration_date',
-  'company_name',
-  'license_number',
-  'contact_name',
-  'contact_phone',
-  'contact_email',
-  'line_userid',
-  'memberid',
-  'attendee_count',
-  'attendee_names',
-  'shirt_count',
-  'shirt_sizes',
-  'event_fee',
-  'shirt_fee',
-  'total_amount',
-  'slip_url',
-  'deposit_amount',
-  'remaining_amount',
-  'deposit_paid',
-  'deposit_paid_date',
-  'remaining_paid_date',
-  'deposit_slip_url',
-  'remaining_slip_url',
-  'deposit_deadline',
-  'remaining_deadline',
-  'payment_status',
-  'status',
-  'verified_by',
-  'verified_date',
-  'attendance_type',
-  'special_requests',
-  'admin_notes',
-  'last_update_info',
-  'attendee_type_selections',
-  'room_allocations',
-  'special_charges',
-];
-
-// Initialize or validate event sheet headers
-export async function ensureSheetHeaders(sheetName: string): Promise<{ success: boolean; addedHeaders: string[] }> {
-  const sheets = getGoogleSheetsClient();
-  const addedHeaders: string[] = [];
-
-  try {
-    // Get current headers
-    const headerResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: `'${sheetName}'!1:1`,
-    });
-
-    const currentHeaders = (headerResponse.data.values?.[0] as string[]) || [];
-    const normalizedCurrentHeaders = currentHeaders.map(h => h.toLowerCase().trim());
-
-    // Find missing headers
-    const missingHeaders: string[] = [];
-    for (const requiredHeader of REQUIRED_HEADERS) {
-      if (!normalizedCurrentHeaders.includes(requiredHeader)) {
-        missingHeaders.push(requiredHeader);
-      }
-    }
-
-    if (missingHeaders.length === 0) {
-      return { success: true, addedHeaders: [] };
-    }
-
-    console.log(`[ensureSheetHeaders] Adding ${missingHeaders.length} missing headers to ${sheetName}:`, missingHeaders);
-
-    // Append missing headers to the end of the header row
-    const newHeaderRow = [...currentHeaders, ...missingHeaders];
-
-    // Update header row
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: `'${sheetName}'!1:1`,
-      valueInputOption: 'RAW',
-      requestBody: {
-        values: [newHeaderRow],
-      },
-    });
-
-    addedHeaders.push(...missingHeaders);
-    console.log(`[ensureSheetHeaders] Successfully added headers to ${sheetName}`);
-
-    return { success: true, addedHeaders };
-  } catch (error) {
-    console.error(`Error ensuring headers for ${sheetName}:`, error);
-    return { success: false, addedHeaders: [] };
-  }
 }
 
 // Get all registrations from Firestore by eventId
@@ -328,11 +185,11 @@ async function getEventRegistrationsFromFirestore(eventId: string): Promise<Even
         fullPaymentPaid: data.fullPaymentPaid || false,
         fullPaymentPaidDate: data.fullPaymentPaidDate || '',
         fullPaymentAmountPaid: data.fullPaymentAmountPaid || 0,
-        fullPaymentDeadline: data.fullPaymentDeadline || '', // ✅ CRITICAL FIX: Full payment deadline
+        fullPaymentDeadline: data.fullPaymentDeadline || '',
         remainingPaid: data.remainingPaid || false,
         remainingAmountPaid: data.remainingAmountPaid || 0,
         depositAmountPaid: data.depositAmountPaid || 0,
-        additionalPaymentAmountPaid: data.additionalPaymentAmountPaid || 0, // ✅ CRITICAL FIX: Track additional payments
+        additionalPaymentAmountPaid: data.additionalPaymentAmountPaid || 0,
         paidAmount: data.paidAmount || 0,
         depositDeadline: data.depositDeadline || '',
         remainingDeadline: data.remainingDeadline || '',
@@ -368,59 +225,6 @@ async function getEventRegistrationsFromFirestore(eventId: string): Promise<Even
   }
 }
 
-// Get all registrations from a specific event sheet (DEPRECATED - use getEventRegistrationsByEventId)
-// This function is kept for backward compatibility with Google Sheets
-export async function getEventRegistrations(sheetName: string): Promise<EventRegistration[]> {
-  const sheets = getGoogleSheetsClient();
-
-  try {
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: `'${sheetName}'!A:AZ`, // Wide range to capture all columns
-    });
-
-    const rows = response.data.values;
-    if (!rows || rows.length === 0) {
-      return [];
-    }
-
-    const headers = (rows[0] as string[]).map(h => h.toLowerCase().trim());
-
-    // DEBUG: Log headers to see what columns we have
-    console.log('[getEventRegistrations] Headers:', headers);
-    console.log('[getEventRegistrations] Headers related to user ID:',
-      headers.filter(h => h.includes('user') || h.includes('member'))
-    );
-
-    const registrations = rows.slice(1).map((row, index) => {
-      const reg = rowToEventRegistration(headers, row as string[]);
-
-      // DEBUG: Log first registration to see what we're getting
-      if (index === 0) {
-        console.log('[getEventRegistrations] First registration sample:', {
-          registrationId: reg.registrationId,
-          lineUserId: reg.lineUserId,
-          memberId: reg.memberId,
-          contactName: reg.contactName,
-        });
-      }
-
-      return reg;
-    });
-
-    const filtered = registrations.filter((r) => r.registrationId);
-
-    console.log(`[getEventRegistrations] Total registrations: ${filtered.length}`);
-    console.log(`[getEventRegistrations] Registrations with lineUserId: ${filtered.filter(r => r.lineUserId).length}`);
-    console.log(`[getEventRegistrations] Registrations with memberId: ${filtered.filter(r => r.memberId).length}`);
-
-    return filtered;
-  } catch (error) {
-    console.error(`Error fetching registrations from ${sheetName}:`, error);
-    return [];
-  }
-}
-
 // Add a new registration to Firestore
 export async function addEventRegistrationToFirestore(
   eventId: string,
@@ -438,69 +242,9 @@ export async function addEventRegistrationToFirestore(
     });
 
     console.log(`[addEventRegistrationToFirestore] Added registration ${registrationData.registrationId} to Firestore with doc ID ${docRef.id}`);
-    return docRef.id; // Return document ID for immediate payment slip upload
+    return docRef.id;
   } catch (error) {
     console.error(`[addEventRegistrationToFirestore] Error adding registration:`, error);
-    throw error;
-  }
-}
-
-// Add a new registration to an event sheet (DEPRECATED - use addEventRegistrationToFirestore)
-// This function is kept for backward compatibility with Google Sheets
-export async function addEventRegistration(
-  sheetName: string,
-  registrationData: Record<string, unknown>
-): Promise<boolean> {
-  const sheets = getGoogleSheetsClient();
-
-  try {
-    // Ensure all required headers exist in the sheet
-    await ensureSheetHeaders(sheetName);
-
-    // Get headers (now guaranteed to have all required columns)
-    const headerResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: `'${sheetName}'!1:1`,
-    });
-
-    const headers = headerResponse.data.values?.[0] as string[];
-    if (!headers || headers.length === 0) {
-      console.error('No headers found in sheet:', sheetName);
-      return false;
-    }
-
-    // Map registration data to row based on headers
-    const newRow = headers.map(header => {
-      const normalizedHeader = header.toLowerCase().trim();
-      // Try direct match first
-      if (registrationData[normalizedHeader] !== undefined) {
-        return String(registrationData[normalizedHeader]);
-      }
-      // Try with underscore replaced by space
-      const withSpace = normalizedHeader.replace(/_/g, ' ');
-      if (registrationData[withSpace] !== undefined) {
-        return String(registrationData[withSpace]);
-      }
-      // Try original header name
-      if (registrationData[header] !== undefined) {
-        return String(registrationData[header]);
-      }
-      return '';
-    });
-
-    // Append to sheet
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SHEET_ID,
-      range: `'${sheetName}'!A:AZ`,
-      valueInputOption: 'RAW',
-      requestBody: {
-        values: [newRow],
-      },
-    });
-
-    return true;
-  } catch (error) {
-    console.error(`Error adding registration to ${sheetName}:`, error);
     throw error;
   }
 }
@@ -535,123 +279,6 @@ export async function updateEventRegistrationInFirestore(
     return true;
   } catch (error) {
     console.error(`[updateEventRegistrationInFirestore] Error updating registration:`, error);
-    throw error;
-  }
-}
-
-// Update an existing registration in an event sheet (DEPRECATED - use updateEventRegistrationInFirestore)
-// This function is kept for backward compatibility with Google Sheets
-export async function updateEventRegistration(
-  sheetName: string,
-  registrationId: string,
-  updateData: Record<string, unknown>
-): Promise<boolean> {
-  const sheets = getGoogleSheetsClient();
-
-  try {
-    console.log(`[updateEventRegistration] Starting update for ${registrationId} in ${sheetName}`);
-    console.log(`[updateEventRegistration] Update data:`, updateData);
-
-    // Ensure all required headers exist in the sheet
-    await ensureSheetHeaders(sheetName);
-
-    // Get all data from the sheet
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: `'${sheetName}'!A:AZ`,
-    });
-
-    const rows = response.data.values;
-    if (!rows || rows.length < 2) {
-      console.error('[updateEventRegistration] No data found in sheet:', sheetName);
-      return false;
-    }
-
-    const headers = rows[0] as string[];
-    const dataRows = rows.slice(1);
-
-    console.log(`[updateEventRegistration] Found ${headers.length} columns in sheet`);
-    console.log(`[updateEventRegistration] Headers:`, headers);
-
-    // Find registration_id column index
-    const regIdIndex = headers.findIndex(h =>
-      h.toLowerCase().trim() === 'registration_id' ||
-      h.toLowerCase().trim() === 'registration id'
-    );
-
-    if (regIdIndex === -1) {
-      console.error('[updateEventRegistration] registration_id column not found in sheet:', sheetName);
-      return false;
-    }
-
-    console.log(`[updateEventRegistration] registration_id column at index ${regIdIndex}`);
-
-    // Find the row with matching registration ID
-    const rowIndex = dataRows.findIndex(row => row[regIdIndex] === registrationId);
-
-    if (rowIndex === -1) {
-      console.error('[updateEventRegistration] Registration not found:', registrationId);
-      console.error('[updateEventRegistration] Available registration IDs:', dataRows.map(r => r[regIdIndex]).filter(Boolean));
-      return false;
-    }
-
-    // Actual row number (add 2: 1 for header, 1 for 0-indexed to 1-indexed)
-    const actualRowNumber = rowIndex + 2;
-    console.log(`[updateEventRegistration] Found registration at row ${actualRowNumber}`);
-
-    // Update specific cells
-    const updates: { range: string; values: unknown[][] }[] = [];
-    for (const [key, value] of Object.entries(updateData)) {
-      const normalizedKey = key.toLowerCase().trim();
-      const headerIndex = headers.findIndex(h => {
-        const normalizedHeader = h.toLowerCase().trim();
-        return normalizedHeader === normalizedKey ||
-               normalizedHeader.replace(/ /g, '_') === normalizedKey ||
-               normalizedHeader.replace(/_/g, ' ') === normalizedKey;
-      });
-
-      if (headerIndex !== -1) {
-        // Support columns beyond Z (AA, AB, etc.)
-        let columnLetter = '';
-        let tempIndex = headerIndex;
-        while (tempIndex >= 0) {
-          columnLetter = String.fromCharCode(65 + (tempIndex % 26)) + columnLetter;
-          tempIndex = Math.floor(tempIndex / 26) - 1;
-        }
-
-        console.log(`[updateEventRegistration] Mapping ${key} -> column ${columnLetter} (index ${headerIndex}) = ${value}`);
-
-        updates.push({
-          range: `'${sheetName}'!${columnLetter}${actualRowNumber}`,
-          values: [[value]],
-        });
-      } else {
-        console.warn(`[updateEventRegistration] Column not found for key: ${key}`);
-      }
-    }
-
-    if (updates.length === 0) {
-      console.error('[updateEventRegistration] No matching columns found for update');
-      console.error('[updateEventRegistration] Requested keys:', Object.keys(updateData));
-      console.error('[updateEventRegistration] Available headers:', headers);
-      return false;
-    }
-
-    console.log(`[updateEventRegistration] Performing ${updates.length} updates:`, updates);
-
-    // Batch update
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: SHEET_ID,
-      requestBody: {
-        data: updates as never,
-        valueInputOption: 'RAW',
-      },
-    });
-
-    console.log('[updateEventRegistration] Update successful');
-    return true;
-  } catch (error) {
-    console.error(`[updateEventRegistration] Error updating registration in ${sheetName}:`, error);
     throw error;
   }
 }
@@ -711,7 +338,6 @@ export async function getRegistrationsByLicense(licenseNumber: string): Promise<
   const events = await getTrackedEventsFromFirestore();
 
   for (const event of events) {
-    // ✅ Read from Firestore instead of Google Sheets
     const registrations = await getEventRegistrationsByEventId(event.eventId);
     const matchingReg = registrations.find(r => {
       const regLicense = (r.licenseNumber || '').trim().replace(/\s+/g, '');
@@ -766,7 +392,6 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
     // Check if confirmed/attended - include Thai status values
     const status = record.registration.status || '';
     const statusLower = status.toLowerCase();
-    // Use includes() for Thai text to handle potential encoding differences
     const isConfirmed =
       statusLower === 'confirmed' ||
       statusLower === 'attended' ||
@@ -781,7 +406,7 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
         eventId: record.eventId,
         eventName: record.eventName,
         eventDate: event.eventDate,
-        eventEndDate: event.eventEndDate || '', // Include end date for proper date range formatting
+        eventEndDate: event.eventEndDate || '',
         registrationId: record.registration.registrationId,
         attendeeNames: record.registration.attendeeNames,
         attendeeCount: record.registration.attendeeCount,
@@ -862,14 +487,19 @@ function isRegistrationConfirmed(reg: EventRegistration): boolean {
   );
 }
 
+// Helper to normalize license number for matching
+function normalizeLicenseNumber(license: string): string {
+  if (!license) return '';
+  return license.trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+}
+
 // Get all members' attendance summary for an event
-// This function deduplicates by license number - same company counts as 1
 export async function getEventAttendanceSummary(eventId: string): Promise<{
   event: Event | undefined;
-  totalRegistrations: number;        // Total rows in sheet
-  agentRegistrations: number;        // Unique companies (by license number)
-  confirmedCount: number;            // Unique confirmed companies
-  totalAttendees: number;            // Sum of all attendeeCount (total people)
+  totalRegistrations: number;
+  agentRegistrations: number;
+  confirmedCount: number;
+  totalAttendees: number;
   attendees: {
     registration: EventRegistration;
     member: {
@@ -892,48 +522,39 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
     };
   }
 
-  // ✅ Read from Firestore instead of Google Sheets
   const allRegistrations = await getEventRegistrationsByEventId(eventId);
 
   // Split registrations into active and cancelled
-  // Note: For active registrations, we count 'agent' type OR missing attendanceType (legacy data)
-  // For cancelled registrations, we include ALL types to show in admin panel
   const agentRegistrationsActive = allRegistrations.filter(r =>
     (r.attendanceType?.toLowerCase() === 'agent' || !r.attendanceType) && !isRegistrationCancelled(r)
   );
 
   const agentRegistrationsCancelled = allRegistrations.filter(r =>
-    isRegistrationCancelled(r) // Show ALL cancelled registrations regardless of attendance_type
+    isRegistrationCancelled(r)
   );
 
   const members = await getAllMembers();
 
   // Deduplicate ACTIVE registrations by license number or memberId
-  // Keep only the LATEST active registration per license/member
   const licenseMap = new Map<string, EventRegistration>();
 
   for (const reg of agentRegistrationsActive) {
     const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber || '');
     const memberId = reg.memberId || '';
 
-    // Create a unique key based on license number (preferred) or memberId
     let key = '';
     if (normalizedLicense) {
       key = `LICENSE_${normalizedLicense}`;
     } else if (memberId) {
       key = `MEMBER_${memberId}`;
     } else {
-      // For registrations without license or memberId, use LINE user ID or registration ID
       key = `USER_${reg.lineUserId || reg.registrationId}`;
     }
 
-    // Always use the latest registration (newer registrations override older ones)
-    // This ensures that if someone re-registers after cancellation, the new one is used
     const existing = licenseMap.get(key);
     if (!existing) {
       licenseMap.set(key, reg);
     } else {
-      // Compare registration dates to keep the latest one
       const existingDate = existing.registrationDate || '';
       const currentDate = reg.registrationDate || '';
       if (currentDate > existingDate) {
@@ -956,7 +577,6 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
   let totalAttendees = 0;
 
   for (const [, reg] of licenseMap) {
-    // Find matching member
     const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber || '');
     const member = members.find(m => {
       const memberLicense = normalizeLicenseNumber(m.licenseNumber || '');
@@ -979,7 +599,6 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
   }
 
   // Add cancelled registrations to the attendees list
-  // Note: Cancelled registrations are NOT deduplicated or counted in totals
   for (const reg of agentRegistrationsCancelled) {
     const normalizedLicense = normalizeLicenseNumber(reg.licenseNumber || '');
     const member = members.find(m => {
@@ -997,15 +616,14 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
     });
   }
 
-  // Filter allRegistrations to exclude cancelled for totalRegistrations count
   const activeRegistrationsCount = allRegistrations.filter(r => !isRegistrationCancelled(r)).length;
 
   return {
     event,
-    totalRegistrations: activeRegistrationsCount,  // Only active registrations
-    agentRegistrations: licenseMap.size,           // Unique companies count (active only)
-    confirmedCount,                                 // Unique confirmed companies
-    totalAttendees,                                 // Total people (sum of attendeeCount, active only)
+    totalRegistrations: activeRegistrationsCount,
+    agentRegistrations: licenseMap.size,
+    confirmedCount,
+    totalAttendees,
     attendees,
   };
 }
@@ -1048,12 +666,12 @@ export async function getYearlyAttendanceReport(year: number): Promise<{
   };
 }
 
-// Get list of tracked events (async version using Firestore)
+// Get list of tracked events
 export async function getTrackedEvents(): Promise<Event[]> {
   return getTrackedEventsFromFirestore();
 }
 
-// Get event by ID (async version using Firestore)
+// Get event by ID
 export async function getEventById(eventId: string): Promise<Event | undefined> {
   const events = await getTrackedEventsFromFirestore();
   return events.find(e => e.eventId === eventId);
@@ -1114,23 +732,15 @@ export async function getAttendanceCache(): Promise<Record<string, AttendanceCac
   }
 }
 
-// Helper to normalize license number for matching
-// Removes all non-alphanumeric characters and converts to uppercase
-function normalizeLicenseNumber(license: string): string {
-  if (!license) return '';
-  return license.trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-}
-
 /**
  * Build and store attendance cache
- * This reads all event registrations once and maps them to members by license number
  * @param months - Number of months to look back (default: 12)
  */
 export async function buildAttendanceCache(months: number = 12): Promise<{ success: boolean; memberCount: number; eventCount: number; confirmedCount: number }> {
   try {
     const db = adminDb();
 
-    // 1. Get all members (to map license -> memberId)
+    // 1. Get all members
     const members = await getAllMembers();
     const licenseToMemberMap: Record<string, { memberId: string; licenseNumber: string }> = {};
 
@@ -1152,57 +762,33 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
     const events = await getTrackedEventsFromFirestore();
     console.log(`buildAttendanceCache: Found ${events.length} events`);
 
-    // Debug: show each event's date and parse result
-    for (const event of events) {
-      const parsedDate = parseEventDate(event.eventDate);
-      const withinMonths = isWithinLastMonths(event.eventDate, months);
-      console.log(`buildAttendanceCache: Event "${event.eventName}" date="${event.eventDate}" parsed=${parsedDate?.toISOString()} withinMonths=${withinMonths}`);
-    }
-
     // 3. Build attendance count per license number
     const licenseAttendance: Record<string, number> = {};
     let totalConfirmed = 0;
 
     for (const event of events) {
-      // Skip events that don't count towards attendance
       if (!event.countsAttendance) {
         console.log(`buildAttendanceCache: Skipping event ${event.eventId} - countsAttendance is false`);
         continue;
       }
 
-      // Check if event is within the specified months (regardless of isActive status)
       if (!isWithinLastMonths(event.eventDate, months)) {
-        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - not within ${months} months (date: ${event.eventDate})`);
+        console.log(`buildAttendanceCache: Skipping event ${event.eventId} - not within ${months} months`);
         continue;
       }
 
       console.log(`buildAttendanceCache: Processing event ${event.eventId} (${event.eventName})`);
 
       try {
-        // ✅ Read from Firestore instead of Google Sheets
         const registrations = await getEventRegistrationsByEventId(event.eventId);
         console.log(`buildAttendanceCache: Found ${registrations.length} registrations for ${event.eventId}`);
-
-        // Debug: Show first few registrations with status
-        if (registrations.length > 0) {
-          console.log(`buildAttendanceCache: Sample registrations for ${event.eventName}:`,
-            registrations.slice(0, 3).map(r => ({
-              registrationId: r.registrationId,
-              licenseNumber: r.licenseNumber,
-              status: r.status,
-              companyName: r.companyName
-            }))
-          );
-        }
 
         let confirmedInEvent = 0;
         for (const reg of registrations) {
           if (!reg.licenseNumber) {
-            console.log(`buildAttendanceCache: Skipping registration ${reg.registrationId} - no license number`);
             continue;
           }
 
-          // Check if confirmed/attended
           const status = reg.status || '';
           const statusLower = status.toLowerCase();
           const isConfirmed =
@@ -1218,10 +804,7 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
               licenseAttendance[normalizedLicense] = (licenseAttendance[normalizedLicense] || 0) + 1;
               confirmedInEvent++;
               totalConfirmed++;
-              console.log(`buildAttendanceCache: ✓ Counted registration ${reg.registrationId} (${reg.companyName}) - license: ${normalizedLicense}, status: ${status}`);
             }
-          } else {
-            console.log(`buildAttendanceCache: ✗ Skipped registration ${reg.registrationId} (${reg.companyName}) - status: ${status} (not confirmed)`);
           }
         }
         console.log(`buildAttendanceCache: ${confirmedInEvent} confirmed registrations in ${event.eventName}`);
@@ -1231,7 +814,6 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
     }
 
     console.log(`buildAttendanceCache: Total confirmed registrations: ${totalConfirmed}`);
-    console.log(`buildAttendanceCache: Unique licenses with attendance: ${Object.keys(licenseAttendance).length}`);
 
     // 4. Build cache entries for all members
     const attendanceCache: Record<string, AttendanceCacheEntry> = {};
@@ -1283,7 +865,6 @@ export async function buildAttendanceCache(months: number = 12): Promise<{ succe
 
 /**
  * Invalidate attendance cache
- * Call this when registration status changes (confirm/cancel)
  */
 export async function invalidateAttendanceCache(): Promise<void> {
   try {
@@ -1297,7 +878,6 @@ export async function invalidateAttendanceCache(): Promise<void> {
 
 /**
  * Auto-rebuild attendance cache if needed
- * Call this after invalidation to rebuild in background
  */
 export async function autoRebuildAttendanceCache(): Promise<void> {
   try {
@@ -1310,10 +890,8 @@ export async function autoRebuildAttendanceCache(): Promise<void> {
 
 /**
  * Get attendance status for all members (using cache)
- * If cache doesn't exist, builds it first
  */
 export async function getAllMembersAttendanceStatus(): Promise<Record<string, AttendanceCacheEntry>> {
-  // Try to get from cache first
   let cache = await getAttendanceCache();
 
   if (!cache) {

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
-import { getAllMembersAttendanceStatus } from '@/lib/event-sheets';
+import { getAllMembersAttendanceStatus } from '@/lib/events';
 
 interface AttendanceStatus {
   memberId: string;

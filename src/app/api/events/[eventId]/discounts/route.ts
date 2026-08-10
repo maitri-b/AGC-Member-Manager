@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/events';
 import { Discount } from '@/types/event';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
 import { recalculatePaymentStatus } from '@/lib/payment-status';

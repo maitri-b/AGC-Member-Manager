@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
-import { getEventRegistrationsByEventId } from '@/lib/event-sheets';
+import { getEventRegistrationsByEventId } from '@/lib/events';
 import { EventRegistration, Event } from '@/types/event';
 import { determinePaymentStatus } from '@/lib/payment-status';
 import { sheetsCache, CacheKeys, CacheTTL } from '@/lib/cache/google-sheets-cache';

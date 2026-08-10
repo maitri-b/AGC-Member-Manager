@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission, canManageEvent } from '@/lib/permissions';
-import { getEventAttendanceSummary, getEventById } from '@/lib/event-sheets';
+import { getEventAttendanceSummary, getEventById } from '@/lib/events';
 import { adminDb } from '@/lib/firebase-admin';
 // Removed caching for admin view - admin always gets real-time data
 

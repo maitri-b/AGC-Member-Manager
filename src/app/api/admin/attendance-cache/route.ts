@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
-import { buildAttendanceCache, getAttendanceCache } from '@/lib/event-sheets';
+import { buildAttendanceCache, getAttendanceCache } from '@/lib/events';
 
 // GET - Get cache status
 export async function GET(request: NextRequest) {

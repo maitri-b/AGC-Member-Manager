@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
-import { getTrackedEvents, getEventAttendanceSummary, getEventRegistrationsByEventId } from '@/lib/event-sheets';
+import { getTrackedEvents, getEventAttendanceSummary, getEventRegistrationsByEventId } from '@/lib/events';
 import { EventRegistration } from '@/types/event';
 import { sheetsCache, CacheKeys, CacheTTL } from '@/lib/cache/google-sheets-cache';
 

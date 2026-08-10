@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminStorage, adminDb } from '@/lib/firebase-admin';
 import { createPaymentSlip, getPaymentSlipsByRegistration, getPaymentTypeLabel } from '@/lib/payment-slips';
-import { getEventRegistrationByRegistrationId } from '@/lib/event-sheets';
+import { getEventRegistrationByRegistrationId } from '@/lib/events';
 import { PaymentType } from '@/types/payment';
 
 export async function POST(request: NextRequest) {

@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { getMemberById, updateMember } from '@/lib/google-sheets';
 import { hasPermission } from '@/lib/permissions';
 import { adminDb } from '@/lib/firebase-admin';
-import { getMemberAttendanceSummary } from '@/lib/event-sheets';
+import { getMemberAttendanceSummary } from '@/lib/events';
 
 export async function GET(
   request: NextRequest,

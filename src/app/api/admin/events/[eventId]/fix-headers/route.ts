@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
-import { ensureSheetHeaders } from '@/lib/event-sheets';
+import { ensureSheetHeaders } from '@/lib/events';
 
 // POST - Fix headers for an event sheet
 export async function POST(

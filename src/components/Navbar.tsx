@@ -1,17 +1,18 @@
 'use client';
 
-import { useSession, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import { hasPermission } from '@/lib/permissions';
+import { useEffectiveSession } from '@/hooks/useEffectiveSession';
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, status } = useEffectiveSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  if (!session) return null;
+  if (status === 'loading' || !session) return null;
 
   // Check if user is admin (both role and permission)
   const isAdmin = session.user.role === 'admin' && hasPermission(session.user.permissions, 'admin:access');

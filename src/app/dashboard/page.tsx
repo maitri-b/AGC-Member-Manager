@@ -568,55 +568,61 @@ function DashboardContent() {
             </div>
           ) : events.length > 0 ? (
             <>
-              {/* Active Events */}
-              {events.filter(e => e.isActive).length > 0 && (
-                <div className="space-y-4 mb-6">
-                  {events.filter(e => e.isActive).map((event) => {
-                    const userAttendance = getUserAttendanceForEvent(event.eventId);
-                    const isRegistered = hasUserRegistered(event);
-                    return (
-                      <div key={event.eventId} className="bg-white rounded-lg shadow overflow-hidden border-l-4 border-green-500">
+              {/* Events Section - Simplified to show only latest active or encouraging message */}
+              {(() => {
+                const activeEvents = events.filter(e => e.isActive);
+                const latestActiveEvent = activeEvents[0];
+
+                if (latestActiveEvent) {
+                  // Show latest active event only
+                  const userAttendance = getUserAttendanceForEvent(latestActiveEvent.eventId);
+                  const isRegistered = hasUserRegistered(latestActiveEvent);
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Latest Active Event */}
+                      <div className="bg-white rounded-lg shadow overflow-hidden border-l-4 border-green-500">
                         <div className="p-5">
                           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             {/* Event Info */}
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-lg font-semibold text-gray-900">{event.eventName}</h3>
+                                <h3 className="text-lg font-semibold text-gray-900">{latestActiveEvent.eventName}</h3>
                                 <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
                                   กำลังดำเนินการ
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-500 mb-1">{event.eventNameEN}</p>
+                              <p className="text-sm text-gray-500 mb-1">{latestActiveEvent.eventNameEN}</p>
                               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                                 <span className="flex items-center gap-1">
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                   </svg>
-                                  {formatEventDateRange(event.eventDate || String(event.year), event.eventEndDate)}
+                                  {formatEventDateRange(latestActiveEvent.eventDate || String(latestActiveEvent.year), latestActiveEvent.eventEndDate)}
                                 </span>
-                                {event.location && event.location !== 'TBD' && (
+                                {latestActiveEvent.location && latestActiveEvent.location !== 'TBD' && (
                                   <span className="flex items-center gap-1">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
-                                    {event.location}
+                                    {latestActiveEvent.location}
                                   </span>
                                 )}
                               </div>
-                              {event.description && (
+                              {latestActiveEvent.description && (
                                 <p className="text-sm text-gray-500 mt-2">
-                                  {event.description.length > 50
-                                    ? `${event.description.substring(0, 50)}...`
-                                    : event.description}
+                                  {latestActiveEvent.description.length > 50
+                                    ? `${latestActiveEvent.description.substring(0, 50)}...`
+                                    : latestActiveEvent.description}
                                 </p>
                               )}
                             </div>
 
                             {/* Stats (for committee/admin) */}
-                            {isCommitteeOrAdmin && event.totalRegistrations !== undefined && (
+                            {isCommitteeOrAdmin && latestActiveEvent.totalRegistrations !== undefined && (
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-blue-600">{event.totalAttendees || 0}</p>
+                                <p className="text-2xl font-bold text-blue-600">{latestActiveEvent.totalAttendees || 0}</p>
                                 <p className="text-xs text-gray-500">ผู้เข้าร่วม<br />(คน)</p>
                               </div>
                             )}
@@ -670,7 +676,7 @@ function DashboardContent() {
                           {/* View Details Button */}
                           <div className="mt-4 pt-4 border-t border-gray-100">
                             <Link
-                              href={`/events/${event.eventId}`}
+                              href={`/events/${latestActiveEvent.eventId}`}
                               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -681,145 +687,143 @@ function DashboardContent() {
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
 
-              {/* Past Events */}
-              {events.filter(e => !e.isActive).length > 0 && (
-                <>
-                  <h3 className="text-lg font-medium text-gray-700 mb-3 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    กิจกรรมที่ผ่านมา
-                  </h3>
-                  <div className="space-y-4">
-                    {events.filter(e => !e.isActive).map((event) => {
-                      const userAttendance = getUserAttendanceForEvent(event.eventId);
-                      const isRegistered = hasUserRegistered(event);
-                      return (
-                        <div key={event.eventId} className="bg-white rounded-lg shadow overflow-hidden opacity-90">
-                          <div className="p-5">
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                              {/* Event Info */}
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="text-lg font-semibold text-gray-700">{event.eventName}</h3>
-                                  <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
-                                    สิ้นสุดแล้ว
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-500 mb-1">{event.eventNameEN}</p>
-                                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                                  <span className="flex items-center gap-1">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    {formatEventDateRange(event.eventDate || String(event.year), event.eventEndDate)}
-                                  </span>
-                                  {event.location && event.location !== 'TBD' && (
-                                    <span className="flex items-center gap-1">
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      </svg>
-                                      {event.location}
-                                    </span>
-                                  )}
-                                </div>
-                                {event.description && (
-                                  <p className="text-sm text-gray-400 mt-2">
-                                    {event.description.length > 50
-                                      ? `${event.description.substring(0, 50)}...`
-                                      : event.description}
-                                  </p>
-                                )}
-                              </div>
+                      {/* View All Link - if more than 1 active event */}
+                      {activeEvents.length > 1 && (
+                        <div className="text-center py-3">
+                          <Link
+                            href="/events"
+                            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
+                          >
+                            มีกิจกรรมอื่นๆ อีก {activeEvents.length - 1} กิจกรรม คลิกเพื่อดูทั้งหมด
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  );
+                } else {
+                  // No active events - show encouraging message and optionally latest past event
+                  const pastEvents = events.filter(e => !e.isActive);
+                  const latestPastEvent = pastEvents[0];
 
-                              {/* Stats (for committee/admin) */}
-                              {isCommitteeOrAdmin && event.totalRegistrations !== undefined && (
-                                <div className="text-center">
-                                  <p className="text-2xl font-bold text-gray-500">{event.totalAttendees || 0}</p>
-                                  <p className="text-xs text-gray-400">ผู้เข้าร่วม<br />(คน)</p>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* User Registration Status - Past Event */}
-                            {session.user.memberId && (
-                              <div className="mt-4 pt-4 border-t border-gray-100">
-                                {loadingEvents ? (
-                                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-                                    กำลังโหลดข้อมูล...
-                                  </div>
-                                ) : userAttendance ? (
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                      <span className="text-sm font-medium text-blue-700">
-                                        คุณได้เข้าร่วมกิจกรรมนี้
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                        เข้าร่วมแล้ว
-                                      </span>
-                                      {userAttendance.attendeeCount > 0 && (
-                                        <span className="text-sm text-gray-500">
-                                          ผู้เข้าร่วมจากบริษัท {userAttendance.attendeeCount} คน
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                ) : isRegistered ? (
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                      <span className="text-sm font-medium text-yellow-700">
-                                        คุณได้ลงทะเบียนกิจกรรมนี้
-                                      </span>
-                                    </div>
-                                    <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                                      รอตรวจสอบ
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span>คุณไม่ได้ลงทะเบียนกิจกรรมนี้</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* View Details Button */}
-                            <div className="mt-4 pt-4 border-t border-gray-100">
-                              <Link
-                                href={`/events/${event.eventId}`}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                ดูรายละเอียดกิจกรรม
-                              </Link>
-                            </div>
+                  return (
+                    <div className="space-y-6">
+                      {/* Encouraging Message */}
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 text-center">
+                        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-semibold text-purple-900 mb-2">
+                          รอพบกับกิจกรรมดีๆ จากชมรมเอเจ้นท์คลับ
+                        </h3>
+                        <p className="text-sm text-purple-700 mb-4">
+                          กิจกรรมใหม่ๆ กำลังจะมาถึงเร็วๆ นี้! ติดตามข่าวสารและประกาศกิจกรรมได้ที่
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                          <div className="flex items-center gap-2 text-sm text-purple-800">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M19.5 3h-15C3.675 3 3 3.675 3 4.5v15c0 .825.675 1.5 1.5 1.5h15c.825 0 1.5-.675 1.5-1.5v-15c0-.825-.675-1.5-1.5-1.5zm-7.5 15.75c-3.45 0-6.25-2.8-6.25-6.25S8.55 6.25 12 6.25s6.25 2.8 6.25 6.25-2.8 6.25-6.25 6.25z" />
+                            </svg>
+                            <span className="font-medium">กลุ่ม LINE Official</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-purple-800">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M19.5 3h-15C3.675 3 3 3.675 3 4.5v15c0 .825.675 1.5 1.5 1.5h15c.825 0 1.5-.675 1.5-1.5v-15c0-.825-.675-1.5-1.5-1.5zm-7.5 15.75c-3.45 0-6.25-2.8-6.25-6.25S8.55 6.25 12 6.25s6.25 2.8 6.25 6.25-2.8 6.25-6.25 6.25z" />
+                            </svg>
+                            <span className="font-medium">LINE OA ของชมรม</span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+                      </div>
+
+                      {/* Latest Past Event Preview (if exists) */}
+                      {latestPastEvent && (
+                        <>
+                          <h3 className="text-lg font-medium text-gray-700 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            กิจกรรมล่าสุดที่ผ่านมา
+                          </h3>
+                          <div className="bg-white rounded-lg shadow overflow-hidden opacity-90">
+                            <div className="p-5">
+                              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                {/* Event Info */}
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <h3 className="text-lg font-semibold text-gray-700">{latestPastEvent.eventName}</h3>
+                                    <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                                      สิ้นสุดแล้ว
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-500 mb-1">{latestPastEvent.eventNameEN}</p>
+                                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                                    <span className="flex items-center gap-1">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                      {formatEventDateRange(latestPastEvent.eventDate || String(latestPastEvent.year), latestPastEvent.eventEndDate)}
+                                    </span>
+                                    {latestPastEvent.location && latestPastEvent.location !== 'TBD' && (
+                                      <span className="flex items-center gap-1">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        {latestPastEvent.location}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Stats (for committee/admin) */}
+                                {isCommitteeOrAdmin && latestPastEvent.totalRegistrations !== undefined && (
+                                  <div className="text-center">
+                                    <p className="text-2xl font-bold text-gray-500">{latestPastEvent.totalAttendees || 0}</p>
+                                    <p className="text-xs text-gray-400">ผู้เข้าร่วม<br />(คน)</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* View Details Button */}
+                              <div className="mt-4 pt-4 border-t border-gray-100">
+                                <Link
+                                  href={`/events/${latestPastEvent.eventId}`}
+                                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  ดูรายละเอียดกิจกรรม
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* View All Past Events Link */}
+                          {pastEvents.length > 1 && (
+                            <div className="text-center py-3">
+                              <Link
+                                href="/events"
+                                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-700 font-medium text-sm transition-colors"
+                              >
+                                ดูกิจกรรมที่ผ่านมาทั้งหมด
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </Link>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                }
+              })()}
             </>
           ) : (
             <div className="bg-white rounded-lg shadow p-6 text-center">

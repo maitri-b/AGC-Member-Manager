@@ -476,20 +476,40 @@ function DashboardContent() {
         </div>
         )}
 
-        {/* Activity Warning for Members */}
+        {/* Activity Invitation for Members */}
         {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && !loadingAttendance && attendance?.noActivityWarning && (
-          <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
+          <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
-                <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-orange-800">แจ้งเตือน: ขาดการเข้าร่วมกิจกรรม</h3>
-                <p className="text-sm text-orange-700 mt-1">
-                  คุณยังไม่ได้เข้าร่วมกิจกรรมของชมรมใน 12 เดือนที่ผ่านมา
-                  กรุณาเข้าร่วมกิจกรรมเพื่อรักษาสถานะสมาชิก
+                <h3 className="font-semibold text-blue-900 text-lg mb-2">คิดถึงคุณนะ! มาร่วมกิจกรรมกับเราอีกครั้งสิ 💙</h3>
+                <p className="text-sm text-blue-800 leading-relaxed mb-3">
+                  ชมรมของเราเป็นมากกว่าแค่กลุ่ม แต่เป็น<strong className="font-semibold">ครอบครัวที่ช่วยเหลือและทำกิจกรรมร่วมกัน</strong>
+                  เราสังเกตว่าคุณยังไม่ได้เข้าร่วมกิจกรรมใดๆ ใน 12 เดือนที่ผ่านมา
+                </p>
+                <div className="bg-white/70 rounded-lg p-4 mb-3 border border-blue-200">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="text-sm text-gray-700">
+                      <p className="font-medium text-indigo-900 mb-1">📱 สิทธิพิเศษ: LINE Official Group (จำกัด 500 ที่นั่ง)</p>
+                      <p className="text-gray-600">
+                        การอยู่ในกลุ่ม LINE ของชมรมเป็นสิทธิพิเศษสำหรับสมาชิกที่มีส่วนร่วมอย่างต่อเนื่อง
+                        เพียงแค่<strong className="text-blue-700"> เข้าร่วมกิจกรรมอย่างน้อย 1 ครั้งต่อปี</strong>
+                        คุณก็จะรักษาสิทธิ์นี้ไว้ได้ และได้เป็นส่วนหนึ่งของชุมชนที่อบอุ่นของเรา
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-blue-700">
+                  <span className="font-medium">💡 เคล็ดลับ:</span> ลองดูกิจกรรมที่น่าสนใจด้านล่าง หรือติดตามประกาศกิจกรรมใหม่ๆ ที่กำลังจะมาถึง เราอยากเจอคุณอีกครั้ง!
                 </p>
               </div>
             </div>

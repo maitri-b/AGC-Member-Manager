@@ -1280,29 +1280,33 @@ export default function EventDetailPage() {
                           return (
                             <div key={rule.ruleId}>
                               {/* Regular rule */}
-                              <p className="text-sm text-gray-700">
-                                <span className="font-medium">ยกเลิกก่อน {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                })}: </span>
-                                <span className={refundText === 'ไม่คืนเงิน' ? 'text-red-600 font-medium' : 'ml-1'}>
-                                  {refundText}
-                                </span>
-                              </p>
-
-                              {/* Final Rule */}
-                              {rule.isFinalRule && (
-                                <p className="text-sm text-gray-700 mt-1 pl-4">
-                                  <span className="font-medium">ยกเลิกตั้งแต่ {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
+                              <div className="flex justify-between text-sm text-gray-700">
+                                <span className="font-medium">
+                                  ยกเลิกก่อน {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
                                     year: 'numeric',
                                     month: 'long',
                                     day: 'numeric'
-                                  })} เป็นต้นไป: </span>
-                                  <span className={finalRuleText === 'ไม่คืนเงิน' ? 'text-red-600 font-medium' : 'ml-1'}>
+                                  })}:
+                                </span>
+                                <span className={refundText === 'ไม่คืนเงิน' ? 'text-red-600 font-medium' : ''}>
+                                  {refundText}
+                                </span>
+                              </div>
+
+                              {/* Final Rule */}
+                              {rule.isFinalRule && (
+                                <div className="flex justify-between text-sm text-gray-700 mt-1">
+                                  <span className="font-medium">
+                                    ยกเลิกตั้งแต่ {new Date(rule.cancelBeforeDate).toLocaleDateString('th-TH', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    })} เป็นต้นไป:
+                                  </span>
+                                  <span className={finalRuleText === 'ไม่คืนเงิน' ? 'text-red-600 font-medium' : ''}>
                                     {finalRuleText}
                                   </span>
-                                </p>
+                                </div>
                               )}
                             </div>
                           );

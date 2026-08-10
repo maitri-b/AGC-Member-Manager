@@ -1994,7 +1994,7 @@ export default function EventDetailPage() {
                                     <div className="pt-2 border-t border-gray-200">
                                       <p className="font-semibold text-orange-700 mb-1">👥 วิธีร่วมรถคนอื่น (สำหรับผู้โดยสาร)</p>
                                       <ol className="list-decimal list-inside space-y-1 ml-2">
-                                        <li>ที่การ์ด "รายชื่อจัดการรถ" กดปุ่ม "Join รถคนอื่น"</li>
+                                        <li>กดปุ่ม "Join รถคนอื่น" (ปุ่มสีเขียว)</li>
                                         <li>ใส่รหัสลงทะเบียนของเจ้าของรถ</li>
                                         <li>เลือกสมาชิกในทีมที่จะไปด้วย</li>
                                         <li>กดยืนยัน - เข้าร่วมสำเร็จ!</li>
@@ -2023,15 +2023,29 @@ export default function EventDetailPage() {
                           </div>
                           <p className="text-xs text-gray-600 mb-3">
                             กรุณาสร้าง Carpool หากคุณจะขับรถไปเอง คุณสามารถเชิญสมาชิกจากรหัสลงทะเบียนอื่นร่วมไปด้วยได้<br />
-                            กรณีไม่ได้ขับไปเอง แต่จะร่วมไปรถของรหัสลงทะเบียนคนอื่น กรุณากด Join รถคนอื่นในการ์ด "รายชื่อจัดการรถ"<br />
+                            กรณีไม่ได้ขับไปเอง แต่จะร่วมไปรถของรหัสลงทะเบียนคนอื่น กรุณากด Join รถคนอื่น<br />
                             <span className="text-purple-600 font-medium">สามารถสร้าง Carpool ได้มากกว่า 1 คัน</span>
                           </p>
-                          <button
-                            onClick={() => setShowCreateCarpoolModal(true)}
-                            className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                          >
-                            + สร้าง Carpool
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setShowCreateCarpoolModal(true)}
+                              className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            >
+                              + สร้าง Carpool
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowJoinCarpoolModal(true);
+                                // Fetch all carpools to check if members are already in other carpools
+                                if (allCarpools.length === 0) {
+                                  fetchAllCarpools();
+                                }
+                              }}
+                              className="text-sm px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                            >
+                              Join รถคนอื่น
+                            </button>
+                          </div>
                         </div>
 
                         {/* Members Status Overview - Show only members NOT in any carpool */}
@@ -2066,29 +2080,15 @@ export default function EventDetailPage() {
                           return (
                             <div className="mb-4 px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg">
                               <div className="flex items-center justify-between mb-2">
-                                <p className="text-xs font-semibold text-gray-700">รายชื่อจัดการรถ:</p>
-                                <div className="flex gap-2">
-                                  {memberCarpools.length > 0 && (
-                                    <button
-                                      onClick={() => setShowJoinOwnCarpoolModal(true)}
-                                      className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                                    >
-                                      เข้าร่วม Carpool ของฉัน
-                                    </button>
-                                  )}
+                                <p className="text-xs font-semibold text-gray-700">รายชื่อจัด Carpool:</p>
+                                {memberCarpools.length > 0 && (
                                   <button
-                                    onClick={() => {
-                                      setShowJoinCarpoolModal(true);
-                                      // Fetch all carpools to check if members are already in other carpools
-                                      if (allCarpools.length === 0) {
-                                        fetchAllCarpools();
-                                      }
-                                    }}
-                                    className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                    onClick={() => setShowJoinOwnCarpoolModal(true)}
+                                    className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                                   >
-                                    Join รถคนอื่น
+                                    เข้าร่วม Carpool ของฉัน
                                   </button>
-                                </div>
+                                )}
                               </div>
                               <div className="space-y-1">
                                 {membersNotInCarpool.map((name, index) => (

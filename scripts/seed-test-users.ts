@@ -82,10 +82,10 @@ const TEST_USERS = [
     licenseExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     lineGroupStatus: 'left',
     lineGroupLeftDate: new Date().toISOString(),
-    membershipStatus: 'inactive',
-    role: 'guest',
+    membershipStatus: 'active',
+    role: 'member',
     permissions: [],
-    description: '👋 ออกจากกลุ่ม LINE แล้ว - สูญเสียสถานะสมาชิก กลับมาเป็น guest',
+    description: '👋 ออกจากกลุ่ม LINE แล้ว - ยังคงเป็นสมาชิก แต่ไม่อยู่ในกลุ่ม LINE',
   },
   {
     lineUserId: 'test-pending-approval',

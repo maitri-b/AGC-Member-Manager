@@ -45,7 +45,13 @@ interface TestUser {
 /**
  * Validation rules for test users based on role
  */
-const VALIDATION_RULES = {
+interface ValidationRule {
+  requiredFields?: string[];
+  mustNotHave?: string[];
+  description: string;
+}
+
+const VALIDATION_RULES: Record<'member' | 'admin' | 'guest', ValidationRule> = {
   member: {
     requiredFields: ['memberId', 'companyName', 'licenseNumber', 'phone'],
     description: 'Members who can register for events MUST have memberId, companyName, licenseNumber, and phone'

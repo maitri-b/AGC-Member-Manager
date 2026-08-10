@@ -3257,25 +3257,32 @@ export default function EventDetailPage() {
                     }
 
                     // ✅ Check if any applicable deadline has passed
+                    // IMPORTANT: Only hide button if deadline passed AND no payment made yet
+                    // If user already paid some amount, always show upload button for additional payments
                     let isPastDeadline = false;
-                    if (event.paymentMode === 'deposit') {
-                      // Deposit mode: Check deposit deadline if deposit not paid, or remaining deadline if deposit paid
-                      if (!userRegistration.depositPaid && userRegistration.depositDeadline) {
-                        isPastDeadline = isDeadlinePassed(userRegistration.depositDeadline);
-                      } else if (userRegistration.depositPaid && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl) {
-                        isPastDeadline = isDeadlinePassed(userRegistration.remainingDeadline);
-                      }
-                    } else {
-                      // Full payment mode: Check full payment deadline
-                      if (userRegistration.fullPaymentDeadline) {
-                        isPastDeadline = isDeadlinePassed(userRegistration.fullPaymentDeadline);
-                      }
-                    }
 
-                    // Hide button if deadline has passed
-                    if (isPastDeadline) {
-                      return false;
+                    // Only check deadline if user has NOT made any payment yet
+                    if (paidAmount === 0) {
+                      if (event.paymentMode === 'deposit') {
+                        // Deposit mode: Check deposit deadline if deposit not paid
+                        if (!userRegistration.depositPaid && userRegistration.depositDeadline) {
+                          isPastDeadline = isDeadlinePassed(userRegistration.depositDeadline);
+                        } else if (userRegistration.depositPaid && userRegistration.remainingDeadline && !userRegistration.remainingSlipUrl) {
+                          isPastDeadline = isDeadlinePassed(userRegistration.remainingDeadline);
+                        }
+                      } else {
+                        // Full payment mode: Check full payment deadline
+                        if (userRegistration.fullPaymentDeadline) {
+                          isPastDeadline = isDeadlinePassed(userRegistration.fullPaymentDeadline);
+                        }
+                      }
+
+                      // Hide button if deadline has passed AND no payment made yet
+                      if (isPastDeadline) {
+                        return false;
+                      }
                     }
+                    // If paidAmount > 0, ignore deadline and allow upload (user can pay additional amounts)
 
                     // Show button if has payment account and total amount > 0
                     return hasPaymentAccount && hasTotalAmount;

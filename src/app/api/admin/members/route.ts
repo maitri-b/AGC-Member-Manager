@@ -25,10 +25,10 @@ export async function GET() {
 
     const db = adminDb();
 
-    // Fetch all members
-    const membersSnapshot = await db.collection('members').get();
+    // Fetch all users (includes both real members and test accounts)
+    const usersSnapshot = await db.collection('users').get();
 
-    const members = membersSnapshot.docs.map(doc => {
+    const members = usersSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         lineUserId: doc.id,

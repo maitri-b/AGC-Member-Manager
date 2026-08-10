@@ -577,7 +577,6 @@ export const DEFAULT_EVENTS: Event[] = [
     eventDate: '2569',  // พ.ศ.
     location: 'TBD',
     description: 'งานครบรอบ 10 ปี Agents Club',
-    sheetName: '10 Yearth Meeting',
     year: 2569,  // พ.ศ. 2569 = ค.ศ. 2026
     isActive: true,
     isPublished: true,

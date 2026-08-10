@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { Event, EventInput, DEFAULT_EVENTS } from '@/types/event';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // GET - List all events
 export async function GET() {
@@ -299,11 +300,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    const updateData = {
+    const updateData: any = {
       ...updates,
       updatedAt: new Date().toISOString(),
       updatedBy: session.user.id,
     };
+
+    // ✅ Handle cancellationPolicy deletion when it's undefined
+    if (updates.cancellationPolicy === undefined) {
+      updateData.cancellationPolicy = FieldValue.delete();
+    }
 
     await eventRef.update(updateData);
 

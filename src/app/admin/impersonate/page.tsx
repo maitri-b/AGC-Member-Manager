@@ -108,25 +108,44 @@ export default function ImpersonatePage() {
     }
   };
 
+  const getRoleBadge = (role?: string) => {
+    const roleConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {
+      admin: { label: 'Admin', bgColor: 'bg-red-100', textColor: 'text-red-800' },
+      staff: { label: 'Staff', bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
+      event_staff: { label: 'Event Staff', bgColor: 'bg-cyan-100', textColor: 'text-cyan-800' },
+      member: { label: 'Member', bgColor: 'bg-green-100', textColor: 'text-green-800' },
+      guest: { label: 'Guest', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
+    };
+
+    const config = roleConfig[role || 'guest'] || roleConfig.guest;
+
+    return (
+      <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${config.bgColor} ${config.textColor}`}>
+        {config.label}
+      </span>
+    );
+  };
+
   const getStatusBadge = (member: Member) => {
     const badges = [];
 
+    // Test Account Badge
     if (member.testAccount) {
       badges.push(
-        <span key="test" className="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800">
+        <span key="test" className="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800 font-semibold">
           TEST
         </span>
       );
     }
 
-    if (member.role === 'admin') {
-      badges.push(
-        <span key="admin" className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800">
-          Admin
-        </span>
-      );
-    }
+    // Role Badge (always show)
+    badges.push(
+      <span key="role">
+        {getRoleBadge(member.role)}
+      </span>
+    );
 
+    // License Status Badges
     if (member.licenseStatus === 'expired') {
       badges.push(
         <span key="expired" className="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-800">
@@ -143,6 +162,7 @@ export default function ImpersonatePage() {
       );
     }
 
+    // LINE Group Status
     if (member.lineGroupStatus === 'left') {
       badges.push(
         <span key="left" className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">

@@ -92,12 +92,14 @@ export default function Navbar() {
             >
               กิจกรรม
             </Link>
-            <Link
-              href="/my-registrations"
-              className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              ประวัติการจอง
-            </Link>
+            {session.user.role !== 'guest' && (
+              <Link
+                href="/my-registrations"
+                className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                ประวัติการจอง
+              </Link>
+            )}
             {canViewMembers && (
               <Link
                 href="/members"
@@ -243,13 +245,15 @@ export default function Navbar() {
             >
               กิจกรรม
             </Link>
-            <Link
-              href="/my-registrations"
-              className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              ประวัติการจอง
-            </Link>
+            {session.user.role !== 'guest' && (
+              <Link
+                href="/my-registrations"
+                className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                ประวัติการจอง
+              </Link>
+            )}
             {canViewMembers && (
               <Link
                 href="/members"

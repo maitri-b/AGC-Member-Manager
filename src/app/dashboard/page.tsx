@@ -76,25 +76,36 @@ function DashboardContent() {
 
   useEffect(() => {
     if (session) {
-      // Only fetch events for members and above (not guests)
-      if (session.user.role !== 'guest') {
-        fetchEvents();
-      } else {
-        setLoadingEvents(false);
-      }
+      // Fetch all data in parallel for better performance
+      const fetchAllData = async () => {
+        const promises: Promise<void>[] = [];
 
-      if (session.user.memberId) {
-        fetchAttendance();
-      } else {
-        setLoadingAttendance(false);
-      }
+        // Fetch events for members and above (not guests)
+        if (session.user.role !== 'guest') {
+          promises.push(fetchEvents());
+        } else {
+          setLoadingEvents(false);
+        }
 
-      // Fetch verification status for guests
-      if (session.user.role === 'guest') {
-        fetchVerificationStatus();
-      } else {
-        setLoadingVerification(false);
-      }
+        // Fetch attendance for members
+        if (session.user.memberId) {
+          promises.push(fetchAttendance());
+        } else {
+          setLoadingAttendance(false);
+        }
+
+        // Fetch verification status for guests
+        if (session.user.role === 'guest') {
+          promises.push(fetchVerificationStatus());
+        } else {
+          setLoadingVerification(false);
+        }
+
+        // Wait for all promises to complete in parallel
+        await Promise.all(promises);
+      };
+
+      fetchAllData();
     }
   }, [session]);
 
@@ -130,7 +141,8 @@ function DashboardContent() {
 
   const fetchAttendance = async () => {
     try {
-      const response = await fetch('/api/events/attendance');
+      // Use cache for faster loading (default: true, but explicit for clarity)
+      const response = await fetch('/api/events/attendance?cache=true');
       if (response.ok) {
         const data = await response.json();
         setAttendance(data.attendance);
@@ -184,6 +196,29 @@ function DashboardContent() {
             )}
           </div>
         </div>
+
+        {/* Loading Skeleton for Activity Box */}
+        {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && loadingAttendance && (
+          <div className="mb-8 bg-gradient-to-r from-gray-50 to-slate-50 border-2 border-gray-200 rounded-xl p-6 shadow-sm animate-pulse">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+              </div>
+              <div className="flex-1 space-y-3">
+                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                </div>
+                <div className="bg-white/70 rounded-lg p-4 border border-gray-200">
+                  <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 rounded w-4/5 mt-1"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Activity Invitation for Members */}
         {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && !loadingAttendance && attendance?.noActivityWarning && (
@@ -267,6 +302,29 @@ function DashboardContent() {
                   <span className="font-medium">🌟 เชิญชวน:</span> ยังมีกิจกรรมน่าสนใจอีกมากมายด้านล่าง มาเจอกันบ่อยๆ นะ!
                   ทุกครั้งที่คุณมาร่วม คุณก็เป็นส่วนสำคัญที่ทำให้ชมรมมีชีวิตชีวา
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading Skeleton for Attendance Statistics */}
+        {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && loadingAttendance && (
+          <div className="mb-8">
+            <div className="h-7 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
+            <div className="bg-white rounded-lg shadow p-6 animate-pulse">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="h-9 bg-gray-200 rounded w-16 mx-auto mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-24 mx-auto"></div>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="h-9 bg-gray-200 rounded w-16 mx-auto mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-24 mx-auto"></div>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-lg col-span-2">
+                  <div className="h-6 bg-gray-200 rounded w-40 mx-auto mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-32 mx-auto"></div>
+                </div>
               </div>
             </div>
           </div>

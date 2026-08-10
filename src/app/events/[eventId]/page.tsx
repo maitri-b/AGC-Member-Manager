@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Toast, useToast } from '@/components/Toast';
 import PaymentSlipUploadModal from '@/components/PaymentSlipUploadModal';
 import CancellationModal from '@/components/member/CancellationModal';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 // TEMP: Hidden until PDF generation is fixed on Vercel
 // import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier, CancellationPolicy } from '@/types/event';
@@ -157,7 +157,7 @@ interface UserRegistration {
 }
 
 export default function EventDetailPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useEffectiveSessionContext();
   const router = useRouter();
   const params = useParams();
   const toast = useToast();

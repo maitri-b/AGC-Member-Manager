@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import CancellationModal from '@/components/member/CancellationModal';
 import { Event } from '@/types/event';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 
 interface Registration {
   eventId: string;
@@ -41,7 +41,7 @@ interface RegistrationCardProps {
 }
 
 export default function MyRegistrationsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useEffectiveSessionContext();
   const router = useRouter();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);

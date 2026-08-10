@@ -4,6 +4,7 @@ import "./globals.css";
 import AuthProvider from "@/lib/auth-provider";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
+import { EffectiveSessionProvider } from "@/lib/EffectiveSessionProvider";
 
 const sarabun = Sarabun({
   weight: ["300", "400", "500", "600", "700"],
@@ -28,8 +29,10 @@ export default function RootLayout({
     <html lang="th" className={`${sarabun.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sarabun bg-gray-50">
         <AuthProvider>
-          <ImpersonationBanner />
-          <LayoutWrapper>{children}</LayoutWrapper>
+          <EffectiveSessionProvider>
+            <ImpersonationBanner />
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </EffectiveSessionProvider>
         </AuthProvider>
       </body>
     </html>

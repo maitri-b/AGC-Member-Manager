@@ -1,9 +1,9 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 
 interface MemberInfo {
   memberId: string;
@@ -30,7 +30,7 @@ interface VerificationStatus {
 }
 
 export default function VerifyPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useEffectiveSessionContext();
   const router = useRouter();
   const [step, setStep] = useState<'check' | 'search' | 'confirm' | 'alreadyLinked' | 'dispute' | 'disputeSubmitted' | 'submitted' | 'verified'>('check');
   const [licenseNumber, setLicenseNumber] = useState('');

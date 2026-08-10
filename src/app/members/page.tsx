@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Member, parseLicenseExpiryDate, parseThaiDate, formatThaiDate, formatThaiDateShort } from '@/types/member';
 import { Toast, useToast } from '@/components/Toast';
 import { hasPermission } from '@/lib/permissions';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 
 // Extended Member type with LINE profile from Firestore
 interface MemberWithProfile extends Member {
@@ -1321,7 +1321,7 @@ ${companyName} (ทะเบียน ${member.licenseNumber || '-'})
 }
 
 export default function MembersPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useEffectiveSessionContext();
   const router = useRouter();
   const [allMembers, setAllMembers] = useState<MemberWithProfile[]>([]);
   const [loading, setLoading] = useState(true);

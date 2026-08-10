@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Member, formatThaiDate as formatLicenseDate } from '@/types/member';
 import { Toast, useToast } from '@/components/Toast';
 import { formatEventDateRange } from '@/lib/date-utils';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 
 interface UserProfile {
   id: string;
@@ -51,7 +51,7 @@ interface MemberAttendance {
 }
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useEffectiveSessionContext();
   const router = useRouter();
   const toast = useToast();
   const [user, setUser] = useState<UserProfile | null>(null);

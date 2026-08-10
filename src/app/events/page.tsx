@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatEventDateRange } from '@/lib/date-utils';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 
 interface Event {
   eventId: string;
@@ -52,7 +52,7 @@ interface EventAttendee {
 }
 
 export default function EventsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useEffectiveSessionContext();
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);

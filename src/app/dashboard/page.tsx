@@ -1,11 +1,11 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Link from 'next/link';
 import { hasPermission } from '@/lib/permissions';
 import { formatEventDateRange } from '@/lib/date-utils';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 
 interface EventInfo {
   eventId: string;
@@ -66,7 +66,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-  const { data: session } = useSession();
+  const { data: session } = useEffectiveSessionContext();
   const [events, setEvents] = useState<EventInfo[]>([]);
   const [attendance, setAttendance] = useState<MemberAttendance | null>(null);
   const [loadingEvents, setLoadingEvents] = useState(true);

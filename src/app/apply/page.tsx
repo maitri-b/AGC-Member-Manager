@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import LineLoginButton from '@/components/LineLoginButton';
 import { Toast, useToast } from '@/components/Toast';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 
 interface ApplicationForm {
   // Company Info
@@ -79,7 +80,7 @@ function formatPhoneNumber(value: string, isMobile: boolean = false): string {
 }
 
 export default function ApplyPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useEffectiveSessionContext();
   const router = useRouter();
   const toast = useToast();
 

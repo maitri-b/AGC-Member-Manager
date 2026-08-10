@@ -46,9 +46,27 @@ export async function GET(request: Request) {
     // 1. If ?published=true is specified → always show only published events
     // 2. If not specified → Admin/Committee/Event Managers see all, Regular members see only published
     const canSeeAllEvents = isCommitteeOrAdmin || canManageEvents;
+
+    // Debug logging
+    console.log('[Events API] User permissions:', {
+      isCommitteeOrAdmin,
+      canManageEvents,
+      canSeeAllEvents,
+      userId: session.user.id,
+      role: session.user.role
+    });
+    console.log('[Events API] Total events before filter:', events.length);
+    console.log('[Events API] Events isPublished status:', events.map(e => ({
+      eventId: e.eventId,
+      isPublished: e.isPublished,
+      typeOf: typeof e.isPublished
+    })));
+
     const visibleEvents = onlyPublished
       ? events.filter(e => e.isPublished === true)
       : (canSeeAllEvents ? events : events.filter(e => e.isPublished === true));
+
+    console.log('[Events API] Visible events after filter:', visibleEvents.length);
 
     if (!canSeeAllEvents) {
       // For regular members (non-admin, non-committee, non-event-managers), return basic event info with registration status

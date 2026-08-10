@@ -196,8 +196,12 @@ export async function POST(
     // Commit all updates
     await batch.commit();
 
-    // Send LINE notification if member has LINE ID
-    if (registration.lineUserId) {
+    // Send LINE notification if member has LINE ID and notifications are enabled
+    // Check master control: event.sendLineNotification and cancellationPolicy.sendLineNotification
+    const shouldNotify = (event.cancellationPolicy?.sendLineNotification ?? true) &&
+                         (event.sendLineNotification ?? true);
+
+    if (registration.lineUserId && shouldNotify) {
       try {
         // Format event date
         const formatEventDate = (dateStr: string): string => {

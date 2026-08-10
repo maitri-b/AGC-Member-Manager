@@ -23,7 +23,7 @@ const TEST_USERS = [
   {
     lineUserId: 'test-normal-active',
     displayName: 'Test: Normal Active Member',
-    pictureUrl: 'https://via.placeholder.com/150/4CAF50/FFFFFF?text=Normal',
+    pictureUrl: 'https://ui-avatars.com/api/?name=Normal&background=4CAF50&color=fff&size=150',
     email: 'test-normal@example.com',
     phone: '081-111-1111',
     companyName: 'Test Company Normal',
@@ -39,7 +39,7 @@ const TEST_USERS = [
   {
     lineUserId: 'test-license-expired',
     displayName: 'Test: Expired License',
-    pictureUrl: 'https://via.placeholder.com/150/FF9800/FFFFFF?text=Expired',
+    pictureUrl: 'https://ui-avatars.com/api/?name=Expired&background=FF9800&color=fff&size=150',
     email: 'test-expired@example.com',
     phone: '081-222-2222',
     companyName: 'Test Company Expired',
@@ -55,7 +55,7 @@ const TEST_USERS = [
   {
     lineUserId: 'test-license-suspended',
     displayName: 'Test: Suspended License',
-    pictureUrl: 'https://via.placeholder.com/150/F44336/FFFFFF?text=Suspended',
+    pictureUrl: 'https://ui-avatars.com/api/?name=Suspended&background=F44336&color=fff&size=150',
     email: 'test-suspended@example.com',
     phone: '081-333-3333',
     companyName: 'Test Company Suspended',
@@ -73,7 +73,7 @@ const TEST_USERS = [
   {
     lineUserId: 'test-left-line-group',
     displayName: 'Test: Left LINE Group',
-    pictureUrl: 'https://via.placeholder.com/150/9E9E9E/FFFFFF?text=Left',
+    pictureUrl: 'https://ui-avatars.com/api/?name=Left&background=9E9E9E&color=fff&size=150',
     email: 'test-left@example.com',
     phone: '081-444-4444',
     companyName: 'Test Company Left Group',
@@ -90,7 +90,7 @@ const TEST_USERS = [
   {
     lineUserId: 'test-pending-approval',
     displayName: 'Test: Pending Approval',
-    pictureUrl: 'https://via.placeholder.com/150/2196F3/FFFFFF?text=Pending',
+    pictureUrl: 'https://ui-avatars.com/api/?name=Pending&background=2196F3&color=fff&size=150',
     email: 'test-pending@example.com',
     phone: '081-555-5555',
     companyName: 'Test Company Pending',
@@ -106,7 +106,7 @@ const TEST_USERS = [
   {
     lineUserId: 'test-admin-user',
     displayName: 'Test: Admin User',
-    pictureUrl: 'https://via.placeholder.com/150/9C27B0/FFFFFF?text=Admin',
+    pictureUrl: 'https://ui-avatars.com/api/?name=Admin&background=9C27B0&color=fff&size=150',
     email: 'test-admin@example.com',
     phone: '081-666-6666',
     companyName: 'Test Company Admin',
@@ -122,7 +122,7 @@ const TEST_USERS = [
   {
     lineUserId: 'test-event-staff',
     displayName: 'Test: Event Staff',
-    pictureUrl: 'https://via.placeholder.com/150/00BCD4/FFFFFF?text=Staff',
+    pictureUrl: 'https://ui-avatars.com/api/?name=Staff&background=00BCD4&color=fff&size=150',
     email: 'test-staff@example.com',
     phone: '081-777-7777',
     companyName: 'Test Company Staff',
@@ -139,7 +139,7 @@ const TEST_USERS = [
   {
     lineUserId: 'test-multiple-issues',
     displayName: 'Test: Multiple Issues',
-    pictureUrl: 'https://via.placeholder.com/150/E91E63/FFFFFF?text=Issues',
+    pictureUrl: 'https://ui-avatars.com/api/?name=Issues&background=E91E63&color=fff&size=150',
     email: 'test-issues@example.com',
     phone: '081-888-8888',
     companyName: 'Test Company Issues',
@@ -157,7 +157,7 @@ const TEST_USERS = [
   {
     lineUserId: 'test-guest-unverified',
     displayName: 'Test: Guest (Unverified)',
-    pictureUrl: 'https://via.placeholder.com/150/9E9E9E/FFFFFF?text=Guest',
+    pictureUrl: 'https://ui-avatars.com/api/?name=Guest&background=9E9E9E&color=fff&size=150',
     email: 'test-guest@example.com',
     phone: '',
     companyName: '',

@@ -8,7 +8,7 @@ import { sendEventCancellationNotification } from '@/lib/line-messaging';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> }
+  { params }: { params: { eventId: string } }
 ) {
   try {
     const db = adminDb();
@@ -22,7 +22,7 @@ export async function POST(
       );
     }
 
-    const { eventId } = await params;
+    const eventId = params.eventId;
     const body = await request.json();
     const { registrationId, cancellationReason, isAdmin } = body;
 

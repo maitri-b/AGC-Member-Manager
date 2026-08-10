@@ -47,9 +47,16 @@ export default function CancellationPolicySettings({
   // Toggle enabled state
   const handleToggleEnabled = (enabled: boolean) => {
     if (!enabled) {
-      onChange(undefined); // Clear policy when disabled
+      // Explicitly set enabled to false AND clear the policy
+      onChange({
+        enabled: false,
+        noRefundPolicy: { active: false, description: '' },
+        dateBasedPolicies: [],
+        sendLineNotification: true
+      });
       setValidationErrors([]);
     } else {
+      // Validate that at least one policy type is configured
       onChange({
         enabled: true,
         noRefundPolicy: { active: false, description: '' },
@@ -61,6 +68,12 @@ export default function CancellationPolicySettings({
 
   // Toggle no refund policy
   const handleToggleNoRefund = (active: boolean) => {
+    // Validate: cannot enable both no refund and date-based policies
+    if (active && policy.dateBasedPolicies.length > 0) {
+      alert('❌ ไม่สามารถเปิด "ไม่คืนเงินในทุกกรณี" พร้อมกับ "เงื่อนไขตามวันที่" ได้\n\nกรุณาเลือกเพียงอย่างใดอย่างหนึ่ง');
+      return;
+    }
+
     updatePolicy({
       noRefundPolicy: {
         ...policy.noRefundPolicy,
@@ -81,6 +94,12 @@ export default function CancellationPolicySettings({
 
   // Add new empty rule
   const handleAddRule = () => {
+    // Validate: cannot add date-based policy if no refund policy is active
+    if (policy.noRefundPolicy?.active) {
+      alert('❌ ไม่สามารถเพิ่ม "เงื่อนไขตามวันที่" ได้เนื่องจากเปิด "ไม่คืนเงินในทุกกรณี" อยู่\n\nกรุณาปิด "ไม่คืนเงินในทุกกรณี" ก่อน');
+      return;
+    }
+
     // Check if there's already a final rule
     const hasFinalRule = policy.dateBasedPolicies.some(r => r.isFinalRule);
     if (hasFinalRule) {

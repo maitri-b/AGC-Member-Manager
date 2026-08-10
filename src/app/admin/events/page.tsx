@@ -646,6 +646,22 @@ export default function AdminEventsPage() {
 
   // Main submission function
   const submitEventData = async () => {
+    // Validate cancellation policy if enabled
+    if (formData.cancellationPolicy?.enabled) {
+      const hasNoRefund = formData.cancellationPolicy.noRefundPolicy?.active;
+      const hasDateBased = formData.cancellationPolicy.dateBasedPolicies && formData.cancellationPolicy.dateBasedPolicies.length > 0;
+
+      if (!hasNoRefund && !hasDateBased) {
+        alert('❌ กรุณาตั้งค่านโยบายการยกเลิก\n\nเมื่อเปิดใช้งานระบบยกเลิกการจอง ต้องเลือกอย่างน้อย 1 อย่าง:\n• ไม่คืนเงินในทุกกรณี\n• เงื่อนไขตามวันที่');
+        return;
+      }
+
+      if (hasNoRefund && hasDateBased) {
+        alert('❌ ไม่สามารถใช้ทั้ง 2 นโยบายพร้อมกันได้\n\nกรุณาเลือกเพียงอย่างใดอย่างหนึ่ง:\n• ไม่คืนเงินในทุกกรณี หรือ\n• เงื่อนไขตามวันที่');
+        return;
+      }
+    }
+
     setSaving(true);
     setError(null);
     setSuccess(null);

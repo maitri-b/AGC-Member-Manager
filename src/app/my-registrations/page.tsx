@@ -345,7 +345,8 @@ export default function MyRegistrationsPage() {
 
 function RegistrationCard({ reg, formatEventDate, getPaymentStatusBadgeClass, getStatusBadgeClass, onCancelClick }: RegistrationCardProps) {
   const isCancelled = reg.status?.toLowerCase().includes('cancelled') || reg.status?.toLowerCase().includes('ยกเลิก');
-  const canCancel = !isCancelled;
+  // Hide cancel button from my-registrations page - users should cancel from event detail page
+  const canCancel = false;
 
   return (
     <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">

@@ -42,7 +42,6 @@ export async function GET() {
 
     return NextResponse.json({
       eventName: event.eventName,
-      sheetName: event.sheetName,
       statusAnalysis,
       sampleRegistrations: allRegistrations.slice(0, 5).map(r => ({
         registrationId: r.registrationId,

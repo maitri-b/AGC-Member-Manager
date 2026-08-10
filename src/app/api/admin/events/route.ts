@@ -313,7 +313,19 @@ export async function PUT(request: NextRequest) {
 
     await eventRef.update(updateData);
 
-    return NextResponse.json({ success: true });
+    // ✅ Fetch updated event data to return
+    const updatedDoc = await eventRef.get();
+    const updatedEventData = updatedDoc.data();
+
+    const event = {
+      eventId: updatedDoc.id,
+      ...updatedEventData,
+      // Convert Firestore Timestamps to ISO strings
+      createdAt: updatedEventData?.createdAt?.toDate?.()?.toISOString?.() || updatedEventData?.createdAt || '',
+      updatedAt: updatedEventData?.updatedAt?.toDate?.()?.toISOString?.() || updatedEventData?.updatedAt || '',
+    };
+
+    return NextResponse.json({ success: true, event });
   } catch (error) {
     console.error('Error updating event:', error);
     return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });

@@ -690,6 +690,15 @@ export default function AdminEventsPage() {
           )
         );
 
+        // ✅ Update editingEvent state so modal shows latest data if reopened
+        setEditingEvent(updatedEventData.event);
+
+        // ✅ Update formData to reflect the saved changes (including cancellationPolicy)
+        setFormData({
+          ...formData,
+          cancellationPolicy: updatedEventData.event.cancellationPolicy
+        });
+
         setSuccess('อัพเดทกิจกรรมเรียบร้อยแล้ว');
 
         // ✅ Close modal after a short delay to show success message

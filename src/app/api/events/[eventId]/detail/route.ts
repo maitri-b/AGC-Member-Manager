@@ -1,7 +1,6 @@
 // API Route for Event Detail (Public for members)
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrationsByEventId } from '@/lib/events';
 import { EventRegistration, Event } from '@/types/event';
@@ -23,7 +22,7 @@ export async function GET(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

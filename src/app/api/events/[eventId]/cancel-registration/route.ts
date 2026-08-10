@@ -128,18 +128,28 @@ export async function POST(
       cancelledAt: new Date().toISOString(),
       cancelledBy: isAdmin ? session.user.email || session.user.id : session.user.id,
       cancellationMethod: isAdmin ? 'admin' : 'member',
-      cancellationReason: cancellationReason || undefined,
-      appliedCancellationRule: refundCalculation.appliedRule?.ruleId || undefined,
       refundAmount: refundCalculation.refundAmount,
       refundPercentage: refundCalculation.refundPercentage,
       refundStatus: refundCalculation.refundAmount > 0 ? 'pending' : 'not_applicable',
-      previousRoomInfo,
-      previousCarpoolInfo,
       updatedAt: new Date().toISOString(),
       // ✅ Update discounts and totalAmount to create overpayment
       discounts: JSON.stringify(currentDiscounts),
       totalAmount: newTotalAmount,
     };
+
+    // Add optional fields only if they have values
+    if (cancellationReason) {
+      updateData.cancellationReason = cancellationReason;
+    }
+    if (refundCalculation.appliedRule?.ruleId) {
+      updateData.appliedCancellationRule = refundCalculation.appliedRule.ruleId;
+    }
+    if (previousRoomInfo) {
+      updateData.previousRoomInfo = previousRoomInfo;
+    }
+    if (previousCarpoolInfo) {
+      updateData.previousCarpoolInfo = previousCarpoolInfo;
+    }
 
     // Start batch update
     const batch = db.batch();

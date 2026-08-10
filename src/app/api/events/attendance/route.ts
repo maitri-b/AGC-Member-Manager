@@ -1,13 +1,12 @@
 // API Route for Member Attendance - Get attendance for current user or specific member
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { hasPermission } from '@/lib/permissions';
 import { getMemberAttendanceSummary, getAttendanceCache } from '@/lib/events';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

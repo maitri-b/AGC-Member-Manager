@@ -1,13 +1,12 @@
 // API Route for Member Verification - Submit Verification Request
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { adminDb } from '@/lib/firebase-admin';
 import { getAllMembers } from '@/lib/google-sheets';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -96,7 +95,7 @@ export async function POST(request: NextRequest) {
 // GET: Check current verification status
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -76,7 +76,7 @@ export default function CancellationModal({
     setError(null);
 
     try {
-      const response = await fetch(`/api/events/${event.eventId}/cancel-registration`, {
+      const response = await fetch(`/api/events/${encodeURIComponent(event.eventId)}/cancel-registration`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

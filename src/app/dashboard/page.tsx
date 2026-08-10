@@ -185,297 +185,6 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Events Summary Section - Only for members and above */}
-        {session.user.role !== 'guest' && (
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">กิจกรรมของชมรม</h2>
-            {isCommitteeOrAdmin && (
-              <Link
-                href="/admin/events"
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                จัดการกิจกรรม
-              </Link>
-            )}
-          </div>
-
-          {loadingEvents ? (
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              </div>
-            </div>
-          ) : events.length > 0 ? (
-            <>
-              {/* Active Events */}
-              {events.filter(e => e.isActive).length > 0 && (
-                <div className="space-y-4 mb-6">
-                  {events.filter(e => e.isActive).map((event) => {
-                    const userAttendance = getUserAttendanceForEvent(event.eventId);
-                    const isRegistered = hasUserRegistered(event);
-                    return (
-                      <div key={event.eventId} className="bg-white rounded-lg shadow overflow-hidden border-l-4 border-green-500">
-                        <div className="p-5">
-                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                            {/* Event Info */}
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="text-lg font-semibold text-gray-900">{event.eventName}</h3>
-                                <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                  กำลังดำเนินการ
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-500 mb-1">{event.eventNameEN}</p>
-                              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                                <span className="flex items-center gap-1">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                  {formatEventDateRange(event.eventDate || String(event.year), event.eventEndDate)}
-                                </span>
-                                {event.location && event.location !== 'TBD' && (
-                                  <span className="flex items-center gap-1">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    {event.location}
-                                  </span>
-                                )}
-                              </div>
-                              {event.description && (
-                                <p className="text-sm text-gray-500 mt-2">
-                                  {event.description.length > 50
-                                    ? `${event.description.substring(0, 50)}...`
-                                    : event.description}
-                                </p>
-                              )}
-                            </div>
-
-                            {/* Stats (for committee/admin) */}
-                            {isCommitteeOrAdmin && event.totalRegistrations !== undefined && (
-                              <div className="text-center">
-                                <p className="text-2xl font-bold text-blue-600">{event.totalAttendees || 0}</p>
-                                <p className="text-xs text-gray-500">ผู้เข้าร่วม<br />(คน)</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* User Registration Status - Active Event */}
-                          {session.user.memberId && (
-                            <div className="mt-4 pt-4 border-t border-gray-100">
-                              {loadingEvents ? (
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-                                  กำลังโหลดข้อมูล...
-                                </div>
-                              ) : isRegistered ? (
-                                <div>
-                                  <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                      <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                      <span className="text-sm font-medium text-green-700">
-                                        คุณได้ลงทะเบียนเข้าร่วมกิจกรรมนี้แล้ว
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                                        {userAttendance ? 'เข้าร่วมแล้ว' : 'รอเข้าร่วมงาน'}
-                                      </span>
-                                      {userAttendance?.attendeeCount && userAttendance.attendeeCount > 0 && (
-                                        <span className="text-sm text-gray-500">
-                                          ผู้เข้าร่วมจากบริษัท {userAttendance.attendeeCount} คน
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="text-xs text-blue-600">
-                                    💳 คลิก &quot;ดูรายละเอียดกิจกรรม&quot; เพื่อดูสถานะการชำระเงินและกำหนดชำระ
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  <span>คุณยังไม่ได้ลงทะเบียนเข้าร่วมกิจกรรมนี้</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* View Details Button */}
-                          <div className="mt-4 pt-4 border-t border-gray-100">
-                            <Link
-                              href={`/events/${event.eventId}`}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              ดูรายละเอียดกิจกรรม
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Past Events */}
-              {events.filter(e => !e.isActive).length > 0 && (
-                <>
-                  <h3 className="text-lg font-medium text-gray-700 mb-3 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    กิจกรรมที่ผ่านมา
-                  </h3>
-                  <div className="space-y-4">
-                    {events.filter(e => !e.isActive).map((event) => {
-                      const userAttendance = getUserAttendanceForEvent(event.eventId);
-                      const isRegistered = hasUserRegistered(event);
-                      return (
-                        <div key={event.eventId} className="bg-white rounded-lg shadow overflow-hidden opacity-90">
-                          <div className="p-5">
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                              {/* Event Info */}
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="text-lg font-semibold text-gray-700">{event.eventName}</h3>
-                                  <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
-                                    สิ้นสุดแล้ว
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-500 mb-1">{event.eventNameEN}</p>
-                                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                                  <span className="flex items-center gap-1">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    {formatEventDateRange(event.eventDate || String(event.year), event.eventEndDate)}
-                                  </span>
-                                  {event.location && event.location !== 'TBD' && (
-                                    <span className="flex items-center gap-1">
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      </svg>
-                                      {event.location}
-                                    </span>
-                                  )}
-                                </div>
-                                {event.description && (
-                                  <p className="text-sm text-gray-400 mt-2">
-                                    {event.description.length > 50
-                                      ? `${event.description.substring(0, 50)}...`
-                                      : event.description}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Stats (for committee/admin) */}
-                              {isCommitteeOrAdmin && event.totalRegistrations !== undefined && (
-                                <div className="text-center">
-                                  <p className="text-2xl font-bold text-gray-500">{event.totalAttendees || 0}</p>
-                                  <p className="text-xs text-gray-400">ผู้เข้าร่วม<br />(คน)</p>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* User Registration Status - Past Event */}
-                            {session.user.memberId && (
-                              <div className="mt-4 pt-4 border-t border-gray-100">
-                                {loadingEvents ? (
-                                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-                                    กำลังโหลดข้อมูล...
-                                  </div>
-                                ) : userAttendance ? (
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                      <span className="text-sm font-medium text-blue-700">
-                                        คุณได้เข้าร่วมกิจกรรมนี้
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                        เข้าร่วมแล้ว
-                                      </span>
-                                      {userAttendance.attendeeCount > 0 && (
-                                        <span className="text-sm text-gray-500">
-                                          ผู้เข้าร่วมจากบริษัท {userAttendance.attendeeCount} คน
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                ) : isRegistered ? (
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                      <span className="text-sm font-medium text-yellow-700">
-                                        คุณได้ลงทะเบียนกิจกรรมนี้
-                                      </span>
-                                    </div>
-                                    <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                                      รอตรวจสอบ
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span>คุณไม่ได้ลงทะเบียนกิจกรรมนี้</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* View Details Button */}
-                            <div className="mt-4 pt-4 border-t border-gray-100">
-                              <Link
-                                href={`/events/${event.eventId}`}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                ดูรายละเอียดกิจกรรม
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <div className="bg-white rounded-lg shadow p-6 text-center">
-              <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p className="text-gray-500">ยังไม่มีกิจกรรมในขณะนี้</p>
-            </div>
-          )}
-        </div>
-        )}
-
         {/* Activity Invitation for Members */}
         {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && !loadingAttendance && attendance?.noActivityWarning && (
           <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 shadow-sm">
@@ -824,6 +533,297 @@ function DashboardContent() {
               </div>
             ) : null}
           </div>
+        )}
+
+        {/* Events Summary Section - Only for members and above */}
+        {session.user.role !== 'guest' && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-800">กิจกรรมของชมรม</h2>
+            {isCommitteeOrAdmin && (
+              <Link
+                href="/admin/events"
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                จัดการกิจกรรม
+              </Link>
+            )}
+          </div>
+
+          {loadingEvents ? (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            </div>
+          ) : events.length > 0 ? (
+            <>
+              {/* Active Events */}
+              {events.filter(e => e.isActive).length > 0 && (
+                <div className="space-y-4 mb-6">
+                  {events.filter(e => e.isActive).map((event) => {
+                    const userAttendance = getUserAttendanceForEvent(event.eventId);
+                    const isRegistered = hasUserRegistered(event);
+                    return (
+                      <div key={event.eventId} className="bg-white rounded-lg shadow overflow-hidden border-l-4 border-green-500">
+                        <div className="p-5">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            {/* Event Info */}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-lg font-semibold text-gray-900">{event.eventName}</h3>
+                                <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                  กำลังดำเนินการ
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-500 mb-1">{event.eventNameEN}</p>
+                              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                                <span className="flex items-center gap-1">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  {formatEventDateRange(event.eventDate || String(event.year), event.eventEndDate)}
+                                </span>
+                                {event.location && event.location !== 'TBD' && (
+                                  <span className="flex items-center gap-1">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    {event.location}
+                                  </span>
+                                )}
+                              </div>
+                              {event.description && (
+                                <p className="text-sm text-gray-500 mt-2">
+                                  {event.description.length > 50
+                                    ? `${event.description.substring(0, 50)}...`
+                                    : event.description}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Stats (for committee/admin) */}
+                            {isCommitteeOrAdmin && event.totalRegistrations !== undefined && (
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-blue-600">{event.totalAttendees || 0}</p>
+                                <p className="text-xs text-gray-500">ผู้เข้าร่วม<br />(คน)</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* User Registration Status - Active Event */}
+                          {session.user.memberId && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                              {loadingEvents ? (
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                                  กำลังโหลดข้อมูล...
+                                </div>
+                              ) : isRegistered ? (
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <span className="text-sm font-medium text-green-700">
+                                        คุณได้ลงทะเบียนเข้าร่วมกิจกรรมนี้แล้ว
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                        {userAttendance ? 'เข้าร่วมแล้ว' : 'รอเข้าร่วมงาน'}
+                                      </span>
+                                      {userAttendance?.attendeeCount && userAttendance.attendeeCount > 0 && (
+                                        <span className="text-sm text-gray-500">
+                                          ผู้เข้าร่วมจากบริษัท {userAttendance.attendeeCount} คน
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-blue-600">
+                                    💳 คลิก &quot;ดูรายละเอียดกิจกรรม&quot; เพื่อดูสถานะการชำระเงินและกำหนดชำระ
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span>คุณยังไม่ได้ลงทะเบียนเข้าร่วมกิจกรรมนี้</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* View Details Button */}
+                          <div className="mt-4 pt-4 border-t border-gray-100">
+                            <Link
+                              href={`/events/${event.eventId}`}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              ดูรายละเอียดกิจกรรม
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Past Events */}
+              {events.filter(e => !e.isActive).length > 0 && (
+                <>
+                  <h3 className="text-lg font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    กิจกรรมที่ผ่านมา
+                  </h3>
+                  <div className="space-y-4">
+                    {events.filter(e => !e.isActive).map((event) => {
+                      const userAttendance = getUserAttendanceForEvent(event.eventId);
+                      const isRegistered = hasUserRegistered(event);
+                      return (
+                        <div key={event.eventId} className="bg-white rounded-lg shadow overflow-hidden opacity-90">
+                          <div className="p-5">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                              {/* Event Info */}
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="text-lg font-semibold text-gray-700">{event.eventName}</h3>
+                                  <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                                    สิ้นสุดแล้ว
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-500 mb-1">{event.eventNameEN}</p>
+                                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                                  <span className="flex items-center gap-1">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    {formatEventDateRange(event.eventDate || String(event.year), event.eventEndDate)}
+                                  </span>
+                                  {event.location && event.location !== 'TBD' && (
+                                    <span className="flex items-center gap-1">
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      </svg>
+                                      {event.location}
+                                    </span>
+                                  )}
+                                </div>
+                                {event.description && (
+                                  <p className="text-sm text-gray-400 mt-2">
+                                    {event.description.length > 50
+                                      ? `${event.description.substring(0, 50)}...`
+                                      : event.description}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Stats (for committee/admin) */}
+                              {isCommitteeOrAdmin && event.totalRegistrations !== undefined && (
+                                <div className="text-center">
+                                  <p className="text-2xl font-bold text-gray-500">{event.totalAttendees || 0}</p>
+                                  <p className="text-xs text-gray-400">ผู้เข้าร่วม<br />(คน)</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* User Registration Status - Past Event */}
+                            {session.user.memberId && (
+                              <div className="mt-4 pt-4 border-t border-gray-100">
+                                {loadingEvents ? (
+                                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                                    กำลังโหลดข้อมูล...
+                                  </div>
+                                ) : userAttendance ? (
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <span className="text-sm font-medium text-blue-700">
+                                        คุณได้เข้าร่วมกิจกรรมนี้
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                        เข้าร่วมแล้ว
+                                      </span>
+                                      {userAttendance.attendeeCount > 0 && (
+                                        <span className="text-sm text-gray-500">
+                                          ผู้เข้าร่วมจากบริษัท {userAttendance.attendeeCount} คน
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : isRegistered ? (
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <span className="text-sm font-medium text-yellow-700">
+                                        คุณได้ลงทะเบียนกิจกรรมนี้
+                                      </span>
+                                    </div>
+                                    <span className="inline-flex px-2.5 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                                      รอตรวจสอบ
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>คุณไม่ได้ลงทะเบียนกิจกรรมนี้</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* View Details Button */}
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                              <Link
+                                href={`/events/${event.eventId}`}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                ดูรายละเอียดกิจกรรม
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="bg-white rounded-lg shadow p-6 text-center">
+              <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-gray-500">ยังไม่มีกิจกรรมในขณะนี้</p>
+            </div>
+          )}
+        </div>
         )}
       </main>
     </div>

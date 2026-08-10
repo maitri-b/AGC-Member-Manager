@@ -45,21 +45,22 @@ export async function POST(
 
     const event = { eventId: eventDoc.id, ...eventDoc.data() } as Event;
 
-    // Get registration
-    const regDoc = await db
-      .collection('events')
-      .doc(eventId)
-      .collection('registrations')
-      .doc(registrationId)
+    // Get registration from eventRegistrations collection
+    const regSnapshot = await db
+      .collection('eventRegistrations')
+      .where('registrationId', '==', registrationId)
+      .where('eventId', '==', eventId)
+      .limit(1)
       .get();
 
-    if (!regDoc.exists) {
+    if (regSnapshot.empty) {
       return NextResponse.json(
         { success: false, message: 'ไม่พบการจองนี้' },
         { status: 404 }
       );
     }
 
+    const regDoc = regSnapshot.docs[0];
     const registration = { registrationId: regDoc.id, ...regDoc.data() } as EventRegistration;
 
     // Verify ownership (member can only cancel their own registration, admin can cancel any)
@@ -143,20 +144,14 @@ export async function POST(
     // Start batch update
     const batch = db.batch();
 
-    // Update registration
-    const regRef = db
-      .collection('events')
-      .doc(eventId)
-      .collection('registrations')
-      .doc(registrationId);
+    // Update registration in eventRegistrations collection
+    const regRef = regDoc.ref;
 
     batch.update(regRef, updateData);
 
     // Remove from carpool if exists
     if (registration.carpoolId) {
       const carpoolRef = db
-        .collection('events')
-        .doc(eventId)
         .collection('carpools')
         .doc(registration.carpoolId);
 

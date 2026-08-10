@@ -601,7 +601,7 @@ function DashboardContent() {
 
         {/* Events Summary Section - Only for members and above */}
         {session.user.role !== 'guest' && (
-        <div className="mb-8">
+        <div className="mt-12 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-800">กิจกรรมของชมรม</h2>
             {isCommitteeOrAdmin && (

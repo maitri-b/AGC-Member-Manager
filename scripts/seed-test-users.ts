@@ -9,22 +9,14 @@
  * ⚠️ ONLY run in development/staging environment!
  */
 
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+// Load environment variables
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 
-// Initialize Firebase Admin (if not already initialized)
-if (getApps().length === 0) {
-  // Read service account from environment or file
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-    : require('../firebase-service-account.json');
+// Import the existing Firebase Admin instance
+import { adminDb } from '../src/lib/firebase-admin';
 
-  initializeApp({
-    credential: cert(serviceAccount)
-  });
-}
-
-const db = getFirestore();
+const db = adminDb();
 
 // Test user scenarios
 const TEST_USERS = [

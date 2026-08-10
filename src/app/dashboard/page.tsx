@@ -516,6 +516,47 @@ function DashboardContent() {
           </div>
         )}
 
+        {/* Active Member Appreciation */}
+        {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && !loadingAttendance && attendance && !attendance.noActivityWarning && (
+          <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-green-900 text-lg mb-2">ขอบคุณที่เป็นส่วนหนึ่งของครอบครัวเรา! 🎉</h3>
+                <p className="text-sm text-green-800 leading-relaxed mb-3">
+                  คุณได้เข้าร่วมกิจกรรมของชมรมแล้ว <strong className="font-semibold">{attendance.eventsLast12Months} ครั้ง</strong> ใน 12 เดือนที่ผ่านมา
+                  ความมีส่วนร่วมของคุณช่วยให้ชมรมของเราแข็งแกร่งและอบอุ่นมากขึ้น
+                </p>
+                <div className="bg-white/80 rounded-lg p-4 mb-3 border border-green-200">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div className="text-sm text-gray-700">
+                      <p className="font-medium text-emerald-900 mb-1">✨ สิทธิพิเศษของคุณ</p>
+                      <ul className="space-y-1 text-gray-600">
+                        <li>• <strong className="text-green-700">สิทธิ์เข้ากลุ่ม LINE Official</strong> (จำกัดเพียง 500 ที่นั่ง)</li>
+                        <li>• เข้าถึงข้อมูลกิจกรรมและประโยชน์ต่างๆ ของชมรม</li>
+                        <li>• เป็นส่วนหนึ่งของเครือข่ายมืออาชีพที่แข็งแกร่ง</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-green-700">
+                  <span className="font-medium">🌟 เชิญชวน:</span> ยังมีกิจกรรมน่าสนใจอีกมากมายด้านล่าง มาเจอกันบ่อยๆ นะ!
+                  ทุกครั้งที่คุณมาร่วม คุณก็เป็นส่วนสำคัญที่ทำให้ชมรมมีชีวิตชีวา
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Attendance Summary for Members */}
         {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && !loadingAttendance && attendance && (
           <div className="mb-8">

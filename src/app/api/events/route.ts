@@ -44,13 +44,14 @@ export async function GET(request: Request) {
 
     // Filter events based on user role and query params
     // 1. If ?published=true is specified → always show only published events
-    // 2. If not specified → Admin/Committee see all, Regular users see only published
+    // 2. If not specified → Admin/Committee/Event Managers see all, Regular members see only published
+    const canSeeAllEvents = isCommitteeOrAdmin || canManageEvents;
     const visibleEvents = onlyPublished
       ? events.filter(e => e.isPublished)
-      : (isCommitteeOrAdmin ? events : events.filter(e => e.isPublished));
+      : (canSeeAllEvents ? events : events.filter(e => e.isPublished));
 
-    if (!isCommitteeOrAdmin) {
-      // For regular members, return basic event info with registration status
+    if (!canSeeAllEvents) {
+      // For regular members (non-admin, non-committee, non-event-managers), return basic event info with registration status
       const eventsWithRegistrationInfo = await Promise.all(
         visibleEvents.map(async (e) => {
           let totalAttendees = 0;

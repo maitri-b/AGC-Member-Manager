@@ -47,8 +47,8 @@ export async function GET(request: Request) {
     // 2. If not specified → Admin/Committee/Event Managers see all, Regular members see only published
     const canSeeAllEvents = isCommitteeOrAdmin || canManageEvents;
     const visibleEvents = onlyPublished
-      ? events.filter(e => e.isPublished)
-      : (canSeeAllEvents ? events : events.filter(e => e.isPublished));
+      ? events.filter(e => e.isPublished === true)
+      : (canSeeAllEvents ? events : events.filter(e => e.isPublished === true));
 
     if (!canSeeAllEvents) {
       // For regular members (non-admin, non-committee, non-event-managers), return basic event info with registration status

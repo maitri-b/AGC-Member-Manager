@@ -25,6 +25,20 @@ export default function ImpersonationBanner() {
     checkImpersonationStatus();
   }, []);
 
+  // Add padding to body when banner is shown
+  useEffect(() => {
+    if (status?.impersonating) {
+      document.body.style.paddingTop = '60px';
+    } else {
+      document.body.style.paddingTop = '0';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.paddingTop = '0';
+    };
+  }, [status?.impersonating]);
+
   const checkImpersonationStatus = async () => {
     try {
       const response = await fetch('/api/admin/impersonate');
@@ -66,7 +80,7 @@ export default function ImpersonationBanner() {
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg">
+    <div className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

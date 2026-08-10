@@ -131,6 +131,8 @@ export async function POST(
       refundAmount: refundCalculation.refundAmount,
       refundPercentage: refundCalculation.refundPercentage,
       refundStatus: refundCalculation.refundAmount > 0 ? 'pending' : 'not_applicable',
+      // ✅ Update payment status based on refund amount
+      paymentStatus: refundCalculation.refundAmount > 0 ? 'รอคืนเงิน' : 'ยกเลิก - ไม่คืนเงิน',
       updatedAt: new Date().toISOString(),
       // ✅ Update discounts and totalAmount to create overpayment
       discounts: JSON.stringify(currentDiscounts),

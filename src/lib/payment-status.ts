@@ -209,6 +209,17 @@ export function getStatusBadgeClass(status: string): string {
     return 'bg-purple-100 text-purple-800';
   }
 
+  // Refund statuses
+  if (status === 'รอคืนเงิน') {
+    return 'bg-orange-100 text-orange-800'; // Orange - waiting for refund
+  }
+  if (status === 'คืนเงินแล้ว') {
+    return 'bg-blue-100 text-blue-800'; // Blue - refund completed
+  }
+  if (status === 'ยกเลิก - ไม่คืนเงิน') {
+    return 'bg-gray-100 text-gray-800'; // Gray - cancelled no refund
+  }
+
   // Free or registered
   if (status === 'ลงทะเบียนแล้ว') {
     return 'bg-gray-100 text-gray-800';

@@ -367,6 +367,11 @@ export type PaymentStatus =
   | 'รอตรวจสอบเงินเพิ่มเติม' // Additional payment slip uploaded, pending review
   | 'ชำระครบถ้วนแล้ว'       // Fully paid including additional payments
 
+  // Refund statuses (for cancellations)
+  | 'รอคืนเงิน'              // Pending refund (after cancellation)
+  | 'คืนเงินแล้ว'            // Refund completed
+  | 'ยกเลิก - ไม่คืนเงิน'    // Cancelled with no refund
+
   // Other statuses
   | 'พ้นกำหนด'              // Overdue (deadline passed)
   | 'ปฏิเสธสลิป'            // Slip rejected

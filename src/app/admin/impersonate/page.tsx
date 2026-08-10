@@ -95,8 +95,8 @@ export default function ImpersonatePage() {
 
       if (response.ok) {
         alert(`✅ กำลังดูระบบในมุมมองของ ${userName}\n\nคุณจะถูก redirect ไปหน้าหลัก`);
-        // Redirect to member view
-        window.location.href = '/events';
+        // Redirect to dashboard
+        window.location.href = '/dashboard';
       } else {
         alert(`❌ ไม่สามารถ impersonate ได้: ${data.error}`);
       }

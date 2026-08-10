@@ -71,8 +71,11 @@ export default function EventsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    fetchEvents();
-  }, []);
+    // Wait for session to load before fetching events
+    if (status === 'authenticated') {
+      fetchEvents();
+    }
+  }, [status, session]);
 
   // Close lightbox with ESC key
   useEffect(() => {
@@ -90,8 +93,13 @@ export default function EventsPage() {
 
   const fetchEvents = async () => {
     try {
-      // Fetch only published events (same as dashboard)
-      const response = await fetch('/api/events?published=true');
+      // Admin/Committee can see all events (including unpublished)
+      // Regular members only see published events
+      const isAdmin = session?.user?.permissions?.includes('admin:access') ||
+                      session?.user?.permissions?.includes('members:list');
+
+      const url = isAdmin ? '/api/events' : '/api/events?published=true';
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events);

@@ -33,6 +33,7 @@ const TEST_USERS = [
     lineGroupStatus: 'member',
     membershipStatus: 'active',
     role: 'member',
+    memberId: 'TEST-MEMBER-001', // Member ID for event registration
     permissions: [],
     description: '✅ สถานะปกติ - ใบอนุญาตปกติ, อยู่ในกลุ่ม LINE',
   },
@@ -84,6 +85,7 @@ const TEST_USERS = [
     lineGroupLeftDate: new Date().toISOString(),
     membershipStatus: 'active',
     role: 'member',
+    memberId: 'TEST-MEMBER-004', // Member ID for event registration
     permissions: [],
     description: '👋 ออกจากกลุ่ม LINE แล้ว - ยังคงเป็นสมาชิก แต่ไม่อยู่ในกลุ่ม LINE',
   },
@@ -100,6 +102,7 @@ const TEST_USERS = [
     lineGroupStatus: 'pending',
     membershipStatus: 'pending',
     role: 'member',
+    memberId: 'TEST-MEMBER-005', // Member ID for event registration
     permissions: [],
     description: '⏳ รออนุมัติ - สมาชิกใหม่รอการอนุมัติ แต่ถือว่าเป็น member แล้ว',
   },
@@ -116,6 +119,7 @@ const TEST_USERS = [
     lineGroupStatus: 'member',
     membershipStatus: 'active',
     role: 'admin',
+    memberId: 'TEST-MEMBER-006', // Member ID for event registration
     permissions: ['admin:access', 'events:manage', 'members:manage', 'payments:manage'],
     description: '👑 Admin - มีสิทธิ์เข้าถึงระบบ Admin ทั้งหมด',
   },
@@ -132,6 +136,7 @@ const TEST_USERS = [
     lineGroupStatus: 'member',
     membershipStatus: 'active',
     role: 'member',
+    memberId: 'TEST-MEMBER-007', // Member ID for event registration
     permissions: ['events:manage-assigned', 'events:view-registrations'],
     assignedEventIds: [], // Will be populated based on actual events
     description: '🎫 Event Staff - สมาชิกที่เป็น staff จัดการกิจกรรม',

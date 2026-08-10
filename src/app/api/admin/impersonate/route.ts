@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
 
     const db = adminDb();
 
-    // Verify target user exists
-    const targetUserDoc = await db.collection('members').doc(targetUserId).get();
+    // Verify target user exists (check users collection)
+    const targetUserDoc = await db.collection('users').doc(targetUserId).get();
     if (!targetUserDoc.exists) {
       return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
     }
@@ -160,8 +160,8 @@ export async function GET() {
     }
 
     const db = adminDb();
-    const targetUserDoc = await db.collection('members').doc(impersonatingUserId).get();
-    const adminUserDoc = originalAdminId ? await db.collection('members').doc(originalAdminId).get() : null;
+    const targetUserDoc = await db.collection('users').doc(impersonatingUserId).get();
+    const adminUserDoc = originalAdminId ? await db.collection('users').doc(originalAdminId).get() : null;
 
     return NextResponse.json({
       impersonating: true,

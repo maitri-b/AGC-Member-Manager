@@ -51,7 +51,7 @@ export async function getEffectiveSession(): Promise<ImpersonatedSession | null>
   // Fetch the impersonated user's data
   try {
     const db = adminDb();
-    const targetUserDoc = await db.collection('members').doc(impersonatingUserId).get();
+    const targetUserDoc = await db.collection('users').doc(impersonatingUserId).get();
 
     if (!targetUserDoc.exists) {
       console.error('[Impersonation] Target user not found, returning original session');

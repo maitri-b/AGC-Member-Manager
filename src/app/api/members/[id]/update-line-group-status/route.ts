@@ -58,17 +58,17 @@ export async function PUT(
       );
     }
 
-    // Also update in Firestore if exists
+    // Also update in Firestore users collection if exists
     const db = adminDb();
-    const membersRef = db.collection('members');
-    const snapshot = await membersRef
+    const usersRef = db.collection('users');
+    const snapshot = await usersRef
       .where('memberId', '==', memberId)
       .limit(1)
       .get();
 
     if (!snapshot.empty) {
-      const memberDoc = snapshot.docs[0];
-      await memberDoc.ref.update({
+      const userDoc = snapshot.docs[0];
+      await userDoc.ref.update({
         lineGroupStatus,
         updatedAt: new Date().toISOString(),
         updatedBy: session.user.lineUserId || session.user.id || 'unknown',

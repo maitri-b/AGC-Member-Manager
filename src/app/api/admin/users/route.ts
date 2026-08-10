@@ -24,19 +24,21 @@ export async function GET() {
     const db = adminDb();
     const usersSnapshot = await db.collection('users').get();
 
+    // NOTE: 'members' collection is deprecated - all member data should be in 'users' collection
+    // Keeping this code commented for reference in case migration is needed
     // Get all members data to join with users
-    const membersSnapshot = await db.collection('members').get();
+    // const membersSnapshot = await db.collection('members').get();
     const membersMap = new Map<string, { fullNameTH: string; nickname: string; companyNameTH: string; companyNameEN: string }>();
 
-    membersSnapshot.docs.forEach(doc => {
-      const data = doc.data();
-      membersMap.set(doc.id, {
-        fullNameTH: data.fullNameTH || '',
-        nickname: data.nickname || '',
-        companyNameTH: data.companyNameTH || '',
-        companyNameEN: data.companyNameEN || '',
-      });
-    });
+    // membersSnapshot.docs.forEach(doc => {
+    //   const data = doc.data();
+    //   membersMap.set(doc.id, {
+    //     fullNameTH: data.fullNameTH || '',
+    //     nickname: data.nickname || '',
+    //     companyNameTH: data.companyNameTH || '',
+    //     companyNameEN: data.companyNameEN || '',
+    //   });
+    // });
 
     // Get all verification requests to join with users
     const verificationSnapshot = await db.collection('verificationRequests').get();

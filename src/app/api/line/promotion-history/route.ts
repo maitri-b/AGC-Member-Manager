@@ -61,30 +61,15 @@ export async function GET(request: NextRequest) {
       userDocs.push(...snapshot.docs);
     }
 
-    // Also fetch all members to get full details
-    const membersSnapshot = await adminDb()
-      .collection('members')
-      .get();
-
-    const membersDataMap: Record<string, any> = {};
-    membersSnapshot.docs.forEach(doc => {
-      const data = doc.data();
-      membersDataMap[doc.id] = {
-        fullNameTH: data.fullNameTH,
-        companyNameTH: data.companyNameTH,
-      };
-    });
-
+    // NOTE: 'members' collection is deprecated - all data is in 'users' collection
     const memberMap: Record<string, any> = {};
     userDocs.forEach(doc => {
       const userData = doc.data();
-      const memberId = userData.memberId;
-      const memberDetails = memberId ? membersDataMap[memberId] : null;
 
       memberMap[userData.lineUserId] = {
         memberId: userData.memberId || doc.id,
-        fullNameTH: memberDetails?.fullNameTH || userData.fullNameTH || '',
-        companyNameTH: memberDetails?.companyNameTH || userData.companyNameTH || '',
+        fullNameTH: userData.fullNameTH || userData.displayName || '',
+        companyNameTH: userData.companyNameTH || userData.companyName || '',
         lineDisplayName: userData.lineDisplayName || userData.displayName || userData.name || '',
       };
     });

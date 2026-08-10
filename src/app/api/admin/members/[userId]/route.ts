@@ -27,7 +27,7 @@ export async function GET(
     const { userId } = params;
 
     const db = adminDb();
-    const memberDoc = await db.collection('members').doc(userId).get();
+    const memberDoc = await db.collection('users').doc(userId).get();
 
     if (!memberDoc.exists) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });

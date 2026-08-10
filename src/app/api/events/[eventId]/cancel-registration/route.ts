@@ -22,7 +22,8 @@ export async function POST(
       );
     }
 
-    const eventId = params.eventId;
+    // Decode eventId in case it comes URL-encoded
+    const eventId = decodeURIComponent(params.eventId);
     const body = await request.json();
     const { registrationId, cancellationReason, isAdmin } = body;
 

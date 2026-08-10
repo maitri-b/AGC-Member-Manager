@@ -24,11 +24,13 @@ const CACHE_TTL = 60000; // 1 minute cache
 export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
   // Return cached if valid
   if (eventsCache && Date.now() - eventsCacheTime < CACHE_TTL) {
+    console.log('[getTrackedEventsFromFirestore] Returning cached events');
     return eventsCache;
   }
 
   try {
     const db = adminDb();
+    console.log('[getTrackedEventsFromFirestore] Fetching fresh events from Firestore');
     const eventsSnapshot = await db.collection('events').orderBy('year', 'desc').get();
 
     if (eventsSnapshot.empty) {
@@ -47,6 +49,16 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         if (value === false || value === 'false' || value === 0 || value === '0') return false;
         return defaultValue;
       };
+
+      // Debug raw data for isPublished
+      if (doc.id === 'test-event-001' || data.eventName?.includes('ทดสอบ')) {
+        console.log(`[getTrackedEventsFromFirestore] Event ${doc.id} raw data:`, {
+          eventName: data.eventName,
+          isPublished_raw: data.isPublished,
+          isPublished_type: typeof data.isPublished,
+          isPublished_parsed: parseBoolean(data.isPublished, false)
+        });
+      }
 
       return {
         eventId: doc.id,

@@ -35,12 +35,17 @@ export async function GET(request: Request) {
     // Try to get events list from cache first
     const cacheKey = CacheKeys.allEvents();
     const cachedEvents = sheetsCache.get<Awaited<ReturnType<typeof getTrackedEvents>>>(cacheKey);
-    const events = cachedEvents || await getTrackedEvents();
 
-    // Cache events list for 5 minutes if not already cached
-    if (!cachedEvents) {
-      sheetsCache.set(cacheKey, events, CacheTTL.MEDIUM);
-    }
+    console.log('[Events API] Cache status:', {
+      hasCachedEvents: !!cachedEvents,
+      cachedEventsCount: cachedEvents?.length || 0
+    });
+
+    // TEMPORARILY DISABLE CACHE to ensure fresh data with parseBoolean fix
+    const events = await getTrackedEvents();
+
+    // Cache events list for 5 minutes
+    sheetsCache.set(cacheKey, events, CacheTTL.MEDIUM);
 
     // Filter events based on user role and query params
     // 1. If ?published=true is specified → always show only published events

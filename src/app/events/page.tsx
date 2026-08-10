@@ -90,7 +90,8 @@ export default function EventsPage() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('/api/events');
+      // Fetch only published events (same as dashboard)
+      const response = await fetch('/api/events?published=true');
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events);

@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     // Create audit log
     await db.collection('impersonationLogs').add({
       adminUserId: session.user.id,
-      adminEmail: session.user.email,
-      adminName: session.user.name,
+      adminEmail: session.user.email || '',
+      adminName: session.user.name || '',
       targetUserId,
       targetName: targetUser?.displayName || 'Unknown',
       targetEmail: targetUser?.email || '',

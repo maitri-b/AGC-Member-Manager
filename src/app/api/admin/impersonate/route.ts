@@ -110,17 +110,24 @@ export async function DELETE(request: NextRequest) {
     const db = adminDb();
 
     // Update audit log (find most recent open session)
+    // ⚠️ Avoid .where() + .orderBy() - fetch and sort in JavaScript instead
     if (originalAdminId) {
       const logsSnapshot = await db.collection('impersonationLogs')
         .where('adminUserId', '==', originalAdminId)
         .where('targetUserId', '==', impersonatingUserId)
         .where('endedAt', '==', null)
-        .orderBy('startedAt', 'desc')
-        .limit(1)
         .get();
 
       if (!logsSnapshot.empty) {
-        await logsSnapshot.docs[0].ref.update({
+        // Sort by startedAt desc in JavaScript
+        const sortedDocs = logsSnapshot.docs.sort((a, b) => {
+          const aTime = new Date(a.data().startedAt || 0).getTime();
+          const bTime = new Date(b.data().startedAt || 0).getTime();
+          return bTime - aTime; // descending
+        });
+
+        // Update the most recent one
+        await sortedDocs[0].ref.update({
           endedAt: new Date().toISOString(),
         });
       }

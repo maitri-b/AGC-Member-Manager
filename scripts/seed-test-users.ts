@@ -47,10 +47,10 @@ const TEST_USERS = [
     licenseStatus: 'expired',
     licenseExpiryDate: '2023-01-01', // Expired
     lineGroupStatus: 'member',
-    membershipStatus: 'active',
-    role: 'member',
+    membershipStatus: 'inactive',
+    role: 'guest',
     permissions: [],
-    description: '⚠️ ใบอนุญาตหมดอายุ - ไม่ควรลงทะเบียนกิจกรรมได้',
+    description: '⚠️ ใบอนุญาตหมดอายุ - สูญเสียสถานะสมาชิก กลับมาเป็น guest',
   },
   {
     lineUserId: 'test-license-suspended',
@@ -66,9 +66,9 @@ const TEST_USERS = [
     suspensionDate: new Date().toISOString(),
     lineGroupStatus: 'member',
     membershipStatus: 'suspended',
-    role: 'member',
+    role: 'guest',
     permissions: [],
-    description: '🚫 ใบอนุญาตถูกระงับ - ไม่ควรลงทะเบียนกิจกรรมได้',
+    description: '🚫 ใบอนุญาตถูกระงับ - สูญเสียสถานะสมาชิก กลับมาเป็น guest',
   },
   {
     lineUserId: 'test-left-line-group',
@@ -83,9 +83,9 @@ const TEST_USERS = [
     lineGroupStatus: 'left',
     lineGroupLeftDate: new Date().toISOString(),
     membershipStatus: 'inactive',
-    role: 'member',
+    role: 'guest',
     permissions: [],
-    description: '👋 ออกจากกลุ่ม LINE แล้ว - ไม่ควรลงทะเบียนกิจกรรมได้',
+    description: '👋 ออกจากกลุ่ม LINE แล้ว - สูญเสียสถานะสมาชิก กลับมาเป็น guest',
   },
   {
     lineUserId: 'test-pending-approval',
@@ -101,7 +101,7 @@ const TEST_USERS = [
     membershipStatus: 'pending',
     role: 'member',
     permissions: [],
-    description: '⏳ รออนุมัติ - สมาชิกใหม่ยังไม่ได้รับการอนุมัติ',
+    description: '⏳ รออนุมัติ - สมาชิกใหม่รอการอนุมัติ แต่ถือว่าเป็น member แล้ว',
   },
   {
     lineUserId: 'test-admin-user',
@@ -131,10 +131,10 @@ const TEST_USERS = [
     licenseExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     lineGroupStatus: 'member',
     membershipStatus: 'active',
-    role: 'event-staff',
+    role: 'member',
     permissions: ['events:manage-assigned', 'events:view-registrations'],
     assignedEventIds: [], // Will be populated based on actual events
-    description: '🎫 Event Staff - จัดการกิจกรรมที่ได้รับมอบหมาย',
+    description: '🎫 Event Staff - สมาชิกที่เป็น staff จัดการกิจกรรม',
   },
   {
     lineUserId: 'test-multiple-issues',
@@ -150,9 +150,9 @@ const TEST_USERS = [
     lineGroupLeftDate: '2024-01-15',
     membershipStatus: 'inactive',
     suspensionReason: 'Multiple violations',
-    role: 'member',
+    role: 'guest',
     permissions: [],
-    description: '❌ หลายปัญหา - ใบอนุญาตหมดอายุ + ออกจากกลุ่ม LINE',
+    description: '❌ หลายปัญหา - ใบอนุญาตหมดอายุ + ออกจากกลุ่ม LINE, สูญเสียสถานะสมาชิก',
   },
   {
     lineUserId: 'test-guest-unverified',

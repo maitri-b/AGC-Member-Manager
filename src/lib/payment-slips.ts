@@ -229,7 +229,7 @@ export async function approvePaymentSlip(
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
     // Get event details for payment mode and deadline calculation
-    const { getEventById } = await import('./event-sheets');
+    const { getEventById } = await import('./events');
     const event = await getEventById(slip.eventId);
     const paymentMode = event?.paymentMode || 'full';
 
@@ -457,7 +457,7 @@ export async function approvePaymentSlip(
       if (registrationData.lineUserId && updateData.refundStatus === 'completed') {
         try {
           // Get event details for notification
-          const { getEventById } = await import('./event-sheets');
+          const { getEventById } = await import('./events');
           const event = await getEventById(slip.eventId);
 
           if (event) {

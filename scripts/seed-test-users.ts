@@ -154,6 +154,22 @@ const TEST_USERS = [
     permissions: [],
     description: '❌ หลายปัญหา - ใบอนุญาตหมดอายุ + ออกจากกลุ่ม LINE',
   },
+  {
+    lineUserId: 'test-guest-unverified',
+    displayName: 'Test: Guest (Unverified)',
+    pictureUrl: 'https://via.placeholder.com/150/9E9E9E/FFFFFF?text=Guest',
+    email: 'test-guest@example.com',
+    phone: '',
+    companyName: '',
+    licenseNumber: '',
+    licenseStatus: '',
+    licenseExpiryDate: '',
+    lineGroupStatus: '',
+    membershipStatus: '',
+    role: 'guest',
+    permissions: [],
+    description: '👤 Guest - เพิ่ง login ครั้งแรก ยังไม่ได้ยืนยันตัวตน ไม่มีข้อมูลใบอนุญาต',
+  },
 ];
 
 async function seedTestUsers() {

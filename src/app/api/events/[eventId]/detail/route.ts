@@ -42,6 +42,7 @@ export async function GET(
     // Check if event is published
     // Admin/Committee can see unpublished events, regular users can only see published events
     const isCommitteeOrAdmin = hasPermission(session.user.permissions || [], 'members:list') ||
+                               hasPermission(session.user.permissions || [], 'members:view') ||
                                hasPermission(session.user.permissions || [], 'admin:access');
 
     if (!eventData?.isPublished && !isCommitteeOrAdmin) {

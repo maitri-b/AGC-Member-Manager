@@ -56,7 +56,8 @@ export interface Permission {
 
 export const PERMISSIONS = {
   // Member permissions
-  'members:list': 'View all members list',
+  'members:view': 'View all members list (read-only)',
+  'members:list': 'View all members list (with management access)',
   'member:read': 'View member profiles',
   'member:write': 'Edit member profiles',
   'member:delete': 'Delete member profiles',
@@ -92,12 +93,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     // Note: 'admin:roles' is NOT included - committee cannot change user roles
   ],
   'event-co': [
-    'members:list', // View all members list and member profiles
+    'members:view', // View all members list (read-only, no management access)
     'events:manage-assigned', // Can manage assigned events
     'events:register-on-behalf', // Can register on behalf of members/guests
   ],
   'event-staff': [
-    'members:list', // View all members list and member profiles
+    'members:view', // View all members list (read-only, no management access)
     'events:manage-assigned', // Can manage assigned events only
   ],
   member: [

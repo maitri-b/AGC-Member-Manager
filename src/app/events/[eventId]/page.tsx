@@ -983,7 +983,8 @@ export default function EventDetailPage() {
   };
 
   const isCommitteeOrAdmin = session?.user?.permissions?.includes('admin:access') ||
-                              session?.user?.permissions?.includes('members:list');
+                              session?.user?.permissions?.includes('members:list') ||
+                              session?.user?.permissions?.includes('members:view');
 
   const isFull = event?.maxCapacity && event.maxCapacity > 0 && summary
     ? summary.totalAttendees >= event.maxCapacity

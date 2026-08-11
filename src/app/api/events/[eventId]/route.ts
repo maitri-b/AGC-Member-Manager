@@ -20,16 +20,17 @@ export async function GET(
 
     const { eventId } = await params;
 
-    // Check permissions: either has members:list OR can manage assigned event
-    const hasFullAccess = hasPermission(session.user.permissions || [], 'members:list');
+    // Check permissions: either has members:list/members:view OR can manage assigned event
+    const hasFullAccess = hasPermission(session.user.permissions || [], 'members:list') ||
+                          hasPermission(session.user.permissions || [], 'members:view');
     const canManageAssigned = hasPermission(session.user.permissions || [], 'events:manage-assigned');
 
     if (!hasFullAccess && !canManageAssigned) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    // Verify assignment for event-staff/event-co
-    if (!hasFullAccess && canManageAssigned) {
+    // Verify assignment for event-staff/event-co (only if they don't have full access)
+    if (!hasPermission(session.user.permissions || [], 'members:list') && canManageAssigned) {
       const userRole = session.user.role;
       const assignedEventIds = session.user.assignedEventIds || [];
 

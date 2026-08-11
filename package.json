@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed-test-users": "tsx scripts/seed-test-users.ts",
-    "cleanup-test-users": "tsx scripts/cleanup-test-users.ts"
+    "cleanup-test-users": "tsx scripts/cleanup-test-users.ts",
+    "migrate-permissions": "tsx scripts/migrate-event-staff-permissions.ts"
   },
   "dependencies": {
     "@sparticuz/chromium-min": "^133.0.0",

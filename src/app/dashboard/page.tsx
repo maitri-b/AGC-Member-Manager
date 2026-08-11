@@ -160,6 +160,7 @@ function DashboardContent() {
   const canAccessAdmin = hasPermission(session.user.permissions, 'admin:access');
   const canViewReports = hasPermission(session.user.permissions, 'report:view');
   const isCommitteeOrAdmin = hasPermission(session.user.permissions, 'members:list') ||
+                             hasPermission(session.user.permissions, 'members:view') ||
                              hasPermission(session.user.permissions, 'admin:access');
 
   // Check if user attended a specific event (confirmed status from attendance data)
@@ -264,7 +265,7 @@ function DashboardContent() {
         )}
 
         {/* Active Member Appreciation */}
-        {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && !loadingAttendance && attendance && !attendance.noActivityWarning && (
+        {session.user.role !== 'guest' && session.user.memberId && !loadingAttendance && attendance && !attendance.noActivityWarning && (
           <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
@@ -308,7 +309,7 @@ function DashboardContent() {
         )}
 
         {/* Loading Skeleton for Attendance Statistics */}
-        {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && loadingAttendance && (
+        {session.user.role !== 'guest' && session.user.memberId && loadingAttendance && (
           <div className="mb-8">
             <div className="h-7 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
             <div className="bg-white rounded-lg shadow p-6 animate-pulse">

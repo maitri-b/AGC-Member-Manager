@@ -96,7 +96,8 @@ export default function EventsPage() {
       // Admin/Committee can see all events (including unpublished)
       // Regular members only see published events
       const isAdmin = session?.user?.permissions?.includes('admin:access') ||
-                      session?.user?.permissions?.includes('members:list');
+                      session?.user?.permissions?.includes('members:list') ||
+                      session?.user?.permissions?.includes('members:view');
 
       const url = isAdmin ? '/api/events' : '/api/events?published=true';
       const response = await fetch(url);
@@ -164,6 +165,7 @@ export default function EventsPage() {
   });
 
   const isCommittee = session?.user?.permissions?.includes('members:list') ||
+                      session?.user?.permissions?.includes('members:view') ||
                       session?.user?.permissions?.includes('admin:access');
 
   // Check if user can manage events (committee, admin, event-co, event-staff)

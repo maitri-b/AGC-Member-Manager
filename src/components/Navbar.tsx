@@ -17,7 +17,8 @@ export default function Navbar() {
   // Check if user is admin (both role and permission)
   const isAdmin = session.user.role === 'admin' && hasPermission(session.user.permissions, 'admin:access');
   const canAccessAdmin = hasPermission(session.user.permissions, 'admin:access');
-  const canViewMembers = hasPermission(session.user.permissions, 'members:list');
+  const canViewMembers = hasPermission(session.user.permissions, 'members:list') ||
+                         hasPermission(session.user.permissions, 'members:view');
   const canManageEvents = hasPermission(session.user.permissions, 'events:manage-assigned');
 
   const getRoleBadgeColor = (role: string) => {

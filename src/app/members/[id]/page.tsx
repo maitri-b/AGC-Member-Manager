@@ -114,7 +114,9 @@ export default function MemberDetailPage() {
       router.push('/login');
     } else if (status === 'authenticated' && session?.user) {
       // Check if user has permission to view members list
-      if (!hasPermission(session.user.permissions || [], 'members:list')) {
+      const canViewMembers = hasPermission(session.user.permissions || [], 'members:list') ||
+                             hasPermission(session.user.permissions || [], 'members:view');
+      if (!canViewMembers) {
         router.push('/unauthorized');
       }
     }

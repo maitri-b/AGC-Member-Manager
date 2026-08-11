@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!hasPermission(session.user.permissions || [], 'members:list')) {
+    const canViewMembers = hasPermission(session.user.permissions || [], 'members:list') ||
+                           hasPermission(session.user.permissions || [], 'members:view');
+    if (!canViewMembers) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 

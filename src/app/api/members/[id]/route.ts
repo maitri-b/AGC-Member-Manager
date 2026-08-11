@@ -19,10 +19,12 @@ export async function GET(
     }
 
     // Allow viewing member details for users with these permissions:
-    // - members:list (view members list)
+    // - members:list (view members list with management)
+    // - members:view (view members list read-only)
     // - members:read:all (read all member data)
     // - admin:users (admin user management)
     const canView = hasPermission(session.user.permissions || [], 'members:list') ||
+                    hasPermission(session.user.permissions || [], 'members:view') ||
                     hasPermission(session.user.permissions || [], 'members:read:all') ||
                     hasPermission(session.user.permissions || [], 'admin:users');
 

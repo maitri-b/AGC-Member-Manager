@@ -1363,14 +1363,18 @@ export default function MembersPage() {
       router.push('/login');
     } else if (status === 'authenticated' && session?.user) {
       // Check if user has permission to view members list
-      if (!hasPermission(session.user.permissions || [], 'members:list')) {
+      const canViewMembers = hasPermission(session.user.permissions || [], 'members:list') ||
+                             hasPermission(session.user.permissions || [], 'members:view');
+      if (!canViewMembers) {
         router.push('/unauthorized');
       }
     }
   }, [status, session, router]);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user && hasPermission(session.user.permissions || [], 'members:list')) {
+    const canViewMembers = hasPermission(session?.user?.permissions || [], 'members:list') ||
+                           hasPermission(session?.user?.permissions || [], 'members:view');
+    if (status === 'authenticated' && session?.user && canViewMembers) {
       fetchAllMembers();
       fetchStaff();
       // Fetch attendance and pending contacts in the background - don't block page load

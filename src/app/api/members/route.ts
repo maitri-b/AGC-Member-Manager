@@ -14,8 +14,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check permission - only admin and committee can view all members list
-    if (!hasPermission(session.user.permissions || [], 'members:list')) {
+    // Check permission - users with members:list or members:view can view all members list
+    const canViewMembers = hasPermission(session.user.permissions || [], 'members:list') ||
+                           hasPermission(session.user.permissions || [], 'members:view');
+    if (!canViewMembers) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 

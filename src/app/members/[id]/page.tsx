@@ -104,10 +104,9 @@ export default function MemberDetailPage() {
   const [licenseFilePreview, setLicenseFilePreview] = useState<string | null>(null);
 
   // Check if user can edit members
+  // Only users with member:write or admin:users permission can edit
   const canEdit = session?.user?.permissions?.includes('admin:users') ||
-                  session?.user?.permissions?.includes('members:edit') ||
-                  session?.user?.role === 'admin' ||
-                  session?.user?.role === 'committee';
+                  session?.user?.permissions?.includes('member:write');
 
   useEffect(() => {
     if (status === 'unauthenticated') {

@@ -2272,8 +2272,8 @@ export default function MembersPage() {
                               </button>
                             )}
 
-                            {/* Dropdown menu - Only for Admin and Committee */}
-                            {(session?.user?.role === 'admin' || session?.user?.role === 'committee') && (
+                            {/* Dropdown menu - Only for users with member:write permission */}
+                            {(hasPermission(session?.user?.permissions || [], 'member:write') || hasPermission(session?.user?.permissions || [], 'admin:users')) && (
                               <div className="relative">
                                 <button
                                   onClick={() => setOpenMenuId(openMenuId === member.memberId ? null : member.memberId)}

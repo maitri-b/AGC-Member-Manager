@@ -117,13 +117,13 @@ const TEST_USERS: TestUser[] = [
     email: 'test-normal@example.com',
     phone: '081-111-1111',
     companyName: 'Test Company Normal',
-    licenseNumber: 'TEST-NORMAL-001',
+    licenseNumber: 'NO/001', // ชื่อย่อ Normal
     licenseStatus: 'active',
     licenseExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
     lineGroupStatus: 'member',
     membershipStatus: 'active',
     role: 'member',
-    memberId: 'TEST-MEMBER-001', // Member ID for event registration
+    memberId: 'T-001', // Test member ID
     permissions: [],
     testAccount: true,
     description: '✅ สถานะปกติ - ใบอนุญาตปกติ, อยู่ในกลุ่ม LINE',
@@ -135,7 +135,7 @@ const TEST_USERS: TestUser[] = [
     email: 'test-expired@example.com',
     phone: '081-222-2222',
     companyName: 'Test Company Expired',
-    licenseNumber: 'TEST-EXPIRED-001',
+    licenseNumber: 'EX/002', // ชื่อย่อ Expired
     licenseStatus: 'expired',
     licenseExpiryDate: '2023-01-01', // Expired
     lineGroupStatus: 'member',
@@ -152,7 +152,7 @@ const TEST_USERS: TestUser[] = [
     email: 'test-suspended@example.com',
     phone: '081-333-3333',
     companyName: 'Test Company Suspended',
-    licenseNumber: 'TEST-SUSPENDED-001',
+    licenseNumber: 'SU/003', // ชื่อย่อ Suspended
     licenseStatus: 'suspended',
     licenseExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     suspensionReason: 'Test suspension - Payment overdue',
@@ -171,14 +171,14 @@ const TEST_USERS: TestUser[] = [
     email: 'test-left@example.com',
     phone: '081-444-4444',
     companyName: 'Test Company Left Group',
-    licenseNumber: 'TEST-LEFT-001',
+    licenseNumber: 'LE/004', // ชื่อย่อ Left
     licenseStatus: 'active',
     licenseExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     lineGroupStatus: 'left',
     lineGroupLeftDate: new Date().toISOString(),
     membershipStatus: 'active',
     role: 'member',
-    memberId: 'TEST-MEMBER-004', // Member ID for event registration
+    memberId: 'T-004', // Test member ID
     permissions: [],
     testAccount: true,
     description: '👋 ออกจากกลุ่ม LINE แล้ว - ยังคงเป็นสมาชิก แต่ไม่อยู่ในกลุ่ม LINE',
@@ -190,13 +190,13 @@ const TEST_USERS: TestUser[] = [
     email: 'test-pending@example.com',
     phone: '081-555-5555',
     companyName: 'Test Company Pending',
-    licenseNumber: 'TEST-PENDING-001',
+    licenseNumber: 'PE/005', // ชื่อย่อ Pending
     licenseStatus: 'pending',
     licenseExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     lineGroupStatus: 'pending',
     membershipStatus: 'pending',
     role: 'member',
-    memberId: 'TEST-MEMBER-005', // Member ID for event registration
+    memberId: 'T-005', // Test member ID
     permissions: [],
     testAccount: true,
     description: '⏳ รออนุมัติ - สมาชิกใหม่รอการอนุมัติ แต่ถือว่าเป็น member แล้ว',
@@ -208,13 +208,13 @@ const TEST_USERS: TestUser[] = [
     email: 'test-admin@example.com',
     phone: '081-666-6666',
     companyName: 'Test Company Admin',
-    licenseNumber: 'TEST-ADMIN-001',
+    licenseNumber: 'AD/006', // ชื่อย่อ Admin
     licenseStatus: 'active',
     licenseExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     lineGroupStatus: 'member',
     membershipStatus: 'active',
     role: 'admin',
-    memberId: 'TEST-MEMBER-006', // Member ID for event registration
+    memberId: 'T-006', // Test member ID
     permissions: ['admin:access', 'events:manage', 'members:manage', 'payments:manage'],
     testAccount: true,
     description: '👑 Admin - มีสิทธิ์เข้าถึงระบบ Admin ทั้งหมด',
@@ -226,13 +226,13 @@ const TEST_USERS: TestUser[] = [
     email: 'test-staff@example.com',
     phone: '081-777-7777',
     companyName: 'Test Company Staff',
-    licenseNumber: 'TEST-STAFF-001',
+    licenseNumber: 'ST/007', // ชื่อย่อ Staff
     licenseStatus: 'active',
     licenseExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     lineGroupStatus: 'member',
     membershipStatus: 'active',
     role: 'member',
-    memberId: 'TEST-MEMBER-007', // Member ID for event registration
+    memberId: 'T-007', // Test member ID
     permissions: ['events:manage-assigned', 'events:view-registrations'],
     assignedEventIds: [], // Will be populated based on actual events
     testAccount: true,
@@ -245,7 +245,7 @@ const TEST_USERS: TestUser[] = [
     email: 'test-issues@example.com',
     phone: '081-888-8888',
     companyName: 'Test Company Issues',
-    licenseNumber: 'TEST-ISSUES-001',
+    licenseNumber: 'IS/008', // ชื่อย่อ Issues
     licenseStatus: 'expired',
     licenseExpiryDate: '2022-06-01',
     lineGroupStatus: 'left',

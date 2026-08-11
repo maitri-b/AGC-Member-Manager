@@ -7,6 +7,12 @@
  * Run with: npm run migrate-permissions
  */
 
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env.local file
+config({ path: resolve(process.cwd(), '.env.local') });
+
 import { adminDb } from '../src/lib/firebase-admin';
 
 async function migrateEventStaffPermissions() {

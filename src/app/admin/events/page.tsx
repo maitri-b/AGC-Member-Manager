@@ -370,9 +370,9 @@ export default function AdminEventsPage() {
         const data = await response.json();
         let allEvents = data.events || [];
 
-        // Filter for event-staff and event-co - show only assigned events
-        if (session?.user?.role === 'event-staff' || session?.user?.role === 'event-co') {
-          const assignedIds = session.user.assignedEventIds || [];
+        // ✅ Filter for event-staff and event-co - show only assigned events (use effective session for impersonation)
+        if (effectiveSession?.user?.role === 'event-staff' || effectiveSession?.user?.role === 'event-co') {
+          const assignedIds = effectiveSession.user.assignedEventIds || [];
           allEvents = allEvents.filter((e: Event) => assignedIds.includes(e.eventId));
         }
 

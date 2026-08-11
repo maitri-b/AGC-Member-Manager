@@ -241,8 +241,8 @@ export default function AdminPage() {
     setMemberPreview(null);
     setSendLineNotification(true); // Reset to default (checked)
 
-    // Fetch search logs for this user
-    if (user.searchCount && user.searchCount > 0) {
+    // Fetch search logs for guest users only
+    if (user.role === 'guest' && user.searchCount && user.searchCount > 0) {
       setLoadingLogs(true);
       try {
         const response = await fetch(`/api/admin/users/${user.id}/search-logs`);
@@ -1401,8 +1401,8 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Search Lock Section */}
-                {(editingUser.isSearchLocked || (editingUser.searchCount && editingUser.searchCount > 0)) && (
+                {/* Search Lock Section - Only show for guest role */}
+                {editingUser.role === 'guest' && (editingUser.isSearchLocked || (editingUser.searchCount && editingUser.searchCount > 0)) && (
                   <div className="border-t border-gray-200 pt-4 mt-4">
                     <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                       <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

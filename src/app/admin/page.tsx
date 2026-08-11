@@ -798,16 +798,16 @@ export default function AdminPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     รหัสสมาชิก
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                     เลขใบอนุญาต
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                     เบอร์โทร
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     สถานะ
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                     เข้าใช้ล่าสุด
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -881,8 +881,8 @@ export default function AdminPage() {
 
                     return (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
+                    <td className="px-4 py-4">
+                      <div className="flex items-center max-w-xs">
                         {user.lineProfilePicture ? (
                           <img
                             src={user.lineProfilePicture}
@@ -896,37 +896,37 @@ export default function AdminPage() {
                             </span>
                           </div>
                         )}
-                        <div className="ml-4">
+                        <div className="ml-3 min-w-0 flex-1">
                           {user.memberId ? (
                             <Link
                               href={`/members/${user.memberId}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors truncate block"
                               title="ดูโปรไฟล์สมาชิก (เปิดในแท็บใหม่)"
                             >
                               {user.lineDisplayName || 'Unknown'}
                             </Link>
                           ) : (
-                            <p className="text-sm font-medium text-gray-900">{user.lineDisplayName || 'Unknown'}</p>
+                            <p className="text-sm font-medium text-gray-900 truncate">{user.lineDisplayName || 'Unknown'}</p>
                           )}
                           {memberData && (
                             <>
                               {memberData.fullNameTH && (
-                                <p className="text-xs text-gray-600">{memberData.fullNameTH} ({memberData.nickname || '-'})</p>
+                                <p className="text-xs text-gray-600 truncate">{memberData.fullNameTH} ({memberData.nickname || '-'})</p>
                               )}
                               {(memberData.companyNameTH || memberData.companyNameEN) && (
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-gray-500 truncate">
                                   {memberData.companyNameTH || memberData.companyNameEN}
                                 </p>
                               )}
                             </>
                           )}
-                          <p className="text-xs text-gray-400">ID: {user.id.slice(0, 8)}...</p>
+                          <p className="text-xs text-gray-400 truncate">ID: {user.id.slice(0, 8)}...</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
                         {getRoleDisplayName(user.role)}
                       </span>
@@ -934,10 +934,10 @@ export default function AdminPage() {
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.memberId || '-'}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 hidden xl:table-cell">
                       {user.licenseNumber || '-'}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
                       {user.phone || '-'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
@@ -978,10 +978,10 @@ export default function AdminPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 hidden xl:table-cell">
                       {formatDate(user.lastLoginAt)}
                     </td>
-                    <td className="px-4 py-4 text-sm">
+                    <td className="px-4 py-4 text-sm max-w-[120px]">
                       {user.adminNote ? (
                         <div className="relative group inline-block">
                           <button

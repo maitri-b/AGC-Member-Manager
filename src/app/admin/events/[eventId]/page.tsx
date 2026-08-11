@@ -198,6 +198,15 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
   const [lightboxImage, setLightboxImage] = useState('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  // ✅ NEW: Edit slip modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingSlip, setEditingSlip] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    amount: 0,
+    uploadedAt: '',
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+
   // Helper function to extract name from adminNotes or lineUserId for legacy data
   const extractReviewerName = (slip: any): string | null => {
     // 1. Try to parse from adminNotes (e.g., "อัพโหลดและอนุมัติโดย Admin: ไมตรี-ไมค์ (เต็มจำนวน: 3,999 บาท)")
@@ -307,6 +316,86 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
     } catch (error) {
       console.error('Error deleting payment slip:', error);
       alert(error instanceof Error ? error.message : 'ไม่สามารถลบสลิปได้');
+    }
+  };
+
+  // ✅ NEW: Open edit modal
+  const handleOpenEditModal = (slip: any) => {
+    setEditingSlip(slip);
+    setEditFormData({
+      amount: slip.amount,
+      uploadedAt: slip.uploadedAt ? new Date(slip.uploadedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    });
+    setEditModalOpen(true);
+  };
+
+  // ✅ NEW: Close edit modal
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setEditingSlip(null);
+    setEditFormData({ amount: 0, uploadedAt: '' });
+  };
+
+  // ✅ NEW: Save edited slip
+  const handleSaveEdit = async (action: 'save' | 'save-close' | 'save-approve') => {
+    if (!editingSlip) return;
+
+    if (editFormData.amount <= 0) {
+      alert('กรุณาระบุจำนวนเงินที่ถูกต้อง');
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      // Update slip
+      const updateResponse = await fetch(`/api/payments/${editingSlip.slipId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: editFormData.amount,
+          uploadedAt: new Date(editFormData.uploadedAt).toISOString(),
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        const data = await updateResponse.json();
+        throw new Error(data.error || 'Failed to update slip');
+      }
+
+      // If action is save-approve, also approve the slip
+      if (action === 'save-approve') {
+        const approveResponse = await fetch(`/api/payments/${editingSlip.slipId}/approve`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            adminNotes: `แก้ไขและอนุมัติโดย Admin (จำนวนเงิน: ${editFormData.amount.toLocaleString()} บาท)`,
+          }),
+        });
+
+        if (!approveResponse.ok) {
+          throw new Error('Failed to approve slip after update');
+        }
+      }
+
+      alert(
+        action === 'save-approve'
+          ? 'บันทึกและอนุมัติสลิปเรียบร้อยแล้ว'
+          : 'บันทึกข้อมูลสลิปเรียบร้อยแล้ว'
+      );
+
+      // Refresh data
+      await fetchPaymentSlips();
+      onUpdate();
+
+      // Close modal if action is save-close or save-approve
+      if (action === 'save-close' || action === 'save-approve') {
+        handleCloseEditModal();
+      }
+    } catch (error) {
+      console.error('Error saving edit:', error);
+      alert(error instanceof Error ? error.message : 'ไม่สามารถบันทึกข้อมูลได้');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -479,6 +568,13 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
                         {slip.status === 'pending' && (
                           <>
                             <button
+                              onClick={() => handleOpenEditModal(slip)}
+                              className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+                              title="แก้ไข"
+                            >
+                              ✏️ แก้ไข
+                            </button>
+                            <button
                               onClick={() => handleApprove(slip.slipId)}
                               className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
                               title="อนุมัติ"
@@ -530,6 +626,130 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
               alt="Payment Slip"
               className="max-w-full max-h-[90vh] object-contain rounded-lg"
             />
+          </div>
+        </div>
+      )}
+
+      {/* ✅ NEW: Edit Slip Modal */}
+      {editModalOpen && editingSlip && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            {/* Header */}
+            <div className="bg-purple-50 border-b border-purple-200 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <h2 className="text-lg font-semibold text-purple-900">แก้ไขข้อมูลสลิป</h2>
+              </div>
+              <button
+                onClick={handleCloseEditModal}
+                className="text-gray-400 hover:text-gray-600"
+                disabled={savingEdit}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {/* Slip Info */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">ประเภท:</span>
+                  <span className="font-semibold text-gray-900">{getPaymentTypeName(editingSlip.paymentType)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">สถานะ:</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${getSlipStatusBadgeClass(editingSlip.status)}`}>
+                    {getSlipStatusText(editingSlip.status)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  จำนวนเงิน (บาท) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={editFormData.amount}
+                  onChange={(e) => setEditFormData({ ...editFormData, amount: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  disabled={savingEdit}
+                />
+              </div>
+
+              {/* Date Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  วันที่อัพโหลด <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={editFormData.uploadedAt}
+                  onChange={(e) => setEditFormData({ ...editFormData, uploadedAt: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  disabled={savingEdit}
+                />
+              </div>
+
+              {/* Preview Slip Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">สลิปการชำระเงิน</label>
+                <img
+                  src={editingSlip.slipUrl}
+                  alt="Payment Slip"
+                  className="w-full h-48 object-contain bg-gray-100 rounded-lg cursor-pointer"
+                  onClick={() => {
+                    setLightboxImage(editingSlip.slipUrl);
+                    setLightboxOpen(true);
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex flex-col gap-3">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleSaveEdit('save')}
+                  disabled={savingEdit}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingEdit ? 'กำลังบันทึก...' : '💾 บันทึก'}
+                </button>
+                <button
+                  onClick={() => handleSaveEdit('save-close')}
+                  disabled={savingEdit}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingEdit ? 'กำลังบันทึก...' : '💾 บันทึกแล้วปิด'}
+                </button>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleSaveEdit('save-approve')}
+                  disabled={savingEdit}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingEdit ? 'กำลังดำเนินการ...' : '✓ บันทึกพร้อมอนุมัติ'}
+                </button>
+                <button
+                  onClick={handleCloseEditModal}
+                  disabled={savingEdit}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -2104,12 +2324,15 @@ export default function EventDetailPage() {
         throw new Error('Failed to approve slip');
       }
 
+      // ✅ FIX: Fetch updated data BEFORE closing modal for in-place UI update
+      await fetchEventData();
+      setPaymentDetailsRefreshKey(prev => prev + 1);
+
+      // Now close modal and show success message
       setActionMessage({ type: 'success', text: 'อัพโหลดและอนุมัติสลิปเรียบร้อยแล้ว' });
       setTimeout(() => setActionMessage(null), 3000);
       setApprovalConfirmModalOpen(false);
       setUploadedSlipData(null);
-      await fetchEventData();
-      setPaymentDetailsRefreshKey(prev => prev + 1);
     } catch (error) {
       setActionMessage({
         type: 'error',
@@ -2121,13 +2344,15 @@ export default function EventDetailPage() {
   };
 
   const handleKeepPending = async () => {
-    // Just close modal - slip is already uploaded with pending status
+    // ✅ FIX: Fetch updated data BEFORE closing modal for in-place UI update
+    await fetchEventData();
+    setPaymentDetailsRefreshKey(prev => prev + 1);
+
+    // Now close modal and show success message
     setActionMessage({ type: 'success', text: 'อัพโหลดสลิปเรียบร้อยแล้ว รอการตรวจสอบ' });
     setTimeout(() => setActionMessage(null), 3000);
     setApprovalConfirmModalOpen(false);
     setUploadedSlipData(null);
-    await fetchEventData();
-    setPaymentDetailsRefreshKey(prev => prev + 1);
   };
 
   const handleCancelUpload = async () => {
@@ -2151,12 +2376,15 @@ export default function EventDetailPage() {
         throw new Error('Failed to cancel upload');
       }
 
+      // ✅ FIX: Fetch updated data BEFORE closing modal for in-place UI update
+      await fetchEventData();
+      setPaymentDetailsRefreshKey(prev => prev + 1);
+
+      // Now close modal and show success message
       setActionMessage({ type: 'success', text: 'ยกเลิกการอัพโหลดสลิปแล้ว' });
       setTimeout(() => setActionMessage(null), 3000);
       setApprovalConfirmModalOpen(false);
       setUploadedSlipData(null);
-      await fetchEventData();
-      setPaymentDetailsRefreshKey(prev => prev + 1);
     } catch (error) {
       setActionMessage({
         type: 'error',

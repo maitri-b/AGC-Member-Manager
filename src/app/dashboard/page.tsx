@@ -265,7 +265,7 @@ function DashboardContent() {
         )}
 
         {/* Active Member Appreciation */}
-        {session.user.role !== 'guest' && session.user.memberId && !loadingAttendance && attendance && !attendance.noActivityWarning && (
+        {session.user.role !== 'guest' && session.user.role !== 'visitor' && session.user.memberId && !loadingAttendance && attendance && !attendance.noActivityWarning && (
           <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
@@ -309,7 +309,7 @@ function DashboardContent() {
         )}
 
         {/* Loading Skeleton for Attendance Statistics */}
-        {session.user.role !== 'guest' && session.user.memberId && loadingAttendance && (
+        {session.user.role !== 'guest' && session.user.role !== 'visitor' && session.user.memberId && loadingAttendance && (
           <div className="mb-8">
             <div className="h-7 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
             <div className="bg-white rounded-lg shadow p-6 animate-pulse">
@@ -332,7 +332,7 @@ function DashboardContent() {
         )}
 
         {/* Attendance Summary for Members */}
-        {session.user.role !== 'guest' && session.user.role !== 'event-staff' && session.user.role !== 'event-co' && session.user.memberId && !loadingAttendance && attendance && (
+        {session.user.role !== 'guest' && session.user.role !== 'visitor' && session.user.memberId && !loadingAttendance && attendance && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">สถิติการเข้าร่วมกิจกรรม</h2>
             <div className="bg-white rounded-lg shadow p-6">
@@ -528,7 +528,7 @@ function DashboardContent() {
         </div>
 
         {/* Member Status Warning */}
-        {(session.user.role === 'member' || session.user.role === 'event-co') && session.user.memberId && (
+        {(session.user.role === 'member' || session.user.role === 'event-co' || session.user.role === 'event-staff') && session.user.memberId && (
           <MemberStatusWarning />
         )}
 

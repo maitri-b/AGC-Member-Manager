@@ -157,10 +157,21 @@ export default function AdminPage() {
     if (effectiveStatus === 'authenticated' && effectiveSession && hasPermission(effectiveSession.user.permissions || [], 'admin:users')) {
       fetchUsers();
       fetchPendingCounts();
-      fetchAllMembersData();
+      // NOTE: Members data now loaded lazily when needed (on search or modal open)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]); // Only run when authentication status changes, not on every session update
+
+  // Lazy load members data when user starts searching
+  useEffect(() => {
+    // Only load if:
+    // 1. User is searching AND
+    // 2. Members data hasn't been loaded yet
+    if (userSearchQuery && allMembersData.length === 0 && !loadingMembers) {
+      fetchAllMembers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userSearchQuery]);
 
   const fetchPendingCounts = async () => {
     try {
@@ -194,40 +205,6 @@ export default function AdminPage() {
     }
   };
 
-  const fetchAllMembersData = async () => {
-    try {
-      const response = await fetch('/api/members');
-      if (!response.ok) {
-        console.error('Failed to fetch members data');
-        return;
-      }
-      const data = await response.json();
-
-      // Filter for active members only and map to required fields
-      const activeMembersData = data.members
-        .filter((m: { status: string }) => m.status === 'Active' || m.status === 'ปกติ')
-        .map((m: {
-          memberId: string;
-          nickname: string;
-          fullNameTH: string;
-          companyNameTH: string;
-          companyNameEN: string;
-          licenseNumber: string;
-        }) => ({
-          memberId: m.memberId || '',
-          nickname: m.nickname || '',
-          fullNameTH: m.fullNameTH || '',
-          companyNameTH: m.companyNameTH || '',
-          companyNameEN: m.companyNameEN || '',
-          licenseNumber: m.licenseNumber || '',
-        }));
-
-      setAllMembersData(activeMembersData);
-    } catch (err) {
-      console.error('Error fetching all members data:', err);
-    }
-  };
-
   const handleEditUser = async (user: User) => {
     setEditingUser(user);
     setEditForm({
@@ -257,8 +234,8 @@ export default function AdminPage() {
       }
     }
 
-    // Fetch all members for search dropdown
-    if (memberOptions.length === 0) {
+    // Fetch all members for search dropdown and table display (lazy loaded)
+    if (allMembersData.length === 0 && !loadingMembers) {
       fetchAllMembers();
     }
 
@@ -271,7 +248,8 @@ export default function AdminPage() {
     fetchActivePublishedEvents();
   };
 
-  // Fetch all members from Google Sheets for search dropdown
+  // Fetch all members from Google Sheets for search dropdown and table display
+  // Lazy loaded - only called when opening edit modal
   const fetchAllMembers = async () => {
     setLoadingMembers(true);
     try {
@@ -301,7 +279,9 @@ export default function AdminPage() {
 
       console.log('Active members filtered:', options.length);
 
+      // Set both memberOptions (for modal) and allMembersData (for table display)
       setMemberOptions(options);
+      setAllMembersData(options);
     } catch (err) {
       console.error('Error fetching members:', err);
     } finally {

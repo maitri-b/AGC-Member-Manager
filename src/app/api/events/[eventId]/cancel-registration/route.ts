@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { adminDb } from '@/lib/firebase-admin';
 import { Event, EventRegistration, calculateRefundAmount } from '@/types/event';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -13,8 +12,8 @@ export async function POST(
   try {
     const db = adminDb();
 
-    // Get session
-    const session = await getServerSession(authOptions);
+    // Get effective session (supports impersonation)
+    const session = await getEffectiveSession();
     if (!session?.user) {
       return NextResponse.json(
         { success: false, message: 'กรุณาเข้าสู่ระบบ' },

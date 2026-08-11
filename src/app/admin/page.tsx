@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { hasPermission } from '@/lib/permissions';
@@ -59,7 +60,8 @@ interface PendingCounts {
 }
 
 export default function AdminPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession(); // Real admin session (for audit logs, etc.)
+  const { data: effectiveSession, status: effectiveStatus } = useEffectiveSessionContext(); // Effective session (for permission checks)
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,15 +146,15 @@ export default function AdminPage() {
   const [loadingEvents, setLoadingEvents] = useState(false);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || effectiveStatus === 'unauthenticated') {
       router.push('/login');
-    } else if (status === 'authenticated' && !hasPermission(session?.user?.permissions || [], 'admin:access')) {
+    } else if (effectiveStatus === 'authenticated' && !hasPermission(effectiveSession?.user?.permissions || [], 'admin:access')) {
       router.push('/unauthorized');
     }
-  }, [status, session, router]);
+  }, [status, effectiveStatus, session, effectiveSession, router]);
 
   useEffect(() => {
-    if (status === 'authenticated' && session && hasPermission(session.user.permissions || [], 'admin:users')) {
+    if (effectiveStatus === 'authenticated' && effectiveSession && hasPermission(effectiveSession.user.permissions || [], 'admin:users')) {
       fetchUsers();
       fetchPendingCounts();
       fetchAllMembersData();
@@ -548,7 +550,7 @@ export default function AdminPage() {
       };
 
       // Only include role if user has permission to change roles
-      if (hasPermission(session?.user?.permissions || [], 'admin:roles')) {
+      if (hasPermission(effectiveSession?.user?.permissions || [], 'admin:roles')) {
         payload.role = editForm.role;
       }
 
@@ -1117,7 +1119,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Role selection - only show if user has admin:roles permission */}
-                {hasPermission(session?.user?.permissions || [], 'admin:roles') ? (
+                {hasPermission(effectiveSession?.user?.permissions || [], 'admin:roles') ? (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">บทบาท</label>
                     <select
@@ -1474,7 +1476,7 @@ export default function AdminPage() {
               </div>
               <div className="px-6 py-4 border-t border-gray-200">
                 {/* LINE Notification Checkbox - Only show when changing guest to member */}
-                {hasPermission(session?.user?.permissions || [], 'admin:roles') &&
+                {hasPermission(effectiveSession?.user?.permissions || [], 'admin:roles') &&
                  (editingUser.role === 'guest' || editingUser.role === 'visitor') &&
                  (editForm.role === 'member' || editForm.role === 'committee' || editForm.role === 'admin') &&
                  editForm.memberId && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -337,7 +338,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
   };
 
   // ✅ NEW: Save edited slip
-  const handleSaveEdit = async (action: 'save' | 'save-close' | 'save-approve') => {
+  const handleSaveEdit = async (approveImmediately: boolean = false) => {
     if (!editingSlip) return;
 
     if (editFormData.amount <= 0) {
@@ -362,8 +363,8 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
         throw new Error(data.error || 'Failed to update slip');
       }
 
-      // If action is save-approve, also approve the slip
-      if (action === 'save-approve') {
+      // If approveImmediately, also approve the slip
+      if (approveImmediately) {
         const approveResponse = await fetch(`/api/payments/${editingSlip.slipId}/approve`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -378,7 +379,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
       }
 
       alert(
-        action === 'save-approve'
+        approveImmediately
           ? 'บันทึกและอนุมัติสลิปเรียบร้อยแล้ว'
           : 'บันทึกข้อมูลสลิปเรียบร้อยแล้ว'
       );
@@ -387,10 +388,8 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
       await fetchPaymentSlips();
       onUpdate();
 
-      // Close modal if action is save-close or save-approve
-      if (action === 'save-close' || action === 'save-approve') {
-        handleCloseEditModal();
-      }
+      // Always close modal after save
+      handleCloseEditModal();
     } catch (error) {
       console.error('Error saving edit:', error);
       alert(error instanceof Error ? error.message : 'ไม่สามารถบันทึกข้อมูลได้');
@@ -611,7 +610,7 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
       {/* Lightbox for viewing slip image */}
       {lightboxOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[70] p-4"
           onClick={() => setLightboxOpen(false)}
         >
           <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
@@ -716,39 +715,28 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 flex flex-col gap-3">
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleSaveEdit('save')}
-                  disabled={savingEdit}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {savingEdit ? 'กำลังบันทึก...' : '💾 บันทึก'}
-                </button>
-                <button
-                  onClick={() => handleSaveEdit('save-close')}
-                  disabled={savingEdit}
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {savingEdit ? 'กำลังบันทึก...' : '💾 บันทึกแล้วปิด'}
-                </button>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleSaveEdit('save-approve')}
-                  disabled={savingEdit}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {savingEdit ? 'กำลังดำเนินการ...' : '✓ บันทึกพร้อมอนุมัติ'}
-                </button>
-                <button
-                  onClick={handleCloseEditModal}
-                  disabled={savingEdit}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  ยกเลิก
-                </button>
-              </div>
+            <div className="bg-gray-50 px-6 py-4 flex gap-3">
+              <button
+                onClick={() => handleSaveEdit(false)}
+                disabled={savingEdit}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingEdit ? 'กำลังบันทึก...' : '💾 บันทึก'}
+              </button>
+              <button
+                onClick={() => handleSaveEdit(true)}
+                disabled={savingEdit}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingEdit ? 'กำลังดำเนินการ...' : '✓ บันทึกพร้อมอนุมัติ'}
+              </button>
+              <button
+                onClick={handleCloseEditModal}
+                disabled={savingEdit}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ยกเลิก
+              </button>
             </div>
           </div>
         </div>
@@ -760,7 +748,8 @@ function PaymentHistoryInline({ registrationId, onUpdate }: { registrationId: st
 export default function EventDetailPage() {
   const params = useParams();
   const eventId = decodeURIComponent(params.eventId as string);
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession(); // Real admin session
+  const { data: effectiveSession, status: effectiveStatus } = useEffectiveSessionContext(); // Effective session (for permission checks)
   const router = useRouter();
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1044,10 +1033,10 @@ export default function EventDetailPage() {
   };
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || effectiveStatus === 'unauthenticated') {
       router.push('/');
     }
-  }, [status, router]);
+  }, [status, effectiveStatus, router]);
 
   useEffect(() => {
     if (eventId) {

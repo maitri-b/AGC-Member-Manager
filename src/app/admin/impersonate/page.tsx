@@ -111,8 +111,11 @@ export default function ImpersonatePage() {
   const getRoleBadge = (role?: string) => {
     const roleConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {
       admin: { label: 'Admin', bgColor: 'bg-red-100', textColor: 'text-red-800' },
-      staff: { label: 'Staff', bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
-      event_staff: { label: 'Event Staff', bgColor: 'bg-cyan-100', textColor: 'text-cyan-800' },
+      committee: { label: 'Committee', bgColor: 'bg-purple-100', textColor: 'text-purple-800' },
+      'event-co': { label: 'Event Coordinator', bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
+      'event-staff': { label: 'Event Staff', bgColor: 'bg-cyan-100', textColor: 'text-cyan-800' },
+      staff: { label: 'Staff', bgColor: 'bg-indigo-100', textColor: 'text-indigo-800' },
+      event_staff: { label: 'Event Staff', bgColor: 'bg-cyan-100', textColor: 'text-cyan-800' }, // Legacy support
       member: { label: 'Member', bgColor: 'bg-green-100', textColor: 'text-green-800' },
       guest: { label: 'Guest', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
     };

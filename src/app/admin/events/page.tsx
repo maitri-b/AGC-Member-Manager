@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
@@ -269,7 +270,8 @@ const initialFormData: EventFormData = {
 };
 
 export default function AdminEventsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession(); // Real admin session
+  const { data: effectiveSession, status: effectiveStatus } = useEffectiveSessionContext(); // Effective session (for permission checks)
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [summaries, setSummaries] = useState<Map<string, EventSummary>>(new Map());
@@ -350,10 +352,10 @@ export default function AdminEventsPage() {
   }, [lightboxImage]);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || effectiveStatus === 'unauthenticated') {
       router.push('/');
     }
-  }, [status, router]);
+  }, [status, effectiveStatus, router]);
 
   useEffect(() => {
     fetchEvents();
@@ -1013,9 +1015,9 @@ export default function AdminEventsPage() {
     }
   };
 
-  const isAdmin = session?.user?.permissions?.includes('admin:access');
-  const isCommittee = session?.user?.permissions?.includes('members:list');
-  const canManageEvents = session?.user?.permissions?.includes('events:manage-assigned');
+  const isAdmin = effectiveSession?.user?.permissions?.includes('admin:access');
+  const isCommittee = effectiveSession?.user?.permissions?.includes('members:list');
+  const canManageEvents = effectiveSession?.user?.permissions?.includes('events:manage-assigned');
   const hasAccess = isAdmin || canManageEvents;
   const isAdminOrCommittee = isAdmin || isCommittee;
 

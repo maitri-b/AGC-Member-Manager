@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Member, formatThaiDate } from '@/types/member';
 import { hasPermission } from '@/lib/permissions';
 import { Toast, useToast } from '@/components/Toast';
+import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 
 interface LineProfile {
   lineDisplayName: string;
@@ -85,6 +86,7 @@ const EDITABLE_FIELDS = [
 
 export default function MemberDetailPage() {
   const { data: session, status } = useSession();
+  const { data: effectiveSession, status: effectiveStatus } = useEffectiveSessionContext();
   const router = useRouter();
   const params = useParams();
   const memberId = params.id as string;
@@ -103,23 +105,23 @@ export default function MemberDetailPage() {
   const [licenseFile, setLicenseFile] = useState<File | null>(null);
   const [licenseFilePreview, setLicenseFilePreview] = useState<string | null>(null);
 
-  // Check if user can edit members
+  // Check if user can edit members (use effective session for permission check)
   // Only users with member:write or admin:users permission can edit
-  const canEdit = session?.user?.permissions?.includes('admin:users') ||
-                  session?.user?.permissions?.includes('member:write');
+  const canEdit = effectiveSession?.user?.permissions?.includes('admin:users') ||
+                  effectiveSession?.user?.permissions?.includes('member:write');
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || effectiveStatus === 'unauthenticated') {
       router.push('/login');
-    } else if (status === 'authenticated' && session?.user) {
-      // Check if user has permission to view members list
-      const canViewMembers = hasPermission(session.user.permissions || [], 'members:list') ||
-                             hasPermission(session.user.permissions || [], 'members:view');
+    } else if (effectiveStatus === 'authenticated' && effectiveSession?.user) {
+      // Check if user has permission to view members list (use effective session)
+      const canViewMembers = hasPermission(effectiveSession.user.permissions || [], 'members:list') ||
+                             hasPermission(effectiveSession.user.permissions || [], 'members:view');
       if (!canViewMembers) {
         router.push('/unauthorized');
       }
     }
-  }, [status, session, router]);
+  }, [status, effectiveStatus, session, effectiveSession, router]);
 
   useEffect(() => {
     if (memberId && status === 'authenticated' && session?.user) {

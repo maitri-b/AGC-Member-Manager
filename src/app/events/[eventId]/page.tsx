@@ -1763,7 +1763,7 @@ export default function EventDetailPage() {
                   )}
 
                   {/* Attendee Names Section */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="bg-white border border-gray-300 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-semibold text-gray-900">
                         รายชื่อผู้เข้าร่วมกิจกรรม
@@ -2014,7 +2014,7 @@ export default function EventDetailPage() {
                   </div>
 
                   {/* ==================== CARPOOL CARD START ==================== */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+                  <div className="bg-white border border-gray-300 rounded-lg p-4 mb-6">
                     {event.hasCarpoolFeature && (event.carpoolSettings?.carpoolActive !== false || isCommitteeOrAdmin) && (
                       <div>
                         <div className="mb-4">

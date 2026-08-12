@@ -2017,87 +2017,96 @@ export default function EventDetailPage() {
                   <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
                     {event.hasCarpoolFeature && (event.carpoolSettings?.carpoolActive !== false || isCommitteeOrAdmin) && (
                       <div>
-                        <div className="mb-2">
-                          <div className="flex items-center gap-2 mb-1">
-                            <label className="text-lg font-semibold text-gray-900">
-                              🚗 รายละเอียดรถ Carpool
-                            </label>
-                            {event.carpoolSettings?.carpoolActive === false && isCommitteeOrAdmin && (
-                              <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium border border-yellow-300">
-                                Inactive - เห็นเฉพาะ Admin
-                              </span>
-                            )}
-                            <div className="relative">
-                              <button
-                                type="button"
-                                onMouseEnter={() => setShowCarpoolTooltip(true)}
-                                onMouseLeave={() => setShowCarpoolTooltip(false)}
-                                onClick={() => setShowCarpoolTooltip(!showCarpoolTooltip)}
-                                className="text-blue-500 hover:text-blue-700 transition-colors"
-                              >
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                </svg>
-                              </button>
-                              {showCarpoolTooltip && (
-                                <div className="absolute left-0 top-6 z-50 w-80 p-4 bg-white border-2 border-blue-300 rounded-lg shadow-xl">
-                                  <div className="space-y-3 text-xs text-gray-700">
-                                    <div>
-                                      <p className="font-semibold text-blue-700 mb-1">🚗 Carpool คืออะไร?</p>
-                                      <p>ระบบรวมรถเพื่อให้สมาชิกเดินทางไปงานร่วมกัน ช่วยลดต้นทุนและสะดวกในการจัดการที่จอดรถ</p>
-                                    </div>
-                                    <div className="pt-2 border-t border-gray-200">
-                                      <p className="font-semibold text-green-700 mb-1">📝 วิธีสร้าง Carpool (สำหรับคนขับ)</p>
-                                      <ol className="list-decimal list-inside space-y-1 ml-2">
-                                        <li>กดปุ่ม "+ สร้าง Carpool"</li>
-                                        <li>ใส่เลขทะเบียนรถของคุณ</li>
-                                        <li>เลือกสมาชิกในทีมที่จะนั่งรถคุณ</li>
-                                        <li>กดยืนยัน - เสร็จแล้ว!</li>
-                                      </ol>
-                                    </div>
-                                    <div className="pt-2 border-t border-gray-200">
-                                      <p className="font-semibold text-purple-700 mb-1">👥 วิธีเชิญเพื่อนจากรหัสลงทะเบียนอื่น</p>
-                                      <ol className="list-decimal list-inside space-y-1 ml-2">
-                                        <li>คลิกปุ่ม "+ ชวนเพื่อนจากรหัสลงทะเบียนอื่น"</li>
-                                        <li>ใส่รหัสลงทะเบียนของเพื่อน</li>
-                                        <li>เลือกสมาชิกที่ต้องการชวน</li>
-                                        <li>กดยืนยัน - เพื่อนจะเข้ามาในรถคุณ!</li>
-                                      </ol>
-                                    </div>
-                                    <div className="pt-2 border-t border-gray-200">
-                                      <p className="font-semibold text-orange-700 mb-1">👥 วิธีร่วมรถคนอื่น (สำหรับผู้โดยสาร)</p>
-                                      <ol className="list-decimal list-inside space-y-1 ml-2">
-                                        <li>กดปุ่ม "Join รถคนอื่น" (ปุ่มสีเขียว)</li>
-                                        <li>ใส่รหัสลงทะเบียนของเจ้าของรถ</li>
-                                        <li>เลือกสมาชิกในทีมที่จะไปด้วย</li>
-                                        <li>กดยืนยัน - เข้าร่วมสำเร็จ!</li>
-                                      </ol>
-                                    </div>
-                                    <div className="pt-2 border-t border-gray-200">
-                                      <p className="font-semibold text-red-700 mb-1">🗑️ วิธีลบ Carpool</p>
-                                      <ol className="list-decimal list-inside space-y-1 ml-2">
-                                        <li>ที่การ์ด "Carpool ของคุณ" กดปุ่ม "🗑️ ลบ" ข้างเลขทะเบียน</li>
-                                        <li>ยืนยันการลบ - Carpool จะถูกลบทั้งคัน</li>
-                                      </ol>
-                                    </div>
-                                    <div className="pt-2 border-t border-gray-200 bg-yellow-50 -mx-4 -mb-4 p-3 rounded-b-lg">
-                                      <p className="text-yellow-800 font-medium">💡 Tips:</p>
-                                      <ul className="list-disc list-inside space-y-0.5 ml-2 mt-1 text-yellow-700">
-                                        <li>สมาชิก 1 คนสามารถอยู่ได้แค่ 1 รถเท่านั้น</li>
-                                        <li>เจ้าของรถสามารถลบสมาชิกออกได้โดยกดปุ่ม "ลบ" ข้างชื่อสมาชิก</li>
-                                        <li>สมาชิกสามารถลบตัวเองออกจากรถได้</li>
-                                        <li>สามารถแก้ไขเลขทะเบียนได้โดยกดปุ่ม "✏️ แก้ไข"</li>
-                                      </ul>
+                        <div className="mb-4">
+                          {/* Header */}
+                          <div className="mb-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-2xl font-bold text-blue-600">
+                                🚗 การลงทะเบียนรถยนต์ และรวมไปด้วยกัน (Carpool)
+                              </h3>
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onMouseEnter={() => setShowCarpoolTooltip(true)}
+                                  onMouseLeave={() => setShowCarpoolTooltip(false)}
+                                  onClick={() => setShowCarpoolTooltip(!showCarpoolTooltip)}
+                                  className="text-blue-500 hover:text-blue-700 transition-colors"
+                                >
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                  </svg>
+                                </button>
+                                {showCarpoolTooltip && (
+                                  <div className="absolute left-0 top-6 z-50 w-80 p-4 bg-white border-2 border-blue-300 rounded-lg shadow-xl">
+                                    <div className="space-y-3 text-xs text-gray-700">
+                                      <div>
+                                        <p className="font-semibold text-blue-700 mb-1">🚗 การรวมรถไปด้วยกัน (Carpool)</p>
+                                        <p>ระบบลงทะเบียนรถและรวมรถเพื่อให้เอเจ้นท์เดินทางไปงานร่วมกัน ช่วยลดค่าใช้จ่ายและสะดวกในการจัดการที่จอดรถ</p>
+                                      </div>
+                                      <div className="pt-2 border-t border-gray-200">
+                                        <p className="font-semibold text-green-700 mb-1">📝 วิธีสร้าง Carpool (สำหรับเจ้าของรถ)</p>
+                                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                                          <li>กดปุ่ม "+ สร้าง Carpool"</li>
+                                          <li>กรอกเลขทะเบียนรถของคุณ</li>
+                                          <li>เลือกสมาชิกในทีมที่จะนั่งรถคุณ</li>
+                                          <li>กดยืนยัน - เสร็จสิ้น!</li>
+                                        </ol>
+                                      </div>
+                                      <div className="pt-2 border-t border-gray-200">
+                                        <p className="font-semibold text-purple-700 mb-1">👥 วิธีเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่น</p>
+                                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                                          <li>คลิกปุ่ม "+ ชวนเพื่อนจากรหัสลงทะเบียนอื่น"</li>
+                                          <li>ใส่รหัสลงทะเบียนของเอเจ้นท์ที่ต้องการเชิญ</li>
+                                          <li>เลือกสมาชิกที่ต้องการชวน</li>
+                                          <li>กดยืนยัน - สมาชิกจะเข้าร่วม Carpool ของคุณ!</li>
+                                        </ol>
+                                      </div>
+                                      <div className="pt-2 border-t border-gray-200">
+                                        <p className="font-semibold text-orange-700 mb-1">👥 วิธีร่วมรถคนอื่น (สำหรับผู้โดยสาร)</p>
+                                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                                          <li>กดปุ่ม "Join รถคนอื่น" (ปุ่มสีเขียว)</li>
+                                          <li>ใส่รหัสลงทะเบียนของเจ้าของรถ</li>
+                                          <li>เลือกสมาชิกในทีมที่จะไปด้วย</li>
+                                          <li>กดยืนยัน - เข้าร่วมสำเร็จ!</li>
+                                        </ol>
+                                      </div>
+                                      <div className="pt-2 border-t border-gray-200">
+                                        <p className="font-semibold text-red-700 mb-1">🗑️ วิธีลบ Carpool</p>
+                                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                                          <li>ที่การ์ด "Carpool ของคุณ" กดปุ่ม "🗑️ ลบ" ข้างเลขทะเบียน</li>
+                                          <li>ยืนยันการลบ - Carpool จะถูกลบทั้งคัน</li>
+                                        </ol>
+                                      </div>
+                                      <div className="pt-2 border-t border-gray-200 bg-yellow-50 -mx-4 -mb-4 p-3 rounded-b-lg">
+                                        <p className="text-yellow-800 font-medium">💡 ข้อควรทราบ:</p>
+                                        <ul className="list-disc list-inside space-y-0.5 ml-2 mt-1 text-yellow-700">
+                                          <li>สมาชิก 1 คนสามารถอยู่ได้แค่ 1 รถเท่านั้น</li>
+                                          <li>เจ้าของรถสามารถลบสมาชิกออกได้โดยกดปุ่ม "ลบ" ข้างชื่อสมาชิก</li>
+                                          <li>สมาชิกสามารถลบตัวเองออกจากรถได้</li>
+                                          <li>สามารถแก้ไขเลขทะเบียนได้โดยกดปุ่ม "✏️ แก้ไข"</li>
+                                          <li>1 เอเจ้นท์สามารถสร้างได้มากกว่า 1 คัน</li>
+                                        </ul>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
+                            {/* Inactive Warning */}
+                            {event.carpoolSettings?.carpoolActive === false && isCommitteeOrAdmin && (
+                              <div className="mt-2">
+                                <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium border border-yellow-300">
+                                  ⚠️ ระบบปิดใช้งาน - เห็นเฉพาะ Admin/Committee
+                                </span>
+                              </div>
+                            )}
                           </div>
-                          <p className="text-xs text-gray-600 mb-3">
-                            กรุณาสร้าง Carpool หากคุณจะขับรถไปเอง คุณสามารถเชิญสมาชิกจากรหัสลงทะเบียนอื่นร่วมไปด้วยได้<br />
-                            กรณีไม่ได้ขับไปเอง แต่จะร่วมไปรถของรหัสลงทะเบียนคนอื่น กรุณากด Join รถคนอื่น<br />
-                            <span className="text-purple-600 font-medium">สามารถสร้าง Carpool ได้มากกว่า 1 คัน</span>
+
+                          {/* Description */}
+                          <p className="text-sm text-gray-600 mb-3">
+                            หากคุณจะขับรถไปเอง กรุณาสร้าง Carpool และสามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นร่วมไปด้วยได้<br />
+                            กรณีที่คุณร่วมไปกับรถของเอเจ้นท์ท่านอื่น กรุณากด Join รถคนอื่น<br />
+                            <span className="text-purple-600 font-semibold">✨ 1 เอเจ้นท์สามารถสร้าง Carpool ได้มากกว่า 1 คัน</span>
                           </p>
                           <div className="flex gap-2">
                             <button
@@ -2186,7 +2195,7 @@ export default function EventDetailPage() {
                             {/* Owned Carpools Section */}
                             {ownedCarpools.length > 0 && (
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-2">Carpool ของคุณ ({ownedCarpools.length} คัน)</p>
+                                <p className="text-lg font-bold text-green-800 mb-2">Carpool ของคุณ ({ownedCarpools.length} คัน)</p>
                                 <div className="space-y-2">
                                   {ownedCarpools.map((ownedCarpool) => (
                                     <div key={ownedCarpool.carpoolId} className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
@@ -2344,7 +2353,7 @@ export default function EventDetailPage() {
                             {/* Joined Carpools Section */}
                             {joinedCarpools.length > 0 && (
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-2">Carpools ที่เข้าร่วม</p>
+                                <p className="text-lg font-bold text-green-800 mb-2">Carpools ที่เข้าร่วม</p>
                                 <div className="space-y-2">
                                   {joinedCarpools.map((carpool) => (
                                     <div key={carpool.carpoolId} className="px-4 py-3 bg-green-50 border border-green-300 rounded-lg">

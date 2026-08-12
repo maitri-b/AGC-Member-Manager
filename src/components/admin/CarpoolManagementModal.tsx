@@ -729,6 +729,15 @@ export default function CarpoolManagementModal({
                     </div>
                   </div>
 
+                  {/* Status: All Carpools Assigned */}
+                  {availableCarpools.length === 0 && carpools.length > 0 && (
+                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800 font-medium">
+                        ✅ Carpool ทั้งหมดได้รับเลขรถแล้ว
+                      </p>
+                    </div>
+                  )}
+
                   {/* Car Slots Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {carSlots.map((slot) => (
@@ -789,14 +798,6 @@ export default function CarpoolManagementModal({
                       </div>
                     ))}
                   </div>
-
-                  {availableCarpools.length === 0 && carpools.length > 0 && (
-                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800">
-                        ✅ Carpool ทั้งหมดได้รับเลขรถแล้ว
-                      </p>
-                    </div>
-                  )}
                 </>
               )}
             </>

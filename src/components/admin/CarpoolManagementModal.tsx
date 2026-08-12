@@ -14,6 +14,7 @@ interface CarpoolManagementModalProps {
     showCarNumbersToMembers?: boolean;
     carpoolActive?: boolean;
   };
+  onSettingsUpdate?: () => void; // Callback to refresh parent data after settings update
 }
 
 interface EnrichedCarpool extends Carpool {
@@ -32,6 +33,7 @@ export default function CarpoolManagementModal({
   eventId,
   eventName,
   carpoolSettings,
+  onSettingsUpdate,
 }: CarpoolManagementModalProps) {
   // Tab state
   const [activeTab, setActiveTab] = useState<'carpools' | 'car-numbers'>('carpools');
@@ -523,7 +525,11 @@ export default function CarpoolManagementModal({
       }
 
       alert(`บันทึกการตั้งค่า Carpool สำเร็จ`);
-      window.location.reload();
+
+      // Call parent callback to refresh event data instead of full page reload
+      if (onSettingsUpdate) {
+        onSettingsUpdate();
+      }
     } catch (err) {
       console.error('Error saving settings:', err);
       alert(err instanceof Error ? err.message : 'Failed to save settings');

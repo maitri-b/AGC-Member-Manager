@@ -6155,6 +6155,7 @@ export default function EventDetailPage() {
         eventId={eventId as string}
         eventName={eventData?.event?.eventName || ''}
         carpoolSettings={eventData?.event?.carpoolSettings}
+        onSettingsUpdate={fetchEventData}
       />
 
       {/* Car Number Assignment Modal */}

@@ -2021,7 +2021,7 @@ export default function EventDetailPage() {
                           {/* Header */}
                           <div className="mb-3">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-lg font-semibold text-gray-900">
+                              <h3 className="text-base font-semibold text-gray-900">
                                 🚗 การลงทะเบียนรถยนต์ และรวมไปด้วยกัน (Carpool)
                               </h3>
                               <div className="relative">
@@ -2103,9 +2103,9 @@ export default function EventDetailPage() {
                           </div>
 
                           {/* Description */}
-                          <p className="text-sm text-gray-600 mb-3">
+                          <p className="text-xs text-gray-600 mb-3">
                             หากคุณจะขับรถไปเอง กรุณาลงทะเบียนรถยนต์ของคุณ โดยกด +สร้าง Carpool<br />
-                            ทั้งนี้คุณสามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นร่วมไปกับคุณด้วยได้<p />
+                            ทั้งนี้คุณสามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นร่วมไปกับคุณด้วยได้<br />
                             กรณีที่คุณร่วมไปกับรถของเอเจ้นท์ท่านอื่น กรุณากด Join รถคนอื่น<br />
                             <span className="text-purple-600 font-semibold">✨ 1 เอเจ้นท์สามารถสร้าง Carpool ได้มากกว่า 1 คัน</span>
                           </p>

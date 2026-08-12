@@ -5243,6 +5243,7 @@ export default function EventDetailPage() {
 
                           {/* ✅ Payment History - Inline Table */}
                           <PaymentHistoryInline
+                            key={`payment-history-${attendee.registration.registrationId}-${paymentDetailsRefreshKey}`}
                             registrationId={attendee.registration.registrationId}
                             onUpdate={() => fetchEventData()}
                           />

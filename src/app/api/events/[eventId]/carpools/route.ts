@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { hasPermission } from '@/lib/permissions';
 import { getCarpoolsByEvent } from '@/lib/carpools';
 import { adminDb } from '@/lib/firebase-admin';
@@ -9,20 +10,29 @@ import { adminDb } from '@/lib/firebase-admin';
 /**
  * GET /api/events/[eventId]/carpools
  * Get all Carpools for a specific event with enriched registration data
+ *
+ * For impersonation:
+ * - Permission check uses the REAL admin session (must have admin:access)
+ * - But returns ALL carpools for the event (admin view)
+ *
+ * This is intentional because admin managing carpools needs to see all carpools,
+ * not just the impersonated user's carpools.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: { eventId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    // Use real admin session for permission check
+    // Admin needs admin:access to manage all carpools
+    const adminSession = await getServerSession(authOptions);
 
-    if (!session?.user) {
+    if (!adminSession?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Require admin:access permission
-    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
+    // Require admin:access permission (check real admin, not impersonated user)
+    if (!hasPermission(adminSession.user.permissions || [], 'admin:access')) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 

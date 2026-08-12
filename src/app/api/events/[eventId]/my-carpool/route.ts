@@ -1,20 +1,21 @@
 // API Route: Get Member's Carpools for an Event
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { getAllMemberCarpools } from '@/lib/carpools';
 import { getEventAttendanceSummary } from '@/lib/events';
 
 /**
  * GET /api/events/[eventId]/my-carpool
  * Get all carpools where the authenticated member has team members participating
+ * Supports impersonation - returns carpools for the effective user (impersonated user if applicable)
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    // Use effective session to support impersonation
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -22,7 +23,7 @@ export async function GET(
 
     const { eventId } = await params;
 
-    // Get member's LINE user ID
+    // Get member's LINE user ID (from effective session)
     const lineUserId = session.user.lineUserId;
 
     if (!lineUserId) {

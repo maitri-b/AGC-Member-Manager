@@ -2116,18 +2116,50 @@ export default function EventDetailPage() {
                             >
                               + สร้าง Carpool
                             </button>
-                            <button
-                              onClick={() => {
-                                setShowJoinCarpoolModal(true);
-                                // Fetch all carpools to check if members are already in other carpools
-                                if (allCarpools.length === 0) {
-                                  fetchAllCarpools();
-                                }
-                              }}
-                              className="text-sm px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                            >
-                              Join รถคนอื่น
-                            </button>
+                            {/* Only show "Join รถคนอื่น" if there are members not in any carpool */}
+                            {(() => {
+                              // Check if all members are already in carpools
+                              const membersNotInCarpool = attendeeNames.filter((name, index) => {
+                                let isInCarpool = false;
+
+                                memberCarpools.forEach(cp => {
+                                  const member = cp.members?.find((m: any) => {
+                                    // Use attendeeIndex for stable identification (if available)
+                                    if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
+                                      return m.attendeeIndex === index;
+                                    }
+                                    // Fallback to name matching (for old data)
+                                    const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                    return cleanName === name || m.name === name;
+                                  });
+                                  if (member) {
+                                    isInCarpool = true;
+                                  }
+                                });
+
+                                return !isInCarpool;
+                              });
+
+                              // Only show button if there are members not in any carpool
+                              if (membersNotInCarpool.length === 0) {
+                                return null;
+                              }
+
+                              return (
+                                <button
+                                  onClick={() => {
+                                    setShowJoinCarpoolModal(true);
+                                    // Fetch all carpools to check if members are already in other carpools
+                                    if (allCarpools.length === 0) {
+                                      fetchAllCarpools();
+                                    }
+                                  }}
+                                  className="text-sm px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                >
+                                  Join รถคนอื่น
+                                </button>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -2163,13 +2195,13 @@ export default function EventDetailPage() {
                           return (
                             <div className="mb-4 px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg">
                               <div className="flex items-center justify-between mb-2">
-                                <p className="text-xs font-semibold text-gray-700">รายชื่อจัด Carpool:</p>
+                                <p className="text-xs font-semibold text-gray-700">จัดการรายชื่อร่วม carpool:</p>
                                 {memberCarpools.length > 0 && (
                                   <button
                                     onClick={() => setShowJoinOwnCarpoolModal(true)}
                                     className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                                   >
-                                    เข้าร่วม Carpool ของฉัน
+                                    เข้าร่วม carpool
                                   </button>
                                 )}
                               </div>

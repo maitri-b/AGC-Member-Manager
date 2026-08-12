@@ -4419,6 +4419,14 @@ export default function EventDetailPage() {
               </button>
             </div>
 
+            {/* Description */}
+            <div className="mb-4 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-gray-700">
+                กรุณาระบุทะเบียนรถยนต์ของทีมคุณเท่านั้น<br />
+                หากเดินทางไปกับเอเจ้นท์รายอื่น โปรดเลือก <span className="font-semibold text-green-700">'Join รถคนอื่น'</span>
+              </p>
+            </div>
+
             <div className="space-y-4">
               {/* License Plate */}
               <div>

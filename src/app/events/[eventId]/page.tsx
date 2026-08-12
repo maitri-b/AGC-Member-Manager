@@ -5302,7 +5302,7 @@ export default function EventDetailPage() {
                   <div className="text-sm text-blue-800">
                     <p className="font-semibold mb-1">วิธีชวนเพื่อนเข้าร่วมรถ:</p>
                     <ol className="list-decimal list-inside space-y-1 ml-1">
-                      <li>ขอรหัสการลงทะเบียน 6 หลัก (เช่น REG_xxxxx) จากเพื่อนที่ต้องการชวน</li>
+                      <li>ขอรหัสการลงทะเบียน 6 หลัก (เช่น ABC123) จากเพื่อนที่ต้องการชวน</li>
                       <li>พิมพ์รหัสลงทะเบียนในช่องค้นหาด้านล่าง แล้วกดปุ่มค้นหา</li>
                       <li>เลือกชื่อผู้เดินทางที่ต้องการชวนขึ้นรถ (สามารถเลือกได้หลายคน)</li>
                       <li>กดปุ่ม "ชวนเข้า Carpool" เพื่อยืนยัน</li>
@@ -5321,7 +5321,7 @@ export default function EventDetailPage() {
                     type="text"
                     value={searchRegistrationId}
                     onChange={(e) => setSearchRegistrationId(e.target.value)}
-                    placeholder="ระบุรหัสลงทะเบียน 6 หลัก (เช่น REG_xxxxx)"
+                    placeholder="ระบุรหัสลงทะเบียน 6 หลัก เช่น ABC123"
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {

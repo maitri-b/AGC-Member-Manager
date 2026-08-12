@@ -2103,7 +2103,7 @@ export default function EventDetailPage() {
                           </div>
 
                           {/* Description */}
-                          <p className="text-xs text-gray-600 mb-3">
+                          <p className="text-xs text-gray-600 mb-3 leading-relaxed">
                             หากคุณจะขับรถไปเอง กรุณาลงทะเบียนรถยนต์ของคุณ โดยกด +สร้าง Carpool<br />
                             ทั้งนี้คุณสามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นร่วมไปกับคุณด้วยได้<br />
                             กรณีที่คุณร่วมไปกับรถของเอเจ้นท์ท่านอื่น กรุณากด Join รถคนอื่น<br />

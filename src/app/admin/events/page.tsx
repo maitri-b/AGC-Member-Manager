@@ -2209,12 +2209,46 @@ export default function AdminEventsPage() {
                         </label>
                       </div>
 
+                      {/* Carpool Active/Inactive Toggle */}
+                      <div className="flex items-center gap-3 mt-3 p-3 bg-white border border-gray-200 rounded-lg">
+                        <label className="text-xs font-semibold text-gray-800">สถานะ Carpool:</label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({
+                              ...formData,
+                              carpoolSettings: {
+                                ...formData.carpoolSettings!,
+                                carpoolActive: !(formData.carpoolSettings?.carpoolActive ?? true)
+                              }
+                            })}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              (formData.carpoolSettings?.carpoolActive ?? true) ? 'bg-green-600' : 'bg-gray-300'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                (formData.carpoolSettings?.carpoolActive ?? true) ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                          <span className={`text-xs font-medium ${(formData.carpoolSettings?.carpoolActive ?? true) ? 'text-green-700' : 'text-gray-600'}`}>
+                            {(formData.carpoolSettings?.carpoolActive ?? true) ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        {!(formData.carpoolSettings?.carpoolActive ?? true) && (
+                          <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">
+                            Carpool ซ่อนจากสมาชิก
+                          </span>
+                        )}
+                      </div>
+
                       <div className="flex items-center gap-2 p-2 bg-gray-50 rounded mt-3">
                         <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span className="text-xs text-gray-700">
-                          การตั้งค่าเพิ่มเติม (จำนวนรถ, แสดงเลขรถ) สามารถทำได้ในหน้า Event Detail หลังสร้างกิจกรรมแล้ว
+                          การจัดการเพิ่มเติม (จัดเลขรถ, เพิ่ม/ลบสมาชิก) สามารถทำได้ในหน้า Event Detail หลังสร้างกิจกรรมแล้ว
                         </span>
                       </div>
                     </div>

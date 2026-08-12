@@ -43,9 +43,7 @@ export default function CarpoolManagementModal({
   const [error, setError] = useState<string | null>(null);
 
   // Car number assignment state - initialized from carpoolSettings
-  const [totalCars, setTotalCars] = useState(carpoolSettings?.totalCarNumbers || 10);
-  const [showCarNumbers, setShowCarNumbers] = useState(carpoolSettings?.showCarNumbersToMembers ?? false);
-  const [carpoolActive, setCarpoolActive] = useState(carpoolSettings?.carpoolActive ?? true); // New: Active/Inactive toggle
+  const totalCars = carpoolSettings?.totalCarNumbers || 10;
   const [carSlots, setCarSlots] = useState<CarSlot[]>([]);
 
   // Create/Edit Carpool modal state
@@ -93,15 +91,6 @@ export default function CarpoolManagementModal({
       fetchAllRegistrations();
     }
   }, [isOpen, eventId]);
-
-  // Sync settings with carpoolSettings when it changes
-  useEffect(() => {
-    if (carpoolSettings?.totalCarNumbers) {
-      setTotalCars(carpoolSettings.totalCarNumbers);
-    }
-    setShowCarNumbers(carpoolSettings?.showCarNumbersToMembers ?? false);
-    setCarpoolActive(carpoolSettings?.carpoolActive ?? true);
-  }, [carpoolSettings?.totalCarNumbers, carpoolSettings?.showCarNumbersToMembers, carpoolSettings?.carpoolActive]);
 
   // Generate car slots based on totalCars and carpools
   useEffect(() => {
@@ -503,40 +492,6 @@ export default function CarpoolManagementModal({
 
   const availableCarpools = carpools.filter((cp) => !cp.assignedCarNumber);
 
-  const handleSaveSettings = async () => {
-    try {
-      // Update event carpoolSettings with ONLY carpool-related settings
-      // Do NOT include other properties to avoid overwriting unrelated settings
-      const response = await fetch(`/api/admin/events`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventId, // eventId must be in body, not URL
-          carpoolSettings: {
-            totalCarNumbers: totalCars,
-            showCarNumbersToMembers: showCarNumbers,
-            carpoolActive: carpoolActive,
-            maxSeatsPerCar: carpoolSettings?.maxSeatsPerCar, // Preserve existing setting
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save settings');
-      }
-
-      alert(`บันทึกการตั้งค่า Carpool สำเร็จ`);
-
-      // Call parent callback to refresh event data instead of full page reload
-      if (onSettingsUpdate) {
-        onSettingsUpdate();
-      }
-    } catch (err) {
-      console.error('Error saving settings:', err);
-      alert(err instanceof Error ? err.message : 'Failed to save settings');
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -758,77 +713,17 @@ export default function CarpoolManagementModal({
                 </div>
               ) : (
                 <>
-                  {/* Carpool Settings */}
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="space-y-4">
-                      {/* Active/Inactive Toggle */}
-                      <div className="flex items-center justify-between pb-3 border-b border-gray-300">
-                        <div className="flex items-center gap-3">
-                          <label className="text-sm font-semibold text-gray-800">สถานะ Carpool:</label>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setCarpoolActive(!carpoolActive)}
-                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                carpoolActive ? 'bg-green-600' : 'bg-gray-300'
-                              }`}
-                            >
-                              <span
-                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                  carpoolActive ? 'translate-x-6' : 'translate-x-1'
-                                }`}
-                              />
-                            </button>
-                            <span className={`text-sm font-medium ${carpoolActive ? 'text-green-700' : 'text-gray-600'}`}>
-                              {carpoolActive ? 'Active' : 'Inactive'}
-                            </span>
-                          </div>
-                        </div>
-                        {!carpoolActive && (
-                          <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full font-medium">
-                            เห็นเฉพาะ Admin
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Total Cars & Show Numbers */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <label className="text-sm font-medium text-gray-700 w-40">จำนวนรถทั้งหมด:</label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="100"
-                            value={totalCars}
-                            onChange={(e) => setTotalCars(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                            className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          />
-                          <span className="text-xs text-gray-500">คัน</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <label className="text-sm font-medium text-gray-700 w-40">แสดงเลขรถให้สมาชิก:</label>
-                          <input
-                            type="checkbox"
-                            id="showCarNumbersCheckbox"
-                            checked={showCarNumbers}
-                            onChange={(e) => setShowCarNumbers(e.target.checked)}
-                            className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-                          />
-                          <label htmlFor="showCarNumbersCheckbox" className="text-sm text-gray-600 cursor-pointer">
-                            เปิดใช้งาน
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Save Button */}
-                      <div className="pt-3 border-t border-gray-300">
-                        <button
-                          onClick={handleSaveSettings}
-                          className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                        >
-                          💾 บันทึกการตั้งค่าทั้งหมด
-                        </button>
-                        <p className="text-xs text-gray-500 mt-2 text-center">
-                          การตั้งค่าจะถูกบันทึกลง Event Settings
+                  {/* Info: Settings moved to Event Detail */}
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-semibold text-blue-900">การตั้งค่า Carpool</p>
+                        <p className="text-xs text-blue-700 mt-1">
+                          สถานะ Carpool, จำนวนรถทั้งหมด, และการแสดงเลขรถให้สมาชิก<br />
+                          สามารถตั้งค่าได้ที่หน้า <strong>แก้ไขกิจกรรม</strong>
                         </p>
                       </div>
                     </div>

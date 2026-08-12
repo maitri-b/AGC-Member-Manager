@@ -6146,6 +6146,7 @@ export default function EventDetailPage() {
         onClose={() => setShowRoomManagementModal(false)}
         eventId={eventId as string}
         eventName={eventData?.event?.eventName || ''}
+        onRoomUpdate={fetchEventData}
       />
 
       {/* Carpool Management Modal */}

@@ -10,6 +10,7 @@ interface RoomManagementModalProps {
   onClose: () => void;
   eventId: string;
   eventName: string;
+  onRoomUpdate?: () => void; // Callback to refresh parent data after room changes
 }
 
 interface RoomOccupant {
@@ -29,6 +30,7 @@ export default function RoomManagementModal({
   onClose,
   eventId,
   eventName,
+  onRoomUpdate,
 }: RoomManagementModalProps) {
   const [activeTab, setActiveTab] = useState<'manage' | 'summary'>('manage');
   const [rooms, setRooms] = useState<EventRoom[]>([]);
@@ -248,6 +250,9 @@ export default function RoomManagementModal({
       toast.success(editingRoomId ? 'แก้ไขห้องพักสำเร็จ' : 'เพิ่มห้องพักสำเร็จ');
       setShowRoomForm(false);
       fetchRooms();
+      if (onRoomUpdate) {
+        onRoomUpdate(); // Refresh parent data
+      }
     } catch (error: any) {
       console.error('Error saving room:', error);
       toast.error(error.message || 'เกิดข้อผิดพลาด');
@@ -464,6 +469,9 @@ export default function RoomManagementModal({
 
       toast.success('ลบห้องพักสำเร็จ');
       fetchRooms();
+      if (onRoomUpdate) {
+        onRoomUpdate(); // Refresh parent data
+      }
     } catch (error: any) {
       console.error('Error deleting room:', error);
       toast.error(error.message || 'เกิดข้อผิดพลาด');
@@ -543,6 +551,9 @@ export default function RoomManagementModal({
 
       setEditedRooms({});
       fetchRooms();
+      if (successCount > 0 && onRoomUpdate) {
+        onRoomUpdate(); // Refresh parent data
+      }
     } catch (error) {
       console.error('Error saving batch edit:', error);
       toast.error('เกิดข้อผิดพลาดในการบันทึก');
@@ -620,6 +631,9 @@ export default function RoomManagementModal({
       );
 
       toast.success('ปล่อยห้องสำเร็จ');
+      if (onRoomUpdate) {
+        onRoomUpdate(); // Refresh parent data
+      }
     } catch (error: any) {
       console.error('Error leaving room:', error);
       toast.error(error.message || 'เกิดข้อผิดพลาด');
@@ -733,6 +747,9 @@ export default function RoomManagementModal({
       });
 
       toast.success('ย้ายห้องสำเร็จ');
+      if (onRoomUpdate) {
+        onRoomUpdate(); // Refresh parent data
+      }
       setTransferModalOpen(false);
       setTransferData(null);
     } catch (error: any) {
@@ -889,6 +906,9 @@ export default function RoomManagementModal({
       });
 
       toast.success(`ย้ายผู้พัก ${bulkTransferData.occupants.length} คนสำเร็จ`);
+      if (onRoomUpdate) {
+        onRoomUpdate(); // Refresh parent data
+      }
       setBulkTransferModalOpen(false);
       setBulkTransferData(null);
     } catch (error: any) {

@@ -886,8 +886,16 @@ export async function hardDeletePaymentSlip(
       const newAdditionalPaid = Math.max(0, currentAdditionalPaid - slipAmount);
       updateData.additionalPaymentAmountPaid = newAdditionalPaid;
 
+      // ✅ Update payment status based on slip status
+      // If the slip was pending (รอตรวจสอบ), revert to waiting for payment
+      // If the slip was approved, status will be recalculated below based on fullyPaid check
+      if (slip.status === 'pending') {
+        updateData.paymentStatus = 'รอชำระเงินเพิ่มเติม';
+      }
+
       console.log(`[Hard Delete Slip] Clearing additional payment tracking:`, {
         slipAmount,
+        slipStatus: slip.status,
         oldAdditionalPaid: currentAdditionalPaid,
         newAdditionalPaid,
       });
@@ -943,7 +951,28 @@ export async function hardDeletePaymentSlip(
       // Not fully paid anymore
       updateData.status = 'รอดำเนินการ';
       updateData.overpayment_amount = 0; // Clear overpayment
-      // paymentStatus already set based on payment type above
+
+      // ✅ Update paymentStatus if not already set (for additional payment type)
+      // For deposit/remaining/full types, paymentStatus was set above
+      // For additional type, we need to determine the correct status
+      if (slip.paymentType === 'additional' && slip.status === 'approved') {
+        // Deleted an approved additional payment - determine status based on existing payments
+        const hasFullPayment = registrationData.fullPaymentPaid === true;
+        const hasDeposit = registrationData.depositPaid === true;
+        const hasRemaining = (registrationData as any).remainingPaid === true;
+
+        if (hasFullPayment || (hasDeposit && hasRemaining)) {
+          // Main payment completed, but need additional due to total increase
+          updateData.paymentStatus = 'รอชำระเงินเพิ่มเติม';
+        } else if (hasDeposit && !hasRemaining) {
+          updateData.paymentStatus = 'รอชำระยอดคงเหลือ';
+        } else if (!hasDeposit) {
+          // Get event to determine payment mode
+          const paymentMode = (registrationData as any).paymentMode || 'full';
+          updateData.paymentStatus = paymentMode === 'deposit' ? 'รอชำระมัดจำ' : 'รอชำระเงิน';
+        }
+      }
+      // For other types, paymentStatus already set based on payment type above
     }
 
     await registrationDoc.ref.update(updateData);

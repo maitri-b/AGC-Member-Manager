@@ -505,17 +505,18 @@ export default function CarpoolManagementModal({
 
   const handleSaveSettings = async () => {
     try {
-      // Update event carpoolSettings with all settings
+      // Update event carpoolSettings with ONLY carpool-related settings
+      // Do NOT include other properties to avoid overwriting unrelated settings
       const response = await fetch(`/api/admin/events`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId, // eventId must be in body, not URL
           carpoolSettings: {
-            ...carpoolSettings,
             totalCarNumbers: totalCars,
             showCarNumbersToMembers: showCarNumbers,
             carpoolActive: carpoolActive,
+            maxSeatsPerCar: carpoolSettings?.maxSeatsPerCar, // Preserve existing setting
           },
         }),
       });

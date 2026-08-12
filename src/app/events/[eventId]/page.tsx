@@ -1946,12 +1946,12 @@ export default function EventDetailPage() {
                       </div>
                     )}
 
-                    {/* Carpool Section */}
+                    {/* 🚗 Carpool Section - Visually Separated */}
                     {event.hasCarpoolFeature && (event.carpoolSettings?.carpoolActive !== false || isCommitteeOrAdmin) && (
-                      <div className="mt-4">
+                      <div className="mt-8 pt-6 border-t-2 border-gray-200">
                         <div className="mb-2">
                           <div className="flex items-center gap-2 mb-1">
-                            <label className="text-sm font-medium text-gray-700">
+                            <label className="text-lg font-semibold text-gray-900">
                               🚗 รายละเอียดรถ Carpool
                             </label>
                             {event.carpoolSettings?.carpoolActive === false && isCommitteeOrAdmin && (

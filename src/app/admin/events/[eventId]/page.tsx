@@ -3353,7 +3353,31 @@ export default function EventDetailPage() {
 
               {/* Payment Status Filter */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">สถานะการชำระเงิน</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  <span className="inline-flex items-center gap-2">
+                    สถานะการชำระเงิน
+                    {(() => {
+                      // Count registrations with "รอตรวจสอบ" status
+                      const pendingReviewCount = eventData.attendees.filter(a => {
+                        const status = String(a.registration.status || '').toLowerCase();
+                        const isCancelled = status === 'cancelled' || a.registration.status?.includes('ยกเลิก');
+                        return !isCancelled && a.registration.paymentStatus === 'รอตรวจสอบ';
+                      }).length;
+
+                      if (pendingReviewCount > 0) {
+                        return (
+                          <span className="relative inline-flex items-center">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                              มี {pendingReviewCount} รายการ
+                            </span>
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </span>
+                </label>
                 <select
                   value={paymentFilter}
                   onChange={(e) => setPaymentFilter(e.target.value)}

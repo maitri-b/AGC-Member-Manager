@@ -77,9 +77,9 @@ export function determinePaymentStatus(
         // Check if additional payment slip is pending
         const hasPendingAdditional = additionalPayments.some(p => p.status === 'รอตรวจสอบ');
         if (hasPendingAdditional) {
-          return 'รอตรวจสอบเงินเพิ่มเติม';
+          return 'รอตรวจสอบ';
         }
-        return 'รอชำระเงินเพิ่มเติม';
+        return 'รอชำระเพิ่มเติม';
       }
       // Fallback: Marked as paid but no amount recorded (old data)
       return 'ชำระครบแล้ว';
@@ -195,7 +195,7 @@ export function getStatusBadgeClass(status: string): string {
   }
 
   // Waiting for payment states (yellow - user action required)
-  if (status === 'รอชำระมัดจำ' || status === 'รอชำระเงิน' || status === 'รอชำระเงินเพิ่มเติม') {
+  if (status === 'รอชำระมัดจำ' || status === 'รอชำระเงิน' || status === 'รอชำระเพิ่มเติม') {
     return 'bg-yellow-100 text-yellow-800';
   }
 

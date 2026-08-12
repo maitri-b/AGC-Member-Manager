@@ -288,8 +288,8 @@ export async function approvePaymentSlip(
       if (isFullyPaid(totalAmount, slip.amount, additionalPayments)) {
         updateData.paymentStatus = 'ชำระครบแล้ว';
       } else {
-        // ✅ Use 'รอชำระเงินเพิ่มเติม' to indicate additional payment needed
-        updateData.paymentStatus = 'รอชำระเงินเพิ่มเติม';
+        // ✅ Use 'รอชำระเพิ่มเติม' to indicate additional payment needed
+        updateData.paymentStatus = 'รอชำระเพิ่มเติม';
       }
 
       // ✅ CLEAR deposit/remaining fields to avoid confusion
@@ -717,7 +717,7 @@ export async function rejectPaymentSlip(
       updateData.additionalPayments = JSON.stringify(additionalPayments);
 
       // ✅ Update payment status to indicate additional payment still needed
-      updateData.paymentStatus = 'รอชำระเงินเพิ่มเติม';
+      updateData.paymentStatus = 'รอชำระเพิ่มเติม';
     }
 
     // ✅ AUTO-UPDATE REGISTRATION STATUS based on payment completion after rejection
@@ -890,7 +890,7 @@ export async function hardDeletePaymentSlip(
       // If the slip was pending (รอตรวจสอบ), revert to waiting for payment
       // If the slip was approved, status will be recalculated below based on fullyPaid check
       if (slip.status === 'pending') {
-        updateData.paymentStatus = 'รอชำระเงินเพิ่มเติม';
+        updateData.paymentStatus = 'รอชำระเพิ่มเติม';
       }
 
       console.log(`[Hard Delete Slip] Clearing additional payment tracking:`, {
@@ -963,7 +963,7 @@ export async function hardDeletePaymentSlip(
 
         if (hasFullPayment || (hasDeposit && hasRemaining)) {
           // Main payment completed, but need additional due to total increase
-          updateData.paymentStatus = 'รอชำระเงินเพิ่มเติม';
+          updateData.paymentStatus = 'รอชำระเพิ่มเติม';
         } else if (hasDeposit && !hasRemaining) {
           updateData.paymentStatus = 'รอชำระยอดคงเหลือ';
         } else if (!hasDeposit) {

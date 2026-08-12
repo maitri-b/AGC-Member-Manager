@@ -361,8 +361,7 @@ export type PaymentStatus =
   | 'ชำระครบแล้ว'     // Fully paid (full payment mode)
 
   // Additional payment statuses (for amount adjustments)
-  | 'รอชำระเงินเพิ่มเติม'    // Awaiting additional payment (after amount increase)
-  | 'รอตรวจสอบเงินเพิ่มเติม' // Additional payment slip uploaded, pending review
+  | 'รอชำระเพิ่มเติม'    // Awaiting additional payment (after amount increase)
   | 'ชำระครบถ้วนแล้ว'       // Fully paid including additional payments
 
   // Refund statuses (for cancellations)

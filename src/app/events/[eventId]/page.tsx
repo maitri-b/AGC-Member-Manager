@@ -1852,6 +1852,36 @@ export default function EventDetailPage() {
                       )}
                     </div>
 
+                    {/* Room Allocation Display */}
+                    {event.roomTypes && event.roomTypes.length > 0 && roomAllocations && roomAllocations.length > 0 && (
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ประเภทการเข้าพัก
+                        </label>
+                        <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <div className="space-y-2">
+                            {roomAllocations.map((alloc) => {
+                              const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
+                              if (!roomType) return null;
+                              return (
+                                <div key={alloc.roomTypeId} className="flex justify-between items-start text-sm">
+                                  <div className="flex-1">
+                                    <span className="font-medium text-gray-900">{roomType.typeName}</span>
+                                    {roomType.note && (
+                                      <p className="text-xs text-gray-500 mt-0.5">{roomType.note}</p>
+                                    )}
+                                  </div>
+                                  <span className="text-gray-700 ml-4">
+                                    {alloc.roomCount} {alloc.roomCount === 1 ? 'ห้อง' : 'ห้อง'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Action Buttons - Show only when editing */}
                     {isEditingNames && (
                       <div className="flex gap-3 pt-4 mt-4 border-t border-gray-200">
@@ -1916,39 +1946,77 @@ export default function EventDetailPage() {
                       </div>
                     )}
 
-                    {/* Room Allocation Display */}
-                    {event.roomTypes && event.roomTypes.length > 0 && roomAllocations && roomAllocations.length > 0 && (
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ประเภทการเข้าพัก
-                        </label>
-                        <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                          <div className="space-y-2">
-                            {roomAllocations.map((alloc) => {
-                              const roomType = event.roomTypes?.find((rt: RoomType) => rt.typeId === alloc.roomTypeId);
-                              if (!roomType) return null;
-                              return (
-                                <div key={alloc.roomTypeId} className="flex justify-between items-start text-sm">
-                                  <div className="flex-1">
-                                    <span className="font-medium text-gray-900">{roomType.typeName}</span>
-                                    {roomType.note && (
-                                      <p className="text-xs text-gray-500 mt-0.5">{roomType.note}</p>
-                                    )}
-                                  </div>
-                                  <span className="text-gray-700 ml-4">
-                                    {alloc.roomCount} {alloc.roomCount === 1 ? 'ห้อง' : 'ห้อง'}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
+                    {/* Edit Action Buttons */}
+                    {isEditingNames && (
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={async () => {
+                            // Validate if required
+                            if (event.requireAttendeeNames === true) {
+                              const filledNames = tempAttendeeNames.filter(name => name.trim());
+                              if (filledNames.length !== attendeeCount) {
+                                toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
+                                return;
+                              }
+                            }
+
+                            setUpdating(true);
+                            try {
+                              const response = await fetch(`/api/events/${eventId}/update-registration`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  attendeeCount,
+                                  attendeeNames: tempAttendeeNames,
+                                  specialRequests: tempSpecialRequests,
+                                  attendeeTypeSelections,
+                                  roomAllocations,
+                                  requestNameChange: false,
+                                }),
+                              });
+
+                              const data = await response.json();
+
+                              if (!response.ok) {
+                                throw new Error(data.error || 'ไม่สามารถบันทึกได้');
+                              }
+
+                              toast.success('บันทึกข้อมูลเรียบร้อยแล้ว');
+                              setAttendeeNames(tempAttendeeNames);
+                              setSpecialRequests(tempSpecialRequests);
+                              setSpecialRequestsLastUpdated(new Date().toISOString());
+                              setIsEditingNames(false);
+                              fetchEventDetail();
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+                            } finally {
+                              setUpdating(false);
+                            }
+                          }}
+                          disabled={updating}
+                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {updating ? 'กำลังบันทึก...' : 'บันทึก'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingNames(false);
+                            setTempAttendeeNames([]);
+                            setTempSpecialRequests('');
+                          }}
+                          disabled={updating}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                        >
+                          ยกเลิก
+                        </button>
                       </div>
                     )}
+                  </div>
 
-                    {/* 🚗 Carpool Section - Visually Separated */}
+                  {/* ==================== CARPOOL CARD START ==================== */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
                     {event.hasCarpoolFeature && (event.carpoolSettings?.carpoolActive !== false || isCommitteeOrAdmin) && (
-                      <div className="mt-8 pt-6 border-t-2 border-gray-200">
+                      <div>
                         <div className="mb-2">
                           <div className="flex items-center gap-2 mb-1">
                             <label className="text-lg font-semibold text-gray-900">
@@ -2356,73 +2424,8 @@ export default function EventDetailPage() {
                         )}
                       </div>
                     )}
-
-                    {/* Edit Action Buttons */}
-                    {isEditingNames && (
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          onClick={async () => {
-                            // Validate if required
-                            if (event.requireAttendeeNames === true) {
-                              const filledNames = tempAttendeeNames.filter(name => name.trim());
-                              if (filledNames.length !== attendeeCount) {
-                                toast.error('กรุณากรอกชื่อผู้เข้าร่วมให้ครบทุกคน');
-                                return;
-                              }
-                            }
-
-                            setUpdating(true);
-                            try {
-                              const response = await fetch(`/api/events/${eventId}/update-registration`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  attendeeCount,
-                                  attendeeNames: tempAttendeeNames,
-                                  specialRequests: tempSpecialRequests,
-                                  attendeeTypeSelections,
-                                  roomAllocations,
-                                  requestNameChange: false,
-                                }),
-                              });
-
-                              const data = await response.json();
-
-                              if (!response.ok) {
-                                throw new Error(data.error || 'ไม่สามารถบันทึกได้');
-                              }
-
-                              toast.success('บันทึกข้อมูลเรียบร้อยแล้ว');
-                              setAttendeeNames(tempAttendeeNames);
-                              setSpecialRequests(tempSpecialRequests);
-                              setSpecialRequestsLastUpdated(new Date().toISOString());
-                              setIsEditingNames(false);
-                              fetchEventDetail();
-                            } catch (err) {
-                              toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
-                            } finally {
-                              setUpdating(false);
-                            }
-                          }}
-                          disabled={updating}
-                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                        >
-                          {updating ? 'กำลังบันทึก...' : 'บันทึก'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setIsEditingNames(false);
-                            setTempAttendeeNames([]);
-                            setTempSpecialRequests('');
-                          }}
-                          disabled={updating}
-                          className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
-                        >
-                          ยกเลิก
-                        </button>
-                      </div>
-                    )}
                   </div>
+                  {/* ==================== CARPOOL CARD END ==================== */}
 
                   {/* Edit Form */}
                   {isEditing && (

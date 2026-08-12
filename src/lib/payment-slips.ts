@@ -162,6 +162,9 @@ export async function createPaymentSlip(
       updateData.remainingAmount = 0;
       updateData.depositDeadline = null;
       updateData.remainingDeadline = null;
+    } else if (slip.paymentType === 'additional') {
+      // ✅ Additional payment slip uploaded - update status to pending verification
+      updateData.paymentStatus = 'รอตรวจสอบ';
     }
     // Note: 'additional' type doesn't need to update main slip URLs
 
@@ -713,7 +716,8 @@ export async function rejectPaymentSlip(
 
       updateData.additionalPayments = JSON.stringify(additionalPayments);
 
-      // Don't update main payment status for additional payments
+      // ✅ Update payment status to indicate additional payment still needed
+      updateData.paymentStatus = 'รอชำระเงินเพิ่มเติม';
     }
 
     // ✅ AUTO-UPDATE REGISTRATION STATUS based on payment completion after rejection

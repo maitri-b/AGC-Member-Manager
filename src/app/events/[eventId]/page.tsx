@@ -2021,7 +2021,7 @@ export default function EventDetailPage() {
                           {/* Header */}
                           <div className="mb-3">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-2xl font-bold text-blue-600">
+                              <h3 className="text-lg font-semibold text-gray-900">
                                 🚗 การลงทะเบียนรถยนต์ และรวมไปด้วยกัน (Carpool)
                               </h3>
                               <div className="relative">
@@ -2104,7 +2104,8 @@ export default function EventDetailPage() {
 
                           {/* Description */}
                           <p className="text-sm text-gray-600 mb-3">
-                            หากคุณจะขับรถไปเอง กรุณาสร้าง Carpool และสามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นร่วมไปด้วยได้<br />
+                            หากคุณจะขับรถไปเอง กรุณาลงทะเบียนรถยนต์ของคุณ โดยกด +สร้าง Carpool<br />
+                            ทั้งนี้คุณสามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นร่วมไปกับคุณด้วยได้<p />
                             กรณีที่คุณร่วมไปกับรถของเอเจ้นท์ท่านอื่น กรุณากด Join รถคนอื่น<br />
                             <span className="text-purple-600 font-semibold">✨ 1 เอเจ้นท์สามารถสร้าง Carpool ได้มากกว่า 1 คัน</span>
                           </p>
@@ -2195,7 +2196,7 @@ export default function EventDetailPage() {
                             {/* Owned Carpools Section */}
                             {ownedCarpools.length > 0 && (
                               <div>
-                                <p className="text-lg font-bold text-green-800 mb-2">Carpool ของคุณ ({ownedCarpools.length} คัน)</p>
+                                <p className="text-sm font-semibold text-blue-700 mb-2">Carpool ของคุณ ({ownedCarpools.length} คัน)</p>
                                 <div className="space-y-2">
                                   {ownedCarpools.map((ownedCarpool) => (
                                     <div key={ownedCarpool.carpoolId} className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
@@ -2353,7 +2354,7 @@ export default function EventDetailPage() {
                             {/* Joined Carpools Section */}
                             {joinedCarpools.length > 0 && (
                               <div>
-                                <p className="text-lg font-bold text-green-800 mb-2">Carpools ที่เข้าร่วม</p>
+                                <p className="text-sm font-semibold text-green-700 mb-2">Carpools ที่เข้าร่วม</p>
                                 <div className="space-y-2">
                                   {joinedCarpools.map((carpool) => (
                                     <div key={carpool.carpoolId} className="px-4 py-3 bg-green-50 border border-green-300 rounded-lg">

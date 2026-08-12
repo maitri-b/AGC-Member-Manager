@@ -3500,7 +3500,6 @@ export default function EventDetailPage() {
                   })()}
 
                   {eventData.event.roomTypes
-                    .filter((rt: any) => rt.isActive)
                     .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
                     .map((roomType: any) => {
                       // Count TOTAL ROOMS (not companies) of this room type
@@ -3559,9 +3558,14 @@ export default function EventDetailPage() {
                         return sum + (allocation?.roomCount || 0);
                       }, 0);
 
+                      // Show room type label with inactive indicator if needed
+                      const roomTypeLabel = roomType.isActive
+                        ? roomType.typeName
+                        : `${roomType.typeName} (ปิดใช้งาน)`;
+
                       return (
                         <option key={roomType.typeId} value={roomType.typeId}>
-                          {roomType.typeName} ({totalRooms})
+                          {roomTypeLabel} ({totalRooms})
                         </option>
                       );
                     })}
@@ -3647,7 +3651,15 @@ export default function EventDetailPage() {
                       <span className="font-medium text-gray-900">
                         {roomTypeFilter === 'unassigned'
                           ? 'ยังไม่ระบุห้อง'
-                          : eventData.event.roomTypes.find((rt: any) => rt.typeId === roomTypeFilter)?.typeName || roomTypeFilter
+                          : (() => {
+                              const selectedRoomType = eventData.event.roomTypes.find((rt: any) => rt.typeId === roomTypeFilter);
+                              if (selectedRoomType) {
+                                return selectedRoomType.isActive
+                                  ? selectedRoomType.typeName
+                                  : `${selectedRoomType.typeName} (ปิดใช้งาน)`;
+                              }
+                              return roomTypeFilter;
+                            })()
                         }
                       </span>
                       <button

@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
 import { getMemberById } from '@/lib/google-sheets';
 import { adminDb } from '@/lib/firebase-admin';
+import { getBaseUrl } from '@/lib/settings';
 
 const LINE_API_URL = 'https://api.line.me/v2/bot/message/push';
 
@@ -82,6 +83,9 @@ export async function POST(request: NextRequest) {
         successfulSends: [] as { lineUserId: string; message: string }[],
       };
 
+      // Fetch base URL from settings once before the loop
+      const baseUrl = await getBaseUrl();
+
       for (const lineUserId of lineUserIds) {
         try {
           let personalizedMessage = customMessage;
@@ -98,12 +102,12 @@ export async function POST(request: NextRequest) {
               if (!userSnapshot.empty) {
                 const userData = userSnapshot.docs[0].data();
 
-                // Replace personalization tags
+                // Replace personalization tags with multiple fallback options
                 personalizedMessage = personalizedMessage
-                  .replace(/{LINE_NAME}/g, userData.lineDisplayName || userData.fullNameTH || '')
-                  .replace(/{CONTACT_NAME}/g, userData.fullNameTH || userData.lineDisplayName || '')
-                  .replace(/{COMPANY_NAME}/g, userData.companyNameTH || '')
-                  .replace(/{EVENT_URL}/g, `${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`)
+                  .replace(/{LINE_NAME}/g, userData.lineDisplayName || userData.displayName || userData.name || userData.fullNameTH || '')
+                  .replace(/{CONTACT_NAME}/g, userData.fullNameTH || userData.lineDisplayName || userData.displayName || userData.name || '')
+                  .replace(/{COMPANY_NAME}/g, userData.companyNameTH || userData.companyNameEN || '')
+                  .replace(/{EVENT_URL}/g, `${baseUrl}/events/${eventId}`)
                   .replace(/{EVENT_NAME}/g, eventName || '');
               } else {
                 // Fallback if user not found
@@ -111,7 +115,7 @@ export async function POST(request: NextRequest) {
                   .replace(/{LINE_NAME}/g, '')
                   .replace(/{CONTACT_NAME}/g, '')
                   .replace(/{COMPANY_NAME}/g, '')
-                  .replace(/{EVENT_URL}/g, `${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`)
+                  .replace(/{EVENT_URL}/g, `${baseUrl}/events/${eventId}`)
                   .replace(/{EVENT_NAME}/g, eventName || '');
               }
             } catch (err) {

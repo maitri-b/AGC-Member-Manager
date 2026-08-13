@@ -13,8 +13,8 @@ export default function CarpoolGuidePage() {
 
   const faqs = [
     {
-      question: 'Q1: สามารถสร้าง Carpool ได้กี่คัน?',
-      answer: '✅ ตอบ: 1 เอเจ้นท์สามารถสร้าง Carpool ได้มากกว่า 1 คัน',
+      question: 'Q1: สามารถลงทะเบียนรถยนต์ ได้กี่คัน?',
+      answer: '✅ ตอบ: 1 เอเจ้นท์สามารถลงทะเบียนรถยนต์ ได้มากกว่า 1 คัน',
     },
     {
       question: 'Q2: ต้องการเลขรหัสลงทะเบียนเพื่อทำอะไร?',
@@ -55,33 +55,33 @@ export default function CarpoolGuidePage() {
         <>
           <p className="font-semibold">✅ ตอบ:</p>
           <p className="mt-2"><strong>แก้ไข:</strong></p>
-          <p>→ กดปุ่ม ✏️ <strong>แก้ไข</strong> ในการ์ด Carpool ของคุณ</p>
+          <p>→ กดปุ่ม ✏️ <strong>แก้ไข</strong> ในการ์ด ทะเบียนรถของคุณ</p>
           <p className="mt-2"><strong>ลบ:</strong></p>
           <p>→ กดปุ่ม 🗑️ <strong>ลบ</strong> (ระบบจะถามยืนยัน)</p>
         </>
       ),
     },
     {
-      question: 'Q5: ออกจาก Carpool ที่เข้าร่วมได้อย่างไร?',
+      question: 'Q5: ย้ายออก ที่เข้าร่วมได้อย่างไร?',
       answer: (
         <>
           <p className="font-semibold">✅ ตอบ:</p>
           <ol className="list-decimal list-inside ml-4 mt-2">
             <li>ไปที่การ์ด <strong>Carpools ที่เข้าร่วม</strong></li>
-            <li>กดปุ่ม <strong>ออกจาก Carpool</strong> (สีแดง) ข้างชื่อสมาชิกของคุณ</li>
+            <li>กดปุ่ม <strong>ย้ายออก</strong> (สีแดง) ข้างชื่อสมาชิกของคุณ</li>
             <li>ยืนยันการออก</li>
           </ol>
         </>
       ),
     },
     {
-      question: 'Q6: ลบสมาชิกที่ชวนมาออกจาก Carpool ได้อย่างไร?',
+      question: 'Q6: ลบสมาชิกที่ชวนมาย้ายออก ได้อย่างไร?',
       answer: (
         <>
           <p className="font-semibold">✅ ตอบ:</p>
           <ol className="list-decimal list-inside ml-4 mt-2">
-            <li>ไปที่การ์ด <strong>Carpool ของคุณ</strong></li>
-            <li>กดปุ่ม <strong>ออกจาก Carpool</strong> (สีแดง) ข้างชื่อสมาชิกที่ต้องการนำออก</li>
+            <li>ไปที่การ์ด <strong>ทะเบียนรถของคุณ</strong></li>
+            <li>กดปุ่ม <strong>ย้ายออก</strong> (สีแดง) ข้างชื่อสมาชิกที่ต้องการนำออก</li>
             <li>ยืนยันการออก</li>
           </ol>
         </>
@@ -245,7 +245,7 @@ export default function CarpoolGuidePage() {
                     จุดเด่นของระบบ
                   </h3>
                   <ul className="space-y-1 text-purple-800">
-                    <li>• <strong>1 เอเจ้นท์สามารถสร้าง Carpool ได้มากกว่า 1 คัน</strong></li>
+                    <li>• <strong>1 เอเจ้นท์สามารถลงทะเบียนรถยนต์ ได้มากกว่า 1 คัน</strong></li>
                     <li>• สามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นได้</li>
                     <li>• ยืดหยุ่น สะดวก ประหยัดค่าใช้จ่าย</li>
                   </ul>
@@ -288,10 +288,10 @@ export default function CarpoolGuidePage() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                   <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
                     <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
-                    สร้าง Carpool ใหม่
+                    ลงทะเบียนรถยนต์ ใหม่
                   </h3>
                   <p className="text-gray-700 mb-4">
-                    กดปุ่ม <strong className="text-blue-600">+ สร้าง Carpool</strong> (สีน้ำเงิน)
+                    กดปุ่ม <strong className="text-blue-600">+ ลงทะเบียนรถยนต์</strong> (สีน้ำเงิน)
                   </p>
                 </div>
 
@@ -303,7 +303,7 @@ export default function CarpoolGuidePage() {
                   <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4 max-w-2xl">
                     <Image
                       src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/02.jpg"
-                      alt="ฟอร์มสร้าง Carpool"
+                      alt="ฟอร์มลงทะเบียนรถยนต์"
                       width={560}
                       height={280}
                       className="w-full h-auto"
@@ -335,9 +335,9 @@ export default function CarpoolGuidePage() {
                     บันทึกข้อมูล
                   </h3>
                   <p className="text-gray-700 mb-2">
-                    กดปุ่ม <strong className="text-blue-600">สร้าง Carpool</strong> (สีน้ำเงิน)
+                    กดปุ่ม <strong className="text-blue-600">ลงทะเบียนรถยนต์</strong> (สีน้ำเงิน)
                   </p>
-                  <p className="text-green-700 font-semibold">✅ ระบบจะแสดงข้อความ "สร้าง Carpool สำเร็จ"</p>
+                  <p className="text-green-700 font-semibold">✅ ระบบจะแสดงข้อความ "ลงทะเบียนรถยนต์ สำเร็จ"</p>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -348,14 +348,14 @@ export default function CarpoolGuidePage() {
                   <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4 max-w-2xl">
                     <Image
                       src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/03.jpg"
-                      alt="Carpool ของคุณ"
+                      alt="ทะเบียนรถของคุณ"
                       width={560}
                       height={280}
                       className="w-full h-auto"
                     />
                   </div>
                   <p className="text-gray-700 mb-3">
-                    หลังจากสร้างสำเร็จ คุณจะเห็น <strong>Carpool ของคุณ</strong> พร้อมข้อมูล:
+                    หลังจากสร้างสำเร็จ คุณจะเห็น <strong>ทะเบียนรถของคุณ</strong> พร้อมข้อมูล:
                   </p>
                   <ul className="space-y-1 text-gray-700">
                     <li>📌 <strong>เลขทะเบียนรถ</strong> - เช่น กก 8888</li>
@@ -421,7 +421,7 @@ export default function CarpoolGuidePage() {
                   <h3 className="text-xl font-bold text-purple-900 mb-2 flex items-center gap-2">
                     📝 วิธีที่ 1: เจ้าของรถเป็นคนเพิ่มชื่อ Join
                   </h3>
-                  <p className="text-purple-800">ผู้ดำเนินการ: เจ้าของรถ (คนที่สร้าง Carpool)</p>
+                  <p className="text-purple-800">ผู้ดำเนินการ: เจ้าของรถ (คนที่ลงทะเบียนรถยนต์)</p>
                 </div>
 
                 <div className="space-y-6">
@@ -444,7 +444,7 @@ export default function CarpoolGuidePage() {
                       เข้าสู่หน้าชวนเพื่อน
                     </h4>
                     <p className="text-gray-700 mb-3">
-                      1. ในการ์ด <strong>Carpool ของคุณ</strong>
+                      1. ในการ์ด <strong>ทะเบียนรถของคุณ</strong>
                     </p>
                     <p className="text-gray-700">
                       2. กดปุ่ม <strong className="text-blue-600">+ ชวนเพื่อนเข้า Carpool</strong> (สีน้ำเงิน)
@@ -497,7 +497,7 @@ export default function CarpoolGuidePage() {
                       กดปุ่ม <strong className="text-blue-600">ชวนเข้า Carpool</strong> (สีน้ำเงิน)
                     </p>
                     <p className="text-green-700 font-semibold">
-                      ✅ ระบบจะเพิ่มสมาชิกที่เลือกเข้า Carpool ของคุณ
+                      ✅ ระบบจะเพิ่มสมาชิกที่เลือกเข้า ทะเบียนรถของคุณ
                     </p>
                   </div>
 
@@ -507,13 +507,13 @@ export default function CarpoolGuidePage() {
                       ตรวจสอบรายชื่อ
                     </h4>
                     <p className="text-gray-700 mb-3">
-                      ในการ์ด <strong>Carpool ของคุณ</strong> จะแสดง:
+                      ในการ์ด <strong>ทะเบียนรถของคุณ</strong> จะแสดง:
                     </p>
                     <div className="bg-white p-4 rounded-lg border border-gray-200">
-                      <p className="font-semibold text-gray-900 mb-2">รายชื่อสมาชิก Carpool นี้:</p>
+                      <p className="font-semibold text-gray-900 mb-2">รายชื่อสมาชิกทะเบียนรถคันนี้:</p>
                       <ul className="space-y-1 text-gray-700">
                         <li>• ชื่อสมาชิกในทีมของคุณ</li>
-                        <li>• ชื่อสมาชิกจากรหัสลงทะเบียนอื่น พร้อมปุ่ม <strong className="text-red-600">ออกจาก Carpool</strong> (สีแดง)</li>
+                        <li>• ชื่อสมาชิกจากรหัสลงทะเบียนอื่น พร้อมปุ่ม <strong className="text-red-600">ย้ายออก</strong> (สีแดง)</li>
                       </ul>
                     </div>
                   </div>
@@ -663,7 +663,7 @@ export default function CarpoolGuidePage() {
                           <li>• เจ้าของ: ชื่อบริษัท</li>
                           <li>• จำนวนสมาชิก</li>
                           <li>• รายชื่อ (สมาชิกของคุณจะมีคำว่า <strong className="text-green-600">- joined</strong>)</li>
-                          <li>• ปุ่ม <strong className="text-red-600">ออกจาก Carpool</strong> (สีแดง)</li>
+                          <li>• ปุ่ม <strong className="text-red-600">ย้ายออก</strong> (สีแดง)</li>
                         </ul>
                       </div>
                     </div>

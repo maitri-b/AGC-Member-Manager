@@ -580,7 +580,7 @@ export default function EventDetailPage() {
         throw new Error(data.error || 'Failed to create carpool');
       }
 
-      toast.success('สร้าง Carpool สำเร็จ!');
+      toast.success('ลงทะเบียนรถยนต์สำเร็จ!');
       setShowCreateCarpoolModal(false);
       setNewCarpoolLicensePlate('');
       setSelectedMembersForCarpool([]);
@@ -590,7 +590,7 @@ export default function EventDetailPage() {
       await fetchAllCarpools();
     } catch (err) {
       console.error('Error creating carpool:', err);
-      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้าง Carpool');
+      toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลงทะเบียนรถยนต์');
     } finally {
       setCreatingCarpool(false);
     }
@@ -744,7 +744,7 @@ export default function EventDetailPage() {
     }
 
     // Normal confirmation for removing member
-    if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบ "${name}" ออกจาก Carpool นี้?`)) {
+    if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบ "${name}" ออกจากทะเบียนรถคันนี้?`)) {
       return;
     }
 
@@ -766,7 +766,7 @@ export default function EventDetailPage() {
         throw new Error(data.error || 'Failed to remove member');
       }
 
-      toast.success(`ลบ ${name} ออกจาก Carpool สำเร็จ`);
+      toast.success(`ลบ ${name} ออกจากทะเบียนรถสำเร็จ`);
 
       // Refresh carpool data
       await fetchMemberCarpool();
@@ -2041,9 +2041,9 @@ export default function EventDetailPage() {
                                         <p>ระบบลงทะเบียนรถและลงชื่อไปด้วยกันเพื่อให้เอเจ้นท์เดินทางไปงานร่วมกัน ช่วยลดค่าใช้จ่ายและสะดวกในการจัดการที่จอดรถ</p>
                                       </div>
                                       <div className="pt-2 border-t border-gray-200">
-                                        <p className="font-semibold text-green-700 mb-1">📝 วิธีสร้าง Carpool (สำหรับเจ้าของรถ)</p>
+                                        <p className="font-semibold text-green-700 mb-1">📝 วิธีลงทะเบียนรถยนต์ (สำหรับเจ้าของรถ)</p>
                                         <ol className="list-decimal list-inside space-y-1 ml-2">
-                                          <li>กดปุ่ม "+ สร้าง Carpool"</li>
+                                          <li>กดปุ่ม "ลงทะเบียนรถยนต์"</li>
                                           <li>กรอกเลขทะเบียนรถของคุณ</li>
                                           <li>เลือกสมาชิกในทีมที่จะนั่งรถคุณ</li>
                                           <li>กดยืนยัน - เสร็จสิ้น!</li>
@@ -2055,7 +2055,7 @@ export default function EventDetailPage() {
                                           <li>คลิกปุ่ม "+ ชวนเพื่อนจากรหัสลงทะเบียนอื่น"</li>
                                           <li>ใส่รหัสลงทะเบียนของเอเจ้นท์ที่ต้องการเชิญ</li>
                                           <li>เลือกสมาชิกที่ต้องการชวน</li>
-                                          <li>กดยืนยัน - สมาชิกจะเข้าร่วม Carpool ของคุณ!</li>
+                                          <li>กดยืนยัน - สมาชิกจะเข้าร่วมทะเบียนรถของคุณ!</li>
                                         </ol>
                                       </div>
                                       <div className="pt-2 border-t border-gray-200">
@@ -2068,17 +2068,17 @@ export default function EventDetailPage() {
                                         </ol>
                                       </div>
                                       <div className="pt-2 border-t border-gray-200">
-                                        <p className="font-semibold text-red-700 mb-1">🗑️ วิธีลบ Carpool</p>
+                                        <p className="font-semibold text-red-700 mb-1">🗑️ วิธีลบทะเบียนรถ</p>
                                         <ol className="list-decimal list-inside space-y-1 ml-2">
-                                          <li>ที่การ์ด "Carpool ของคุณ" กดปุ่ม "🗑️ ลบ" ข้างเลขทะเบียน</li>
-                                          <li>ยืนยันการลบ - Carpool จะถูกลบทั้งคัน</li>
+                                          <li>ที่การ์ด "ทะเบียนรถของคุณ" กดปุ่ม "🗑️ ลบ" ข้างเลขทะเบียน</li>
+                                          <li>ยืนยันการลบ - ทะเบียนรถจะถูกลบทั้งคัน</li>
                                         </ol>
                                       </div>
                                       <div className="pt-2 border-t border-gray-200">
-                                        <p className="font-semibold text-red-700 mb-1">🚪 วิธีออกจาก Carpool</p>
+                                        <p className="font-semibold text-red-700 mb-1">🚪 วิธีย้ายออก</p>
                                         <ol className="list-decimal list-inside space-y-1 ml-2">
-                                          <li>เจ้าของรถ/สมาชิก กดปุ่ม "ออกจาก Carpool" ข้างชื่อสมาชิก</li>
-                                          <li>ยืนยันการออก - สมาชิกจะออกจาก Carpool</li>
+                                          <li>เจ้าของรถ/สมาชิก กดปุ่ม "ย้ายออก" ข้างชื่อสมาชิก</li>
+                                          <li>ยืนยันการย้ายออก - สมาชิกจะย้ายออกจากทะเบียนรถ</li>
                                         </ol>
                                       </div>
                                       <div className="pt-2 border-t border-gray-200 bg-yellow-50 -mx-4 -mb-4 p-3 rounded-b-lg">
@@ -2086,7 +2086,7 @@ export default function EventDetailPage() {
                                         <ul className="list-disc list-inside space-y-0.5 ml-2 mt-1 text-yellow-700">
                                           <li>สมาชิก 1 คนสามารถอยู่ได้แค่ 1 รถเท่านั้น</li>
                                           <li>สามารถแก้ไขเลขทะเบียนได้โดยกดปุ่ม "✏️ แก้ไข"</li>
-                                          <li>1 เอเจ้นท์สามารถสร้างได้มากกว่า 1 คัน</li>
+                                          <li>1 เอเจ้นท์สามารถลงทะเบียนได้มากกว่า 1 คัน</li>
                                           <li>หากต้องการดูขั้นตอนโดยละเอียด <a href="/carpool-guide" target="_blank" className="text-blue-600 hover:underline font-semibold">คลิกที่นี่</a></li>
                                         </ul>
                                       </div>
@@ -2107,10 +2107,10 @@ export default function EventDetailPage() {
 
                           {/* Description */}
                           <p className="text-xs text-gray-600 mb-3 leading-relaxed">
-                            หากคุณจะขับรถไปเอง กรุณาลงทะเบียนรถยนต์ของคุณ โดยกด +สร้าง Carpool<br />
+                            หากคุณจะขับรถไปเอง กรุณาลงทะเบียนรถยนต์ของคุณ โดยกดปุ่ม "ลงทะเบียนรถยนต์"<br />
                             ทั้งนี้คุณสามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นร่วมไปกับคุณด้วยได้<br />
                             กรณีที่คุณร่วมไปกับรถของเอเจ้นท์ท่านอื่น กรุณากด Join รถคนอื่น<br />
-                            <span className="text-purple-600 font-semibold">✨ 1 เอเจ้นท์สามารถสร้าง Carpool ได้มากกว่า 1 คัน</span><br />
+                            <span className="text-purple-600 font-semibold">✨ 1 เอเจ้นท์สามารถลงทะเบียนได้มากกว่า 1 คัน</span><br />
                             <a href="/carpool-guide" target="_blank" className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-sm">
                               📖 ศึกษาขั้นตอนการลงทะเบียน คลิกที่นี่
                             </a>
@@ -2120,7 +2120,7 @@ export default function EventDetailPage() {
                               onClick={() => setShowCreateCarpoolModal(true)}
                               className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                             >
-                              + สร้าง Carpool
+                              ลงทะเบียนรถยนต์
                             </button>
                             {/* Only show "Join รถคนอื่น" if there are members not in any carpool */}
                             {(() => {
@@ -2234,7 +2234,7 @@ export default function EventDetailPage() {
                             {/* Owned Carpools Section */}
                             {ownedCarpools.length > 0 && (
                               <div>
-                                <p className="text-sm font-semibold text-blue-700 mb-2">Carpool ของคุณ ({ownedCarpools.length} คัน)</p>
+                                <p className="text-sm font-semibold text-blue-700 mb-2">ทะเบียนรถของคุณ ({ownedCarpools.length} คัน)</p>
                                 <div className="space-y-2">
                                   {ownedCarpools.map((ownedCarpool) => (
                                     <div key={ownedCarpool.carpoolId} className="px-4 py-3 bg-blue-50 border border-blue-300 rounded-lg">
@@ -2334,7 +2334,7 @@ export default function EventDetailPage() {
                                     </div>
                                     {ownedCarpool.members && ownedCarpool.members.length > 0 && (
                                       <div className="mt-2 pt-2 border-t border-blue-200">
-                                        <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิก Carpool นี้:</p>
+                                        <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิกทะเบียนรถคันนี้:</p>
                                         <div className="space-y-1">
                                           {ownedCarpool.members.map((member: any, idx: number) => {
                                             const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
@@ -2360,7 +2360,7 @@ export default function EventDetailPage() {
                                                   onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
                                                   className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                                                 >
-                                                  ออกจาก Carpool
+                                                  ย้ายออก
                                                 </button>
                                               </div>
                                             );
@@ -2420,7 +2420,7 @@ export default function EventDetailPage() {
                                         </div>
                                         {carpool.members && carpool.members.length > 0 && (
                                           <div className="mt-2 pt-2 border-t border-green-200">
-                                            <p className="text-xs font-medium text-green-800 mb-1">รายชื่อสมาชิก Carpool นี้:</p>
+                                            <p className="text-xs font-medium text-green-800 mb-1">รายชื่อสมาชิกทะเบียนรถคันนี้:</p>
                                             <div className="space-y-1">
                                               {carpool.members.map((member: any, idx: number) => {
                                                 const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
@@ -2447,7 +2447,7 @@ export default function EventDetailPage() {
                                                         onClick={() => handleRemoveTeamMember(member.lineUserId, member.name, carpool.carpoolId)}
                                                         className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                                                       >
-                                                        ออกจาก Carpool
+                                                        ย้ายออก
                                                       </button>
                                                     )}
                                                   </div>
@@ -4410,7 +4410,7 @@ export default function EventDetailPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">สร้าง Carpool ใหม่</h3>
+              <h3 className="text-xl font-bold text-gray-900">ลงทะเบียนรถยนต์ใหม่</h3>
               <button
                 onClick={() => {
                   setShowCreateCarpoolModal(false);
@@ -4584,7 +4584,7 @@ export default function EventDetailPage() {
                 disabled={creatingCarpool || !newCarpoolLicensePlate.trim()}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {creatingCarpool ? 'กำลังสร้าง...' : 'สร้าง Carpool'}
+                {creatingCarpool ? 'กำลังลงทะเบียน...' : 'ลงทะเบียนรถยนต์'}
               </button>
             </div>
           </div>
@@ -4708,7 +4708,7 @@ export default function EventDetailPage() {
                               {isInMyCarpool && (
                                 <button
                                   onClick={async () => {
-                                    if (!confirm(`ต้องการออกจาก Carpool หรือไม่?`)) return;
+                                    if (!confirm(`ต้องการย้ายออกจากทะเบียนรถนี้หรือไม่?`)) return;
 
                                     try {
                                       const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}/remove-members`, {
@@ -4724,16 +4724,16 @@ export default function EventDetailPage() {
 
                                       if (!response.ok) throw new Error('Failed to remove member');
 
-                                      toast.success(`ออกจาก Carpool สำเร็จ`);
+                                      toast.success(`ย้ายออกสำเร็จ`);
                                       await fetchMemberCarpool();
                                       await fetchAllCarpools();
                                     } catch (err) {
-                                      toast.error('เกิดข้อผิดพลาดในการออกจาก Carpool');
+                                      toast.error('เกิดข้อผิดพลาดในการย้ายออก');
                                     }
                                   }}
                                   className="text-xs px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                                 >
-                                  ออกจาก Carpool
+                                  ย้ายออก
                                 </button>
                               )}
 
@@ -4869,14 +4869,14 @@ export default function EventDetailPage() {
                         console.log('[Join Search] Members length:', data.carpool?.members?.length);
 
                         if (!data.carpool) {
-                          toast.error(`รหัสลงทะเบียน "${joinRegistrationId}" ยังไม่ได้สร้าง Carpool กรุณาติดต่อเจ้าของรหัสลงทะเบียนนี้เพื่อให้สร้าง Carpool ก่อน`);
+                          toast.error(`รหัสลงทะเบียน "${joinRegistrationId}" ยังไม่ได้ลงทะเบียนรถยนต์ กรุณาติดต่อเจ้าของรหัสลงทะเบียนนี้เพื่อให้ลงทะเบียนรถยนต์ก่อน`);
                         } else {
                           setJoinSearchedCarpool(data.carpool);
-                          toast.success('พบ Carpool แล้ว!');
+                          toast.success('พบทะเบียนรถแล้ว!');
                         }
                       } catch (err) {
                         console.error('[Join Search] Error searching carpool:', err);
-                        toast.error('เกิดข้อผิดพลาดในการค้นหา Carpool');
+                        toast.error('เกิดข้อผิดพลาดในการค้นหาทะเบียนรถ');
                       } finally {
                         setJoinSearchLoading(false);
                       }

@@ -298,6 +298,7 @@ export default function AdminEventsPage() {
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   // Dropdown menu state
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -784,6 +785,7 @@ export default function AdminEventsPage() {
       setSuccess('ยกเลิกกิจกรรมเรียบร้อยแล้ว');
       setShowDeleteConfirm(false);
       setDeletingEventId(null);
+      setDeleteConfirmText('');
       fetchEvents();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -1490,6 +1492,7 @@ export default function AdminEventsPage() {
                                 <button
                                   onClick={() => {
                                     setDeletingEventId(event.eventId);
+                                    setDeleteConfirmText('');
                                     setShowDeleteConfirm(true);
                                     setOpenDropdown(null);
                                   }}
@@ -2810,6 +2813,7 @@ export default function AdminEventsPage() {
                     type="button"
                     onClick={() => {
                       setDeletingEventId(editingEvent.eventId);
+                      setDeleteConfirmText('');
                       setShowDeleteConfirm(true);
                       setShowModal(false);
                     }}
@@ -2844,15 +2848,42 @@ export default function AdminEventsPage() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">ยืนยันการยกเลิกกิจกรรม</h3>
-            <p className="text-gray-600 mb-6">
-              คุณต้องการยกเลิกกิจกรรมนี้หรือไม่? กิจกรรมจะไม่แสดงในรายการอีกต่อไป
-            </p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">⚠️ ยืนยันการยกเลิกกิจกรรม</h3>
+
+            <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+              <p className="text-sm font-semibold text-red-800 mb-2">
+                คำเตือน: การดำเนินการนี้ไม่สามารถย้อนกลับได้!
+              </p>
+              <p className="text-sm text-red-700">
+                กิจกรรมจะไม่แสดงในรายการอีกต่อไป และข้อมูลทั้งหมดจะถูกเก็บเป็นข้อมูลเก่า
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                พิมพ์ <span className="text-red-600 font-mono bg-red-50 px-2 py-0.5 rounded">delete</span> เพื่อยืนยัน:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="พิมพ์ delete"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 font-mono"
+                autoFocus
+              />
+              {deleteConfirmText && deleteConfirmText !== 'delete' && (
+                <p className="text-xs text-red-600 mt-1">
+                  ⚠️ กรุณาพิมพ์ &quot;delete&quot; ให้ถูกต้อง
+                </p>
+              )}
+            </div>
+
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => {
                   setShowDeleteConfirm(false);
                   setDeletingEventId(null);
+                  setDeleteConfirmText('');
                 }}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
               >
@@ -2860,8 +2891,8 @@ export default function AdminEventsPage() {
               </button>
               <button
                 onClick={handleDelete}
-                disabled={saving}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                disabled={saving || deleteConfirmText !== 'delete'}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'กำลังยกเลิก...' : 'ยกเลิกกิจกรรม'}
               </button>

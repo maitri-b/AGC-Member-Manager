@@ -221,7 +221,7 @@ export default function EventDetailPage() {
   const [searchRegistrationId, setSearchRegistrationId] = useState('');
   const [searchedRegistration, setSearchedRegistration] = useState<any>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedMembersToInvite, setSelectedMembersToInvite] = useState<string[]>([]);
+  const [selectedMembersToInvite, setSelectedMembersToInvite] = useState<{ name: string; originalIndex: number }[]>([]);
   const [inviting, setInviting] = useState(false);
   // Manage Carpool modal state
   const [showManageCarpoolModal, setShowManageCarpoolModal] = useState(false);
@@ -673,17 +673,23 @@ export default function EventDetailPage() {
 
     setInviting(true);
     try {
-      // Build members array from selected names
+      // Build members array from selected members
+      // For Section 1 (team members): use originalIndex from selection
+      // For Section 2 (external members): find index in attendeeNames
       const attendeeNamesArray = sourceRegistration.attendeeNames
         ? sourceRegistration.attendeeNames.split(',').map((n: string) => n.trim())
         : [];
 
-      const membersToAdd = selectedMembersToInvite.map(name => {
-        const index = attendeeNamesArray.indexOf(name);
+      const membersToAdd = selectedMembersToInvite.map(member => {
+        // Use originalIndex if available (Section 1), otherwise find in array (Section 2)
+        const index = member.originalIndex !== undefined
+          ? member.originalIndex
+          : attendeeNamesArray.indexOf(member.name);
+
         return {
           registrationId: sourceRegistration.registrationId,
           lineUserId: sourceRegistration.lineUserId || '',
-          name: name,
+          name: member.name,
           attendeeIndex: index,  // Store index as stable identifier
         };
       });
@@ -5368,7 +5374,7 @@ export default function EventDetailPage() {
                     </h4>
                     <div className="space-y-2 mb-4">
                       {membersNotInCarpool.map(({ name, originalIndex }, index) => {
-                        const isSelected = selectedMembersToInvite.includes(name);
+                        const isSelected = selectedMembersToInvite.some(m => m.name === name && m.originalIndex === originalIndex);
                         // Display fallback if name is empty
                         const displayName = name && name.trim() ? name : `ผู้เข้าร่วมคนที่ ${originalIndex + 1}`;
                         return (
@@ -5385,9 +5391,9 @@ export default function EventDetailPage() {
                               checked={isSelected}
                               onChange={(e) => {
                                 if (e.target.checked) {
-                                  setSelectedMembersToInvite([...selectedMembersToInvite, name]);
+                                  setSelectedMembersToInvite([...selectedMembersToInvite, { name, originalIndex }]);
                                 } else {
-                                  setSelectedMembersToInvite(selectedMembersToInvite.filter(n => n !== name));
+                                  setSelectedMembersToInvite(selectedMembersToInvite.filter(m => !(m.name === name && m.originalIndex === originalIndex)));
                                 }
                               }}
                               className="rounded"
@@ -5535,7 +5541,7 @@ export default function EventDetailPage() {
                             isInOtherCarpool,
                             isInCarpool
                           });
-                          const isSelected = selectedMembersToInvite.includes(displayName);
+                          const isSelected = selectedMembersToInvite.some(m => m.name === displayName && m.originalIndex === index);
 
                           return (
                             <label
@@ -5554,9 +5560,9 @@ export default function EventDetailPage() {
                                 disabled={isInCarpool}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setSelectedMembersToInvite([...selectedMembersToInvite, displayName]);
+                                    setSelectedMembersToInvite([...selectedMembersToInvite, { name: displayName, originalIndex: index }]);
                                   } else {
-                                    setSelectedMembersToInvite(selectedMembersToInvite.filter(n => n !== displayName));
+                                    setSelectedMembersToInvite(selectedMembersToInvite.filter(m => !(m.name === displayName && m.originalIndex === index)));
                                   }
                                 }}
                                 className="rounded"

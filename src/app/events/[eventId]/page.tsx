@@ -5331,30 +5331,33 @@ export default function EventDetailPage() {
               {/* Section 1: Team Members Not In Carpool */}
               {(() => {
                 // Filter team members not in any carpool (use allCarpools to check all carpools in event)
-                const membersNotInCarpool = attendeeNames.filter((name, index) => {
-                  let isInCarpool = false;
-                  allCarpools.forEach(cp => {
-                    const member = cp.members?.find((m: any) => {
-                      // Skip if not from same registration
-                      if (m.registrationId !== userRegistration?.registrationId) {
-                        return false;
-                      }
+                // Track both name and original index for fallback display
+                const membersNotInCarpool = attendeeNames
+                  .map((name, originalIndex) => ({ name, originalIndex }))
+                  .filter(({ name, originalIndex }) => {
+                    let isInCarpool = false;
+                    allCarpools.forEach(cp => {
+                      const member = cp.members?.find((m: any) => {
+                        // Skip if not from same registration
+                        if (m.registrationId !== userRegistration?.registrationId) {
+                          return false;
+                        }
 
-                      // Check by attendeeIndex (stable identifier) - exclude -1 (manually added)
-                      if (m.attendeeIndex !== undefined && m.attendeeIndex !== -1) {
-                        return m.attendeeIndex === index;
-                      }
+                        // Check by attendeeIndex (stable identifier) - exclude -1 (manually added)
+                        if (m.attendeeIndex !== undefined && m.attendeeIndex !== -1) {
+                          return m.attendeeIndex === originalIndex;
+                        }
 
-                      // Fallback: check by name matching (normalize whitespace)
-                      const normalizeName = (n: string) => n.replace(/\s+/g, ' ').trim();
-                      const cleanMemberName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
-                      return normalizeName(cleanMemberName) === normalizeName(name) ||
-                             normalizeName(m.name) === normalizeName(name);
+                        // Fallback: check by name matching (normalize whitespace)
+                        const normalizeName = (n: string) => n.replace(/\s+/g, ' ').trim();
+                        const cleanMemberName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                        return normalizeName(cleanMemberName) === normalizeName(name) ||
+                               normalizeName(m.name) === normalizeName(name);
+                      });
+                      if (member) isInCarpool = true;
                     });
-                    if (member) isInCarpool = true;
+                    return !isInCarpool;
                   });
-                  return !isInCarpool;
-                });
 
                 if (membersNotInCarpool.length === 0) return null;
 
@@ -5364,8 +5367,10 @@ export default function EventDetailPage() {
                       ยังมีสมาชิกในทีม {membersNotInCarpool.length} ท่าน ที่ยังไม่ได้ join รถไปกับใคร
                     </h4>
                     <div className="space-y-2 mb-4">
-                      {membersNotInCarpool.map((name, index) => {
+                      {membersNotInCarpool.map(({ name, originalIndex }, index) => {
                         const isSelected = selectedMembersToInvite.includes(name);
+                        // Display fallback if name is empty
+                        const displayName = name && name.trim() ? name : `ผู้เข้าร่วมคนที่ ${originalIndex + 1}`;
                         return (
                           <label
                             key={index}
@@ -5387,7 +5392,10 @@ export default function EventDetailPage() {
                               }}
                               className="rounded"
                             />
-                            <span className="flex-1 text-sm font-medium text-gray-900">{name}</span>
+                            <span className="flex-1 text-sm font-medium text-gray-900">
+                              {displayName}
+                              {!name || !name.trim() ? <span className="text-xs text-gray-500 ml-2">(ยังไม่ได้ระบุชื่อ)</span> : ''}
+                            </span>
                           </label>
                         );
                       })}

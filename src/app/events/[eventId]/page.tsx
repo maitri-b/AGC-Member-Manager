@@ -2288,7 +2288,7 @@ export default function EventDetailPage() {
                                                   onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
                                                   className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                                                 >
-                                                  ลบ
+                                                  ออกจาก Carpool
                                                 </button>
                                               </div>
                                             );
@@ -2375,7 +2375,7 @@ export default function EventDetailPage() {
                                                         onClick={() => handleRemoveTeamMember(member.lineUserId, member.name, carpool.carpoolId)}
                                                         className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                                                       >
-                                                        ลบ
+                                                        ออกจาก Carpool
                                                       </button>
                                                     )}
                                                   </div>
@@ -4636,7 +4636,7 @@ export default function EventDetailPage() {
                               {isInMyCarpool && (
                                 <button
                                   onClick={async () => {
-                                    if (!confirm(`ต้องการลบ ${name} ออกจาก Carpool หรือไม่?`)) return;
+                                    if (!confirm(`ต้องการออกจาก Carpool หรือไม่?`)) return;
 
                                     try {
                                       const response = await fetch(`/api/carpools/${memberCarpool.carpoolId}/remove-members`, {
@@ -4652,16 +4652,16 @@ export default function EventDetailPage() {
 
                                       if (!response.ok) throw new Error('Failed to remove member');
 
-                                      toast.success(`ลบ ${name} ออกจาก Carpool สำเร็จ`);
+                                      toast.success(`ออกจาก Carpool สำเร็จ`);
                                       await fetchMemberCarpool();
                                       await fetchAllCarpools();
                                     } catch (err) {
-                                      toast.error('เกิดข้อผิดพลาดในการลบสมาชิก');
+                                      toast.error('เกิดข้อผิดพลาดในการออกจาก Carpool');
                                     }
                                   }}
                                   className="text-xs px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                                 >
-                                  ลบออก
+                                  ออกจาก Carpool
                                 </button>
                               )}
 

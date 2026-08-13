@@ -386,7 +386,7 @@ export async function PUT(
             .where('status', '!=', 'deleted')
             .get();
 
-          const carpoolUpdates: Promise<void>[] = [];
+          const carpoolUpdates: Promise<any>[] = [];
 
           for (const carpoolDoc of carpoolsSnapshot.docs) {
             const carpoolData = carpoolDoc.data();

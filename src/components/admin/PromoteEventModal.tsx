@@ -24,6 +24,9 @@ interface PromotionHistory {
   sentAt: string;
   sentBy: string;
   sentByName: string;
+  messageType?: 'promote' | 'custom';
+  subject?: string;
+  message?: string;
   member: {
     memberId: string;
     fullNameTH?: string;
@@ -54,17 +57,24 @@ export default function PromoteEventModal({
   // NEW: Message mode - 'promote' or 'custom'
   const [messageMode, setMessageMode] = useState<'promote' | 'custom'>('promote');
   const [customMessage, setCustomMessage] = useState('');
+  const [messageSubject, setMessageSubject] = useState('');
+  const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
+  const [savedTemplates, setSavedTemplates] = useState<Array<{subject: string; message: string}>>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       fetchMembers();
       fetchHistory();
+      loadTemplates();
       setSelectedMemberIds(new Set());
       setSearchTerm('');
       setMessage(null);
       setActiveTab('select');
       setMessageMode('promote'); // Reset to promote mode
       setCustomMessage(''); // Clear custom message
+      setMessageSubject(''); // Clear subject
+      setShowTemplates(false);
     }
   }, [isOpen, eventId]);
 
@@ -178,6 +188,90 @@ export default function PromoteEventModal({
     }
   };
 
+  // Load templates from localStorage
+  const loadTemplates = () => {
+    try {
+      const stored = localStorage.getItem('lineMessageTemplates');
+      if (stored) {
+        setSavedTemplates(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  };
+
+  // Save current message as template
+  const saveTemplate = () => {
+    if (!messageSubject.trim() || !customMessage.trim()) {
+      setMessage({ type: 'error', text: 'กรุณากรอกหัวข้อและข้อความก่อนบันทึก' });
+      return;
+    }
+
+    const newTemplate = {
+      subject: messageSubject,
+      message: customMessage,
+    };
+
+    const updated = [...savedTemplates, newTemplate];
+    setSavedTemplates(updated);
+
+    try {
+      localStorage.setItem('lineMessageTemplates', JSON.stringify(updated));
+      setMessage({ type: 'success', text: 'บันทึกเทมเพลตสำเร็จ' });
+      setTimeout(() => setMessage(null), 2000);
+    } catch (error) {
+      console.error('Error saving template:', error);
+      setMessage({ type: 'error', text: 'ไม่สามารถบันทึกเทมเพลตได้' });
+    }
+  };
+
+  // Load template
+  const loadTemplate = (template: {subject: string; message: string}) => {
+    setMessageSubject(template.subject);
+    setCustomMessage(template.message);
+    setShowTemplates(false);
+    setMessage({ type: 'success', text: 'โหลดเทมเพลตสำเร็จ' });
+    setTimeout(() => setMessage(null), 2000);
+  };
+
+  // Delete template
+  const deleteTemplate = (index: number) => {
+    const updated = savedTemplates.filter((_, i) => i !== index);
+    setSavedTemplates(updated);
+
+    try {
+      localStorage.setItem('lineMessageTemplates', JSON.stringify(updated));
+      setMessage({ type: 'success', text: 'ลบเทมเพลตสำเร็จ' });
+      setTimeout(() => setMessage(null), 2000);
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      setMessage({ type: 'error', text: 'ไม่สามารถลบเทมเพลตได้' });
+    }
+  };
+
+  // Insert personalization tag at cursor position
+  const insertTag = (tag: string) => {
+    if (!textareaRef) return;
+
+    const start = textareaRef.selectionStart;
+    const end = textareaRef.selectionEnd;
+    const text = customMessage;
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    const newText = before + tag + after;
+
+    setCustomMessage(newText);
+
+    // Set cursor position after inserted tag
+    setTimeout(() => {
+      if (textareaRef) {
+        textareaRef.focus();
+        const newCursorPos = start + tag.length;
+        textareaRef.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  };
+
   const handleSend = async () => {
     if (selectedMemberIds.size === 0) {
       setMessage({ type: 'error', text: 'กรุณาเลือกสมาชิกอย่างน้อย 1 คน' });
@@ -185,9 +279,15 @@ export default function PromoteEventModal({
     }
 
     // Validate custom message
-    if (messageMode === 'custom' && !customMessage.trim()) {
-      setMessage({ type: 'error', text: 'กรุณากรอกข้อความ' });
-      return;
+    if (messageMode === 'custom') {
+      if (!messageSubject.trim()) {
+        setMessage({ type: 'error', text: 'กรุณากรอกหัวข้อข้อความ' });
+        return;
+      }
+      if (!customMessage.trim()) {
+        setMessage({ type: 'error', text: 'กรุณากรอกเนื้อหาข้อความ' });
+        return;
+      }
     }
 
     try {
@@ -215,7 +315,7 @@ export default function PromoteEventModal({
           }),
         });
       } else {
-        // Custom mode: Use send-notification API
+        // Custom mode: Use send-notification API with personalization
         response = await fetch('/api/line/send-notification', {
           method: 'POST',
           headers: {
@@ -224,6 +324,10 @@ export default function PromoteEventModal({
           body: JSON.stringify({
             lineUserIds: memberIdsArray,
             message: customMessage,
+            subject: messageSubject,
+            eventId,
+            eventName,
+            enablePersonalization: true,
           }),
         });
       }
@@ -239,11 +343,10 @@ export default function PromoteEventModal({
       // Reset selection after success
       setSelectedMemberIds(new Set());
       setCustomMessage('');
+      setMessageSubject('');
 
-      // Refresh history (only for promote mode as custom doesn't log)
-      if (messageMode === 'promote') {
-        await fetchHistory();
-      }
+      // Refresh history to include both promote and custom messages
+      await fetchHistory();
 
       // Close modal after 2 seconds
       setTimeout(() => {
@@ -384,13 +487,24 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
                   ยังไม่มีประวัติการส่งข้อความสำหรับกิจกรรมนี้
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {history.map((record) => (
-                    <div key={record.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between">
+                    <div key={record.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">
-                            {record.member?.lineDisplayName || record.lineUserId}
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="font-medium text-gray-900">
+                              {record.member?.lineDisplayName || record.lineUserId}
+                            </div>
+                            {record.messageType && (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                record.messageType === 'promote'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {record.messageType === 'promote' ? '📢 โปรโมท' : '✉️ กำหนดเอง'}
+                              </span>
+                            )}
                           </div>
                           {record.member?.companyNameTH && (
                             <div className="text-sm text-gray-600 mt-1">
@@ -398,7 +512,7 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
                             </div>
                           )}
                           {record.member?.memberId && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 mt-2">
                               ID: {record.member.memberId}
                             </span>
                           )}
@@ -417,6 +531,14 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
                           </div>
                         </div>
                       </div>
+
+                      {/* Message Subject */}
+                      {record.subject && (
+                        <div className="bg-gray-50 border-l-4 border-blue-400 p-3 rounded">
+                          <p className="text-xs text-gray-600 mb-1">หัวข้อ:</p>
+                          <p className="text-sm font-semibold text-gray-900">{record.subject}</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -427,20 +549,154 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
             <>
               {/* Custom Message Input (only in custom mode) */}
               {messageMode === 'custom' && (
-                <div className="bg-white border border-gray-300 rounded-lg p-4">
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    เนื้อหาข้อความ: <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    value={customMessage}
-                    onChange={(e) => setCustomMessage(e.target.value)}
-                    placeholder="พิมพ์ข้อความที่ต้องการส่งให้สมาชิกที่ลงทะเบียน..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px] font-sans"
-                    maxLength={1000}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {customMessage.length}/1000 ตัวอักษร
-                  </p>
+                <div className="bg-white border border-gray-300 rounded-lg p-4 space-y-4">
+                  {/* Subject Field */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      หัวข้อข้อความ: <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={messageSubject}
+                      onChange={(e) => setMessageSubject(e.target.value)}
+                      placeholder="เช่น: แจ้งเปลี่ยนแปลงสถานที่จัดงาน, ขอบคุณที่ร่วมกิจกรรม..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans"
+                      maxLength={200}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {messageSubject.length}/200 ตัวอักษร
+                    </p>
+                  </div>
+
+                  {/* Message Content */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      เนื้อหาข้อความ: <span className="text-red-500">*</span>
+                    </label>
+
+                    {/* Personalization Tags */}
+                    <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        แทรก Personalization Tags:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { label: 'ชื่อ LINE', tag: '{LINE_NAME}', color: 'purple' },
+                          { label: 'ชื่อติดต่อ', tag: '{CONTACT_NAME}', color: 'blue' },
+                          { label: 'ชื่อบริษัท', tag: '{COMPANY_NAME}', color: 'green' },
+                          { label: 'Link กิจกรรม', tag: '{EVENT_URL}', color: 'orange' },
+                          { label: 'ชื่อกิจกรรม', tag: '{EVENT_NAME}', color: 'pink' }
+                        ].map(({ label, tag, color }) => {
+                          const colors = {
+                            purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-300',
+                            blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-300',
+                            green: 'bg-green-100 text-green-700 hover:bg-green-200 border-green-300',
+                            orange: 'bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-300',
+                            pink: 'bg-pink-100 text-pink-700 hover:bg-pink-200 border-pink-300'
+                          };
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => insertTag(tag)}
+                              className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${colors[color as keyof typeof colors]}`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-blue-700 mt-2">
+                        💡 คลิกปุ่มเพื่อแทรก tag ลงในข้อความ - ระบบจะแทนที่ด้วยข้อมูลจริงของแต่ละคนเมื่อส่ง
+                      </p>
+                    </div>
+
+                    <textarea
+                      ref={(el) => setTextareaRef(el)}
+                      value={customMessage}
+                      onChange={(e) => setCustomMessage(e.target.value)}
+                      placeholder="พิมพ์ข้อความที่ต้องการส่ง... (สามารถใช้ personalization tags ด้านบนได้)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px] font-sans"
+                      maxLength={1000}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {customMessage.length}/1000 ตัวอักษร
+                    </p>
+                  </div>
+
+                  {/* Template Management */}
+                  <div className="flex gap-2 pt-3 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={saveTemplate}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                      </svg>
+                      บันทึกเทมเพลต
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplates(!showTemplates)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                      เทมเพลตที่บันทึก ({savedTemplates.length})
+                    </button>
+                  </div>
+
+                  {/* Saved Templates List */}
+                  {showTemplates && savedTemplates.length > 0 && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">เทมเพลตที่บันทึก</h4>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {savedTemplates.map((template, index) => (
+                          <div key={index} className="bg-white border border-gray-200 rounded p-3 hover:shadow-sm transition-shadow">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 cursor-pointer" onClick={() => loadTemplate(template)}>
+                                <p className="font-medium text-gray-900 text-sm mb-1">{template.subject}</p>
+                                <p className="text-xs text-gray-600 line-clamp-2">{template.message}</p>
+                              </div>
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => loadTemplate(template)}
+                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  title="โหลดเทมเพลต"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteTemplate(index)}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="ลบเทมเพลต"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {showTemplates && savedTemplates.length === 0 && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center text-gray-500 text-sm">
+                      ยังไม่มีเทมเพลตที่บันทึก
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -453,11 +709,31 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
                 }`}>
                   ตัวอย่างข้อความที่จะส่ง:
                 </h3>
+                {messageMode === 'custom' && messageSubject && (
+                  <div className="mb-2 pb-2 border-b border-blue-300">
+                    <p className="text-xs text-blue-700 font-medium mb-1">หัวข้อ:</p>
+                    <p className="text-sm font-semibold text-blue-900">{messageSubject}</p>
+                  </div>
+                )}
                 <pre className={`text-sm whitespace-pre-wrap font-sans ${
                   messageMode === 'promote' ? 'text-purple-800' : 'text-blue-800'
                 }`}>
-                  {messageMode === 'promote' ? messagePreview : (customMessage || '(ยังไม่ได้กรอกข้อความ)')}
+                  {messageMode === 'promote'
+                    ? messagePreview
+                    : (customMessage
+                      ? customMessage
+                          .replace(/{LINE_NAME}/g, '[ชื่อ LINE ของสมาชิก]')
+                          .replace(/{CONTACT_NAME}/g, '[ชื่อติดต่อ]')
+                          .replace(/{COMPANY_NAME}/g, '[ชื่อบริษัท]')
+                          .replace(/{EVENT_URL}/g, `${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`)
+                          .replace(/{EVENT_NAME}/g, eventName)
+                      : '(ยังไม่ได้กรอกข้อความ)')}
                 </pre>
+                {messageMode === 'custom' && (customMessage.includes('{LINE_NAME}') || customMessage.includes('{CONTACT_NAME}') || customMessage.includes('{COMPANY_NAME}')) && (
+                  <p className="text-xs text-blue-600 mt-2 italic">
+                    💡 ข้อความจะถูกปรับแต่งตามข้อมูลของแต่ละคนเมื่อส่ง
+                  </p>
+                )}
               </div>
 
           {/* Success/Error Message */}

@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
 import { getMemberById } from '@/lib/google-sheets';
+import { adminDb } from '@/lib/firebase-admin';
 
 const LINE_API_URL = 'https://api.line.me/v2/bot/message/push';
 
@@ -52,7 +53,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { memberId, lineUserIds, message: customMessage } = body;
+    const {
+      memberId,
+      lineUserIds,
+      message: customMessage,
+      subject,
+      eventId,
+      eventName,
+      enablePersonalization
+    } = body;
 
     // Support both old API (memberId) and new API (lineUserIds + custom message)
     if (!memberId && (!lineUserIds || lineUserIds.length === 0)) {
@@ -65,15 +74,59 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Message is required' }, { status: 400 });
       }
 
+      // Import db for fetching user data if personalization is enabled
+      let db: any = null;
+      if (enablePersonalization) {
+        const { db: firestoreDb } = await import('@/lib/firebase-admin');
+        db = firestoreDb;
+      }
+
       // Send custom message to multiple users
       const results = {
         success: 0,
         failed: 0,
         errors: [] as string[],
+        successfulSends: [] as { lineUserId: string; message: string }[],
       };
 
       for (const lineUserId of lineUserIds) {
         try {
+          let personalizedMessage = customMessage;
+
+          // Personalize message if enabled
+          if (enablePersonalization && db) {
+            try {
+              // Fetch user data from Firestore
+              const userSnapshot = await db.collection('users')
+                .where('lineUserId', '==', lineUserId)
+                .limit(1)
+                .get();
+
+              if (!userSnapshot.empty) {
+                const userData = userSnapshot.docs[0].data();
+
+                // Replace personalization tags
+                personalizedMessage = personalizedMessage
+                  .replace(/{LINE_NAME}/g, userData.lineDisplayName || userData.fullNameTH || '')
+                  .replace(/{CONTACT_NAME}/g, userData.fullNameTH || userData.lineDisplayName || '')
+                  .replace(/{COMPANY_NAME}/g, userData.companyNameTH || '')
+                  .replace(/{EVENT_URL}/g, `${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`)
+                  .replace(/{EVENT_NAME}/g, eventName || '');
+              } else {
+                // Fallback if user not found
+                personalizedMessage = personalizedMessage
+                  .replace(/{LINE_NAME}/g, '')
+                  .replace(/{CONTACT_NAME}/g, '')
+                  .replace(/{COMPANY_NAME}/g, '')
+                  .replace(/{EVENT_URL}/g, `${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`)
+                  .replace(/{EVENT_NAME}/g, eventName || '');
+              }
+            } catch (err) {
+              console.error('Error personalizing message:', err);
+              // Continue with non-personalized message on error
+            }
+          }
+
           const response = await fetch(LINE_API_URL, {
             method: 'POST',
             headers: {
@@ -85,7 +138,7 @@ export async function POST(request: NextRequest) {
               messages: [
                 {
                   type: 'text',
-                  text: customMessage,
+                  text: personalizedMessage,
                 },
               ],
             }),
@@ -93,6 +146,7 @@ export async function POST(request: NextRequest) {
 
           if (response.ok) {
             results.success++;
+            results.successfulSends.push({ lineUserId, message: personalizedMessage });
           } else {
             const errorData = await response.json();
             results.failed++;
@@ -101,6 +155,35 @@ export async function POST(request: NextRequest) {
         } catch (err) {
           results.failed++;
           results.errors.push(`${lineUserId}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+
+      // Save custom message history to Firestore (if eventId is provided)
+      if (eventId && results.successfulSends.length > 0) {
+        try {
+          const promotionHistoryRef = adminDb().collection('promotionHistory');
+          const batch = adminDb().batch();
+          const sentAt = new Date();
+
+          for (const send of results.successfulSends) {
+            const historyDoc = promotionHistoryRef.doc();
+            batch.set(historyDoc, {
+              eventId,
+              eventName: eventName || '',
+              lineUserId: send.lineUserId,
+              sentAt,
+              sentBy: session.user.lineUserId || session.user.id || 'unknown',
+              sentByName: session.user.name || 'Unknown',
+              message: send.message,
+              messageType: 'custom',
+              subject: subject || '',
+            });
+          }
+
+          await batch.commit();
+        } catch (error) {
+          console.error('Error saving custom message history:', error);
+          // Don't fail the request if history save fails
         }
       }
 

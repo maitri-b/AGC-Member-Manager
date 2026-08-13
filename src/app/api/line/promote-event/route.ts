@@ -117,6 +117,8 @@ ${fullEventUrl}`;
           sentBy: session.user.lineUserId || session.user.id || 'unknown',
           sentByName: session.user.name || 'Unknown',
           message,
+          messageType: 'promote',
+          subject: eventName,
         });
       }
     }

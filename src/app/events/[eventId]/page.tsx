@@ -5335,11 +5335,21 @@ export default function EventDetailPage() {
                   let isInCarpool = false;
                   allCarpools.forEach(cp => {
                     const member = cp.members?.find((m: any) => {
-                      if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
+                      // Skip if not from same registration
+                      if (m.registrationId !== userRegistration?.registrationId) {
+                        return false;
+                      }
+
+                      // Check by attendeeIndex (stable identifier) - exclude -1 (manually added)
+                      if (m.attendeeIndex !== undefined && m.attendeeIndex !== -1) {
                         return m.attendeeIndex === index;
                       }
-                      const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
-                      return cleanName === name || m.name === name;
+
+                      // Fallback: check by name matching (normalize whitespace)
+                      const normalizeName = (n: string) => n.replace(/\s+/g, ' ').trim();
+                      const cleanMemberName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                      return normalizeName(cleanMemberName) === normalizeName(name) ||
+                             normalizeName(m.name) === normalizeName(name);
                     });
                     if (member) isInCarpool = true;
                   });

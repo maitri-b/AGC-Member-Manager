@@ -661,7 +661,12 @@ export default function EventDetailPage() {
       return;
     }
 
-    if (!searchedRegistration) {
+    // Determine which registration to use:
+    // - If searchedRegistration exists, use it (Section 2: external members)
+    // - Otherwise, use userRegistration (Section 1: team members)
+    const sourceRegistration = searchedRegistration || userRegistration;
+
+    if (!sourceRegistration) {
       toast.error('ไม่พบข้อมูลการจอง');
       return;
     }
@@ -669,15 +674,15 @@ export default function EventDetailPage() {
     setInviting(true);
     try {
       // Build members array from selected names
-      const attendeeNamesArray = searchedRegistration.attendeeNames
-        ? searchedRegistration.attendeeNames.split(',').map((n: string) => n.trim())
+      const attendeeNamesArray = sourceRegistration.attendeeNames
+        ? sourceRegistration.attendeeNames.split(',').map((n: string) => n.trim())
         : [];
 
       const membersToAdd = selectedMembersToInvite.map(name => {
         const index = attendeeNamesArray.indexOf(name);
         return {
-          registrationId: searchedRegistration.registrationId,
-          lineUserId: searchedRegistration.lineUserId || '',
+          registrationId: sourceRegistration.registrationId,
+          lineUserId: sourceRegistration.lineUserId || '',
           name: name,
           attendeeIndex: index,  // Store index as stable identifier
         };

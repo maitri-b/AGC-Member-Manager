@@ -116,6 +116,104 @@ export default function CarpoolGuidePage() {
         <div className="space-y-8">
           {/* Main Content Area */}
           <main className="space-y-8">
+            {/* Table of Contents */}
+            <section className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                สารบัญ
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Case 1 */}
+                <a
+                  href="#case1"
+                  className="block p-4 border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-3xl">🚙</span>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-blue-900 group-hover:text-blue-700 mb-1">
+                        กรณีที่ 1: ขับรถไปเอง
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        สำหรับท่านที่มีรถและจะขับไปเอง
+                      </p>
+                      <p className="text-xs text-blue-600 mt-2 font-medium">
+                        → 5 ขั้นตอน
+                      </p>
+                    </div>
+                  </div>
+                </a>
+
+                {/* Case 2 */}
+                <a
+                  href="#case2"
+                  className="block p-4 border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all group"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-3xl">🚐</span>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-green-900 group-hover:text-green-700 mb-1">
+                        กรณีที่ 2: Carpool กับเอเจ้นท์อื่น
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        สำหรับท่านที่ไม่มีรถหรือต้องการไปกับเพื่อน
+                      </p>
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs text-purple-600 font-medium">
+                          📝 วิธีที่ 1: เจ้าของรถเพิ่มชื่อ (6 ขั้นตอน)
+                        </p>
+                        <p className="text-xs text-green-600 font-medium">
+                          🔍 วิธีที่ 2: ผู้ Join ขอเข้าเอง (7 ขั้นตอน)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+
+                {/* FAQ */}
+                <a
+                  href="#faq"
+                  className="block p-4 border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all group"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-3xl">❓</span>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-purple-900 group-hover:text-purple-700 mb-1">
+                        คำถามที่พบบ่อย (FAQ)
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        คำตอบสำหรับคำถามยอดนิยม
+                      </p>
+                      <p className="text-xs text-purple-600 mt-2 font-medium">
+                        → 7 คำถาม
+                      </p>
+                    </div>
+                  </div>
+                </a>
+
+                {/* Introduction */}
+                <a
+                  href="#intro"
+                  className="block p-4 border-2 border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all group"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-3xl">ℹ️</span>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-900 group-hover:text-gray-700 mb-1">
+                        ระบบ Carpool คืออะไร?
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        ทำความเข้าใจระบบและจุดเด่น
+                      </p>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            </section>
+
             {/* Introduction */}
             <section id="intro" className="bg-white rounded-xl shadow-lg p-8 border border-gray-200 scroll-mt-4">
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">

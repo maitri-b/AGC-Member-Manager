@@ -1920,8 +1920,7 @@ export default function EventDetailPage() {
                               setIsEditingNames(false);
                               setAttendeeNames([...tempAttendeeNames]);
                               setSpecialRequests(tempSpecialRequests);
-                              fetchEventDetail(); // Refresh data
-                              fetchMemberCarpool(); // Refresh carpool data to update member names in joined carpools
+                              fetchEventDetail(); // Refresh data (useEffect will auto-refresh carpool)
                             } catch (err) {
                               toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
                             } finally {

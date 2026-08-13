@@ -2116,85 +2116,136 @@ export default function EventDetailPage() {
                           </div>
 
                           {/* Description */}
-                          <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-gray-300 rounded-lg">
-                            <p className="text-sm font-semibold text-gray-800 mb-3">เลือกวิธีเดินทางของคุณ:</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {/* Option 1: Drive own car */}
-                              <button
-                                onClick={() => setShowCreateCarpoolModal(true)}
-                                className="flex items-start gap-3 p-3 bg-white border-2 border-blue-300 rounded-lg hover:border-blue-500 hover:shadow-md transition-all text-left group"
-                              >
-                                <div className="text-3xl mt-1">🚗</div>
-                                <div className="flex-1">
-                                  <p className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">ขับรถไปเอง</p>
-                                  <p className="text-xs text-gray-600 mt-1">คุณสามารถลงทะเบียนรถยนต์ได้มากกว่า 1 คัน</p>
-                                  <div className="mt-2 inline-block px-3 py-1 bg-blue-600 text-white text-xs rounded-lg group-hover:bg-blue-700 transition-colors">
-                                    ลงทะเบียนรถยนต์
-                                  </div>
-                                </div>
-                              </button>
+                          {(() => {
+                            // Check if all members are already in carpools (use allCarpools for accurate check)
+                            const membersNotInCarpool = attendeeNames.filter((name, index) => {
+                              let isInCarpool = false;
 
-                              {/* Option 2: Join other's car */}
-                              {(() => {
-                                // Check if all members are already in carpools
-                                const membersNotInCarpool = attendeeNames.filter((name, index) => {
-                                  let isInCarpool = false;
+                              allCarpools.forEach(cp => {
+                                const member = cp.members?.find((m: any) => {
+                                  // Skip if not from same registration
+                                  if (m.registrationId !== userRegistration?.registrationId) {
+                                    return false;
+                                  }
 
-                                  memberCarpools.forEach(cp => {
-                                    const member = cp.members?.find((m: any) => {
-                                      // Use attendeeIndex for stable identification (if available)
-                                      if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
-                                        return m.attendeeIndex === index;
-                                      }
-                                      // Fallback to name matching (for old data)
-                                      const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
-                                      return cleanName === name || m.name === name;
-                                    });
-                                    if (member) {
-                                      isInCarpool = true;
-                                    }
-                                  });
-
-                                  return !isInCarpool;
+                                  // Use attendeeIndex for stable identification (if available)
+                                  if (m.attendeeIndex !== undefined && m.attendeeIndex !== -1) {
+                                    return m.attendeeIndex === index;
+                                  }
+                                  // Fallback to name matching (for old data)
+                                  const normalizeName = (n: string) => n.replace(/\s+/g, ' ').trim();
+                                  const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                  return normalizeName(cleanName) === normalizeName(name) || normalizeName(m.name) === normalizeName(name);
                                 });
-
-                                // Only show option if there are members not in any carpool
-                                if (membersNotInCarpool.length === 0) {
-                                  return null;
+                                if (member) {
+                                  isInCarpool = true;
                                 }
+                              });
 
-                                return (
+                              return !isInCarpool;
+                            });
+
+                            const allMembersInCarpools = membersNotInCarpool.length === 0;
+                            const ownedCarpoolsCount = ownedCarpools.length;
+
+                            return (
+                              <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-gray-300 rounded-lg">
+                                <p className="text-sm font-semibold text-gray-800 mb-3">เลือกวิธีเดินทางของคุณ:</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {/* Option 1: Drive own car */}
+                                  <button
+                                    onClick={() => !allMembersInCarpools && setShowCreateCarpoolModal(true)}
+                                    disabled={allMembersInCarpools}
+                                    className={`flex items-start gap-3 p-3 border-2 rounded-lg transition-all text-left group ${
+                                      allMembersInCarpools
+                                        ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
+                                        : 'bg-white border-blue-300 hover:border-blue-500 hover:shadow-md'
+                                    }`}
+                                  >
+                                    <div className="text-3xl mt-1">🚗</div>
+                                    <div className="flex-1">
+                                      <p className={`font-semibold transition-colors ${
+                                        allMembersInCarpools ? 'text-gray-500' : 'text-gray-900 group-hover:text-blue-700'
+                                      }`}>
+                                        ขับรถไปเอง
+                                      </p>
+                                      <p className={`text-xs mt-1 ${allMembersInCarpools ? 'text-gray-400' : 'text-gray-600'}`}>
+                                        คุณสามารถลงทะเบียนรถยนต์ได้มากกว่า 1 คัน
+                                      </p>
+                                      <div className={`mt-2 inline-block px-3 py-1 text-xs rounded-lg transition-colors ${
+                                        allMembersInCarpools
+                                          ? 'bg-gray-300 text-gray-500'
+                                          : 'bg-blue-600 text-white group-hover:bg-blue-700'
+                                      }`}>
+                                        {allMembersInCarpools
+                                          ? 'ลงทะเบียนรถยนต์'
+                                          : ownedCarpoolsCount === 0
+                                          ? 'ลงทะเบียนรถยนต์'
+                                          : `ลงทะเบียนรถยนต์ คันที่ ${ownedCarpoolsCount + 1}`
+                                        }
+                                      </div>
+                                    </div>
+                                  </button>
+
+                                  {/* Option 2: Join other's car */}
                                   <button
                                     onClick={() => {
-                                      setShowJoinCarpoolModal(true);
-                                      // Fetch all carpools to check if members are already in other carpools
-                                      if (allCarpools.length === 0) {
-                                        fetchAllCarpools();
+                                      if (!allMembersInCarpools) {
+                                        setShowJoinCarpoolModal(true);
+                                        // Fetch all carpools to check if members are already in other carpools
+                                        if (allCarpools.length === 0) {
+                                          fetchAllCarpools();
+                                        }
                                       }
                                     }}
-                                    className="flex items-start gap-3 p-3 bg-white border-2 border-green-300 rounded-lg hover:border-green-500 hover:shadow-md transition-all text-left group"
+                                    disabled={allMembersInCarpools}
+                                    className={`flex items-start gap-3 p-3 border-2 rounded-lg transition-all text-left group ${
+                                      allMembersInCarpools
+                                        ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
+                                        : 'bg-white border-green-300 hover:border-green-500 hover:shadow-md'
+                                    }`}
                                   >
                                     <div className="text-3xl mt-1">🚐</div>
                                     <div className="flex-1">
-                                      <p className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors">ไปรถคนอื่น</p>
-                                      <p className="text-xs text-gray-600 mt-1">ต้องมีรหัสการจอง 6 หลัก ของรถที่คุณขอ Join</p>
-                                      <div className="mt-2 inline-block px-3 py-1 bg-green-600 text-white text-xs rounded-lg group-hover:bg-green-700 transition-colors">
+                                      <p className={`font-semibold transition-colors ${
+                                        allMembersInCarpools ? 'text-gray-500' : 'text-gray-900 group-hover:text-green-700'
+                                      }`}>
+                                        ไปรถคนอื่น
+                                      </p>
+                                      <p className={`text-xs mt-1 ${allMembersInCarpools ? 'text-gray-400' : 'text-gray-600'}`}>
+                                        ต้องมีรหัสการจอง 6 หลัก ของรถที่คุณขอ Join
+                                      </p>
+                                      <div className={`mt-2 inline-block px-3 py-1 text-xs rounded-lg transition-colors ${
+                                        allMembersInCarpools
+                                          ? 'bg-gray-300 text-gray-500'
+                                          : 'bg-green-600 text-white group-hover:bg-green-700'
+                                      }`}>
                                         เลือกรถที่ร่วม Join
                                       </div>
                                     </div>
                                   </button>
-                                );
-                              })()}
-                            </div>
-                            <div className="mt-3 pt-3 border-t border-gray-300">
-                              <a href="/carpool-guide" target="_blank" className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-xs flex items-center gap-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
-                                ศึกษาขั้นตอนการลงทะเบียนแบบละเอียด
-                              </a>
-                            </div>
-                          </div>
+                                </div>
+
+                                {/* Message when all members selected travel method */}
+                                {allMembersInCarpools && (
+                                  <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+                                    <p className="text-xs text-green-700 text-center font-medium">
+                                      ✅ สมาชิกในทีมเลือกวิธีเดินทางครบแล้ว
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="mt-3 pt-3 border-t border-gray-300">
+                                  <a href="/carpool-guide" target="_blank" className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-xs flex items-center gap-1">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                    </svg>
+                                    ศึกษาขั้นตอนการลงทะเบียนแบบละเอียด
+                                  </a>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {carpoolLoading ? (

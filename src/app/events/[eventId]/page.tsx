@@ -2064,7 +2064,7 @@ export default function EventDetailPage() {
                                         <p className="font-semibold text-purple-700 mb-1">👥 วิธีชวนเพื่อนไปด้วยกัน</p>
                                         <ol className="list-decimal list-inside space-y-1 ml-2">
                                           <li>คลิกปุ่ม "ชวนเพื่อนไปด้วยกัน"</li>
-                                          <li>เพิ่มสมาชิกในทีม หรือชวนเพื่อนจากเอเจ้นท์อื่น</li>
+                                          <li>เพิ่มสมาชิกในทีม หรือชวนเพื่อนจากเอเจ้นท์อื่น (ต้องมีรหัสลงทะเบียน 6 หลัก)</li>
                                           <li>กดยืนยัน - สมาชิกจะเข้าร่วมทะเบียนรถของคุณ!</li>
                                         </ol>
                                       </div>
@@ -2235,14 +2235,6 @@ export default function EventDetailPage() {
                                   </div>
                                 )}
 
-                                <div className="mt-3 pt-3 border-t border-gray-300">
-                                  <a href="/carpool-guide" target="_blank" className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-xs flex items-center gap-1">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                    </svg>
-                                    ศึกษาขั้นตอนการลงทะเบียนแบบละเอียด
-                                  </a>
-                                </div>
                               </div>
                             );
                           })()}

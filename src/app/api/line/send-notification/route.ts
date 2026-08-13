@@ -74,13 +74,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Message is required' }, { status: 400 });
       }
 
-      // Import db for fetching user data if personalization is enabled
-      let db: any = null;
-      if (enablePersonalization) {
-        const { db: firestoreDb } = await import('@/lib/firebase-admin');
-        db = firestoreDb;
-      }
-
       // Send custom message to multiple users
       const results = {
         success: 0,
@@ -94,10 +87,10 @@ export async function POST(request: NextRequest) {
           let personalizedMessage = customMessage;
 
           // Personalize message if enabled
-          if (enablePersonalization && db) {
+          if (enablePersonalization) {
             try {
               // Fetch user data from Firestore
-              const userSnapshot = await db.collection('users')
+              const userSnapshot = await adminDb().collection('users')
                 .where('lineUserId', '==', lineUserId)
                 .limit(1)
                 .get();

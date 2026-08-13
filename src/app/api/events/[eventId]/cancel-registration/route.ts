@@ -160,7 +160,7 @@ export async function POST(
 
     batch.update(regRef, updateData);
 
-    // Remove from carpool if exists
+    // Handle carpool removal/deletion
     if (registration.carpoolId) {
       const carpoolRef = db
         .collection('carpools')
@@ -169,15 +169,31 @@ export async function POST(
       const carpoolDoc = await carpoolRef.get();
       if (carpoolDoc.exists) {
         const carpoolData = carpoolDoc.data();
-        const updatedMembers = (carpoolData?.members || []).filter(
-          (member: any) => member.registrationId !== registrationId
-        );
 
-        batch.update(carpoolRef, {
-          members: updatedMembers,
-          currentCapacity: updatedMembers.length,
-          updatedAt: new Date().toISOString(),
-        });
+        // Check if this registration is the owner of the carpool
+        const isOwner = carpoolData?.ownerRegistrationId === registrationId;
+
+        if (isOwner) {
+          // If owner is cancelling, mark carpool as deleted (but keep the owner data)
+          batch.update(carpoolRef, {
+            status: 'deleted',
+            deletedAt: new Date().toISOString(),
+            deletedBy: isAdmin ? session.user.email || session.user.id : session.user.id,
+            deletionReason: 'owner_cancelled_registration',
+            updatedAt: new Date().toISOString(),
+          });
+        } else {
+          // If member is cancelling, just remove them from members list
+          const updatedMembers = (carpoolData?.members || []).filter(
+            (member: any) => member.registrationId !== registrationId
+          );
+
+          batch.update(carpoolRef, {
+            members: updatedMembers,
+            currentCapacity: updatedMembers.length,
+            updatedAt: new Date().toISOString(),
+          });
+        }
       }
 
       // Remove carpoolId from registration

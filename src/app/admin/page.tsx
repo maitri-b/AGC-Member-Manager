@@ -157,7 +157,12 @@ export default function AdminPage() {
     if (effectiveStatus === 'authenticated' && effectiveSession && hasPermission(effectiveSession.user.permissions || [], 'admin:users')) {
       fetchUsers();
       fetchPendingCounts();
-      fetchAllMembersData();
+
+      // Background loading: Fetch member data after 2 seconds to avoid blocking initial page load
+      // This data is optional (only for displaying extra info like fullNameTH, nickname, company)
+      setTimeout(() => {
+        fetchAllMembersData();
+      }, 2000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]); // Only run when authentication status changes, not on every session update

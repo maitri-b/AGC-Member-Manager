@@ -2050,18 +2050,17 @@ export default function EventDetailPage() {
                                         </ol>
                                       </div>
                                       <div className="pt-2 border-t border-gray-200">
-                                        <p className="font-semibold text-purple-700 mb-1">👥 วิธีเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่น</p>
+                                        <p className="font-semibold text-purple-700 mb-1">👥 วิธีชวนเพื่อนไปด้วยกัน</p>
                                         <ol className="list-decimal list-inside space-y-1 ml-2">
-                                          <li>คลิกปุ่ม "+ ชวนเพื่อนจากรหัสลงทะเบียนอื่น"</li>
-                                          <li>ใส่รหัสลงทะเบียนของเอเจ้นท์ที่ต้องการเชิญ</li>
-                                          <li>เลือกสมาชิกที่ต้องการชวน</li>
+                                          <li>คลิกปุ่ม "ชวนเพื่อนไปด้วยกัน"</li>
+                                          <li>เพิ่มสมาชิกในทีม หรือชวนเพื่อนจากเอเจ้นท์อื่น</li>
                                           <li>กดยืนยัน - สมาชิกจะเข้าร่วมทะเบียนรถของคุณ!</li>
                                         </ol>
                                       </div>
                                       <div className="pt-2 border-t border-gray-200">
-                                        <p className="font-semibold text-orange-700 mb-1">👥 วิธีร่วมรถคนอื่น (สำหรับผู้โดยสาร)</p>
+                                        <p className="font-semibold text-orange-700 mb-1">🚐 วิธีเลือกรถที่ร่วม Join</p>
                                         <ol className="list-decimal list-inside space-y-1 ml-2">
-                                          <li>กดปุ่ม "Join รถคนอื่น" (ปุ่มสีเขียว)</li>
+                                          <li>เลือก "ไปรถคนอื่น" จากหน้าหลัก</li>
                                           <li>ใส่รหัสลงทะเบียนของเจ้าของรถ</li>
                                           <li>เลือกสมาชิกในทีมที่จะไปด้วย</li>
                                           <li>กดยืนยัน - เข้าร่วมสำเร็จ!</li>
@@ -2106,124 +2105,86 @@ export default function EventDetailPage() {
                           </div>
 
                           {/* Description */}
-                          <p className="text-xs text-gray-600 mb-3 leading-relaxed">
-                            หากคุณจะขับรถไปเอง กรุณาลงทะเบียนรถยนต์ของคุณ โดยกดปุ่ม "ลงทะเบียนรถยนต์"<br />
-                            ทั้งนี้คุณสามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นร่วมไปกับคุณด้วยได้<br />
-                            กรณีที่คุณร่วมไปกับรถของเอเจ้นท์ท่านอื่น กรุณากด Join รถคนอื่น<br />
-                            <span className="text-purple-600 font-semibold">✨ 1 เอเจ้นท์สามารถลงทะเบียนได้มากกว่า 1 คัน</span><br />
-                            <a href="/carpool-guide" target="_blank" className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-sm">
-                              📖 ศึกษาขั้นตอนการลงทะเบียน คลิกที่นี่
-                            </a>
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setShowCreateCarpoolModal(true)}
-                              className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                            >
-                              ลงทะเบียนรถยนต์
-                            </button>
-                            {/* Only show "Join รถคนอื่น" if there are members not in any carpool */}
-                            {(() => {
-                              // Check if all members are already in carpools
-                              const membersNotInCarpool = attendeeNames.filter((name, index) => {
-                                let isInCarpool = false;
+                          <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-gray-300 rounded-lg">
+                            <p className="text-sm font-semibold text-gray-800 mb-3">เลือกวิธีเดินทางของคุณ:</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {/* Option 1: Drive own car */}
+                              <button
+                                onClick={() => setShowCreateCarpoolModal(true)}
+                                className="flex items-start gap-3 p-3 bg-white border-2 border-blue-300 rounded-lg hover:border-blue-500 hover:shadow-md transition-all text-left group"
+                              >
+                                <div className="text-3xl mt-1">🚗</div>
+                                <div className="flex-1">
+                                  <p className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">ขับรถไปเอง</p>
+                                  <p className="text-xs text-gray-600 mt-1">คุณสามารถลงทะเบียนรถยนต์ได้มากกว่า 1 คัน</p>
+                                  <div className="mt-2 inline-block px-3 py-1 bg-blue-600 text-white text-xs rounded-lg group-hover:bg-blue-700 transition-colors">
+                                    ลงทะเบียนรถยนต์
+                                  </div>
+                                </div>
+                              </button>
 
-                                memberCarpools.forEach(cp => {
-                                  const member = cp.members?.find((m: any) => {
-                                    // Use attendeeIndex for stable identification (if available)
-                                    if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
-                                      return m.attendeeIndex === index;
+                              {/* Option 2: Join other's car */}
+                              {(() => {
+                                // Check if all members are already in carpools
+                                const membersNotInCarpool = attendeeNames.filter((name, index) => {
+                                  let isInCarpool = false;
+
+                                  memberCarpools.forEach(cp => {
+                                    const member = cp.members?.find((m: any) => {
+                                      // Use attendeeIndex for stable identification (if available)
+                                      if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
+                                        return m.attendeeIndex === index;
+                                      }
+                                      // Fallback to name matching (for old data)
+                                      const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                      return cleanName === name || m.name === name;
+                                    });
+                                    if (member) {
+                                      isInCarpool = true;
                                     }
-                                    // Fallback to name matching (for old data)
-                                    const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
-                                    return cleanName === name || m.name === name;
                                   });
-                                  if (member) {
-                                    isInCarpool = true;
-                                  }
+
+                                  return !isInCarpool;
                                 });
 
-                                return !isInCarpool;
-                              });
+                                // Only show option if there are members not in any carpool
+                                if (membersNotInCarpool.length === 0) {
+                                  return null;
+                                }
 
-                              // Only show button if there are members not in any carpool
-                              if (membersNotInCarpool.length === 0) {
-                                return null;
-                              }
-
-                              return (
-                                <button
-                                  onClick={() => {
-                                    setShowJoinCarpoolModal(true);
-                                    // Fetch all carpools to check if members are already in other carpools
-                                    if (allCarpools.length === 0) {
-                                      fetchAllCarpools();
-                                    }
-                                  }}
-                                  className="text-sm px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                                >
-                                  Join รถคนอื่น
-                                </button>
-                              );
-                            })()}
+                                return (
+                                  <button
+                                    onClick={() => {
+                                      setShowJoinCarpoolModal(true);
+                                      // Fetch all carpools to check if members are already in other carpools
+                                      if (allCarpools.length === 0) {
+                                        fetchAllCarpools();
+                                      }
+                                    }}
+                                    className="flex items-start gap-3 p-3 bg-white border-2 border-green-300 rounded-lg hover:border-green-500 hover:shadow-md transition-all text-left group"
+                                  >
+                                    <div className="text-3xl mt-1">🚐</div>
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors">ไปรถคนอื่น</p>
+                                      <p className="text-xs text-gray-600 mt-1">ต้องมีรหัสการจอง 6 หลัก ของรถที่คุณขอ Join</p>
+                                      <div className="mt-2 inline-block px-3 py-1 bg-green-600 text-white text-xs rounded-lg group-hover:bg-green-700 transition-colors">
+                                        เลือกรถที่ร่วม Join
+                                      </div>
+                                    </div>
+                                  </button>
+                                );
+                              })()}
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-gray-300">
+                              <a href="/carpool-guide" target="_blank" className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-xs flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                                ศึกษาขั้นตอนการลงทะเบียนแบบละเอียด
+                              </a>
+                            </div>
                           </div>
                         </div>
-
-                        {/* Members Status Overview - Show only members NOT in any carpool */}
-                        {userRegistration && attendeeNames.length > 0 && !carpoolLoading && (() => {
-                          // Filter to show only members who are NOT in any carpool
-                          const membersNotInCarpool = attendeeNames.filter((name, index) => {
-                            let isInCarpool = false;
-
-                            memberCarpools.forEach(cp => {
-                              const member = cp.members?.find((m: any) => {
-                                // Use attendeeIndex for stable identification (if available)
-                                if (m.attendeeIndex !== undefined && m.registrationId === userRegistration.registrationId) {
-                                  return m.attendeeIndex === index;
-                                }
-                                // Fallback to name matching (for old data)
-                                const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
-                                return cleanName === name || m.name === name;
-                              });
-                              if (member) {
-                                isInCarpool = true;
-                              }
-                            });
-
-                            return !isInCarpool;
-                          });
-
-                          // Only show the card if there are members not in any carpool
-                          if (membersNotInCarpool.length === 0) {
-                            return null;
-                          }
-
-                          return (
-                            <div className="mb-4 px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <p className="text-xs font-semibold text-gray-700">จัดการรายชื่อร่วม carpool:</p>
-                                {memberCarpools.length > 0 && (
-                                  <button
-                                    onClick={() => setShowJoinOwnCarpoolModal(true)}
-                                    className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                                  >
-                                    เข้าร่วม carpool
-                                  </button>
-                                )}
-                              </div>
-                              <div className="space-y-1">
-                                {membersNotInCarpool.map((name, index) => (
-                                  <div key={index} className="flex items-center justify-between text-xs">
-                                    <span className="font-medium text-gray-800">{name}</span>
-                                    <span className="text-rose-400 italic">
-                                      ยังไม่ระบุรถ
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })()}
 
                         {carpoolLoading ? (
                           <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
@@ -2377,9 +2338,9 @@ export default function EventDetailPage() {
                                             setShowInviteModal(true);
                                             fetchAllCarpools(); // Fetch all carpools for validation
                                           }}
-                                          className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                          className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                                         >
-                                          + ชวนเพื่อนจากรหัสลงทะเบียนอื่น
+                                          👥 ชวนเพื่อนไปด้วยกัน
                                         </button>
                                       </div>
                                     </div>
@@ -5330,11 +5291,21 @@ export default function EventDetailPage() {
       )}
 
       {/* Invite Members Modal */}
-      {showInviteModal && invitingToCarpoolId && (
+      {showInviteModal && invitingToCarpoolId && (() => {
+        // Find the carpool we're inviting to
+        const currentCarpool = memberCarpools.find(cp => cp.carpoolId === invitingToCarpoolId);
+        const carpoolLicensePlate = currentCarpool?.licensePlate || '';
+
+        return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">ชวนเพื่อนเข้า Carpool</h3>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">ชวนเพื่อนไปด้วยกัน</h3>
+                {carpoolLicensePlate && (
+                  <p className="text-sm text-gray-600 mt-1">ทะเบียนรถยนต์: <span className="font-semibold text-blue-700">{carpoolLicensePlate}</span></p>
+                )}
+              </div>
               <button
                 onClick={() => {
                   setShowInviteModal(false);
@@ -5352,26 +5323,94 @@ export default function EventDetailPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Instructions */}
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  <div className="text-sm text-blue-800">
-                    <p className="font-semibold mb-1">วิธีชวนเพื่อนเข้าร่วมรถ:</p>
-                    <ol className="list-decimal list-inside space-y-1 ml-1">
-                      <li>ขอรหัสการลงทะเบียน 6 หลัก (เช่น ABC123) จากเพื่อนที่ต้องการชวน</li>
-                      <li>พิมพ์รหัสลงทะเบียนในช่องค้นหาด้านล่าง แล้วกดปุ่มค้นหา</li>
-                      <li>เลือกชื่อผู้เดินทางที่ต้องการชวนขึ้นรถ (สามารถเลือกได้หลายคน)</li>
-                      <li>กดปุ่ม "ชวนเข้า Carpool" เพื่อยืนยัน</li>
-                    </ol>
+              {/* Section 1: Team Members Not In Carpool */}
+              {(() => {
+                // Filter team members not in any carpool
+                const membersNotInCarpool = attendeeNames.filter((name, index) => {
+                  let isInCarpool = false;
+                  memberCarpools.forEach(cp => {
+                    const member = cp.members?.find((m: any) => {
+                      if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
+                        return m.attendeeIndex === index;
+                      }
+                      const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                      return cleanName === name || m.name === name;
+                    });
+                    if (member) isInCarpool = true;
+                  });
+                  return !isInCarpool;
+                });
+
+                if (membersNotInCarpool.length === 0) return null;
+
+                return (
+                  <div className="mb-6 p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                    <h4 className="font-semibold text-green-900 mb-3">
+                      ยังมีสมาชิกในทีม {membersNotInCarpool.length} ท่าน ที่ยังไม่ได้ join รถไปกับใคร
+                    </h4>
+                    <div className="space-y-2 mb-4">
+                      {membersNotInCarpool.map((name, index) => {
+                        const isSelected = selectedMembersToInvite.includes(name);
+                        return (
+                          <label
+                            key={index}
+                            className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'border-green-500 bg-green-100'
+                                : 'border-green-200 hover:bg-green-50'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedMembersToInvite([...selectedMembersToInvite, name]);
+                                } else {
+                                  setSelectedMembersToInvite(selectedMembersToInvite.filter(n => n !== name));
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <span className="flex-1 text-sm font-medium text-gray-900">{name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {selectedMembersToInvite.length > 0 && (
+                      <button
+                        onClick={handleInviteMembers}
+                        disabled={inviting}
+                        className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium"
+                      >
+                        {inviting ? 'กำลังเพิ่ม...' : `เพิ่มเพื่อนไปรถคันนี้ (${selectedMembersToInvite.length} คน)`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Section 2: Invite Friends from Other Agents */}
+              <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-3">ชวนเพื่อนจากเอเจ้นท์อื่น</h4>
+
+                <div className="mb-4 p-3 bg-white border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <div className="text-xs text-blue-800">
+                      <p className="font-semibold mb-1">วิธีชวน:</p>
+                      <ol className="list-decimal list-inside space-y-0.5 ml-1">
+                        <li>ขอรหัสการลงทะเบียน 6 หลัก (เช่น ABC123)</li>
+                        <li>กดค้นหา เลือกสมาชิก และกดยืนยัน</li>
+                      </ol>
+                    </div>
                   </div>
                 </div>
-              </div>
 
               {/* Search Registration */}
-              <div className="mb-6">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   ค้นหารหัสลงทะเบียน
                 </label>
@@ -5517,6 +5556,7 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               )}
+              </div>
             </div>
 
             {searchedRegistration && (
@@ -5545,7 +5585,8 @@ export default function EventDetailPage() {
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Toast notifications */}
       <Toast toasts={toast.toasts} onRemove={toast.removeToast} />

@@ -2047,7 +2047,10 @@ export default function EventDetailPage() {
                             หากคุณจะขับรถไปเอง กรุณาลงทะเบียนรถยนต์ของคุณ โดยกด +สร้าง Carpool<br />
                             ทั้งนี้คุณสามารถเชิญเอเจ้นท์จากรหัสลงทะเบียนอื่นร่วมไปกับคุณด้วยได้<br />
                             กรณีที่คุณร่วมไปกับรถของเอเจ้นท์ท่านอื่น กรุณากด Join รถคนอื่น<br />
-                            <span className="text-purple-600 font-semibold">✨ 1 เอเจ้นท์สามารถสร้าง Carpool ได้มากกว่า 1 คัน</span>
+                            <span className="text-purple-600 font-semibold">✨ 1 เอเจ้นท์สามารถสร้าง Carpool ได้มากกว่า 1 คัน</span><br />
+                            <a href="/carpool-guide" target="_blank" className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-sm">
+                              📖 ศึกษาขั้นตอนการลงทะเบียน คลิกที่นี่
+                            </a>
                           </p>
                           <div className="flex gap-2">
                             <button
@@ -2231,7 +2234,7 @@ export default function EventDetailPage() {
                                         ) : (
                                           <div className="flex items-center gap-2">
                                             <p className="text-lg font-semibold text-blue-900">
-                                              {ownedCarpool.licensePlate}
+                                              เลขทะเบียน: {ownedCarpool.licensePlate}
                                             </p>
                                             <button
                                               onClick={() => {
@@ -2334,7 +2337,7 @@ export default function EventDetailPage() {
                                         <div className="flex items-center justify-between">
                                           <div className="flex-1">
                                             <p className="text-lg font-semibold text-green-900">
-                                              {carpool.licensePlate}
+                                              เลขทะเบียน: {carpool.licensePlate}
                                             </p>
                                             <p className="text-xs text-green-700">
                                               เจ้าของ: {carpool.ownerCompanyName}

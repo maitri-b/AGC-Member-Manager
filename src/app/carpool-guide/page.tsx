@@ -112,45 +112,10 @@ export default function CarpoolGuidePage() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar - Table of Contents */}
-          <aside className="lg:col-span-1">
-            <div className="sticky top-4 bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-                สารบัญ
-              </h2>
-              <nav className="space-y-2">
-                <a href="#intro" className="block text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
-                  📖 ระบบ Carpool คืออะไร?
-                </a>
-                <a href="#case1" className="block text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
-                  🚙 กรณีที่ 1: ขับรถไปเอง
-                </a>
-                <a href="#case2" className="block text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
-                  🚐 กรณีที่ 2: Carpool กับเอเจ้นท์อื่น
-                </a>
-                <a href="#method1" className="block text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors ml-4">
-                  📝 วิธีที่ 1: เจ้าของรถเพิ่มชื่อ
-                </a>
-                <a href="#method2" className="block text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors ml-4">
-                  🔍 วิธีที่ 2: ผู้ Join ขอเข้าเอง
-                </a>
-                <a href="#faq" className="block text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
-                  ❓ คำถามที่พบบ่อย (FAQ)
-                </a>
-                <a href="#comparison" className="block text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
-                  📊 ตารางเปรียบเทียบ
-                </a>
-              </nav>
-            </div>
-          </aside>
-
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <div className="space-y-8">
           {/* Main Content Area */}
-          <main className="lg:col-span-3 space-y-8">
+          <main className="space-y-8">
             {/* Introduction */}
             <section id="intro" className="bg-white rounded-xl shadow-lg p-8 border border-gray-200 scroll-mt-4">
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -210,12 +175,12 @@ export default function CarpoolGuidePage() {
                   <p className="text-gray-700 mb-4">
                     เลื่อนหน้าลงมาที่ส่วน <strong>🚗 การลงทะเบียนรถยนต์ และรวมไปด้วยกัน (Carpool)</strong>
                   </p>
-                  <div className="rounded-lg overflow-hidden shadow-md border border-gray-200">
+                  <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 max-w-2xl">
                     <Image
-                      src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/02.jpg"
+                      src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/01.jpg"
                       alt="หน้า Carpool เริ่มต้น"
-                      width={800}
-                      height={400}
+                      width={560}
+                      height={280}
                       className="w-full h-auto"
                     />
                   </div>
@@ -237,12 +202,12 @@ export default function CarpoolGuidePage() {
                     <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
                     กรอกข้อมูลรถ
                   </h3>
-                  <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4">
+                  <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4 max-w-2xl">
                     <Image
-                      src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/03.jpg"
+                      src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/02.jpg"
                       alt="ฟอร์มสร้าง Carpool"
-                      width={800}
-                      height={400}
+                      width={560}
+                      height={280}
                       className="w-full h-auto"
                     />
                   </div>
@@ -282,12 +247,12 @@ export default function CarpoolGuidePage() {
                     <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">5</span>
                     ตรวจสอบ Carpool ที่สร้าง
                   </h3>
-                  <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4">
+                  <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4 max-w-2xl">
                     <Image
-                      src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/01.jpg"
+                      src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/03.jpg"
                       alt="Carpool ของคุณ"
-                      width={800}
-                      height={400}
+                      width={560}
+                      height={280}
                       className="w-full h-auto"
                     />
                   </div>
@@ -393,12 +358,12 @@ export default function CarpoolGuidePage() {
                       <span className="bg-purple-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
                       ค้นหารหัสลงทะเบียน
                     </h4>
-                    <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4">
+                    <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4 max-w-2xl">
                       <Image
-                        src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/05.jpg"
+                        src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/04.jpg"
                         alt="ฟอร์มชวนเพื่อน"
-                        width={800}
-                        height={400}
+                        width={560}
+                        height={280}
                         className="w-full h-auto"
                       />
                     </div>
@@ -507,12 +472,12 @@ export default function CarpoolGuidePage() {
                       <span className="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
                       ค้นหารถที่ต้องการ Join
                     </h4>
-                    <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4">
+                    <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 mb-4 max-w-2xl">
                       <Image
-                        src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/04.jpg"
+                        src="https://storage.googleapis.com/agents-club-event-slips/images/howto_carpool/05.jpg"
                         alt="ฟอร์มเข้าร่วมรถ"
-                        width={800}
-                        height={400}
+                        width={560}
+                        height={280}
                         className="w-full h-auto"
                       />
                     </div>
@@ -642,58 +607,6 @@ export default function CarpoolGuidePage() {
                     )}
                   </div>
                 ))}
-              </div>
-            </section>
-
-            {/* Comparison Table */}
-            <section id="comparison" className="bg-white rounded-xl shadow-lg p-8 border border-gray-200 scroll-mt-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <span className="text-3xl">📊</span>
-                สรุปความแตกต่าง: วิธีที่ 1 vs วิธีที่ 2
-              </h2>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-blue-100 to-green-100">
-                      <th className="border border-gray-300 px-4 py-3 text-left font-bold">หัวข้อ</th>
-                      <th className="border border-gray-300 px-4 py-3 text-left font-bold">วิธีที่ 1: เจ้าของรถเพิ่มชื่อ</th>
-                      <th className="border border-gray-300 px-4 py-3 text-left font-bold">วิธีที่ 2: ผู้ Join ขอเข้าเอง</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white">
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 font-semibold bg-gray-50">ผู้ดำเนินการ</td>
-                      <td className="border border-gray-300 px-4 py-3">เจ้าของรถ</td>
-                      <td className="border border-gray-300 px-4 py-3">ผู้ต้องการเข้าร่วม</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 font-semibold bg-gray-50">ต้องการรหัส</td>
-                      <td className="border border-gray-300 px-4 py-3">รหัสของผู้ที่จะชวน</td>
-                      <td className="border border-gray-300 px-4 py-3">รหัสของเจ้าของรถ</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 font-semibold bg-gray-50">ความเร็ว</td>
-                      <td className="border border-gray-300 px-4 py-3">⚡⚡⚡ รวดเร็วมาก</td>
-                      <td className="border border-gray-300 px-4 py-3">⚡⚡ รวดเร็ว</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 font-semibold bg-gray-50">ความสะดวก</td>
-                      <td className="border border-gray-300 px-4 py-3">🎯 ง่ายสำหรับเจ้าของรถ</td>
-                      <td className="border border-gray-300 px-4 py-3">🎯 ง่ายสำหรับผู้ Join</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 font-semibold bg-gray-50">ข้อดี</td>
-                      <td className="border border-gray-300 px-4 py-3">ควบคุมได้ว่าใครขึ้นรถ</td>
-                      <td className="border border-gray-300 px-4 py-3">ไม่ต้องรอเจ้าของรถ</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-300 px-4 py-3 font-semibold bg-gray-50">ข้อควรระวัง</td>
-                      <td className="border border-gray-300 px-4 py-3">ผู้ Join ต้องรอ</td>
-                      <td className="border border-gray-300 px-4 py-3">ต้องรู้รหัสลงทะเบียนเจ้าของรถ</td>
-                    </tr>
-                  </tbody>
-                </table>
               </div>
             </section>
 

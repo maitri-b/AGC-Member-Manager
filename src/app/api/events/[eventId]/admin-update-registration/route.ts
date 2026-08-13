@@ -371,6 +371,70 @@ export async function PUT(
     }
     await updateEventRegistrationInFirestore(registrationId, firestoreUpdateData);
 
+    // ✅ NEW: Update carpool member names if attendeeNames changed
+    if (updateData.attendee_names !== undefined) {
+      try {
+        // Parse new attendee names
+        const newAttendeeNames = typeof updateData.attendee_names === 'string'
+          ? JSON.parse(updateData.attendee_names)
+          : updateData.attendee_names;
+
+        if (Array.isArray(newAttendeeNames)) {
+          // Find all carpools where this registration is a member
+          const carpoolsSnapshot = await db.collection('carpools')
+            .where('eventId', '==', eventId)
+            .where('status', '!=', 'deleted')
+            .get();
+
+          const carpoolUpdates: Promise<void>[] = [];
+
+          for (const carpoolDoc of carpoolsSnapshot.docs) {
+            const carpoolData = carpoolDoc.data();
+            const members = carpoolData.members || [];
+
+            // Check if this registration has members in this carpool
+            let hasUpdates = false;
+            const updatedMembers = members.map((member: any) => {
+              if (member.registrationId === registrationId && member.attendeeIndex !== undefined) {
+                const index = member.attendeeIndex;
+                const newName = newAttendeeNames[index];
+
+                if (newName !== undefined && newName !== member.name) {
+                  hasUpdates = true;
+                  return {
+                    ...member,
+                    name: newName,
+                  };
+                }
+              }
+              return member;
+            });
+
+            // Update carpool if there were changes
+            if (hasUpdates) {
+              carpoolUpdates.push(
+                carpoolDoc.ref.update({
+                  members: updatedMembers,
+                  updatedAt: new Date().toISOString(),
+                })
+              );
+              console.log(`[Admin Update] Updating carpool ${carpoolDoc.id} with new attendee names`);
+            }
+          }
+
+          // Wait for all carpool updates to complete
+          if (carpoolUpdates.length > 0) {
+            await Promise.all(carpoolUpdates);
+            console.log(`[Admin Update] Updated ${carpoolUpdates.length} carpool(s) with new attendee names`);
+          }
+        }
+      } catch (carpoolUpdateError) {
+        console.error('[Admin Update] Error updating carpool member names:', carpoolUpdateError);
+        // Don't fail the request if carpool update fails
+        // The registration update was successful
+      }
+    }
+
     // Log the activity
     try {
       await logRegistrationUpdate({

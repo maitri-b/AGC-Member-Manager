@@ -5330,10 +5330,10 @@ export default function EventDetailPage() {
             <div className="flex-1 overflow-y-auto p-6">
               {/* Section 1: Team Members Not In Carpool */}
               {(() => {
-                // Filter team members not in any carpool
+                // Filter team members not in any carpool (use allCarpools to check all carpools in event)
                 const membersNotInCarpool = attendeeNames.filter((name, index) => {
                   let isInCarpool = false;
-                  memberCarpools.forEach(cp => {
+                  allCarpools.forEach(cp => {
                     const member = cp.members?.find((m: any) => {
                       if (m.attendeeIndex !== undefined && m.registrationId === userRegistration?.registrationId) {
                         return m.attendeeIndex === index;

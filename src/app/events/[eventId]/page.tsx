@@ -2011,14 +2011,20 @@ export default function EventDetailPage() {
                                           <li>ยืนยันการลบ - Carpool จะถูกลบทั้งคัน</li>
                                         </ol>
                                       </div>
+                                      <div className="pt-2 border-t border-gray-200">
+                                        <p className="font-semibold text-red-700 mb-1">🚪 วิธีออกจาก Carpool</p>
+                                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                                          <li>เจ้าของรถ/สมาชิก กดปุ่ม "ออกจาก Carpool" ข้างชื่อสมาชิก</li>
+                                          <li>ยืนยันการออก - สมาชิกจะออกจาก Carpool</li>
+                                        </ol>
+                                      </div>
                                       <div className="pt-2 border-t border-gray-200 bg-yellow-50 -mx-4 -mb-4 p-3 rounded-b-lg">
                                         <p className="text-yellow-800 font-medium">💡 ข้อควรทราบ:</p>
                                         <ul className="list-disc list-inside space-y-0.5 ml-2 mt-1 text-yellow-700">
                                           <li>สมาชิก 1 คนสามารถอยู่ได้แค่ 1 รถเท่านั้น</li>
-                                          <li>เจ้าของรถสามารถลบสมาชิกออกได้โดยกดปุ่ม "ลบ" ข้างชื่อสมาชิก</li>
-                                          <li>สมาชิกสามารถลบตัวเองออกจากรถได้</li>
                                           <li>สามารถแก้ไขเลขทะเบียนได้โดยกดปุ่ม "✏️ แก้ไข"</li>
                                           <li>1 เอเจ้นท์สามารถสร้างได้มากกว่า 1 คัน</li>
+                                          <li>หากต้องการดูขั้นตอนโดยละเอียด <a href="/carpool-guide" target="_blank" className="text-blue-600 hover:underline font-semibold">คลิกที่นี่</a></li>
                                         </ul>
                                       </div>
                                     </div>

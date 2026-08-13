@@ -494,7 +494,7 @@ export function personalizeMessage(
     deadlineText: formatDeadlineText(deadline),
     daysOverdue,
     registrationId: registration.registrationId,
-    eventLink: `${appBaseUrl}/events/${event.eventId}`,
+    eventLink: `${appBaseUrl}/events/${encodeURIComponent(event.eventId)}`,
   };
 
   // Replace all variables in template

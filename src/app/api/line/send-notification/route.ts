@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
                   .replace(/{LINE_NAME}/g, userData.lineDisplayName || userData.displayName || userData.name || userData.fullNameTH || '')
                   .replace(/{CONTACT_NAME}/g, userData.fullNameTH || userData.lineDisplayName || userData.displayName || userData.name || '')
                   .replace(/{COMPANY_NAME}/g, userData.companyNameTH || userData.companyNameEN || '')
-                  .replace(/{EVENT_URL}/g, `${baseUrl}/events/${eventId}`)
+                  .replace(/{EVENT_URL}/g, `${baseUrl}/events/${encodeURIComponent(eventId)}`)
                   .replace(/{EVENT_NAME}/g, eventName || '');
               } else {
                 // Fallback if user not found
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
                   .replace(/{LINE_NAME}/g, '')
                   .replace(/{CONTACT_NAME}/g, '')
                   .replace(/{COMPANY_NAME}/g, '')
-                  .replace(/{EVENT_URL}/g, `${baseUrl}/events/${eventId}`)
+                  .replace(/{EVENT_URL}/g, `${baseUrl}/events/${encodeURIComponent(eventId)}`)
                   .replace(/{EVENT_NAME}/g, eventName || '');
               }
             } catch (err) {

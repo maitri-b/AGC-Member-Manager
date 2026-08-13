@@ -378,7 +378,7 @@ ${shortDescription}${needsTruncation ? '\n\nอ่านเพิ่มเติ
 
 เชิญชวนให้เข้าร่วมกิจกรรม
 คลิกเพื่อดูรายละเอียดและลงทะเบียน:
-${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
+${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`;
   }, [eventId, eventName, eventDescription]);
 
   if (!isOpen) return null;
@@ -725,7 +725,7 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`;
                           .replace(/{LINE_NAME}/g, '[ชื่อ LINE ของสมาชิก]')
                           .replace(/{CONTACT_NAME}/g, '[ชื่อติดต่อ]')
                           .replace(/{COMPANY_NAME}/g, '[ชื่อบริษัท]')
-                          .replace(/{EVENT_URL}/g, `${process.env.NEXT_PUBLIC_BASE_URL}/events/${eventId}`)
+                          .replace(/{EVENT_URL}/g, `${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`)
                           .replace(/{EVENT_NAME}/g, eventName)
                       : '(ยังไม่ได้กรอกข้อความ)')}
                 </pre>

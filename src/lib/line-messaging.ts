@@ -422,7 +422,7 @@ export async function sendEventRegistrationConfirmation(
   const hasPayment = eventData.registrationFee > 0;
   const isDepositMode = eventData.paymentMode === 'deposit' && hasPayment;
   const baseUrl = process.env.NEXTAUTH_URL || 'https://agentsclub.vercel.app';
-  const eventDetailUrl = `${baseUrl}/events/${eventData.eventId}`;
+  const eventDetailUrl = `${baseUrl}/events/${encodeURIComponent(eventData.eventId)}`;
 
   // Format Thai date/time for deadlines
   const formatThaiDateTime = (isoString: string): string => {
@@ -791,7 +791,7 @@ export async function sendEventRegistrationConfirmationOnBehalf(
   const hasPayment = eventData.registrationFee > 0;
   const isDepositMode = eventData.paymentMode === 'deposit' && hasPayment;
   const baseUrl = process.env.NEXTAUTH_URL || 'https://agentsclub.vercel.app';
-  const eventDetailUrl = `${baseUrl}/events/${eventData.eventId}`;
+  const eventDetailUrl = `${baseUrl}/events/${encodeURIComponent(eventData.eventId)}`;
 
   // Format Thai date/time for deadlines
   const formatThaiDateTime = (isoString: string): string => {

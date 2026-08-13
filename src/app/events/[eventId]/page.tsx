@@ -1921,6 +1921,7 @@ export default function EventDetailPage() {
                               setAttendeeNames([...tempAttendeeNames]);
                               setSpecialRequests(tempSpecialRequests);
                               fetchEventDetail(); // Refresh data
+                              fetchMemberCarpool(); // Refresh carpool data to update member names in joined carpools
                             } catch (err) {
                               toast.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
                             } finally {

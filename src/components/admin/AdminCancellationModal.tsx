@@ -183,20 +183,44 @@ export default function AdminCancellationModal({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               เหตุผลการยกเลิก <span className="text-red-500">*</span>
             </label>
+
+            {/* Warning about LINE notification */}
+            <div className="mb-3 bg-orange-50 border-l-4 border-orange-500 rounded-r-lg p-4">
+              <div className="flex gap-3">
+                <svg className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-orange-900 mb-1">⚠️ สำคัญ!</p>
+                  <p className="text-sm text-orange-800">
+                    ข้อความเหตุผลนี้จะถูกส่งไปยัง <strong>LINE แจ้งเตือนการยกเลิก</strong> ให้สมาชิกทราบด้วย
+                  </p>
+                  <p className="text-xs text-orange-700 mt-1">
+                    กรุณาระบุข้อความที่ชัดเจน สุภาพ และเป็นมืออาชีพ
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <textarea
               value={cancellationReason}
               onChange={(e) => setCancellationReason(e.target.value)}
-              rows={3}
+              rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
-              placeholder="ระบุเหตุผลที่ยกเลิก (สำหรับ admin)"
+              placeholder="ตัวอย่าง: ขออภัยค่ะ เนื่องจากกิจกรรมเต็มแล้ว ทางทีมงานจึงต้องยกเลิกการลงทะเบียนของท่าน จะมีการคืนเงินตามเงื่อนไขที่กำหนดค่ะ"
               disabled={isSubmitting}
               maxLength={500}
             />
-            {cancellationReason.length > 0 && (
-              <p className="text-xs text-gray-500 mt-1">
-                {cancellationReason.length}/500 ตัวอักษร
+            <div className="flex justify-between items-center mt-1">
+              <p className="text-xs text-gray-500">
+                💡 ข้อความนี้จะแสดงใน LINE notification
               </p>
-            )}
+              {cancellationReason.length > 0 && (
+                <p className="text-xs text-gray-500">
+                  {cancellationReason.length}/500 ตัวอักษร
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Warning */}

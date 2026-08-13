@@ -1344,6 +1344,69 @@ export default function EventDetailPage() {
           {/* Right Column - Registration Status & Payment Info (42%) */}
           <div className="lg:col-span-5">
             <div className="lg:sticky lg:top-24 space-y-6">
+              {/* Quick Navigation Menu - Only show when user is registered */}
+              {userRegistration && (
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4 shadow-sm">
+                  <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    เมนูด่วน
+                  </h3>
+                  <div className="space-y-2">
+                    {/* Attendee Names - Always show when registered */}
+                    <a
+                      href="#attendee-names"
+                      className="flex items-center gap-3 p-3 bg-white hover:bg-blue-50 border border-blue-200 rounded-lg transition-all group"
+                    >
+                      <svg className="w-5 h-5 text-blue-600 group-hover:text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-700">แก้ไขรายชื่อและความต้องการพิเศษ</p>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </a>
+
+                    {/* Carpool - Only show if carpool is active */}
+                    {event.carpoolSettings?.carpoolActive && (
+                      <a
+                        href="#carpool-section"
+                        className="flex items-center gap-3 p-3 bg-white hover:bg-blue-50 border border-blue-200 rounded-lg transition-all group"
+                      >
+                        <svg className="w-5 h-5 text-blue-600 group-hover:text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-700">การลงทะเบียนรถยนต์ และลงชื่อไปด้วยกัน</p>
+                        </div>
+                        <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </a>
+                    )}
+
+                    {/* Payment - Always show when registered */}
+                    <a
+                      href="#payment-section"
+                      className="flex items-center gap-3 p-3 bg-white hover:bg-blue-50 border border-blue-200 rounded-lg transition-all group"
+                    >
+                      <svg className="w-5 h-5 text-blue-600 group-hover:text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-700">รายละเอียดและประวัติการชำระเงิน</p>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {/* Registration Button - Show when not registered */}
               {!userRegistration && !isFull && event.registrationOpen && (
                 <div className="bg-white rounded-lg shadow p-6">
@@ -1763,7 +1826,7 @@ export default function EventDetailPage() {
                   )}
 
                   {/* Attendee Names Section */}
-                  <div className="bg-white border border-gray-300 rounded-lg p-4">
+                  <div id="attendee-names" className="bg-white border border-gray-300 rounded-lg p-4 scroll-mt-24">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-semibold text-gray-900">
                         รายชื่อผู้เข้าร่วมกิจกรรม
@@ -1948,7 +2011,7 @@ export default function EventDetailPage() {
                   </div>
 
                   {/* ==================== CARPOOL CARD START ==================== */}
-                  <div className="bg-white border border-gray-300 rounded-lg p-4 mb-6">
+                  <div id="carpool-section" className="bg-white border border-gray-300 rounded-lg p-4 mb-6 scroll-mt-24">
                     {event.hasCarpoolFeature && (event.carpoolSettings?.carpoolActive !== false || isCommitteeOrAdmin) && (
                       <div>
                         <div className="mb-4">
@@ -2559,7 +2622,7 @@ export default function EventDetailPage() {
                     const isFreeWithDiscount = userRegistration.totalAmount === 0 && hasDiscounts;
 
                     return (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <div id="payment-section" className="bg-blue-50 border border-blue-200 rounded-lg p-6 scroll-mt-24">
                       <h3 className="font-semibold text-blue-900 mb-4">รายละเอียดการชำระเงิน</h3>
 
                       {/* ✅ Show free with discount notice */}

@@ -107,7 +107,7 @@ export default function CarpoolGuidePage() {
       <header className="bg-gradient-to-r from-blue-600 to-green-600 text-white py-8 shadow-lg">
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-4xl font-bold mb-2">🚗 คู่มือการใช้งานระบบ Carpool</h1>
-          <p className="text-blue-100">การลงทะเบียนรถยนต์และการรวมรถไปด้วยกัน | Agents Club</p>
+          <p className="text-blue-100">การลงทะเบียนรถยนต์และลงชื่อไปด้วยกัน | Agents Club</p>
         </div>
       </header>
 
@@ -271,7 +271,7 @@ export default function CarpoolGuidePage() {
                     เข้าสู่หน้า Carpool
                   </h3>
                   <p className="text-gray-700 mb-4">
-                    เลื่อนหน้าลงมาที่ส่วน <strong>🚗 การลงทะเบียนรถยนต์ และรวมไปด้วยกัน (Carpool)</strong>
+                    เลื่อนหน้าลงมาที่ส่วน <strong>🚗 การลงทะเบียนรถยนต์ และลงชื่อไปด้วยกัน (Carpool)</strong>
                   </p>
                   <div className="rounded-lg overflow-hidden shadow-md border border-gray-200 max-w-2xl">
                     <Image

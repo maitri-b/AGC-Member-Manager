@@ -1956,7 +1956,7 @@ export default function EventDetailPage() {
                           <div className="mb-3">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="text-base font-semibold text-gray-900">
-                                🚗 การลงทะเบียนรถยนต์ และรวมไปด้วยกัน (Carpool)
+                                🚗 การลงทะเบียนรถยนต์ และลงชื่อไปด้วยกัน (Carpool)
                               </h3>
                               <div className="relative">
                                 <button
@@ -1974,8 +1974,8 @@ export default function EventDetailPage() {
                                   <div className="absolute left-0 top-6 z-50 w-80 p-4 bg-white border-2 border-blue-300 rounded-lg shadow-xl">
                                     <div className="space-y-3 text-xs text-gray-700">
                                       <div>
-                                        <p className="font-semibold text-blue-700 mb-1">🚗 การรวมรถไปด้วยกัน (Carpool)</p>
-                                        <p>ระบบลงทะเบียนรถและรวมรถเพื่อให้เอเจ้นท์เดินทางไปงานร่วมกัน ช่วยลดค่าใช้จ่ายและสะดวกในการจัดการที่จอดรถ</p>
+                                        <p className="font-semibold text-blue-700 mb-1">🚗 การลงชื่อไปด้วยกัน (Carpool)</p>
+                                        <p>ระบบลงทะเบียนรถและลงชื่อไปด้วยกันเพื่อให้เอเจ้นท์เดินทางไปงานร่วมกัน ช่วยลดค่าใช้จ่ายและสะดวกในการจัดการที่จอดรถ</p>
                                       </div>
                                       <div className="pt-2 border-t border-gray-200">
                                         <p className="font-semibold text-green-700 mb-1">📝 วิธีสร้าง Carpool (สำหรับเจ้าของรถ)</p>

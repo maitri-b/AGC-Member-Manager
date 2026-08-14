@@ -7,31 +7,41 @@ import { PartyTable, TableMember, PartyTableSettings } from '@/types/partyTable'
 function normalizeMemberName(name: any): string {
   if (!name) return '';
 
-  // If it's already a string and not JSON, return it
-  if (typeof name === 'string' && !name.startsWith('[') && !name.startsWith('{')) {
-    return name.trim();
-  }
+  let current = name;
 
-  // If it's an array, join with comma
-  if (Array.isArray(name)) {
-    return name.join(', ').trim();
-  }
-
-  // Try to parse if it looks like JSON
-  if (typeof name === 'string' && (name.startsWith('[') || name.startsWith('{'))) {
+  // Handle multiple levels of JSON encoding
+  // Keep parsing until we get a non-JSON string or array
+  while (typeof current === 'string' && (current.startsWith('[') || current.startsWith('{'))) {
     try {
-      const parsed = JSON.parse(name);
+      const parsed = JSON.parse(current);
+
+      // If we got an array, join it and return
       if (Array.isArray(parsed)) {
+        // If array has only one element, return it
+        if (parsed.length === 1) {
+          current = parsed[0];
+          // Continue loop in case it's still JSON
+          continue;
+        }
+        // Multiple elements: join with comma
         return parsed.join(', ').trim();
       }
-      return String(parsed).trim();
+
+      // If parsed to something else, update current and continue
+      current = parsed;
     } catch {
-      // If parsing fails, return the original string
-      return name.trim();
+      // If parsing fails, break and return what we have
+      break;
     }
   }
 
-  return String(name).trim();
+  // If it's an array at this point, join it
+  if (Array.isArray(current)) {
+    return current.join(', ').trim();
+  }
+
+  // Return as string
+  return String(current).trim();
 }
 
 // Helper function to parse attendeeNames from database format

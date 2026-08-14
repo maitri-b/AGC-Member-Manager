@@ -203,11 +203,14 @@ export default function PartyTableManagementModal({
         throw new Error(errorData.error || 'Failed to assign table number');
       }
 
-      alert(`จัดเลขโต๊ะ #${tableNumber} สำเร็จ!`);
+      // Wait for response to complete before refreshing
+      await response.json();
       await fetchTables();
+
+      return true; // Success
     } catch (err) {
       console.error('Error assigning table number:', err);
-      alert(err instanceof Error ? err.message : 'Failed to assign table number');
+      throw err; // Re-throw to be handled by caller
     }
   };
 
@@ -428,6 +431,7 @@ export default function PartyTableManagementModal({
         await handleAssignTableNumber(selectedGroupForAssign, selectedTableNumberForAssign);
         setShowAssignModal(false);
         setSelectedGroupForAssign(null);
+        alert(`จัดเลขโต๊ะ #${selectedTableNumberForAssign} สำเร็จ!`);
       }
       // Case 2: Create new group from selected members
       else if (assignModalTab === 'registrations' && selectedMembersForNewGroup.length > 0) {
@@ -1405,82 +1409,79 @@ function TabTableNumbers({
         <p className="text-sm text-gray-600 mb-4">
           คลิกที่ช่องสีเทาเพื่อจัดสมาชิกเข้าโต๊ะ • ช่องสีม่วงคือโต๊ะที่จัดแล้ว
         </p>
-        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {tableSlots.map((slot) => {
             const isOccupied = !!slot.table;
 
             return (
               <div key={slot.tableNumber} className="relative">
-                <button
-                  onClick={() => {
-                    if (!isOccupied) {
-                      onTableNumberClick(slot.tableNumber);
-                    }
-                  }}
-                  disabled={isOccupied}
-                  className={`w-full aspect-square rounded-lg font-semibold text-sm transition-all ${
-                    isOccupied
-                      ? 'bg-purple-600 text-white cursor-default'
-                      : 'bg-gray-100 text-gray-700 hover:bg-purple-100 hover:border-purple-400 border-2 border-gray-200'
-                  }`}
-                >
-                  #{slot.tableNumber}
-                </button>
-
-                {isOccupied && slot.table && (
-                  <div className="absolute -bottom-2 -right-2 group">
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => onChangeTableNumber(slot.table!)}
-                        className="p-1 bg-white rounded-full shadow-md hover:bg-gray-100"
-                        title="เปลี่ยนเลขโต๊ะ"
-                      >
-                        <svg
-                          className="w-3 h-3 text-gray-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                {/* Table Number Card */}
+                <div className={`border-2 rounded-lg overflow-hidden ${
+                  isOccupied ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-white'
+                }`}>
+                  {/* Header with Table Number */}
+                  <div className={`p-3 flex items-center justify-between ${
+                    isOccupied ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    <span className="font-semibold">โต๊ะ {slot.tableNumber}</span>
+                    {isOccupied && slot.table && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => onChangeTableNumber(slot.table!)}
+                          className="p-1 bg-white bg-opacity-20 rounded hover:bg-opacity-30"
+                          title="เปลี่ยนเลขโต๊ะ"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => onUnassignTableNumber(slot.table!.tableId)}
-                        className="p-1 bg-white rounded-full shadow-md hover:bg-red-100"
-                        title="ยกเลิกเลขโต๊ะ"
-                      >
-                        <svg
-                          className="w-3 h-3 text-red-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => onUnassignTableNumber(slot.table!.tableId)}
+                          className="p-1 bg-white bg-opacity-20 rounded hover:bg-opacity-30"
+                          title="ยกเลิกการจัดเลขโต๊ะ"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Tooltip on hover */}
-                    <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 w-48">
-                      <div className="bg-gray-800 text-white text-xs rounded-lg p-2 shadow-lg">
-                        <p className="font-medium">
-                          {slot.table.tableGroupName || `โต๊ะของ ${slot.table.hostCompanyName}`}
-                        </p>
-                        <p className="text-gray-300 mt-1">{slot.table.members.length} คน</p>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       </div>
-                    </div>
+                    )}
                   </div>
-                )}
+
+                  {/* Content */}
+                  <div className="p-3">
+                    {isOccupied && slot.table ? (
+                      <div className="space-y-2">
+                        {/* Group Name */}
+                        <p className="font-medium text-sm text-gray-900">
+                          {slot.table.tableGroupName || `กลุ่มโต๊ะ: ${slot.table.hostCompanyName}`}
+                        </p>
+
+                        {/* Member Count */}
+                        <p className="text-xs text-gray-600">
+                          {slot.table.members.length} / {defaultSeats} คน
+                        </p>
+
+                        {/* Member List */}
+                        <div className="space-y-1 mt-2 max-h-32 overflow-y-auto">
+                          {slot.table.members.map((member, idx) => (
+                            <div key={idx} className="text-xs text-gray-700 flex items-start gap-1">
+                              <span className="text-purple-600">•</span>
+                              <span className="flex-1">{member.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => onTableNumberClick(slot.tableNumber)}
+                        className="w-full py-6 text-sm text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
+                      >
+                        + จัดสมาชิกเข้าโต๊ะ
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })}

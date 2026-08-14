@@ -2497,7 +2497,7 @@ export default function EventDetailPage() {
 
                   {/* ==================== PARTY TABLE CARD START ==================== */}
                   <PartyTableSection
-                    eventId={params.eventId}
+                    eventId={Array.isArray(params.eventId) ? params.eventId[0] : params.eventId}
                     event={event}
                     userRegistration={userRegistration}
                     session={session}

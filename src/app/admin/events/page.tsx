@@ -8,6 +8,7 @@ import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { AttendeeType, RoomType, PriceTier, CancellationPolicy } from '@/types/event';
 import { CarpoolSettings } from '@/types/carpool';
+import { PartyTableSettings } from '@/types/partyTable';
 import { formatEventDateRange } from '@/lib/date-utils';
 import CancellationPolicySettings from '@/components/admin/CancellationPolicySettings';
 
@@ -72,6 +73,12 @@ interface Event {
   useAttendeeTypePricing?: boolean;
   attendeeTypes?: AttendeeType[];
   roomTypes?: RoomType[];
+  // Carpool feature (New)
+  hasCarpoolFeature?: boolean;
+  carpoolSettings?: CarpoolSettings;
+  // Party Table feature (New)
+  hasPartyTableFeature?: boolean;
+  partyTableSettings?: PartyTableSettings;
   // Cancellation policy (New)
   cancellationPolicy?: CancellationPolicy;
   createdAt: string;
@@ -152,6 +159,9 @@ interface EventFormData {
   // Carpool feature (New)
   hasCarpoolFeature?: boolean;
   carpoolSettings?: CarpoolSettings;
+  // Party Table feature (New)
+  hasPartyTableFeature?: boolean;
+  partyTableSettings?: PartyTableSettings;
   // Cancellation policy (New)
   cancellationPolicy?: CancellationPolicy;
 }
@@ -265,6 +275,9 @@ const initialFormData: EventFormData = {
   // Carpool feature (New)
   hasCarpoolFeature: false,
   carpoolSettings: undefined,
+  // Party Table feature (New)
+  hasPartyTableFeature: false,
+  partyTableSettings: undefined,
   // Cancellation policy (New)
   cancellationPolicy: undefined,
 };
@@ -535,6 +548,9 @@ export default function AdminEventsPage() {
         // Carpool feature (New)
         hasCarpoolFeature: (event as any).hasCarpoolFeature ?? false,
         carpoolSettings: (event as any).carpoolSettings ?? undefined,
+        // Party Table feature (New)
+        hasPartyTableFeature: (event as any).hasPartyTableFeature ?? false,
+        partyTableSettings: (event as any).partyTableSettings ?? undefined,
         // Cancellation policy (New)
         cancellationPolicy: event.cancellationPolicy ?? undefined,
       });
@@ -678,9 +694,11 @@ export default function AdminEventsPage() {
           priceTiers: formData.pricingType === 'tiered' ? priceTiers : undefined,
         };
 
-        // Debug: Log Carpool settings before sending
+        // Debug: Log Carpool and Party Table settings before sending
         console.log('[Submit Event] hasCarpoolFeature:', payload.hasCarpoolFeature);
         console.log('[Submit Event] carpoolSettings:', payload.carpoolSettings);
+        console.log('[Submit Event] hasPartyTableFeature:', payload.hasPartyTableFeature);
+        console.log('[Submit Event] partyTableSettings:', payload.partyTableSettings);
 
         const response = await fetch('/api/admin/events', {
           method: 'PUT',
@@ -2252,6 +2270,172 @@ export default function AdminEventsPage() {
                         </svg>
                         <span className="text-xs text-gray-700">
                           การจัดการเพิ่มเติม (จัดเลขรถ, เพิ่ม/ลบสมาชิก) สามารถทำได้ในหน้า Event Detail หลังสร้างกิจกรรมแล้ว
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Party Table Feature Configuration (NEW) */}
+                <div className="md:col-span-2 bg-purple-50 border border-purple-200 rounded-lg p-4 mt-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <input
+                      type="checkbox"
+                      id="hasPartyTableFeature"
+                      checked={formData.hasPartyTableFeature || false}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        hasPartyTableFeature: e.target.checked,
+                        partyTableSettings: e.target.checked ? {
+                          totalTables: 0,
+                          defaultSeatsPerTable: 10,
+                          maxSeatsPerTable: 12,
+                          showTableNumbersToMembers: false,
+                          tableActive: true
+                        } : undefined
+                      })}
+                      className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    />
+                    <label htmlFor="hasPartyTableFeature" className="text-sm font-semibold text-purple-900 cursor-pointer">
+                      กิจกรรมนี้มีการจัดโต๊ะนั่ง (Party Table)
+                    </label>
+                  </div>
+                  <p className="text-xs text-purple-700 mb-3">
+                    เปิดใช้งานฟีเจอร์ Party Table เพื่อให้สมาชิกสามารถสร้างกลุ่มโต๊ะและชวนเพื่อนนั่งโต๊ะเดียวกันได้
+                  </p>
+
+                  {formData.hasPartyTableFeature && (
+                    <div className="bg-white p-3 rounded border border-purple-200 space-y-3 mt-3">
+                      <p className="text-xs text-gray-600 mb-3">
+                        <strong>การตั้งค่า Party Table:</strong> สมาชิกสามารถสร้างกลุ่มโต๊ะและชวนเพื่อนจากรหัสลงทะเบียนอื่นได้
+                        Admin สามารถจัดการเลขโต๊ะและ assign Table Number ในหน้า Event Detail
+                      </p>
+
+                      {/* Party Table Settings Fields */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            จำนวนโต๊ะทั้งหมด
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.partyTableSettings?.totalTables || 0}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              partyTableSettings: {
+                                ...formData.partyTableSettings!,
+                                totalTables: parseInt(e.target.value) || 0
+                              }
+                            })}
+                            className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="0 = ไม่จำกัด"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">ระบุ 0 หากไม่ต้องการจำกัด</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            จำนวนที่นั่งต่อโต๊ะ (ปกติ)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={formData.partyTableSettings?.defaultSeatsPerTable || 10}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              partyTableSettings: {
+                                ...formData.partyTableSettings!,
+                                defaultSeatsPerTable: parseInt(e.target.value) || 10
+                              }
+                            })}
+                            className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="10"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">จำนวนที่นั่งมาตรฐาน</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            จำนวนที่นั่งสูงสุด
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={formData.partyTableSettings?.maxSeatsPerTable || ''}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              partyTableSettings: {
+                                ...formData.partyTableSettings!,
+                                maxSeatsPerTable: e.target.value ? parseInt(e.target.value) : undefined
+                              }
+                            })}
+                            className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="ไม่จำกัด"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">ใช้สำหรับเตือนเมื่อเกินที่นั่ง</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          type="checkbox"
+                          id="showTableNumbersToMembers"
+                          checked={formData.partyTableSettings?.showTableNumbersToMembers || false}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            partyTableSettings: {
+                              ...formData.partyTableSettings!,
+                              showTableNumbersToMembers: e.target.checked
+                            }
+                          })}
+                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                        />
+                        <label htmlFor="showTableNumbersToMembers" className="text-xs font-medium text-gray-700 cursor-pointer">
+                          แสดงเลขโต๊ะให้สมาชิกเห็น
+                        </label>
+                      </div>
+
+                      {/* Party Table Active/Inactive Toggle */}
+                      <div className="flex items-center gap-3 mt-3 p-3 bg-white border border-gray-200 rounded-lg">
+                        <label className="text-xs font-semibold text-gray-800">สถานะ Party Table:</label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({
+                              ...formData,
+                              partyTableSettings: {
+                                ...formData.partyTableSettings!,
+                                tableActive: !(formData.partyTableSettings?.tableActive ?? true)
+                              }
+                            })}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              (formData.partyTableSettings?.tableActive ?? true) ? 'bg-green-600' : 'bg-gray-300'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                (formData.partyTableSettings?.tableActive ?? true) ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                          <span className={`text-xs font-medium ${(formData.partyTableSettings?.tableActive ?? true) ? 'text-green-700' : 'text-gray-600'}`}>
+                            {(formData.partyTableSettings?.tableActive ?? true) ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        {!(formData.partyTableSettings?.tableActive ?? true) && (
+                          <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">
+                            Party Table ซ่อนจากสมาชิก
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 p-2 bg-gray-50 rounded mt-3">
+                        <svg className="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-xs text-gray-700">
+                          การจัดการเพิ่มเติม (จัดเลขโต๊ะ, เพิ่ม/ลบสมาชิก) สามารถทำได้ในหน้า Event Detail หลังสร้างกิจกรรมแล้ว
                         </span>
                       </div>
                     </div>

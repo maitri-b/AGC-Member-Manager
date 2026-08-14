@@ -2,6 +2,7 @@
 // Based on Agents Club Google Sheet - Event Registration Data
 
 import { CarpoolSettings } from './carpool';
+import { PartyTableSettings } from './partyTable';
 
 // Event registration from Google Sheet "10 Yearth Meeting registration"
 export interface EventRegistration {
@@ -218,6 +219,10 @@ export interface Event {
   hasCarpoolFeature?: boolean;      // กิจกรรมนี้มีการจัดรถร่วมเดินทาง (Carpool)
   carpoolSettings?: CarpoolSettings; // การตั้งค่า Carpool
 
+  // Party Table Feature (New - for event seating arrangements)
+  hasPartyTableFeature?: boolean;   // กิจกรรมนี้มีการจัดโต๊ะนั่ง (Party Table)
+  partyTableSettings?: PartyTableSettings; // การตั้งค่า Party Table
+
   // Cancellation Policy (New - for event cancellation rules)
   cancellationPolicy?: CancellationPolicy; // นโยบายการยกเลิกและคืนเงิน
 
@@ -305,6 +310,10 @@ export interface EventInput {
   // Carpool Feature (New - for events with shared transportation)
   hasCarpoolFeature?: boolean;      // กิจกรรมนี้มีการจัดรถร่วมเดินทาง (Carpool)
   carpoolSettings?: CarpoolSettings; // การตั้งค่า Carpool
+
+  // Party Table Feature (New - for event seating arrangements)
+  hasPartyTableFeature?: boolean;   // กิจกรรมนี้มีการจัดโต๊ะนั่ง (Party Table)
+  partyTableSettings?: PartyTableSettings; // การตั้งค่า Party Table
 
   // Cancellation Policy (New - for event cancellation rules)
   cancellationPolicy?: CancellationPolicy; // นโยบายการยกเลิกและคืนเงิน

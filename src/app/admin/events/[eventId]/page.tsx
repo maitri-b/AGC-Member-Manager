@@ -17,6 +17,7 @@ import PromoteEventModal from '@/components/admin/PromoteEventModal';
 import MessageTemplateModal from '@/components/admin/MessageTemplateModal';
 import RoomManagementModal from '@/components/admin/RoomManagementModal';
 import CarpoolManagementModal from '@/components/admin/CarpoolManagementModal';
+import PartyTableManagementModal from '@/components/admin/PartyTableManagementModal';
 import CarNumberAssignmentModal from '@/components/admin/CarNumberAssignmentModal';
 import AdminCancellationModal from '@/components/admin/AdminCancellationModal';
 import { Event as EventType, EventRegistration, CancellationPolicy } from '@/types/event';
@@ -767,6 +768,7 @@ export default function EventDetailPage() {
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [showRoomManagementModal, setShowRoomManagementModal] = useState(false);
   const [showCarpoolManagementModal, setShowCarpoolManagementModal] = useState(false);
+  const [showPartyTableManagementModal, setShowPartyTableManagementModal] = useState(false);
   const [showCarNumberAssignmentModal, setShowCarNumberAssignmentModal] = useState(false);
   const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
   const [originalAttendeeCount, setOriginalAttendeeCount] = useState<number>(1); // Track original count for validation
@@ -3143,6 +3145,20 @@ export default function EventDetailPage() {
                     <path d="M5 11L6.5 6.5C6.86 5.6 7.69 5 8.62 5H15.38C16.31 5 17.14 5.6 17.5 6.5L19 11M5 11V17C5 17.55 5.45 18 6 18H6.5C7.05 18 7.5 17.55 7.5 17V16H16.5V17C16.5 17.55 16.95 18 17.5 18H18C18.55 18 19 17.55 19 17V11M5 11H19M7 13.5C7 14.33 6.33 15 5.5 15C4.67 15 4 14.33 4 13.5C4 12.67 4.67 12 5.5 12C6.33 12 7 12.67 7 13.5ZM20 13.5C20 14.33 19.33 15 18.5 15C17.67 15 17 14.33 17 13.5C17 12.67 17.67 12 18.5 12C19.33 12 20 12.67 20 13.5Z"/>
                   </svg>
                   <span className="hidden sm:inline">จัดการ Carpool</span>
+                </button>
+              )}
+
+              {/* Party Table Management Button */}
+              {eventData?.event?.hasPartyTableFeature && (
+                <button
+                  onClick={() => setShowPartyTableManagementModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+                  title="จัดการ Party Table"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span className="hidden sm:inline">จัดการ Party Table</span>
                 </button>
               )}
             </div>
@@ -6313,6 +6329,16 @@ export default function EventDetailPage() {
         eventId={eventId as string}
         eventName={eventData?.event?.eventName || ''}
         carpoolSettings={eventData?.event?.carpoolSettings}
+        onSettingsUpdate={fetchEventData}
+      />
+
+      {/* Party Table Management Modal */}
+      <PartyTableManagementModal
+        isOpen={showPartyTableManagementModal}
+        onClose={() => setShowPartyTableManagementModal(false)}
+        eventId={eventId as string}
+        eventName={eventData?.event?.eventName || ''}
+        partyTableSettings={eventData?.event?.partyTableSettings}
         onSettingsUpdate={fetchEventData}
       />
 

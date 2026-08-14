@@ -11,6 +11,8 @@ import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 // import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier, CancellationPolicy } from '@/types/event';
 import { CarpoolSettings } from '@/types/carpool';
+import { PartyTableSettings } from '@/types/partyTable';
+import PartyTableSection from '@/components/event/PartyTableSection';
 import { formatDeadline, getTimeRemaining, isDeadlinePassed } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass, isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
@@ -75,6 +77,9 @@ interface Event {
   // Carpool feature (New)
   hasCarpoolFeature?: boolean;
   carpoolSettings?: CarpoolSettings;
+  // Party Table feature (New)
+  hasPartyTableFeature?: boolean;
+  partyTableSettings?: PartyTableSettings;
   // Cancellation policy (New)
   cancellationPolicy?: CancellationPolicy;
   createdAt: string;
@@ -2489,6 +2494,17 @@ export default function EventDetailPage() {
                     )}
                   </div>
                   {/* ==================== CARPOOL CARD END ==================== */}
+
+                  {/* ==================== PARTY TABLE CARD START ==================== */}
+                  <PartyTableSection
+                    eventId={params.eventId}
+                    event={event}
+                    userRegistration={userRegistration}
+                    session={session}
+                    isCommitteeOrAdmin={isCommitteeOrAdmin}
+                    attendeeNames={attendeeNames}
+                  />
+                  {/* ==================== PARTY TABLE CARD END ==================== */}
 
                   {/* Edit Form */}
                   {isEditing && (

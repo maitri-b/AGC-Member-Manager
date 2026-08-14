@@ -1191,7 +1191,6 @@ function TabTableNumbers({
         </p>
         <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
           {tableSlots.map((slot) => {
-            const isSelected = selectedTableNumber === slot.tableNumber;
             const isOccupied = !!slot.table;
 
             return (

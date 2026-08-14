@@ -1080,6 +1080,7 @@ export default function EventDetailPage() {
       // Debug: Check if hasPartyTableFeature is being fetched
       console.log('[Fetch Event Data] hasPartyTableFeature:', data.event?.hasPartyTableFeature);
       console.log('[Fetch Event Data] partyTableSettings:', data.event?.partyTableSettings);
+      console.log('[Fetch Event Data] Full event object:', data.event);
 
       setEventData(data);
     } catch (err) {

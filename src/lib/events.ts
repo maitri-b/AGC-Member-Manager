@@ -95,6 +95,9 @@ export async function getTrackedEventsFromFirestore(): Promise<Event[]> {
         // Carpool feature
         hasCarpoolFeature: parseBoolean(data.hasCarpoolFeature, false),
         carpoolSettings: data.carpoolSettings || undefined,
+        // Party Table feature
+        hasPartyTableFeature: parseBoolean(data.hasPartyTableFeature, false),
+        partyTableSettings: data.partyTableSettings || undefined,
         // Cancellation policy
         cancellationPolicy: data.cancellationPolicy || undefined,
         // Convert Firestore Timestamps to ISO strings

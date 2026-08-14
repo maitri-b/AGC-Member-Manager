@@ -359,9 +359,19 @@ export function recalculatePaymentStatus(
     });
   }
 
-  // Fallback to legacy paidAmount if no tracked amounts and no slips
-  const currentPaidAmount = actualTotalPaid || registration.paidAmount || 0;
+  // ✅ CRITICAL FIX: Use actualTotalPaid directly instead of fallback to registration.paidAmount
+  // The registration.paidAmount may already include amounts that are also in tracked fields,
+  // causing the fullyPaid check to incorrectly return true
+  const currentPaidAmount = actualTotalPaid;
   const additionalPayments = parseAdditionalPayments(registration.additionalPayments);
+
+  console.log('[recalculatePaymentStatus] Checking if fully paid:', {
+    registrationId: registration.registrationId,
+    newTotalAmount,
+    currentPaidAmount,
+    additionalPayments,
+  });
+
   const fullyPaid = isFullyPaid(newTotalAmount, currentPaidAmount, additionalPayments);
 
   const result: { payment_status: string; status?: string; overpayment_amount?: number } = {

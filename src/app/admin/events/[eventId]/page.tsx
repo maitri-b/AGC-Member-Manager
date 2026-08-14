@@ -2946,7 +2946,10 @@ export default function EventDetailPage() {
       const matchMemberId = attendee.member?.memberId?.toLowerCase().includes(term);
       const matchRegistrationId = attendee.registration.registrationId?.toLowerCase().includes(term);
 
-      return matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId;
+      // Search in attendeeNames (ชื่อผู้เข้าร่วม)
+      const matchAttendeeNames = attendee.registration.attendeeNames?.toLowerCase().includes(term);
+
+      return matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId || matchAttendeeNames;
     }
 
     return true;
@@ -3496,8 +3499,9 @@ export default function EventDetailPage() {
                         const matchLicense = attendee.registration.licenseNumber?.toLowerCase().includes(term);
                         const matchMemberId = attendee.member?.memberId?.toLowerCase().includes(term);
                         const matchRegistrationId = attendee.registration.registrationId?.toLowerCase().includes(term);
+                        const matchAttendeeNames = attendee.registration.attendeeNames?.toLowerCase().includes(term);
 
-                        if (!(matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId)) {
+                        if (!(matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId || matchAttendeeNames)) {
                           return count;
                         }
                       }
@@ -3566,8 +3570,9 @@ export default function EventDetailPage() {
                           const matchLicense = attendee.registration.licenseNumber?.toLowerCase().includes(term);
                           const matchMemberId = attendee.member?.memberId?.toLowerCase().includes(term);
                           const matchRegistrationId = attendee.registration.registrationId?.toLowerCase().includes(term);
+                          const matchAttendeeNames = attendee.registration.attendeeNames?.toLowerCase().includes(term);
 
-                          if (!(matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId)) {
+                          if (!(matchCompany || matchName || matchLicense || matchMemberId || matchRegistrationId || matchAttendeeNames)) {
                             return sum;
                           }
                         }

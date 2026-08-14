@@ -94,6 +94,7 @@ export default function PartyTableManagementModal({
     registrationId: string;
     attendeeIndex: number;
     name: string;
+    companyName: string;
   }[]>([]);
   const [allRegistrations, setAllRegistrations] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);

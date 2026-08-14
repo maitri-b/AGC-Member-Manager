@@ -80,6 +80,20 @@ export default function PartyTableManagementModal({
   } | null>(null);
   const [removingMember, setRemovingMember] = useState(false);
 
+  // Assign Table Number Modal state (new)
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedTableNumberForAssign, setSelectedTableNumberForAssign] = useState<number | null>(null);
+  const [assignModalTab, setAssignModalTab] = useState<'groups' | 'registrations'>('groups');
+  const [assignSearchTerm, setAssignSearchTerm] = useState('');
+  const [selectedGroupForAssign, setSelectedGroupForAssign] = useState<string | null>(null);
+  const [selectedMembersForNewGroup, setSelectedMembersForNewGroup] = useState<{
+    registrationId: string;
+    attendeeIndex: number;
+    name: string;
+    companyName: string;
+  }[]>([]);
+  const [assigning, setAssigning] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       fetchTables();
@@ -310,6 +324,84 @@ export default function PartyTableManagementModal({
     }
   };
 
+  // Handle assign table number (new modal flow)
+  const handleOpenAssignModal = (tableNumber: number) => {
+    setSelectedTableNumberForAssign(tableNumber);
+    setShowAssignModal(true);
+    setAssignModalTab('groups');
+    setAssignSearchTerm('');
+    setSelectedGroupForAssign(null);
+    setSelectedMembersForNewGroup([]);
+  };
+
+  const handleAssignFromModal = async () => {
+    if (!selectedTableNumberForAssign) return;
+
+    setAssigning(true);
+    try {
+      // Case 1: Assign existing group
+      if (assignModalTab === 'groups' && selectedGroupForAssign) {
+        await handleAssignTableNumber(selectedGroupForAssign, selectedTableNumberForAssign);
+        setShowAssignModal(false);
+        setSelectedGroupForAssign(null);
+      }
+      // Case 2: Create new group from selected members
+      else if (assignModalTab === 'registrations' && selectedMembersForNewGroup.length > 0) {
+        // Get first member's registration to use as host
+        const firstMember = selectedMembersForNewGroup[0];
+        const hostRegistration = allRegistrations.find(
+          (r: any) => r.registration.registrationId === firstMember.registrationId
+        );
+
+        if (!hostRegistration) {
+          throw new Error('ไม่พบข้อมูลการลงทะเบียน');
+        }
+
+        // Prepare members data
+        const initialMembers = selectedMembersForNewGroup.map((m) => ({
+          registrationId: m.registrationId,
+          lineUserId: hostRegistration.registration.lineUserId || '',
+          name: m.name,
+          attendeeIndex: m.attendeeIndex,
+          companyName: m.companyName,
+        }));
+
+        // Create new party table
+        const createResponse = await fetch('/api/party-tables', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId,
+            tableGroupName: undefined, // Auto-generate from company name
+            hostRegistrationId: firstMember.registrationId,
+            hostCompanyName: firstMember.companyName,
+            hostContactName: hostRegistration.registration.contactName || '',
+            initialMembers,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json();
+          throw new Error(errorData.error || 'Failed to create party table');
+        }
+
+        const { table } = await createResponse.json();
+
+        // Assign table number
+        await handleAssignTableNumber(table.tableId, selectedTableNumberForAssign);
+
+        setShowAssignModal(false);
+        setSelectedMembersForNewGroup([]);
+        alert(`สร้างกลุ่มโต๊ะและจัดเลขโต๊ะ #${selectedTableNumberForAssign} สำเร็จ!`);
+      }
+    } catch (error) {
+      console.error('Error assigning table:', error);
+      alert(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const handleRemoveMember = async () => {
     if (!pendingMemberRemoval) return;
 
@@ -444,6 +536,8 @@ export default function PartyTableManagementModal({
             <TabTableNumbers
               tableSlots={tableSlots}
               unassignedTables={unassignedTables}
+              allRegistrations={allRegistrations}
+              allTables={tables}
               onAssignTableNumber={handleAssignTableNumber}
               onUnassignTableNumber={handleUnassignTableNumber}
               onChangeTableNumber={(table) => {
@@ -451,6 +545,7 @@ export default function PartyTableManagementModal({
                 setNewTableNumber(table.assignedTableNumber || 1);
                 setShowChangeTableNumberModal(true);
               }}
+              onTableNumberClick={handleOpenAssignModal}
               defaultSeats={defaultSeats}
             />
           )}
@@ -475,6 +570,133 @@ export default function PartyTableManagementModal({
           </div>
         </div>
       </div>
+
+      {/* Assign Table Number Modal */}
+      {showAssignModal && selectedTableNumberForAssign && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  จัดสมาชิกเข้าโต๊ะ #{selectedTableNumberForAssign}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setSelectedTableNumberForAssign(null);
+                    setSelectedGroupForAssign(null);
+                    setSelectedMembersForNewGroup([]);
+                    setAssignSearchTerm('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setAssignModalTab('groups')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    assignModalTab === 'groups'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  กลุ่มโต๊ะ
+                </button>
+                <button
+                  onClick={() => setAssignModalTab('registrations')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    assignModalTab === 'registrations'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  รหัสการจอง
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="mt-4">
+                <input
+                  type="text"
+                  value={assignSearchTerm}
+                  onChange={(e) => setAssignSearchTerm(e.target.value)}
+                  placeholder="ค้นหา: ชื่อบริษัท, ชื่อ LINE, ชื่อสมาชิก"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {assignModalTab === 'groups' ? (
+                <AssignModalGroupsTab
+                  tables={tables}
+                  searchTerm={assignSearchTerm}
+                  selectedGroupId={selectedGroupForAssign}
+                  onSelectGroup={setSelectedGroupForAssign}
+                />
+              ) : (
+                <AssignModalRegistrationsTab
+                  registrations={allRegistrations}
+                  tables={tables}
+                  searchTerm={assignSearchTerm}
+                  selectedMembers={selectedMembersForNewGroup}
+                  onToggleMember={(member) => {
+                    const exists = selectedMembersForNewGroup.find(
+                      (m) => m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex
+                    );
+                    if (exists) {
+                      setSelectedMembersForNewGroup(
+                        selectedMembersForNewGroup.filter(
+                          (m) => !(m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex)
+                        )
+                      );
+                    } else {
+                      setSelectedMembersForNewGroup([...selectedMembersForNewGroup, member]);
+                    }
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setSelectedTableNumberForAssign(null);
+                    setSelectedGroupForAssign(null);
+                    setSelectedMembersForNewGroup([]);
+                  }}
+                  disabled={assigning}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleAssignFromModal}
+                  disabled={
+                    assigning ||
+                    (assignModalTab === 'groups' && !selectedGroupForAssign) ||
+                    (assignModalTab === 'registrations' && selectedMembersForNewGroup.length === 0)
+                  }
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
+                >
+                  {assigning ? 'กำลังจัด...' : `จัดโต๊ะ #${selectedTableNumberForAssign}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && (
@@ -911,37 +1133,33 @@ function TabTableGroups({
 function TabTableNumbers({
   tableSlots,
   unassignedTables,
+  allRegistrations,
+  allTables,
   onAssignTableNumber,
   onUnassignTableNumber,
   onChangeTableNumber,
+  onTableNumberClick,
   defaultSeats,
 }: {
   tableSlots: TableSlot[];
   unassignedTables: EnrichedPartyTable[];
+  allRegistrations: any[];
+  allTables: EnrichedPartyTable[];
   onAssignTableNumber: (tableId: string, tableNumber: number) => void;
   onUnassignTableNumber: (tableId: string) => void;
   onChangeTableNumber: (table: EnrichedPartyTable) => void;
+  onTableNumberClick: (tableNumber: number) => void;
   defaultSeats: number;
 }) {
-  const [selectedTableNumber, setSelectedTableNumber] = useState<number | null>(null);
-  const [selectedUnassignedTable, setSelectedUnassignedTable] = useState<string | null>(null);
-
-  const handleAssignClick = () => {
-    if (selectedTableNumber && selectedUnassignedTable) {
-      onAssignTableNumber(selectedUnassignedTable, selectedTableNumber);
-      setSelectedTableNumber(null);
-      setSelectedUnassignedTable(null);
-    }
-  };
 
   return (
     <div className="space-y-6">
-      {/* Unassigned Tables */}
+      {/* Info Box */}
       {unassignedTables.length > 0 && (
-        <div>
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
             <svg
-              className="w-5 h-5 text-orange-600"
+              className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -953,42 +1171,24 @@ function TabTableNumbers({
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               />
             </svg>
-            โต๊ะที่ยังไม่ได้จัดเลข ({unassignedTables.length} โต๊ะ)
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {unassignedTables.map((table) => (
-              <button
-                key={table.tableId}
-                onClick={() => setSelectedUnassignedTable(table.tableId)}
-                className={`text-left p-3 border-2 rounded-lg transition-all ${
-                  selectedUnassignedTable === table.tableId
-                    ? 'border-purple-600 bg-purple-50'
-                    : 'border-gray-200 hover:border-purple-300 bg-white'
-                }`}
-              >
-                <p className="font-medium text-gray-900">
-                  {table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  {table.members.length} คน • {table.hostContactName}
-                </p>
-              </button>
-            ))}
+            <div>
+              <p className="font-medium text-orange-900">
+                มีกลุ่มโต๊ะที่ยังไม่ได้จัดเลข {unassignedTables.length} กลุ่ม
+              </p>
+              <p className="text-sm text-orange-700 mt-1">
+                💡 คลิกที่เลขโต๊ะว่าง (สีเทา) เพื่อเลือกกลุ่มโต๊ะหรือสมาชิกที่จะ assign
+              </p>
+            </div>
           </div>
-          {selectedUnassignedTable && selectedTableNumber && (
-            <button
-              onClick={handleAssignClick}
-              className="mt-4 w-full px-4 py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700"
-            >
-              จัดโต๊ะ #{selectedTableNumber}
-            </button>
-          )}
         </div>
       )}
 
       {/* Table Number Grid */}
       <div>
         <h3 className="font-semibold text-gray-900 mb-3">เลขโต๊ะทั้งหมด</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          คลิกที่ช่องสีเทาเพื่อจัดสมาชิกเข้าโต๊ะ • ช่องสีม่วงคือโต๊ะที่จัดแล้ว
+        </p>
         <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
           {tableSlots.map((slot) => {
             const isSelected = selectedTableNumber === slot.tableNumber;
@@ -998,17 +1198,15 @@ function TabTableNumbers({
               <div key={slot.tableNumber} className="relative">
                 <button
                   onClick={() => {
-                    if (!isOccupied && selectedUnassignedTable) {
-                      setSelectedTableNumber(slot.tableNumber);
+                    if (!isOccupied) {
+                      onTableNumberClick(slot.tableNumber);
                     }
                   }}
                   disabled={isOccupied}
                   className={`w-full aspect-square rounded-lg font-semibold text-sm transition-all ${
                     isOccupied
                       ? 'bg-purple-600 text-white cursor-default'
-                      : isSelected
-                      ? 'bg-purple-200 text-purple-900 border-2 border-purple-600'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-200'
+                      : 'bg-gray-100 text-gray-700 hover:bg-purple-100 hover:border-purple-400 border-2 border-gray-200'
                   }`}
                 >
                   #{slot.tableNumber}
@@ -1073,6 +1271,191 @@ function TabTableNumbers({
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Assign Modal - Groups Tab
+function AssignModalGroupsTab({
+  tables,
+  searchTerm,
+  selectedGroupId,
+  onSelectGroup,
+}: {
+  tables: EnrichedPartyTable[];
+  searchTerm: string;
+  selectedGroupId: string | null;
+  onSelectGroup: (groupId: string) => void;
+}) {
+  // Filter: only show unassigned groups
+  const unassignedGroups = tables.filter((t) => t.status === 'active' && !t.assignedTableNumber);
+
+  // Apply search filter
+  const filteredGroups = unassignedGroups.filter((group) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      group.tableGroupName?.toLowerCase().includes(term) ||
+      group.hostCompanyName?.toLowerCase().includes(term) ||
+      group.hostContactName?.toLowerCase().includes(term) ||
+      group.members.some((m) => m.name.toLowerCase().includes(term))
+    );
+  });
+
+  if (filteredGroups.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        {searchTerm ? 'ไม่พบกลุ่มโต๊ะที่ตรงกับการค้นหา' : 'ไม่มีกลุ่มโต๊ะที่ยังไม่ได้จัดเลข'}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {filteredGroups.map((group) => (
+        <button
+          key={group.tableId}
+          onClick={() => onSelectGroup(group.tableId)}
+          className={`text-left p-4 border-2 rounded-lg transition-all ${
+            selectedGroupId === group.tableId
+              ? 'border-purple-600 bg-purple-50'
+              : 'border-gray-200 hover:border-purple-300 bg-white'
+          }`}
+        >
+          <p className="font-semibold text-gray-900">
+            {group.tableGroupName || `โต๊ะของ ${group.hostCompanyName}`}
+          </p>
+          <p className="text-sm text-gray-600 mt-1">
+            {group.members.length} คน • {group.hostContactName}
+          </p>
+          <div className="flex flex-wrap gap-1 mt-2">
+            {group.members.slice(0, 3).map((member, idx) => (
+              <span key={idx} className="text-xs px-2 py-1 bg-gray-100 rounded">
+                {member.name}
+              </span>
+            ))}
+            {group.members.length > 3 && (
+              <span className="text-xs px-2 py-1 bg-gray-100 rounded">
+                +{group.members.length - 3}
+              </span>
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Assign Modal - Registrations Tab
+function AssignModalRegistrationsTab({
+  registrations,
+  tables,
+  searchTerm,
+  selectedMembers,
+  onToggleMember,
+}: {
+  registrations: any[];
+  tables: EnrichedPartyTable[];
+  searchTerm: string;
+  selectedMembers: { registrationId: string; attendeeIndex: number; name: string; companyName: string }[];
+  onToggleMember: (member: { registrationId: string; attendeeIndex: number; name: string; companyName: string }) => void;
+}) {
+  // Helper: Check if a member is already assigned to a table
+  const isMemberAssigned = (registrationId: string, attendeeIndex: number) => {
+    return tables.some((table) =>
+      table.members.some((m) => m.registrationId === registrationId && m.attendeeIndex === attendeeIndex)
+    );
+  };
+
+  // Helper: Check if member is selected
+  const isMemberSelected = (registrationId: string, attendeeIndex: number) => {
+    return selectedMembers.some((m) => m.registrationId === registrationId && m.attendeeIndex === attendeeIndex);
+  };
+
+  // Filter registrations based on search
+  const filteredRegistrations = registrations.filter((item) => {
+    if (!item?.registration) return false;
+
+    // Skip if all members are already assigned
+    const attendeeNames = item.registration.attendeeNames?.split(',').map((n: string) => n.trim()) || [];
+    const allAssigned = attendeeNames.every((_, idx) => isMemberAssigned(item.registration.registrationId, idx));
+    if (allAssigned && attendeeNames.length > 0) return false;
+
+    if (!searchTerm) return true;
+
+    const term = searchTerm.toLowerCase();
+    return (
+      item.registration.companyName?.toLowerCase().includes(term) ||
+      item.registration.contactName?.toLowerCase().includes(term) ||
+      item.lineProfile?.lineDisplayName?.toLowerCase().includes(term) ||
+      item.registration.attendeeNames?.toLowerCase().includes(term)
+    );
+  });
+
+  if (filteredRegistrations.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        {searchTerm ? 'ไม่พบรหัสการจองที่ตรงกับการค้นหา' : 'ไม่มีรหัสการจองที่มีสมาชิกคงเหลือ'}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {filteredRegistrations.map((item) => {
+        const registration = item.registration;
+        const attendeeNames = registration.attendeeNames?.split(',').map((n: string) => n.trim()) || [];
+
+        return (
+          <div key={registration.registrationId} className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="font-semibold text-gray-900">{registration.companyName || registration.contactName}</p>
+                <p className="text-sm text-gray-600">
+                  รหัส: {registration.registrationId} • {registration.contactName}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {attendeeNames.map((name: string, idx: number) => {
+                const isAssigned = isMemberAssigned(registration.registrationId, idx);
+                const isSelected = isMemberSelected(registration.registrationId, idx);
+
+                return (
+                  <label
+                    key={idx}
+                    className={`flex items-center gap-3 p-2 rounded cursor-pointer ${
+                      isAssigned ? 'bg-gray-50 opacity-50 cursor-not-allowed' : 'hover:bg-purple-50'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      disabled={isAssigned}
+                      onChange={() => {
+                        if (!isAssigned) {
+                          onToggleMember({
+                            registrationId: registration.registrationId,
+                            attendeeIndex: idx,
+                            name,
+                            companyName: registration.companyName || registration.contactName || '',
+                          });
+                        }
+                      }}
+                      className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:opacity-50"
+                    />
+                    <span className={`text-sm ${isAssigned ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                      {name}
+                    </span>
+                    {isAssigned && <span className="text-xs text-gray-500 ml-auto">ถูก assign แล้ว</span>}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

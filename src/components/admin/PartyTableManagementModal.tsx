@@ -1377,7 +1377,7 @@ function AssignModalRegistrationsTab({
 
     // Skip if all members are already assigned
     const attendeeNames = item.registration.attendeeNames?.split(',').map((n: string) => n.trim()) || [];
-    const allAssigned = attendeeNames.every((_, idx) => isMemberAssigned(item.registration.registrationId, idx));
+    const allAssigned = attendeeNames.every((_name: string, idx: number) => isMemberAssigned(item.registration.registrationId, idx));
     if (allAssigned && attendeeNames.length > 0) return false;
 
     if (!searchTerm) return true;

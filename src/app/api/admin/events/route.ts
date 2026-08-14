@@ -110,6 +110,9 @@ export async function GET() {
           // Carpool feature
           hasCarpoolFeature: data.hasCarpoolFeature ?? false,
           carpoolSettings: data.carpoolSettings || undefined,
+          // Party Table feature
+          hasPartyTableFeature: data.hasPartyTableFeature ?? false,
+          partyTableSettings: data.partyTableSettings || undefined,
           // Cancellation policy
           cancellationPolicy: data.cancellationPolicy || undefined,
           // Event status
@@ -221,6 +224,8 @@ export async function POST(request: NextRequest) {
       roomTypes: body.roomTypes || [],
       // Carpool feature
       hasCarpoolFeature: body.hasCarpoolFeature ?? false,
+      // Party Table feature
+      hasPartyTableFeature: body.hasPartyTableFeature ?? false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: session.user.id,
@@ -241,6 +246,10 @@ export async function POST(request: NextRequest) {
 
     if (body.carpoolSettings) {
       newEvent.carpoolSettings = body.carpoolSettings;
+    }
+
+    if (body.partyTableSettings) {
+      newEvent.partyTableSettings = body.partyTableSettings;
     }
 
     await db.collection('events').doc(eventId).set(newEvent);

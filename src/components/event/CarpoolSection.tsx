@@ -61,6 +61,7 @@ export default function CarpoolSection({
   // State management
   const [memberCarpools, setMemberCarpools] = useState<Carpool[]>([]);
   const [carpoolLoading, setCarpoolLoading] = useState(false);
+  const [allCarpoolsLoaded, setAllCarpoolsLoaded] = useState(false);
   const [showCreateCarpoolModal, setShowCreateCarpoolModal] = useState(false);
   const [newCarpoolLicensePlate, setNewCarpoolLicensePlate] = useState('');
   const [selectedMembersForCarpool, setSelectedMembersForCarpool] = useState<number[]>([]);
@@ -133,9 +134,11 @@ export default function CarpoolSection({
           (cp: any) => cp.status !== 'deleted' && cp.status !== 'cancelled'
         );
         setAllCarpools(activeCarpools);
+        setAllCarpoolsLoaded(true);
       }
     } catch (err) {
       console.error('Error fetching all carpools:', err);
+      setAllCarpoolsLoaded(true); // Set to true even on error to prevent infinite loading
     }
   };
 

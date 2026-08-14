@@ -696,9 +696,10 @@ export default function EventDetailPage() {
 
         return {
           registrationId: sourceRegistration.registrationId,
-          lineUserId: sourceRegistration.lineUserId || '',
+          lineUserId: sourceRegistration.lineUserId || sourceRegistration.registrationId || '',
           name: member.name,
           attendeeIndex: index,  // Store index as stable identifier
+          companyName: sourceRegistration.companyName,
         };
       });
 

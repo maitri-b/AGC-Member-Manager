@@ -266,10 +266,14 @@ export async function GET(
 
             userRegistration = {
               registrationId: latestReg.registrationId,
+              lineUserId: latestReg.lineUserId,
               status: latestReg.status,
               attendeeCount: latestReg.attendeeCount,
               attendeeNames: latestReg.attendeeNames,
               registrationDate: latestReg.registrationDate,
+              // Company and contact info from registration
+              companyName: latestReg.companyName,
+              contactName: latestReg.contactName,
               // Deposit payment data (New)
               totalAmount: recalculatedTotal, // Use recalculated total
               depositAmount: latestReg.depositAmount,

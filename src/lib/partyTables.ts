@@ -48,10 +48,13 @@ export async function createPartyTable(data: CreatePartyTableData, createdBy: st
     joinedByName: createdByName,
   }));
 
+  // Auto-generate table group name from company name if not provided
+  const tableGroupName = data.tableGroupName || `กลุ่มโต๊ะ: ${data.hostCompanyName}`;
+
   const table: PartyTable = {
     tableId,
     eventId: data.eventId,
-    tableGroupName: data.tableGroupName,
+    tableGroupName,
     hostRegistrationId: data.hostRegistrationId,
     hostCompanyName: data.hostCompanyName,
     hostContactName: data.hostContactName,

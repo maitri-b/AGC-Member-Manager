@@ -73,7 +73,6 @@ export default function PartyTableSection({
   const [memberTables, setMemberTables] = useState<PartyTable[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
   const [showCreateTableModal, setShowCreateTableModal] = useState(false);
-  const [newTableGroupName, setNewTableGroupName] = useState('');
   const [selectedMembersForTable, setSelectedMembersForTable] = useState<number[]>([]);
   const [creatingTable, setCreatingTable] = useState(false);
   const [invitingToTableId, setInvitingToTableId] = useState<string | null>(null);
@@ -164,7 +163,7 @@ export default function PartyTableSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,
-          tableGroupName: newTableGroupName || undefined,
+          tableGroupName: undefined, // Let backend auto-generate from company name
           hostRegistrationId: userRegistration.registrationId,
           hostCompanyName: userRegistration.companyName || '',
           hostContactName: userRegistration.contactName || '',
@@ -182,7 +181,6 @@ export default function PartyTableSection({
 
       // Reset and refresh
       setShowCreateTableModal(false);
-      setNewTableGroupName('');
       setSelectedMembersForTable([]);
       await fetchMemberTables();
     } catch (error: any) {
@@ -730,17 +728,10 @@ export default function PartyTableSection({
             <h3 className="text-lg font-semibold text-gray-900 mb-4">สร้างโต๊ะใหม่</h3>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ชื่อกลุ่มโต๊ะ (ไม่บังคับ)
-                </label>
-                <input
-                  type="text"
-                  value={newTableGroupName}
-                  onChange={(e) => setNewTableGroupName(e.target.value)}
-                  placeholder="เช่น Agent Friends, กลุ่มเพื่อนบ้าน"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-blue-800">
+                  💡 ระบบจะใช้ชื่อบริษัทของคุณเป็นชื่อกลุ่มโต๊ะโดยอัตโนมัติ
+                </p>
               </div>
 
               <div>
@@ -778,7 +769,6 @@ export default function PartyTableSection({
               <button
                 onClick={() => {
                   setShowCreateTableModal(false);
-                  setNewTableGroupName('');
                   setSelectedMembersForTable([]);
                 }}
                 className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"

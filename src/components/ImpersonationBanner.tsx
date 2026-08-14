@@ -64,8 +64,8 @@ export default function ImpersonationBanner() {
       });
 
       if (response.ok) {
-        // Redirect back to admin panel
-        window.location.href = '/admin';
+        // Redirect back to impersonation page
+        window.location.href = '/admin/impersonate';
       } else {
         alert('ไม่สามารถออกจากโหมด impersonation ได้');
       }

@@ -460,7 +460,7 @@ export default function PartyTableSection({
           </div>
         </div>
 
-        {/* Create Table Button - Always visible */}
+        {/* Create Table Button - Always visible in header */}
         <button
           onClick={() => setShowCreateTableModal(true)}
           className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center gap-2"
@@ -728,7 +728,20 @@ export default function PartyTableSection({
       {showCreateTableModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">สร้างโต๊ะใหม่</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">สร้างโต๊ะใหม่</h3>
+              <button
+                onClick={() => {
+                  setShowCreateTableModal(false);
+                  setSelectedMembersForTable([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">

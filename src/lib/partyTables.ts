@@ -602,12 +602,12 @@ export async function logTableHistory(params: {
     eventId: params.eventId,
     tableId: params.tableId,
     action: params.action,
-    memberId: params.memberId,
-    memberName: params.memberName,
+    ...(params.memberId && { memberId: params.memberId }),
+    ...(params.memberName && { memberName: params.memberName }),
     performedBy: params.performedBy,
     performedByName: params.performedByName,
     performedAt: new Date().toISOString(),
-    metadata: params.metadata,
+    ...(params.metadata && { metadata: params.metadata }),
   };
 
   await db.collection('partyTableHistory').doc(historyId).set(history);

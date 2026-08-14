@@ -1388,6 +1388,7 @@ function TabTableNumbers({
   onUnassignTableNumber,
   onChangeTableNumber,
   onTableNumberClick,
+  onManageMembers,
   defaultSeats,
 }: {
   tableSlots: TableSlot[];

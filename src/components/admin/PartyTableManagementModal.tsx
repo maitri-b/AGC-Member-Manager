@@ -83,10 +83,12 @@ export default function PartyTableManagementModal({
   const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [managingTableId, setManagingTableId] = useState<string | null>(null);
   const [expandedTableId, setExpandedTableId] = useState<string | null>(null);
+  const [memberManagementTab, setMemberManagementTab] = useState<'registrations'>('registrations');
 
   // Registration search for inviting members
   const [searchRegistrationId, setSearchRegistrationId] = useState('');
   const [searchedRegistration, setSearchedRegistration] = useState<any>(null);
+  const [memberManagementSearchTerm, setMemberManagementSearchTerm] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedMembersToAdd, setSelectedMembersToAdd] = useState<{
     registrationId: string;
@@ -358,7 +360,7 @@ export default function PartyTableManagementModal({
       const members = selectedMembersToAdd.map((m) => ({
         registrationId: m.registrationId,
         lineUserId: searchedRegistration.lineUserId,
-        name: m.name,
+        name: normalizeMemberName(m.name),
         attendeeIndex: m.attendeeIndex,
         companyName: searchedRegistration.companyName || '',
       }));
@@ -417,7 +419,7 @@ export default function PartyTableManagementModal({
       const initialMembers = selectedMembersForCreate.map((m) => ({
         registrationId: m.registrationId,
         lineUserId: hostRegistration.registration.lineUserId || '',
-        name: m.name,
+        name: normalizeMemberName(m.name),
         attendeeIndex: m.attendeeIndex,
         companyName: m.companyName,
       }));
@@ -486,7 +488,7 @@ export default function PartyTableManagementModal({
         const initialMembers = selectedMembersForNewGroup.map((m) => ({
           registrationId: m.registrationId,
           lineUserId: hostRegistration.registration.lineUserId || '',
-          name: m.name,
+          name: normalizeMemberName(m.name),
           attendeeIndex: m.attendeeIndex,
           companyName: m.companyName,
         }));
@@ -970,110 +972,84 @@ export default function PartyTableManagementModal({
       {/* Member Management Modal */}
       {showMemberManagement && managingTableId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">เพิ่มสมาชิกเข้าโต๊ะ</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  รหัสลงทะเบียน
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={searchRegistrationId}
-                    onChange={(e) => setSearchRegistrationId(e.target.value)}
-                    placeholder="กรอกรหัสลงทะเบียน"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearchRegistration();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={handleSearchRegistration}
-                    disabled={searchLoading}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
-                  >
-                    {searchLoading ? 'ค้นหา...' : 'ค้นหา'}
-                  </button>
-                </div>
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">เพิ่มสมาชิกเข้าโต๊ะ</h3>
+                <button
+                  onClick={() => {
+                    setShowMemberManagement(false);
+                    setManagingTableId(null);
+                    setSelectedMembersToAdd([]);
+                    setMemberManagementSearchTerm('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
 
-              {searchedRegistration && (
-                <div className="border border-gray-300 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-900 mb-3">
-                    {searchedRegistration.companyName || searchedRegistration.contactName}
-                  </p>
-                  <div className="space-y-2">
-                    {searchedRegistration.attendeeNames
-                      ?.split(',')
-                      .map((name: string, index: number) => (
-                        <label
-                          key={index}
-                          className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedMembersToAdd.some(
-                              (m) =>
-                                m.registrationId === searchedRegistration.registrationId &&
-                                m.attendeeIndex === index
-                            )}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedMembersToAdd([
-                                  ...selectedMembersToAdd,
-                                  {
-                                    registrationId: searchedRegistration.registrationId,
-                                    attendeeIndex: index,
-                                    name: name.trim(),
-                                  },
-                                ]);
-                              } else {
-                                setSelectedMembersToAdd(
-                                  selectedMembersToAdd.filter(
-                                    (m) =>
-                                      !(
-                                        m.registrationId ===
-                                          searchedRegistration.registrationId &&
-                                        m.attendeeIndex === index
-                                      )
-                                  )
-                                );
-                              }
-                            }}
-                            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                          />
-                          <span className="text-sm text-gray-900">{normalizeMemberName(name)}</span>
-                        </label>
-                      ))}
-                  </div>
-                </div>
-              )}
+              {/* Search */}
+              <div className="mt-4">
+                <input
+                  type="text"
+                  value={memberManagementSearchTerm}
+                  onChange={(e) => setMemberManagementSearchTerm(e.target.value)}
+                  placeholder="ค้นหา: ชื่อบริษัท, ชื่อ LINE, ชื่อสมาชิก"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowMemberManagement(false);
-                  setManagingTableId(null);
-                  setSearchRegistrationId('');
-                  setSearchedRegistration(null);
-                  setSelectedMembersToAdd([]);
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <AssignModalRegistrationsTab
+                registrations={allRegistrations}
+                tables={tables}
+                searchTerm={memberManagementSearchTerm}
+                selectedMembers={selectedMembersToAdd}
+                onToggleMember={(member) => {
+                  const exists = selectedMembersToAdd.find(
+                    (m) => m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex
+                  );
+                  if (exists) {
+                    setSelectedMembersToAdd(
+                      selectedMembersToAdd.filter(
+                        (m) => !(m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex)
+                      )
+                    );
+                  } else {
+                    setSelectedMembersToAdd([...selectedMembersToAdd, member]);
+                  }
                 }}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-              >
-                ยกเลิก
-              </button>
-              <button
-                onClick={handleAddMembers}
-                disabled={selectedMembersToAdd.length === 0}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
-              >
-                เพิ่ม ({selectedMembersToAdd.length})
-              </button>
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowMemberManagement(false);
+                    setManagingTableId(null);
+                    setSelectedMembersToAdd([]);
+                    setMemberManagementSearchTerm('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleAddMembers}
+                  disabled={selectedMembersToAdd.length === 0}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
+                >
+                  เพิ่มสมาชิก ({selectedMembersToAdd.length} คน)
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -32,7 +32,7 @@ export default function RoomManagementModal({
   eventName,
   onRoomUpdate,
 }: RoomManagementModalProps) {
-  const [activeTab, setActiveTab] = useState<'manage' | 'summary'>('manage');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'manage' | 'summary'>('dashboard');
   const [rooms, setRooms] = useState<EventRoom[]>([]);
   const [roomsWithOccupants, setRoomsWithOccupants] = useState<RoomWithOccupants[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,7 +93,7 @@ export default function RoomManagementModal({
   useEffect(() => {
     if (isOpen) {
       fetchRooms();
-      if (activeTab === 'summary') {
+      if (activeTab === 'summary' || activeTab === 'dashboard') {
         fetchRoomOccupants();
       }
     }
@@ -1205,9 +1205,9 @@ export default function RoomManagementModal({
         let fontColor = '000000'; // Black default
 
         if (roomStatus === 'locked') {
-          // Locked room: Red pastel background with dark red text
-          fillColor = 'FFCCCC'; // Light red/pink pastel
-          fontColor = '8B0000'; // Dark red
+          // Locked room: Gray background with dark gray text
+          fillColor = 'D3D3D3'; // Light gray
+          fontColor = '4A4A4A'; // Dark gray
         } else if (roomStatus === 'empty') {
           // Empty room: Green background
           fillColor = 'CCFFCC'; // Light green
@@ -1412,6 +1412,16 @@ export default function RoomManagementModal({
         <div className="border-b border-gray-200 flex-shrink-0">
           <div className="flex px-6">
             <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`py-3 px-4 font-medium text-sm border-b-2 transition-colors ${
+                activeTab === 'dashboard'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Dashboard
+            </button>
+            <button
               onClick={() => setActiveTab('manage')}
               className={`py-3 px-4 font-medium text-sm border-b-2 transition-colors ${
                 activeTab === 'manage'
@@ -1436,7 +1446,191 @@ export default function RoomManagementModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'manage' ? (
+          {activeTab === 'dashboard' ? (
+            <div className="space-y-6">
+              {/* Dashboard Content */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">สรุปภาพรวมห้องพัก</h3>
+
+                {/* Main Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-blue-900">{roomsWithOccupants.length}</div>
+                    <div className="text-sm text-blue-700 mt-1">ห้องทั้งหมด</div>
+                  </div>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-green-900">
+                      {roomsWithOccupants.filter(r => r.occupants.length > 0).length}
+                    </div>
+                    <div className="text-sm text-green-700 mt-1">ห้องมีผู้พัก</div>
+                  </div>
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-purple-900">
+                      {roomsWithOccupants.filter(r => r.occupants.length === 0 && !r.isLocked).length}
+                    </div>
+                    <div className="text-sm text-purple-700 mt-1">ห้องว่าง</div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-amber-900">
+                      {roomsWithOccupants.reduce((sum, r) => sum + r.occupants.length, 0)}
+                    </div>
+                    <div className="text-sm text-amber-700 mt-1">ผู้เข้าพักทั้งหมด</div>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-gray-900">
+                      {roomsWithOccupants.filter(r => r.isLocked).length}
+                    </div>
+                    <div className="text-sm text-gray-700 mt-1">
+                      ห้องถูกล็อค
+                      <div className="text-xs mt-1">
+                        (รับได้ {roomsWithOccupants.filter(r => r.isLocked).reduce((sum, r) => sum + r.maxOccupancy, 0)} คน)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detailed Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Capacity Stats */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      ข้อมูลความจุห้องพัก
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">จำนวนที่รับได้ทั้งหมด:</span>
+                        <span className="font-semibold text-gray-900">
+                          {roomsWithOccupants.reduce((sum, r) => sum + r.maxOccupancy, 0)} คน
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">จำนวนผู้พักปัจจุบัน:</span>
+                        <span className="font-semibold text-green-700">
+                          {roomsWithOccupants.reduce((sum, r) => sum + r.occupants.length, 0)} คน
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">ที่ว่างที่รับได้อีก:</span>
+                        <span className="font-semibold text-purple-700">
+                          {roomsWithOccupants.reduce((sum, r) => sum + (r.maxOccupancy - r.occupants.length), 0)} คน
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-600">อัตราการเข้าพัก:</span>
+                        <span className="font-semibold text-blue-700">
+                          {roomsWithOccupants.reduce((sum, r) => sum + r.maxOccupancy, 0) > 0
+                            ? Math.round((roomsWithOccupants.reduce((sum, r) => sum + r.occupants.length, 0) / roomsWithOccupants.reduce((sum, r) => sum + r.maxOccupancy, 0)) * 100)
+                            : 0}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Room Type Breakdown */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                      แยกตามประเภทห้อง
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">ห้องพักเดี่ยว (1 คน):</span>
+                        <span className="font-semibold text-gray-900">
+                          {roomsWithOccupants.filter(r => r.maxOccupancy === 1).length} ห้อง
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">ห้องพักคู่ (2 คน):</span>
+                        <span className="font-semibold text-gray-900">
+                          {roomsWithOccupants.filter(r => r.maxOccupancy === 2).length} ห้อง
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">ห้องพัก 3 คน:</span>
+                        <span className="font-semibold text-gray-900">
+                          {roomsWithOccupants.filter(r => r.maxOccupancy === 3).length} ห้อง
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-600">ห้องพัก 4+ คน:</span>
+                        <span className="font-semibold text-gray-900">
+                          {roomsWithOccupants.filter(r => r.maxOccupancy >= 4).length} ห้อง
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Building Breakdown */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      แยกตามอาคาร
+                    </h4>
+                    <div className="space-y-2 text-sm max-h-40 overflow-y-auto">
+                      {(() => {
+                        const buildingGroups = roomsWithOccupants.reduce((acc, room) => {
+                          if (!acc[room.buildingName]) {
+                            acc[room.buildingName] = { count: 0, occupants: 0 };
+                          }
+                          acc[room.buildingName].count++;
+                          acc[room.buildingName].occupants += room.occupants.length;
+                          return acc;
+                        }, {} as Record<string, { count: number; occupants: number }>);
+
+                        return Object.entries(buildingGroups)
+                          .sort(([a], [b]) => a.localeCompare(b))
+                          .map(([building, stats]) => (
+                            <div key={building} className="flex justify-between items-center py-2 border-b border-gray-100">
+                              <span className="text-gray-600">อาคาร {building}:</span>
+                              <span className="font-semibold text-gray-900">
+                                {stats.count} ห้อง ({stats.occupants} คน)
+                              </span>
+                            </div>
+                          ));
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Locked Rooms Detail */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      ห้องที่ถูกล็อค
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">จำนวนห้องถูกล็อค:</span>
+                        <span className="font-semibold text-gray-900">
+                          {roomsWithOccupants.filter(r => r.isLocked).length} ห้อง
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">จำนวนที่รับได้รวม:</span>
+                        <span className="font-semibold text-gray-900">
+                          {roomsWithOccupants.filter(r => r.isLocked).reduce((sum, r) => sum + r.maxOccupancy, 0)} คน
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-600">ห้องว่างที่ใช้งานได้:</span>
+                        <span className="font-semibold text-purple-700">
+                          {roomsWithOccupants.filter(r => r.occupants.length === 0 && !r.isLocked).length} ห้อง
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'manage' ? (
             <div className="space-y-4">
               {/* Toolbar */}
               <div className="flex justify-between items-center">
@@ -1853,11 +2047,16 @@ export default function RoomManagementModal({
                   </div>
                   <div className="text-sm text-amber-700">ผู้เข้าพักทั้งหมด</div>
                 </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-red-900">
+                <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-gray-900">
                     {roomsWithOccupants.filter(r => r.isLocked).length}
                   </div>
-                  <div className="text-sm text-red-700">ห้องถูกล็อค</div>
+                  <div className="text-sm text-gray-700">
+                    ห้องถูกล็อค
+                    <div className="text-xs mt-1">
+                      (รับได้ {roomsWithOccupants.filter(r => r.isLocked).reduce((sum, r) => sum + r.maxOccupancy, 0)} คน)
+                    </div>
+                  </div>
                 </div>
               </div>
 

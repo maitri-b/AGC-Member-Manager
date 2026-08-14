@@ -150,7 +150,11 @@ export default function PartyTableManagementModal({
         throw new Error('Failed to fetch registrations');
       }
       const data = await response.json();
-      setAllRegistrations(data.attendees || []);
+      // Filter out deleted and canceled registrations
+      const activeRegistrations = (data.attendees || []).filter(
+        (reg: any) => reg.status !== 'deleted' && reg.status !== 'canceled'
+      );
+      setAllRegistrations(activeRegistrations);
     } catch (err) {
       console.error('Error fetching registrations:', err);
     }
@@ -287,6 +291,12 @@ export default function PartyTableManagementModal({
       }
 
       const data = await response.json();
+
+      // Check if registration is deleted or canceled
+      if (data.registration.status === 'deleted' || data.registration.status === 'canceled') {
+        throw new Error('รหัสลงทะเบียนนี้ถูกยกเลิกหรือลบแล้ว');
+      }
+
       setSearchedRegistration(data.registration);
       setSelectedMembersToAdd([]);
     } catch (err) {

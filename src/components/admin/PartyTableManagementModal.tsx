@@ -64,6 +64,18 @@ function parseAttendeeNames(attendeeNames: any): string[] {
   return [String(attendeeNames).trim()];
 }
 
+// Helper function to display member name with fallback for empty names
+function displayMemberName(name: string, index?: number): string {
+  const normalized = normalizeMemberName(name);
+
+  // If name is empty or just whitespace, use fallback
+  if (!normalized || normalized.trim() === '') {
+    return index !== undefined ? `ผู้เข้าร่วมคนที่ ${index + 1}` : 'ไม่ระบุชื่อ';
+  }
+
+  return normalized;
+}
+
 interface PartyTableManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -385,39 +397,86 @@ export default function PartyTableManagementModal({
   };
 
   const handleAddMembers = async () => {
-    if (!managingTableId || selectedMembersToAdd.length === 0) {
-      alert('กรุณาเลือกสมาชิกที่ต้องการเพิ่ม');
+    if (!managingTableId) {
+      alert('ไม่พบข้อมูลโต๊ะ');
       return;
     }
 
-    try {
-      const members = selectedMembersToAdd.map((m) => ({
-        registrationId: m.registrationId,
-        lineUserId: m.lineUserId,
-        name: normalizeMemberName(m.name),
-        attendeeIndex: m.attendeeIndex,
-        companyName: m.companyName,
-      }));
-
-      const response = await fetch(`/api/party-tables/${managingTableId}/add-members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add members');
+    // Check if adding from group or individual members
+    if (memberManagementTab === 'groups') {
+      if (!selectedGroupForAssign) {
+        alert('กรุณาเลือกกลุ่มโต๊ะที่ต้องการเพิ่ม');
+        return;
       }
 
-      alert(`เพิ่มสมาชิก ${selectedMembersToAdd.length} คนสำเร็จ!`);
-      setSearchRegistrationId('');
-      setSearchedRegistration(null);
-      setSelectedMembersToAdd([]);
-      await fetchTables();
-    } catch (err) {
-      console.error('Error adding members:', err);
-      alert(err instanceof Error ? err.message : 'Failed to add members');
+      // Get the selected group's members
+      const selectedGroup = unassignedTables.find(t => t.tableId === selectedGroupForAssign);
+      if (!selectedGroup || selectedGroup.members.length === 0) {
+        alert('ไม่พบสมาชิกในกลุ่มโต๊ะที่เลือก');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/party-tables/${managingTableId}/add-members`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ members: selectedGroup.members }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add group');
+        }
+
+        alert(`เพิ่มกลุ่มโต๊ะ (${selectedGroup.members.length} คน) สำเร็จ!`);
+        setSelectedGroupForAssign(null);
+        setShowMemberManagement(false);
+        setManagingTableId(null);
+        setMemberManagementSearchTerm('');
+        await fetchTables();
+      } catch (err) {
+        console.error('Error adding group:', err);
+        alert(err instanceof Error ? err.message : 'Failed to add group');
+      }
+    } else {
+      // Adding individual members from registrations
+      if (selectedMembersToAdd.length === 0) {
+        alert('กรุณาเลือกสมาชิกที่ต้องการเพิ่ม');
+        return;
+      }
+
+      try {
+        const members = selectedMembersToAdd.map((m) => ({
+          registrationId: m.registrationId,
+          lineUserId: m.lineUserId,
+          name: normalizeMemberName(m.name),
+          attendeeIndex: m.attendeeIndex,
+          companyName: m.companyName,
+        }));
+
+        const response = await fetch(`/api/party-tables/${managingTableId}/add-members`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ members }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add members');
+        }
+
+        alert(`เพิ่มสมาชิก ${selectedMembersToAdd.length} คนสำเร็จ!`);
+        setSearchRegistrationId('');
+        setSearchedRegistration(null);
+        setSelectedMembersToAdd([]);
+        setShowMemberManagement(false);
+        setManagingTableId(null);
+        setMemberManagementSearchTerm('');
+        await fetchTables();
+      } catch (err) {
+        console.error('Error adding members:', err);
+        alert(err instanceof Error ? err.message : 'Failed to add members');
+      }
     }
   };
 
@@ -726,6 +785,9 @@ export default function PartyTableManagementModal({
                 setManagingTableId(tableId);
                 setShowMemberManagement(true);
               }}
+              onRemoveMember={(tableId, registrationId, attendeeIndex, name) => {
+                setPendingMemberRemoval({ tableId, registrationId, attendeeIndex, name });
+              }}
               defaultSeats={defaultSeats}
             />
           )}
@@ -1016,6 +1078,7 @@ export default function PartyTableManagementModal({
                     setShowMemberManagement(false);
                     setManagingTableId(null);
                     setSelectedMembersToAdd([]);
+                    setSelectedGroupForAssign(null);
                     setMemberManagementSearchTerm('');
                   }}
                   className="text-gray-400 hover:text-gray-600"
@@ -1103,6 +1166,7 @@ export default function PartyTableManagementModal({
                     setShowMemberManagement(false);
                     setManagingTableId(null);
                     setSelectedMembersToAdd([]);
+                    setSelectedGroupForAssign(null);
                     setMemberManagementSearchTerm('');
                   }}
                   className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
@@ -1111,10 +1175,13 @@ export default function PartyTableManagementModal({
                 </button>
                 <button
                   onClick={handleAddMembers}
-                  disabled={selectedMembersToAdd.length === 0}
+                  disabled={memberManagementTab === 'registrations' ? selectedMembersToAdd.length === 0 : !selectedGroupForAssign}
                   className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
                 >
-                  เพิ่มสมาชิก ({selectedMembersToAdd.length} คน)
+                  {memberManagementTab === 'groups'
+                    ? (selectedGroupForAssign ? `เพิ่มกลุ่มโต๊ะ` : 'เลือกกลุ่มโต๊ะ')
+                    : `เพิ่มสมาชิก (${selectedMembersToAdd.length} คน)`
+                  }
                 </button>
               </div>
             </div>
@@ -1377,7 +1444,7 @@ function TabTableGroups({
                           />
                         </svg>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{normalizeMemberName(member.name)}</p>
+                          <p className="text-sm font-medium text-gray-900">{displayMemberName(member.name, member.attendeeIndex)}</p>
                           <p className="text-xs text-gray-500">{member.companyName}</p>
                         </div>
                       </div>
@@ -1388,7 +1455,7 @@ function TabTableGroups({
                               table.tableId,
                               member.registrationId,
                               member.attendeeIndex,
-                              normalizeMemberName(member.name)
+                              displayMemberName(member.name, member.attendeeIndex)
                             )
                           }
                           className="text-red-600 hover:text-red-800"
@@ -1432,6 +1499,7 @@ function TabTableNumbers({
   onChangeTableNumber,
   onTableNumberClick,
   onManageMembers,
+  onRemoveMember,
   defaultSeats,
 }: {
   tableSlots: TableSlot[];
@@ -1443,6 +1511,7 @@ function TabTableNumbers({
   onChangeTableNumber: (table: EnrichedPartyTable) => void;
   onTableNumberClick: (tableNumber: number) => void;
   onManageMembers: (tableId: string) => void;
+  onRemoveMember: (tableId: string, registrationId: string, attendeeIndex: number, name: string) => void;
   defaultSeats: number;
 }) {
 
@@ -1539,9 +1608,23 @@ function TabTableNumbers({
                         {/* Member List */}
                         <div className="space-y-1 mt-2 max-h-32 overflow-y-auto">
                           {slot.table.members.map((member, idx) => (
-                            <div key={idx} className="text-xs text-gray-700 flex items-start gap-1">
+                            <div key={idx} className="text-xs text-gray-700 flex items-center gap-1 group">
                               <span className="text-purple-600">•</span>
-                              <span className="flex-1">{normalizeMemberName(member.name)}</span>
+                              <span className="flex-1">{displayMemberName(member.name, member.attendeeIndex)}</span>
+                              <button
+                                onClick={() => onRemoveMember(
+                                  slot.table!.tableId,
+                                  member.registrationId,
+                                  member.attendeeIndex,
+                                  displayMemberName(member.name, member.attendeeIndex)
+                                )}
+                                className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 transition-opacity p-0.5"
+                                title="ลบออกจากโต๊ะ"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -1629,7 +1712,7 @@ function AssignModalGroupsTab({
           <div className="flex flex-wrap gap-1 mt-2">
             {group.members.slice(0, 3).map((member, idx) => (
               <span key={idx} className="text-xs px-2 py-1 bg-gray-100 rounded">
-                {normalizeMemberName(member.name)}
+                {displayMemberName(member.name, member.attendeeIndex)}
               </span>
             ))}
             {group.members.length > 3 && (
@@ -1745,7 +1828,7 @@ function AssignModalRegistrationsTab({
                       className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:opacity-50"
                     />
                     <span className={`text-sm ${isAssigned ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                      {normalizeMemberName(name)}
+                      {displayMemberName(name, idx)}
                     </span>
                     {isAssigned && <span className="text-xs text-gray-500 ml-auto">ถูก assign แล้ว</span>}
                   </label>

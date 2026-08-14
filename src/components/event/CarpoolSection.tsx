@@ -98,6 +98,7 @@ export default function CarpoolSection({
   useEffect(() => {
     if (event?.hasCarpoolFeature && userRegistration) {
       fetchMemberCarpool();
+      fetchAllCarpools(); // Also fetch all carpools to validate member status
     }
   }, [event?.hasCarpoolFeature, userRegistration]);
 

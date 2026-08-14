@@ -1,7 +1,6 @@
 // API Route for Updating Event Registration (Member self-service)
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { adminDb } from '@/lib/firebase-admin';
 import { getEventRegistrationsByEventId, updateEventRegistrationInFirestore } from '@/lib/events';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
@@ -20,7 +19,7 @@ export async function PUT(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

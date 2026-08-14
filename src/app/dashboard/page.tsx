@@ -250,9 +250,7 @@ function DashboardContent() {
                         เพียงแค่<strong className="text-blue-700"> เข้าร่วมกิจกรรมอย่างน้อย 1 ครั้งต่อปี</strong>
                         คุณก็จะรักษาสิทธิ์นี้ไว้ได้ และได้เป็นส่วนหนึ่งของชุมชนที่อบอุ่นของเรา
                       </p>
-                      <p className="text-indigo-600 text-xs mt-2 italic">
-                        💡 หากคุณยังไม่ได้อยู่ในกลุ่ม LINE กรุณารอคิวเพื่อเข้ากลุ่ม ทีมงานจะดำเนินการให้เมื่อมีที่ว่าง
-                      </p>
+                      <LineGroupStatusMessage />
                     </div>
                   </div>
                 </div>
@@ -293,9 +291,7 @@ function DashboardContent() {
                         <li>• เข้าถึงข้อมูลกิจกรรมและประโยชน์ต่างๆ ของชมรม</li>
                         <li>• เป็นส่วนหนึ่งของเครือข่ายมืออาชีพที่แข็งแกร่ง</li>
                       </ul>
-                      <p className="text-emerald-600 text-xs mt-2 italic">
-                        💡 หากคุณยังไม่ได้อยู่ในกลุ่ม LINE กรุณารอคิวเพื่อเข้ากลุ่ม ทีมงานจะดำเนินการให้เมื่อมีที่ว่าง
-                      </p>
+                      <LineGroupStatusMessage variant="green" />
                     </div>
                   </div>
                 </div>
@@ -941,6 +937,77 @@ function QuickActionCard({
   );
 }
 
+// LINE Group Status Message Component
+function LineGroupStatusMessage({ variant = 'blue' }: { variant?: 'blue' | 'green' }) {
+  const [statusInfo, setStatusInfo] = useState<{
+    lineGroupStatus?: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const response = await fetch('/api/member/status-check');
+        const data = await response.json();
+        setStatusInfo(data);
+      } catch (error) {
+        console.error('Error fetching LINE status:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStatus();
+  }, []);
+
+  // Color classes based on variant
+  const colors = variant === 'green' ? {
+    loading: 'text-emerald-600',
+    border: 'border-green-200',
+    titleText: 'text-green-700',
+    bodyText: 'text-emerald-600',
+    defaultText: 'text-emerald-600',
+  } : {
+    loading: 'text-blue-600',
+    border: 'border-blue-200',
+    titleText: 'text-blue-700',
+    bodyText: 'text-blue-600',
+    defaultText: 'text-indigo-600',
+  };
+
+  if (loading) {
+    return (
+      <p className={`${colors.loading} text-xs mt-2 italic animate-pulse`}>
+        💡 กำลังตรวจสอบสถานะ LINE...
+      </p>
+    );
+  }
+
+  // Check if user is on waiting list
+  if (statusInfo?.lineGroupStatus === 'รอนำเข้ากลุ่ม') {
+    return (
+      <div className={`mt-2 pt-2 border-t ${colors.border}`}>
+        <p className={`${colors.titleText} text-xs font-medium mb-1`}>
+          💬 เกี่ยวกับ LINE Official Account ของชมรม
+        </p>
+        <p className={`${colors.bodyText} text-xs leading-relaxed`}>
+          ขณะนี้ LINE Official Account ของชมรมเต็มจำนวน 500 ท่านแล้ว
+          ทีมงานได้บันทึกชื่อท่านไว้ใน <strong>Waiting List</strong> เรียบร้อย
+          เมื่อมีที่ว่างทีมงานจะติดต่อเชิญท่านเข้ากลุ่มทันที
+          ขอบคุณที่รอคอยครับ 🙏
+        </p>
+      </div>
+    );
+  }
+
+  // Default message for others
+  return (
+    <p className={`${colors.defaultText} text-xs mt-2 italic`}>
+      💡 หากคุณยังไม่ได้อยู่ในกลุ่ม LINE กรุณารอคิวเพื่อเข้ากลุ่ม ทีมงานจะดำเนินการให้เมื่อมีที่ว่าง
+    </p>
+  );
+}
+
 // Member Status Warning Component
 function MemberStatusWarning() {
   const [statusInfo, setStatusInfo] = useState<{
@@ -967,31 +1034,15 @@ function MemberStatusWarning() {
   if (loading) return null;
   if (!statusInfo?.isRestricted) return null;
 
-  // Check if only LINE Group status is the issue (show positive message)
+  // Check if only LINE Group status is the issue
+  // If so, don't show warning here - it's already displayed in the cards above
   const onlyLineGroupPending = statusInfo.isActive &&
                                 statusInfo.status === 'ปกติ' &&
                                 statusInfo.lineGroupStatus === 'รอนำเข้ากลุ่ม';
 
   if (onlyLineGroupPending) {
-    // Positive message for waiting list
-    return (
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <div className="flex items-start gap-4">
-          <svg className="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div className="flex-1">
-            <h3 className="font-semibold text-blue-800 mb-2">💬 เกี่ยวกับ LINE Official Account ของชมรม</h3>
-            <p className="text-sm text-blue-700 leading-relaxed">
-              ขณะนี้ LINE Official Account ของชมรมเต็มจำนวน 500 ท่านแล้ว
-              ทีมงานได้บันทึกชื่อท่านไว้ใน Waiting List เรียบร้อย
-              เมื่อมีที่ว่างทีมงานจะติดต่อเชิญท่านเข้ากลุ่มทันที
-              ขอบคุณที่รอคอยครับ 🙏
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    // Don't show standalone message - LINE status is now integrated into the cards above
+    return null;
   }
 
   // Warning message for other issues

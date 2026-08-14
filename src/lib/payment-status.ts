@@ -270,8 +270,8 @@ export function parseAdditionalPayments(additionalPaymentsJson?: string): Additi
 /**
  * Calculate additional payment required based on current total vs paid amount
  * @param totalAmount Current total amount (may have been adjusted by admin)
- * @param paidAmount Total amount paid so far (deposit + remaining + approved additional)
- * @param additionalPayments Array of additional payments
+ * @param paidAmount Total amount paid so far (should already include additionalPaymentAmountPaid)
+ * @param additionalPayments Array of additional payments (for legacy compatibility only)
  * @returns Amount still required to be paid (0 if fully paid)
  */
 export function calculateAdditionalPaymentRequired(
@@ -279,13 +279,13 @@ export function calculateAdditionalPaymentRequired(
   paidAmount: number = 0,
   additionalPayments: AdditionalPayment[] = []
 ): number {
-  // Sum all approved additional payments
-  const approvedAdditional = additionalPayments
-    .filter(p => p.status === 'อนุมัติแล้ว')
-    .reduce((sum, p) => sum + p.amount, 0);
+  // ✅ CRITICAL FIX: Don't double-count additional payments
+  // The paidAmount passed in from recalculatePaymentStatus() already includes additionalPaymentAmountPaid
+  // So we should NOT add approvedAdditional again (that would be double-counting)
+  // The additionalPayments parameter is kept for backward compatibility with legacy code
 
-  // Calculate unpaid amount
-  const unpaid = totalAmount - (paidAmount + approvedAdditional);
+  // Calculate unpaid amount directly from paidAmount (which already includes all payment types)
+  const unpaid = totalAmount - paidAmount;
 
   return Math.max(0, unpaid);
 }

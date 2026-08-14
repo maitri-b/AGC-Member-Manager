@@ -54,6 +54,18 @@ export async function POST(request: NextRequest) {
       body.initialMembers = [];
     }
 
+    // Log initialMembers for debugging
+    console.log('[Party Table Creation] Initial members:', {
+      count: body.initialMembers.length,
+      members: body.initialMembers.map((m, i) => ({
+        index: i,
+        name: m.name,
+        nameType: typeof m.name,
+        nameLength: m.name?.length,
+        nameCharCodes: m.name ? Array.from(m.name).map(c => c.charCodeAt(0)).slice(0, 10) : [],
+      })),
+    });
+
     // Create the Party Table
     const createdBy = session.user.id;
     const createdByName = session.user.name || session.user.email || 'Unknown';

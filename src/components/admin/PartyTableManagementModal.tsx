@@ -3,6 +3,37 @@
 import { useState, useEffect } from 'react';
 import { PartyTable, TableMember, PartyTableSettings } from '@/types/partyTable';
 
+// Helper function to normalize member names
+function normalizeMemberName(name: any): string {
+  if (!name) return '';
+
+  // If it's already a string and not JSON, return it
+  if (typeof name === 'string' && !name.startsWith('[') && !name.startsWith('{')) {
+    return name.trim();
+  }
+
+  // If it's an array, join with comma
+  if (Array.isArray(name)) {
+    return name.join(', ').trim();
+  }
+
+  // Try to parse if it looks like JSON
+  if (typeof name === 'string' && (name.startsWith('[') || name.startsWith('{'))) {
+    try {
+      const parsed = JSON.parse(name);
+      if (Array.isArray(parsed)) {
+        return parsed.join(', ').trim();
+      }
+      return String(parsed).trim();
+    } catch {
+      // If parsing fails, return the original string
+      return name.trim();
+    }
+  }
+
+  return String(name).trim();
+}
+
 interface PartyTableManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -228,8 +259,14 @@ export default function PartyTableManagementModal({
         throw new Error(errorData.error || 'Failed to unassign table number');
       }
 
-      alert('ยกเลิกเลขโต๊ะสำเร็จ!');
+      // Wait for response to complete
+      await response.json();
+
+      // Refresh data first
       await fetchTables();
+
+      // Then show success message
+      alert('ยกเลิกเลขโต๊ะสำเร็จ!');
     } catch (err) {
       console.error('Error unassigning table number:', err);
       alert(err instanceof Error ? err.message : 'Failed to unassign table number');
@@ -649,6 +686,7 @@ export default function PartyTableManagementModal({
                 setShowChangeTableNumberModal(true);
               }}
               onTableNumberClick={handleOpenAssignModal}
+              onManageMembers={handleOpenMemberManagement}
               defaultSeats={defaultSeats}
             />
           )}
@@ -1005,7 +1043,7 @@ export default function PartyTableManagementModal({
                             }}
                             className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                           />
-                          <span className="text-sm text-gray-900">{name.trim()}</span>
+                          <span className="text-sm text-gray-900">{normalizeMemberName(name)}</span>
                         </label>
                       ))}
                   </div>
@@ -1293,7 +1331,7 @@ function TabTableGroups({
                           />
                         </svg>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                          <p className="text-sm font-medium text-gray-900">{normalizeMemberName(member.name)}</p>
                           <p className="text-xs text-gray-500">{member.companyName}</p>
                         </div>
                       </div>
@@ -1304,7 +1342,7 @@ function TabTableGroups({
                               table.tableId,
                               member.registrationId,
                               member.attendeeIndex,
-                              member.name
+                              normalizeMemberName(member.name)
                             )
                           }
                           className="text-red-600 hover:text-red-800"
@@ -1357,6 +1395,7 @@ function TabTableNumbers({
   onUnassignTableNumber: (tableId: string) => void;
   onChangeTableNumber: (table: EnrichedPartyTable) => void;
   onTableNumberClick: (tableNumber: number) => void;
+  onManageMembers: (tableId: string) => void;
   defaultSeats: number;
 }) {
 
@@ -1455,10 +1494,18 @@ function TabTableNumbers({
                           {slot.table.members.map((member, idx) => (
                             <div key={idx} className="text-xs text-gray-700 flex items-start gap-1">
                               <span className="text-purple-600">•</span>
-                              <span className="flex-1">{member.name}</span>
+                              <span className="flex-1">{normalizeMemberName(member.name)}</span>
                             </div>
                           ))}
                         </div>
+
+                        {/* Add Member Button */}
+                        <button
+                          onClick={() => onManageMembers(slot.table!.tableId)}
+                          className="w-full mt-3 px-3 py-2 bg-purple-100 text-purple-700 text-xs rounded hover:bg-purple-200 transition-colors font-medium"
+                        >
+                          + เพิ่มสมาชิก
+                        </button>
                       </div>
                     ) : (
                       <button
@@ -1535,7 +1582,7 @@ function AssignModalGroupsTab({
           <div className="flex flex-wrap gap-1 mt-2">
             {group.members.slice(0, 3).map((member, idx) => (
               <span key={idx} className="text-xs px-2 py-1 bg-gray-100 rounded">
-                {member.name}
+                {normalizeMemberName(member.name)}
               </span>
             ))}
             {group.members.length > 3 && (
@@ -1650,7 +1697,7 @@ function AssignModalRegistrationsTab({
                       className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:opacity-50"
                     />
                     <span className={`text-sm ${isAssigned ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                      {name}
+                      {normalizeMemberName(name)}
                     </span>
                     {isAssigned && <span className="text-xs text-gray-500 ml-auto">ถูก assign แล้ว</span>}
                   </label>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
 interface TableMember {
@@ -67,24 +67,8 @@ export default function PartyTableSection({
   userRegistration,
   session,
   isCommitteeOrAdmin,
-  attendeeNames: attendeeNamesProp,
+  attendeeNames,
 }: PartyTableSectionProps) {
-  // Parse attendeeNames in case it's passed as a JSON string
-  const attendeeNames = useMemo(() => {
-    if (Array.isArray(attendeeNamesProp)) {
-      return attendeeNamesProp;
-    }
-    if (typeof attendeeNamesProp === 'string') {
-      try {
-        const parsed = JSON.parse(attendeeNamesProp);
-        return Array.isArray(parsed) ? parsed : [attendeeNamesProp];
-      } catch {
-        return [attendeeNamesProp];
-      }
-    }
-    return [];
-  }, [attendeeNamesProp]);
-
   // State management
   const [memberTables, setMemberTables] = useState<PartyTable[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
@@ -166,32 +150,18 @@ export default function PartyTableSection({
 
     setCreatingTable(true);
     try {
-      const initialMembers = selectedMembersForTable.map((attendeeIndex) => {
-        const attendeeName = attendeeNames[attendeeIndex];
-        // Ensure name is a plain string, not a JSON stringified value
-        const cleanName = typeof attendeeName === 'string'
-          ? attendeeName
-          : String(attendeeName);
-
-        return {
-          registrationId: userRegistration.registrationId,
-          lineUserId: userRegistration.lineUserId,
-          name: cleanName,
-          attendeeIndex,
-          companyName: userRegistration.companyName || '',
-        };
-      });
+      // Build members array - SAME AS CARPOOL
+      const initialMembers = selectedMembersForTable.map(index => ({
+        registrationId: userRegistration.registrationId,
+        lineUserId: userRegistration.lineUserId,
+        name: attendeeNames[index] || '',
+        attendeeIndex: index,
+        companyName: userRegistration.companyName || '',
+      }));
 
       // Use fallback values for required fields
       const hostCompanyName = userRegistration.companyName || 'ไม่ระบุบริษัท';
       const hostContactName = userRegistration.contactName || attendeeNames[0] || 'ไม่ระบุผู้ติดต่อ';
-
-      console.log('[PartyTable] Creating table with data:', {
-        hostCompanyName,
-        hostContactName,
-        initialMembers,
-        attendeeNamesArray: attendeeNames,
-      });
 
       const response = await fetch('/api/party-tables', {
         method: 'POST',

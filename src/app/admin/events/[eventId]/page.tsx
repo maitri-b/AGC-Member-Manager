@@ -68,6 +68,15 @@ interface Event {
     maxSeatsPerCar?: number;
     showCarNumbersToMembers?: boolean;
   };
+  // Party Table feature
+  hasPartyTableFeature?: boolean;
+  partyTableSettings?: {
+    totalTables: number;
+    defaultSeatsPerTable: number;
+    maxSeatsPerTable?: number;
+    showTableNumbersToMembers: boolean;
+    tableActive: boolean;
+  };
   // Cancellation policy
   cancellationPolicy?: CancellationPolicy;
 }

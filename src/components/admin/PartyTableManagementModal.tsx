@@ -34,6 +34,36 @@ function normalizeMemberName(name: any): string {
   return String(name).trim();
 }
 
+// Helper function to parse attendeeNames from database format
+function parseAttendeeNames(attendeeNames: any): string[] {
+  if (!attendeeNames) return [];
+
+  // If it's already an array, return it
+  if (Array.isArray(attendeeNames)) {
+    return attendeeNames.map((n: any) => String(n).trim());
+  }
+
+  // If it's a string, try to parse as JSON first
+  if (typeof attendeeNames === 'string') {
+    // Try parsing as JSON array
+    if (attendeeNames.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(attendeeNames);
+        if (Array.isArray(parsed)) {
+          return parsed.map((n: any) => String(n).trim());
+        }
+      } catch {
+        // If JSON parse fails, fall through to comma split
+      }
+    }
+
+    // Fall back to comma-separated string
+    return attendeeNames.split(',').map((n: string) => n.trim()).filter(Boolean);
+  }
+
+  return [String(attendeeNames).trim()];
+}
+
 interface PartyTableManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -83,7 +113,7 @@ export default function PartyTableManagementModal({
   const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [managingTableId, setManagingTableId] = useState<string | null>(null);
   const [expandedTableId, setExpandedTableId] = useState<string | null>(null);
-  const [memberManagementTab, setMemberManagementTab] = useState<'registrations'>('registrations');
+  const [memberManagementTab, setMemberManagementTab] = useState<'groups' | 'registrations'>('registrations');
 
   // Registration search for inviting members
   const [searchRegistrationId, setSearchRegistrationId] = useState('');
@@ -95,6 +125,7 @@ export default function PartyTableManagementModal({
     attendeeIndex: number;
     name: string;
     companyName: string;
+    lineUserId: string;
   }[]>([]);
   const [allRegistrations, setAllRegistrations] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -125,6 +156,7 @@ export default function PartyTableManagementModal({
     attendeeIndex: number;
     name: string;
     companyName: string;
+    lineUserId: string;
   }[]>([]);
   const [assigning, setAssigning] = useState(false);
 
@@ -136,6 +168,7 @@ export default function PartyTableManagementModal({
     attendeeIndex: number;
     name: string;
     companyName: string;
+    lineUserId: string;
   }[]>([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
 
@@ -360,10 +393,10 @@ export default function PartyTableManagementModal({
     try {
       const members = selectedMembersToAdd.map((m) => ({
         registrationId: m.registrationId,
-        lineUserId: searchedRegistration.lineUserId,
+        lineUserId: m.lineUserId,
         name: normalizeMemberName(m.name),
         attendeeIndex: m.attendeeIndex,
-        companyName: searchedRegistration.companyName || '',
+        companyName: m.companyName,
       }));
 
       const response = await fetch(`/api/party-tables/${managingTableId}/add-members`, {
@@ -419,7 +452,7 @@ export default function PartyTableManagementModal({
       // Prepare members data
       const initialMembers = selectedMembersForCreate.map((m) => ({
         registrationId: m.registrationId,
-        lineUserId: hostRegistration.registration.lineUserId || '',
+        lineUserId: m.lineUserId,
         name: normalizeMemberName(m.name),
         attendeeIndex: m.attendeeIndex,
         companyName: m.companyName,
@@ -488,7 +521,7 @@ export default function PartyTableManagementModal({
         // Prepare members data
         const initialMembers = selectedMembersForNewGroup.map((m) => ({
           registrationId: m.registrationId,
-          lineUserId: hostRegistration.registration.lineUserId || '',
+          lineUserId: m.lineUserId,
           name: normalizeMemberName(m.name),
           attendeeIndex: m.attendeeIndex,
           companyName: m.companyName,
@@ -993,6 +1026,30 @@ export default function PartyTableManagementModal({
                 </button>
               </div>
 
+              {/* Tabs */}
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setMemberManagementTab('groups')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    memberManagementTab === 'groups'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  กลุ่มโต๊ะ
+                </button>
+                <button
+                  onClick={() => setMemberManagementTab('registrations')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    memberManagementTab === 'registrations'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  รหัสการจอง
+                </button>
+              </div>
+
               {/* Search */}
               <div className="mt-4">
                 <input
@@ -1007,26 +1064,35 @@ export default function PartyTableManagementModal({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <AssignModalRegistrationsTab
-                registrations={allRegistrations}
-                tables={tables}
-                searchTerm={memberManagementSearchTerm}
-                selectedMembers={selectedMembersToAdd}
-                onToggleMember={(member) => {
-                  const exists = selectedMembersToAdd.find(
-                    (m) => m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex
-                  );
-                  if (exists) {
-                    setSelectedMembersToAdd(
-                      selectedMembersToAdd.filter(
-                        (m) => !(m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex)
-                      )
+              {memberManagementTab === 'groups' ? (
+                <AssignModalGroupsTab
+                  tables={unassignedTables}
+                  searchTerm={memberManagementSearchTerm}
+                  selectedGroupId={selectedGroupForAssign}
+                  onSelectGroup={setSelectedGroupForAssign}
+                />
+              ) : (
+                <AssignModalRegistrationsTab
+                  registrations={allRegistrations}
+                  tables={tables}
+                  searchTerm={memberManagementSearchTerm}
+                  selectedMembers={selectedMembersToAdd}
+                  onToggleMember={(member) => {
+                    const exists = selectedMembersToAdd.find(
+                      (m) => m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex
                     );
-                  } else {
-                    setSelectedMembersToAdd([...selectedMembersToAdd, member]);
-                  }
-                }}
-              />
+                    if (exists) {
+                      setSelectedMembersToAdd(
+                        selectedMembersToAdd.filter(
+                          (m) => !(m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex)
+                        )
+                      );
+                    } else {
+                      setSelectedMembersToAdd([...selectedMembersToAdd, member]);
+                    }
+                  }}
+                />
+              )}
             </div>
 
             {/* Footer */}
@@ -1589,8 +1655,8 @@ function AssignModalRegistrationsTab({
   registrations: any[];
   tables: EnrichedPartyTable[];
   searchTerm: string;
-  selectedMembers: { registrationId: string; attendeeIndex: number; name: string; companyName: string }[];
-  onToggleMember: (member: { registrationId: string; attendeeIndex: number; name: string; companyName: string }) => void;
+  selectedMembers: { registrationId: string; attendeeIndex: number; name: string; companyName: string; lineUserId: string }[];
+  onToggleMember: (member: { registrationId: string; attendeeIndex: number; name: string; companyName: string; lineUserId: string }) => void;
 }) {
   // Helper: Check if a member is already assigned to a table
   const isMemberAssigned = (registrationId: string, attendeeIndex: number) => {
@@ -1609,7 +1675,7 @@ function AssignModalRegistrationsTab({
     if (!item?.registration) return false;
 
     // Skip if all members are already assigned
-    const attendeeNames = item.registration.attendeeNames?.split(',').map((n: string) => n.trim()) || [];
+    const attendeeNames = parseAttendeeNames(item.registration.attendeeNames);
     const allAssigned = attendeeNames.every((_name: string, idx: number) => isMemberAssigned(item.registration.registrationId, idx));
     if (allAssigned && attendeeNames.length > 0) return false;
 
@@ -1636,7 +1702,7 @@ function AssignModalRegistrationsTab({
     <div className="space-y-4">
       {filteredRegistrations.map((item) => {
         const registration = item.registration;
-        const attendeeNames = registration.attendeeNames?.split(',').map((n: string) => n.trim()) || [];
+        const attendeeNames = parseAttendeeNames(registration.attendeeNames);
 
         return (
           <div key={registration.registrationId} className="border border-gray-200 rounded-lg p-4">
@@ -1672,6 +1738,7 @@ function AssignModalRegistrationsTab({
                             attendeeIndex: idx,
                             name,
                             companyName: registration.companyName || registration.contactName || '',
+                            lineUserId: registration.lineUserId || '',
                           });
                         }
                       }}

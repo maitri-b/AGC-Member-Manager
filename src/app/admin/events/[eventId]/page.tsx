@@ -1077,6 +1077,9 @@ export default function EventDetailPage() {
       // Debug: Check if hasCarpoolFeature is being fetched
       console.log('[Fetch Event Data] hasCarpoolFeature:', data.event?.hasCarpoolFeature);
       console.log('[Fetch Event Data] carpoolSettings:', data.event?.carpoolSettings);
+      // Debug: Check if hasPartyTableFeature is being fetched
+      console.log('[Fetch Event Data] hasPartyTableFeature:', data.event?.hasPartyTableFeature);
+      console.log('[Fetch Event Data] partyTableSettings:', data.event?.partyTableSettings);
 
       setEventData(data);
     } catch (err) {

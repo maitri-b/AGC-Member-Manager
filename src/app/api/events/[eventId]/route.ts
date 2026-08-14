@@ -240,6 +240,9 @@ export async function GET(
         // Carpool feature configuration
         hasCarpoolFeature: event.hasCarpoolFeature || false,
         carpoolSettings: event.carpoolSettings || undefined,
+        // Party Table feature configuration
+        hasPartyTableFeature: event.hasPartyTableFeature || false,
+        partyTableSettings: event.partyTableSettings || undefined,
       },
       summary: {
         totalRegistrations: summary.totalRegistrations,

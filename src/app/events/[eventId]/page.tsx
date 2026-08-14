@@ -110,10 +110,13 @@ interface PaymentSlip {
 
 interface UserRegistration {
   registrationId: string;
+  lineUserId: string;
   status: string;
   attendeeCount: number;
   registrationDate: string;
   attendeeNames: string;
+  companyName?: string;
+  contactName?: string;
   // Deposit payment data (New)
   totalAmount?: number;
   depositAmount?: number;

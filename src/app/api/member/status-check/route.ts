@@ -1,13 +1,12 @@
 // API Route for Member Status Check
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { getMemberById } from '@/lib/google-sheets';
 import { adminDb } from '@/lib/firebase-admin';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ isRestricted: false });

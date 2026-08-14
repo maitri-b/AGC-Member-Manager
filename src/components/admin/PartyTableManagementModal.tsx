@@ -94,6 +94,17 @@ export default function PartyTableManagementModal({
   }[]>([]);
   const [assigning, setAssigning] = useState(false);
 
+  // Create New Group Modal state
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [createGroupSearchTerm, setCreateGroupSearchTerm] = useState('');
+  const [selectedMembersForCreate, setSelectedMembersForCreate] = useState<{
+    registrationId: string;
+    attendeeIndex: number;
+    name: string;
+    companyName: string;
+  }[]>([]);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       fetchTables();
@@ -334,6 +345,69 @@ export default function PartyTableManagementModal({
     setSelectedMembersForNewGroup([]);
   };
 
+  const handleCreateNewGroup = async () => {
+    if (selectedMembersForCreate.length === 0) {
+      alert('กรุณาเลือกสมาชิกอย่างน้อย 1 คน');
+      return;
+    }
+
+    setCreatingGroup(true);
+    try {
+      // Get first member's registration to use as host
+      const firstMember = selectedMembersForCreate[0];
+      const hostRegistration = allRegistrations.find(
+        (r: any) => r.registration.registrationId === firstMember.registrationId
+      );
+
+      if (!hostRegistration) {
+        throw new Error('ไม่พบข้อมูลการลงทะเบียน');
+      }
+
+      // Prepare members data
+      const initialMembers = selectedMembersForCreate.map((m) => ({
+        registrationId: m.registrationId,
+        lineUserId: hostRegistration.registration.lineUserId || '',
+        name: m.name,
+        attendeeIndex: m.attendeeIndex,
+        companyName: m.companyName,
+      }));
+
+      // Create new party table
+      const createResponse = await fetch('/api/party-tables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId,
+          tableGroupName: undefined, // Auto-generate from company name
+          hostRegistrationId: firstMember.registrationId,
+          hostCompanyName: firstMember.companyName,
+          hostContactName: hostRegistration.registration.contactName || '',
+          initialMembers,
+        }),
+      });
+
+      if (!createResponse.ok) {
+        const errorData = await createResponse.json();
+        throw new Error(errorData.error || 'Failed to create party table');
+      }
+
+      await createResponse.json();
+
+      setShowCreateGroupModal(false);
+      setSelectedMembersForCreate([]);
+      setCreateGroupSearchTerm('');
+      alert('สร้างกลุ่มโต๊ะสำเร็จ!');
+
+      // Refresh tables list
+      await fetchTables();
+    } catch (error) {
+      console.error('Error creating group:', error);
+      alert(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
   const handleAssignFromModal = async () => {
     if (!selectedTableNumberForAssign) return;
 
@@ -516,6 +590,11 @@ export default function PartyTableManagementModal({
               tables={tables}
               defaultSeats={defaultSeats}
               maxSeats={maxSeats}
+              onCreateNewGroup={() => {
+                setShowCreateGroupModal(true);
+                setSelectedMembersForCreate([]);
+                setCreateGroupSearchTerm('');
+              }}
               onDeleteTable={(tableId) => {
                 setDeletingTableId(tableId);
                 setDeleteConfirmOpen(true);
@@ -691,6 +770,100 @@ export default function PartyTableManagementModal({
                   className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
                 >
                   {assigning ? 'กำลังจัด...' : `จัดโต๊ะ #${selectedTableNumberForAssign}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create New Group Modal */}
+      {showCreateGroupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  สร้างกลุ่มโต๊ะใหม่
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCreateGroupModal(false);
+                    setSelectedMembersForCreate([]);
+                    setCreateGroupSearchTerm('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Info */}
+              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  💡 เลือกสมาชิกอย่างน้อย 1 คนเพื่อสร้างกลุ่มโต๊ะ ระบบจะใช้ชื่อบริษัทของสมาชิกคนแรกเป็นชื่อกลุ่มโดยอัตโนมัติ
+                </p>
+              </div>
+
+              {/* Search */}
+              <div className="mt-4">
+                <input
+                  type="text"
+                  value={createGroupSearchTerm}
+                  onChange={(e) => setCreateGroupSearchTerm(e.target.value)}
+                  placeholder="ค้นหา: ชื่อบริษัท, ชื่อ LINE, ชื่อสมาชิก"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <AssignModalRegistrationsTab
+                registrations={allRegistrations}
+                tables={tables}
+                searchTerm={createGroupSearchTerm}
+                selectedMembers={selectedMembersForCreate}
+                onToggleMember={(member) => {
+                  const exists = selectedMembersForCreate.find(
+                    (m) => m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex
+                  );
+                  if (exists) {
+                    setSelectedMembersForCreate(
+                      selectedMembersForCreate.filter(
+                        (m) => !(m.registrationId === member.registrationId && m.attendeeIndex === member.attendeeIndex)
+                      )
+                    );
+                  } else {
+                    setSelectedMembersForCreate([...selectedMembersForCreate, member]);
+                  }
+                }}
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCreateGroupModal(false);
+                    setSelectedMembersForCreate([]);
+                    setCreateGroupSearchTerm('');
+                  }}
+                  disabled={creatingGroup}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleCreateNewGroup}
+                  disabled={creatingGroup || selectedMembersForCreate.length === 0}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
+                >
+                  {creatingGroup ? 'กำลังสร้าง...' : `สร้างกลุ่มโต๊ะ (${selectedMembersForCreate.length} คน)`}
                 </button>
               </div>
             </div>
@@ -922,6 +1095,7 @@ function TabTableGroups({
   tables,
   defaultSeats,
   maxSeats,
+  onCreateNewGroup,
   onDeleteTable,
   onManageMembers,
   onToggleExpand,
@@ -931,6 +1105,7 @@ function TabTableGroups({
   tables: EnrichedPartyTable[];
   defaultSeats: number;
   maxSeats?: number;
+  onCreateNewGroup: () => void;
   onDeleteTable: (tableId: string) => void;
   onManageMembers: (tableId: string) => void;
   onToggleExpand: (tableId: string) => void;
@@ -957,14 +1132,35 @@ function TabTableGroups({
         </svg>
         <p className="text-gray-600">ยังไม่มีโต๊ะในกิจกรรมนี้</p>
         <p className="text-sm text-gray-500 mt-2">
-          สมาชิกสามารถสร้างโต๊ะเองได้จากหน้า Event Detail
+          สมาชิกสามารถสร้างโต๊ะเองได้จากหน้า Event Detail หรือคุณสามารถสร้างกลุ่มโต๊ะให้สมาชิกได้
         </p>
+        <button
+          onClick={onCreateNewGroup}
+          className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 inline-flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          สร้างกลุ่มโต๊ะใหม่
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Create New Group Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={onCreateNewGroup}
+          className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 inline-flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          สร้างกลุ่มโต๊ะใหม่
+        </button>
+      </div>
       {activeTables.map((table) => {
         const isExpanded = expandedTableId === table.tableId;
         const memberCount = table.members.length;

@@ -21,10 +21,30 @@ export async function POST(request: NextRequest) {
 
     const body: CreatePartyTableData = await request.json();
 
+    console.log('[Party Table Creation] Request received:', {
+      userId: session.user.id,
+      userName: session.user.name,
+      body,
+    });
+
     // Validate required fields
-    if (!body.eventId || !body.hostRegistrationId || !body.hostCompanyName || !body.hostContactName) {
+    const missingFields: string[] = [];
+    if (!body.eventId) missingFields.push('eventId');
+    if (!body.hostRegistrationId) missingFields.push('hostRegistrationId');
+    if (!body.hostCompanyName) missingFields.push('hostCompanyName');
+    if (!body.hostContactName) missingFields.push('hostContactName');
+
+    if (missingFields.length > 0) {
+      console.error('[Party Table Creation] Missing required fields:', {
+        missingFields,
+        body,
+      });
       return NextResponse.json(
-        { error: 'Missing required fields: eventId, hostRegistrationId, hostCompanyName, hostContactName' },
+        {
+          error: 'ข้อมูลไม่ครบถ้วน',
+          details: `Missing required fields: ${missingFields.join(', ')}`,
+          missingFields
+        },
         { status: 400 }
       );
     }

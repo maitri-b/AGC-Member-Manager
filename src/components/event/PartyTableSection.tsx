@@ -158,6 +158,10 @@ export default function PartyTableSection({
         companyName: userRegistration.companyName || '',
       }));
 
+      // Use fallback values for required fields
+      const hostCompanyName = userRegistration.companyName || 'ไม่ระบุบริษัท';
+      const hostContactName = userRegistration.contactName || attendeeNames[0] || 'ไม่ระบุผู้ติดต่อ';
+
       const response = await fetch('/api/party-tables', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -165,8 +169,8 @@ export default function PartyTableSection({
           eventId,
           tableGroupName: undefined, // Let backend auto-generate from company name
           hostRegistrationId: userRegistration.registrationId,
-          hostCompanyName: userRegistration.companyName || '',
-          hostContactName: userRegistration.contactName || '',
+          hostCompanyName,
+          hostContactName,
           initialMembers,
         }),
       });

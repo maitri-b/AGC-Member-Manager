@@ -11,7 +11,7 @@ import { unassignTableNumber, getPartyTableById } from '@/lib/partyTables';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tableId: string } }
+  { params }: { params: Promise<{ tableId: string }> }
 ) {
   try {
     const session = await getEffectiveSession();
@@ -25,7 +25,7 @@ export async function POST(
       return NextResponse.json({ error: 'Permission denied - Admin access required' }, { status: 403 });
     }
 
-    const { tableId } = params;
+    const { tableId } = await params;
 
     if (!tableId) {
       return NextResponse.json({ error: 'Table ID is required' }, { status: 400 });

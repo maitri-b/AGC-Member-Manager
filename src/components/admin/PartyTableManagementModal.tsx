@@ -686,7 +686,10 @@ export default function PartyTableManagementModal({
                 setShowChangeTableNumberModal(true);
               }}
               onTableNumberClick={handleOpenAssignModal}
-              onManageMembers={handleOpenMemberManagement}
+              onManageMembers={(tableId) => {
+                setManagingTableId(tableId);
+                setShowMemberManagement(true);
+              }}
               defaultSeats={defaultSeats}
             />
           )}

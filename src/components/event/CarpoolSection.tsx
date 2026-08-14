@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 
 interface CarpoolMember {
@@ -301,36 +301,43 @@ export default function CarpoolSection({
     return null;
   }
 
-  // Calculate members not in any carpool
-  const membersNotInCarpool = attendeeNames.filter((name, index) => {
-    let isInCarpool = false;
+  // Calculate members not in any carpool - use useMemo to recalculate when dependencies change
+  const membersNotInCarpool = useMemo(() => {
+    // Don't calculate until allCarpools is loaded
+    if (!allCarpoolsLoaded) {
+      return attendeeNames; // Assume all not in carpool until we know
+    }
 
-    allCarpools.forEach((cp) => {
-      const member = cp.members?.find((m: any) => {
-        if (m.registrationId !== userRegistration?.registrationId) {
-          return false;
+    return attendeeNames.filter((name, index) => {
+      let isInCarpool = false;
+
+      allCarpools.forEach((cp) => {
+        const member = cp.members?.find((m: any) => {
+          if (m.registrationId !== userRegistration?.registrationId) {
+            return false;
+          }
+
+          if (m.attendeeIndex !== undefined && m.attendeeIndex !== -1) {
+            return m.attendeeIndex === index;
+          }
+
+          const normalizeName = (n: string) => n.replace(/\s+/g, ' ').trim();
+          const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+          return (
+            normalizeName(cleanName) === normalizeName(name) ||
+            normalizeName(m.name) === normalizeName(name)
+          );
+        });
+        if (member) {
+          isInCarpool = true;
         }
-
-        if (m.attendeeIndex !== undefined && m.attendeeIndex !== -1) {
-          return m.attendeeIndex === index;
-        }
-
-        const normalizeName = (n: string) => n.replace(/\s+/g, ' ').trim();
-        const cleanName = m.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
-        return (
-          normalizeName(cleanName) === normalizeName(name) ||
-          normalizeName(m.name) === normalizeName(name)
-        );
       });
-      if (member) {
-        isInCarpool = true;
-      }
+
+      return !isInCarpool;
     });
+  }, [allCarpools, allCarpoolsLoaded, attendeeNames, userRegistration?.registrationId]);
 
-    return !isInCarpool;
-  });
-
-  const allMembersInCarpools = membersNotInCarpool.length === 0;
+  const allMembersInCarpools = allCarpoolsLoaded && membersNotInCarpool.length === 0;
   const ownedCarpoolsCount = ownedCarpools.length;
 
   return (

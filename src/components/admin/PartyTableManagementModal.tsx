@@ -74,6 +74,25 @@ function parseAttendeeNames(attendeeNames: any): string[] {
   return [String(attendeeNames).trim()];
 }
 
+// Helper function to truncate company name to 20 characters at word boundary
+function truncateCompanyName(companyName: string, maxLength: number = 20): string {
+  if (!companyName || companyName.length <= maxLength) {
+    return companyName;
+  }
+
+  // Find the last space within maxLength
+  const truncated = companyName.substring(0, maxLength);
+  const lastSpaceIndex = truncated.lastIndexOf(' ');
+
+  // If there's a space, truncate at word boundary
+  if (lastSpaceIndex > 0) {
+    return truncated.substring(0, lastSpaceIndex) + '..';
+  }
+
+  // Otherwise, just truncate at maxLength
+  return truncated + '..';
+}
+
 // Helper function to display member name with fallback for empty names
 function displayMemberName(name: string, index?: number): string {
   const normalized = normalizeMemberName(name);
@@ -84,6 +103,13 @@ function displayMemberName(name: string, index?: number): string {
   }
 
   return normalized;
+}
+
+// Helper function to display member name with company for Join tables
+function displayMemberNameWithCompany(name: string, companyName: string, index?: number): string {
+  const displayName = displayMemberName(name, index);
+  const truncatedCompany = truncateCompanyName(companyName);
+  return `${displayName} (${truncatedCompany})`;
 }
 
 interface PartyTableManagementModalProps {
@@ -193,6 +219,19 @@ export default function PartyTableManagementModal({
     lineUserId: string;
   }[]>([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
+
+  // Create Reservation Table Modal state
+  const [showCreateReservationModal, setShowCreateReservationModal] = useState(false);
+  const [reservationName, setReservationName] = useState('');
+  const [reservationSeats, setReservationSeats] = useState<number>(10);
+  const [creatingReservation, setCreatingReservation] = useState(false);
+
+  // Edit Reservation Modal state
+  const [showEditReservationModal, setShowEditReservationModal] = useState(false);
+  const [editingReservationTable, setEditingReservationTable] = useState<EnrichedPartyTable | null>(null);
+  const [editReservationName, setEditReservationName] = useState('');
+  const [editReservationSeats, setEditReservationSeats] = useState<number>(10);
+  const [updatingReservation, setUpdatingReservation] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -341,17 +380,45 @@ export default function PartyTableManagementModal({
       return;
     }
 
-    // Check if table number is already taken
-    const existingTable = tables.find(
+    // BUSINESS RULE: Check if moving a Join Table to a table number that already has a Join Table
+    const isMovingJoinTable = changingTable.isJoinTable === true;
+    const groupsAtDestination = tables.filter(
       (t) => t.assignedTableNumber === newTableNumber && t.tableId !== changingTable.tableId
     );
-    if (existingTable) {
-      alert(`เลขโต๊ะ #${newTableNumber} ถูกใช้แล้ว`);
-      return;
+    const existingJoinTableAtDestination = groupsAtDestination.find((t) => t.isJoinTable === true);
+
+    if (isMovingJoinTable && existingJoinTableAtDestination) {
+      // Confirm merge with user
+      const confirmMerge = confirm(
+        `โต๊ะ #${newTableNumber} มีกลุ่ม "Join โต๊ะ" อยู่แล้ว\n\n` +
+        `สมาชิกจากกลุ่ม Join โต๊ะที่คุณกำลังย้าย (${changingTable.members.length} คน) จะถูกรวมเข้ากับกลุ่ม Join โต๊ะที่มีอยู่ (${existingJoinTableAtDestination.members.length} คน)\n\n` +
+        `กลุ่มที่ย้ายจะถูกลบออกหลังจากรวมสมาชิกเรียบร้อยแล้ว\n\n` +
+        `ต้องการดำเนินการต่อหรือไม่?`
+      );
+
+      if (!confirmMerge) {
+        return; // User cancelled
+      }
+    } else if (groupsAtDestination.length > 0 && !isMovingJoinTable) {
+      // Regular table - allow multiple groups at same table number
+      const confirmMultiple = confirm(
+        `โต๊ะ #${newTableNumber} มีกลุ่มอื่นอยู่แล้ว ${groupsAtDestination.length} กลุ่ม\n\n` +
+        `ต้องการเพิ่มกลุ่มนี้เข้าไปด้วยหรือไม่?`
+      );
+
+      if (!confirmMultiple) {
+        return; // User cancelled
+      }
     }
 
     setChangingTableNumber(true);
     try {
+      // First, unassign from current table
+      await fetch(`/api/party-tables/${changingTable.tableId}/unassign-number`, {
+        method: 'POST',
+      });
+
+      // Then assign to new table number (this will handle merge if needed)
       const response = await fetch(`/api/party-tables/${changingTable.tableId}/assign-number`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -363,7 +430,16 @@ export default function PartyTableManagementModal({
         throw new Error(errorData.error || 'Failed to change table number');
       }
 
-      alert(`เปลี่ยนเป็นโต๊ะ #${newTableNumber} สำเร็จ!`);
+      // Show appropriate success message
+      if (isMovingJoinTable && existingJoinTableAtDestination) {
+        alert(
+          `รวมกลุ่ม Join โต๊ะสำเร็จ!\n\n` +
+          `สมาชิก ${changingTable.members.length} คนได้ถูกรวมเข้ากับกลุ่ม Join โต๊ะที่โต๊ะ #${newTableNumber} แล้ว`
+        );
+      } else {
+        alert(`เปลี่ยนเป็นโต๊ะ #${newTableNumber} สำเร็จ!`);
+      }
+
       setShowChangeTableNumberModal(false);
       setChangingTable(null);
       setNewTableNumber(0);
@@ -567,6 +643,98 @@ export default function PartyTableManagementModal({
     }
   };
 
+  const handleCreateReservation = async () => {
+    if (!reservationName.trim()) {
+      alert('กรุณาใส่ชื่อกลุ่มจองโต๊ะ');
+      return;
+    }
+
+    if (!reservationSeats || reservationSeats < 1) {
+      alert('กรุณาใส่จำนวนที่นั่งที่ต้องการจอง (อย่างน้อย 1 ที่)');
+      return;
+    }
+
+    setCreatingReservation(true);
+    try {
+      const createResponse = await fetch('/api/party-tables/create-reservation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId,
+          tableGroupName: reservationName.trim(),
+          reservedSeats: reservationSeats,
+        }),
+      });
+
+      if (!createResponse.ok) {
+        const errorData = await createResponse.json();
+        throw new Error(errorData.error || 'Failed to create reservation table');
+      }
+
+      await createResponse.json();
+
+      setShowCreateReservationModal(false);
+      setReservationName('');
+      setReservationSeats(10);
+      alert('สร้างกลุ่มจองโต๊ะสำเร็จ!');
+
+      // Refresh tables list
+      await fetchTables();
+    } catch (error) {
+      console.error('Error creating reservation:', error);
+      alert(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setCreatingReservation(false);
+    }
+  };
+
+  const handleUpdateReservation = async () => {
+    if (!editingReservationTable) return;
+
+    if (!editReservationName.trim()) {
+      alert('กรุณาใส่ชื่อกลุ่มจองโต๊ะ');
+      return;
+    }
+
+    if (!editReservationSeats || editReservationSeats < 1) {
+      alert('กรุณาใส่จำนวนที่นั่งที่ต้องการจอง (อย่างน้อย 1 ที่)');
+      return;
+    }
+
+    setUpdatingReservation(true);
+    try {
+      const updateResponse = await fetch(`/api/party-tables/${editingReservationTable.tableId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableGroupName: editReservationName.trim(),
+          reservedSeats: editReservationSeats,
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(errorData.error || 'Failed to update reservation table');
+      }
+
+      await updateResponse.json();
+
+      setShowEditReservationModal(false);
+      setEditingReservationTable(null);
+      setEditReservationName('');
+      setEditReservationSeats(10);
+      alert('แก้ไขกลุ่มจองโต๊ะสำเร็จ!');
+
+      // Refresh tables list
+      await fetchTables();
+    } catch (error) {
+      console.error('Error updating reservation:', error);
+      alert(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setUpdatingReservation(false);
+    }
+  };
+
   const handleAssignFromModal = async () => {
     if (!selectedTableNumberForAssign) return;
 
@@ -581,18 +749,13 @@ export default function PartyTableManagementModal({
       }
       // Case 2: Create new group from selected members
       else if (assignModalTab === 'registrations' && selectedMembersForNewGroup.length > 0) {
-        // Get first member's registration to use as host
-        const firstMember = selectedMembersForNewGroup[0];
-        const hostRegistration = allRegistrations.find(
-          (r: any) => r.registration.registrationId === firstMember.registrationId
+        // BUSINESS RULE: Check if a Join Table already exists at this table number
+        const existingJoinTableAtDestination = tables.find(
+          (t) => t.assignedTableNumber === selectedTableNumberForAssign && t.isJoinTable === true
         );
 
-        if (!hostRegistration) {
-          throw new Error('ไม่พบข้อมูลการลงทะเบียน');
-        }
-
         // Prepare members data
-        const initialMembers = selectedMembersForNewGroup.map((m) => ({
+        const membersToAdd = selectedMembersForNewGroup.map((m) => ({
           registrationId: m.registrationId,
           lineUserId: m.lineUserId,
           name: normalizeMemberName(m.name),
@@ -600,34 +763,69 @@ export default function PartyTableManagementModal({
           companyName: m.companyName,
         }));
 
-        // Create new party table
-        const createResponse = await fetch('/api/party-tables', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            eventId,
-            tableGroupName: undefined, // Auto-generate from company name
-            hostRegistrationId: firstMember.registrationId,
-            hostCompanyName: firstMember.companyName,
-            hostContactName: hostRegistration.registration.contactName || '',
-            initialMembers,
-            isAdminCreated: true, // Mark as admin-created group (Join โต๊ะ)
-          }),
-        });
+        if (existingJoinTableAtDestination) {
+          // Join Table exists - add members to existing group instead of creating new one
+          console.log('[handleAssignFromModal] Found existing Join Table, adding members to it');
 
-        if (!createResponse.ok) {
-          const errorData = await createResponse.json();
-          throw new Error(errorData.error || 'Failed to create party table');
+          const addMembersResponse = await fetch(
+            `/api/party-tables/${existingJoinTableAtDestination.tableId}/add-members`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ members: membersToAdd }),
+            }
+          );
+
+          if (!addMembersResponse.ok) {
+            const errorData = await addMembersResponse.json();
+            throw new Error(errorData.error || 'Failed to add members to existing Join Table');
+          }
+
+          setShowAssignModal(false);
+          setSelectedMembersForNewGroup([]);
+          alert(
+            `เพิ่มสมาชิก ${membersToAdd.length} คนเข้ากลุ่ม Join โต๊ะที่โต๊ะ #${selectedTableNumberForAssign} สำเร็จ!`
+          );
+        } else {
+          // No Join Table exists - create new one
+          const firstMember = selectedMembersForNewGroup[0];
+          const hostRegistration = allRegistrations.find(
+            (r: any) => r.registration.registrationId === firstMember.registrationId
+          );
+
+          if (!hostRegistration) {
+            throw new Error('ไม่พบข้อมูลการลงทะเบียน');
+          }
+
+          // Create new party table
+          const createResponse = await fetch('/api/party-tables', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventId,
+              tableGroupName: undefined, // Auto-generate from company name
+              hostRegistrationId: firstMember.registrationId,
+              hostCompanyName: firstMember.companyName,
+              hostContactName: hostRegistration.registration.contactName || '',
+              initialMembers: membersToAdd,
+              isJoinTable: true, // Mark as Join Table (created from registration codes)
+            }),
+          });
+
+          if (!createResponse.ok) {
+            const errorData = await createResponse.json();
+            throw new Error(errorData.error || 'Failed to create party table');
+          }
+
+          const { table } = await createResponse.json();
+
+          // Assign table number
+          await handleAssignTableNumber(table.tableId, selectedTableNumberForAssign);
+
+          setShowAssignModal(false);
+          setSelectedMembersForNewGroup([]);
+          alert(`สร้างกลุ่มโต๊ะและจัดเลขโต๊ะ #${selectedTableNumberForAssign} สำเร็จ!`);
         }
-
-        const { table } = await createResponse.json();
-
-        // Assign table number
-        await handleAssignTableNumber(table.tableId, selectedTableNumberForAssign);
-
-        setShowAssignModal(false);
-        setSelectedMembersForNewGroup([]);
-        alert(`สร้างกลุ่มโต๊ะและจัดเลขโต๊ะ #${selectedTableNumberForAssign} สำเร็จ!`);
       }
     } catch (error) {
       console.error('Error assigning table:', error);
@@ -692,12 +890,24 @@ export default function PartyTableManagementModal({
             </div>
             <div className="flex items-center gap-3">
               {activeTab === 'tables' && (
-                <button
-                  onClick={() => setShowCreateGroupModal(true)}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-                >
-                  + สร้างกลุ่มโต๊ะใหม่
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowCreateGroupModal(true)}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                  >
+                    + สร้างกลุ่มโต๊ะใหม่
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCreateReservationModal(true);
+                      setReservationName('');
+                      setReservationSeats(10);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    + สร้างกลุ่มจองโต๊ะ
+                  </button>
+                </>
               )}
               <button
                 onClick={onClose}
@@ -765,6 +975,17 @@ export default function PartyTableManagementModal({
                 setShowCreateGroupModal(true);
                 setSelectedMembersForCreate([]);
                 setCreateGroupSearchTerm('');
+              }}
+              onCreateReservation={() => {
+                setShowCreateReservationModal(true);
+                setReservationName('');
+                setReservationSeats(10);
+              }}
+              onEditReservation={(table) => {
+                setEditingReservationTable(table);
+                setEditReservationName(table.tableGroupName || '');
+                setEditReservationSeats(table.reservedSeats || 10);
+                setShowEditReservationModal(true);
               }}
               onDeleteTable={(tableId) => {
                 setDeletingTableId(tableId);
@@ -1049,6 +1270,178 @@ export default function PartyTableManagementModal({
         </div>
       )}
 
+      {/* Create Reservation Table Modal */}
+      {showCreateReservationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  สร้างกลุ่มจองโต๊ะ
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCreateReservationModal(false);
+                    setReservationName('');
+                    setReservationSeats(10);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  💡 กลุ่มจองโต๊ะใช้สำหรับจองที่นั่งไว้ล่วงหน้าสำหรับผู้ที่ไม่ได้ลงทะเบียนในระบบ
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ชื่อกลุ่มจองโต๊ะ
+                </label>
+                <input
+                  type="text"
+                  value={reservationName}
+                  onChange={(e) => setReservationName(e.target.value)}
+                  placeholder="เช่น: จองสำหรับแขกวีไอพี"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  จำนวนที่นั่งที่ต้องการจอง
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={reservationSeats}
+                  onChange={(e) => setReservationSeats(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCreateReservationModal(false);
+                    setReservationName('');
+                    setReservationSeats(10);
+                  }}
+                  disabled={creatingReservation}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleCreateReservation}
+                  disabled={creatingReservation || !reservationName.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  {creatingReservation ? 'กำลังสร้าง...' : 'สร้างกลุ่มจองโต๊ะ'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Reservation Table Modal */}
+      {showEditReservationModal && editingReservationTable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  แก้ไขกลุ่มจองโต๊ะ
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowEditReservationModal(false);
+                    setEditingReservationTable(null);
+                    setEditReservationName('');
+                    setEditReservationSeats(10);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ชื่อกลุ่มจองโต๊ะ
+                </label>
+                <input
+                  type="text"
+                  value={editReservationName}
+                  onChange={(e) => setEditReservationName(e.target.value)}
+                  placeholder="เช่น: จองสำหรับแขกวีไอพี"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  จำนวนที่นั่งที่ต้องการจอง
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={editReservationSeats}
+                  onChange={(e) => setEditReservationSeats(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowEditReservationModal(false);
+                    setEditingReservationTable(null);
+                    setEditReservationName('');
+                    setEditReservationSeats(10);
+                  }}
+                  disabled={updatingReservation}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleUpdateReservation}
+                  disabled={updatingReservation || !editReservationName.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  {updatingReservation ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
@@ -1286,6 +1679,8 @@ function TabTableGroups({
   defaultSeats,
   maxSeats,
   onCreateNewGroup,
+  onCreateReservation,
+  onEditReservation,
   onDeleteTable,
   onManageMembers,
   onToggleExpand,
@@ -1296,6 +1691,8 @@ function TabTableGroups({
   defaultSeats: number;
   maxSeats?: number;
   onCreateNewGroup: () => void;
+  onCreateReservation: () => void;
+  onEditReservation: (table: EnrichedPartyTable) => void;
   onDeleteTable: (tableId: string) => void;
   onManageMembers: (tableId: string) => void;
   onToggleExpand: (tableId: string) => void;
@@ -1324,24 +1721,58 @@ function TabTableGroups({
         <p className="text-sm text-gray-500 mt-2">
           สมาชิกสามารถสร้างโต๊ะเองได้จากหน้า Event Detail หรือคุณสามารถสร้างกลุ่มโต๊ะให้สมาชิกได้
         </p>
-        <button
-          onClick={onCreateNewGroup}
-          className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 inline-flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          สร้างกลุ่มโต๊ะใหม่
-        </button>
+        <div className="mt-4 flex gap-2 justify-center">
+          <button
+            onClick={onCreateNewGroup}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 inline-flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            สร้างกลุ่มโต๊ะใหม่
+          </button>
+          <button
+            onClick={onCreateReservation}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            สร้างกลุ่มจองโต๊ะ
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Action Buttons Header */}
+      <div className="flex gap-2 justify-end pb-4 border-b border-gray-200">
+        <button
+          onClick={onCreateNewGroup}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 inline-flex items-center gap-2 text-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          สร้างกลุ่มโต๊ะใหม่
+        </button>
+        <button
+          onClick={onCreateReservation}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-flex items-center gap-2 text-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          สร้างกลุ่มจองโต๊ะ
+        </button>
+      </div>
+
       {activeTables.map((table) => {
         const isExpanded = expandedTableId === table.tableId;
-        const memberCount = table.members.length;
+        const isReservation = table.isReservation === true;
+        const memberCount = isReservation ? (table.reservedSeats || 0) : table.members.length;
         const capacityPercentage = maxSeats
           ? Math.round((memberCount / maxSeats) * 100)
           : Math.round((memberCount / defaultSeats) * 100);
@@ -1367,7 +1798,9 @@ function TabTableGroups({
               <div className="flex-1">
                 <div className="flex items-center gap-3">
                   <h3 className="font-semibold text-gray-900">
-                    {table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`}
+                    {isReservation
+                      ? `🔖 ${table.tableGroupName || 'กลุ่มจองโต๊ะ'}`
+                      : (table.isJoinTable ? 'Join โต๊ะ' : (table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`))}
                   </h3>
                   {table.assignedTableNumber && (
                     <span className="px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-full">
@@ -1375,42 +1808,71 @@ function TabTableGroups({
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  เจ้าของโต๊ะ: {table.hostContactName} ({table.hostCompanyName})
-                </p>
+                {!isReservation && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    เจ้าของโต๊ะ: {table.hostContactName} ({table.hostCompanyName})
+                  </p>
+                )}
                 <div className="flex items-center gap-3 mt-2">
                   <span className={`text-xs font-medium px-2 py-1 rounded ${statusColor}`}>
-                    {memberCount} / {maxSeats || defaultSeats} ที่นั่ง ({capacityPercentage}%)
+                    {isReservation
+                      ? `${memberCount} ที่จอง / ${maxSeats || defaultSeats} ที่นั่ง (${capacityPercentage}%)`
+                      : `${memberCount} / {maxSeats || defaultSeats} ที่นั่ง ({capacityPercentage}%)`
+                    }
                   </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onManageMembers(table.tableId)}
-                  className="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700"
-                  title="เพิ่มสมาชิก"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {isReservation ? (
+                  <button
+                    onClick={() => onEditReservation(table)}
+                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                    title="แก้ไขกลุ่มจอง"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => onToggleExpand(table.tableId)}
-                  className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
-                >
-                  {isExpanded ? 'ซ่อน' : 'แสดง'} สมาชิก
-                </button>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => onManageMembers(table.tableId)}
+                      className="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700"
+                      title="เพิ่มสมาชิก"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => onToggleExpand(table.tableId)}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+                    >
+                      {isExpanded ? 'ซ่อน' : 'แสดง'} สมาชิก
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => onDeleteTable(table.tableId)}
                   className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
@@ -1433,7 +1895,7 @@ function TabTableGroups({
               </div>
             </div>
 
-            {isExpanded && (
+            {isExpanded && !isReservation && (
               <div className="border-t border-gray-200 pt-3 mt-3">
                 <p className="text-xs font-medium text-gray-600 mb-2">
                   สมาชิกในโต๊ะ ({memberCount} คน)
@@ -1570,7 +2032,10 @@ function TabTableNumbers({
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {tableSlots.map((slot) => {
             const isOccupied = slot.groups.length > 0;
-            const totalMembers = slot.groups.reduce((sum, g) => sum + g.members.length, 0);
+            const totalMembers = slot.groups.reduce((sum, g) => {
+              const memberCount = g.isReservation ? (g.reservedSeats || 0) : g.members.length;
+              return sum + memberCount;
+            }, 0);
 
             return (
               <div key={slot.tableNumber} className="relative">
@@ -1609,11 +2074,15 @@ function TabTableNumbers({
                       <div className="space-y-3">
                         {/* Display each group separately */}
                         {slot.groups.map((group) => {
-                          const isJoinTable = group.isAdminCreated;
-                          const borderColor = isJoinTable ? 'border-orange-300' : 'border-gray-200';
+                          const isJoinTable = group.isJoinTable;
+                          const isReservation = group.isReservation;
+                          const memberCount = isReservation ? (group.reservedSeats || 0) : group.members.length;
+                          const borderColor = isJoinTable ? 'border-orange-300' : (isReservation ? 'border-blue-300' : 'border-gray-200');
                           const groupName = isJoinTable
-                            ? `Join โต๊ะ: ${group.hostCompanyName}`
-                            : (group.tableGroupName || `กลุ่มโต๊ะ: ${group.hostCompanyName}`);
+                            ? 'Join โต๊ะ'
+                            : (isReservation
+                              ? `🔖 ${group.tableGroupName || 'กลุ่มจองโต๊ะ'}`
+                              : (group.tableGroupName || `กลุ่มโต๊ะ: ${group.hostCompanyName}`));
 
                           return (
                             <div key={group.tableId} className={`border-2 ${borderColor} rounded-lg p-2 bg-white`}>
@@ -1624,7 +2093,7 @@ function TabTableNumbers({
                                     {groupName}
                                   </p>
                                   <p className="text-xs text-gray-500 mt-0.5">
-                                    {group.members.length} คน
+                                    {isReservation ? `${memberCount} ที่จอง` : `${memberCount} คน`}
                                   </p>
                                 </div>
                                 <div className="flex gap-1">
@@ -1651,32 +2120,40 @@ function TabTableNumbers({
                                 </div>
                               </div>
 
-                              {/* Member List */}
-                              <div className="space-y-0.5 max-h-24 overflow-y-auto">
-                                {group.members.map((member, idx) => (
-                                  <div key={idx} className="text-xs text-gray-600 flex items-center gap-1 group/member">
-                                    <span className="text-purple-400">•</span>
-                                    <span className="flex-1">{displayMemberName(member.name, member.attendeeIndex)}</span>
-                                    {/* Show remove button only for Join tables */}
-                                    {isJoinTable && (
-                                      <button
-                                        onClick={() => onRemoveMember(
-                                          group.tableId,
-                                          member.registrationId,
-                                          member.attendeeIndex,
-                                          displayMemberName(member.name, member.attendeeIndex)
-                                        )}
-                                        className="opacity-0 group-hover/member:opacity-100 text-red-500 hover:text-red-700 transition-opacity p-0.5"
-                                        title="ลบออกจากกลุ่ม"
-                                      >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                      </button>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
+                              {/* Member List - Hide for reservations */}
+                              {!isReservation && (
+                                <div className="space-y-0.5 max-h-24 overflow-y-auto">
+                                  {group.members.map((member, idx) => {
+                                  const memberDisplayName = isJoinTable
+                                    ? displayMemberNameWithCompany(member.name, member.companyName, member.attendeeIndex)
+                                    : displayMemberName(member.name, member.attendeeIndex);
+
+                                  return (
+                                    <div key={idx} className="text-xs text-gray-600 flex items-center gap-1 group/member">
+                                      <span className="text-purple-400">•</span>
+                                      <span className="flex-1">{memberDisplayName}</span>
+                                      {/* Show remove button only for Join tables */}
+                                      {isJoinTable && (
+                                        <button
+                                          onClick={() => onRemoveMember(
+                                            group.tableId,
+                                            member.registrationId,
+                                            member.attendeeIndex,
+                                            displayMemberName(member.name, member.attendeeIndex)
+                                          )}
+                                          className="opacity-0 group-hover/member:opacity-100 text-red-500 hover:text-red-700 transition-opacity p-0.5"
+                                          title="ลบออกจากกลุ่ม"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1748,7 +2225,7 @@ function AssignModalGroupsTab({
           }`}
         >
           <p className="font-semibold text-gray-900">
-            {group.tableGroupName || `โต๊ะของ ${group.hostCompanyName}`}
+            {group.isJoinTable ? 'Join โต๊ะ' : (group.tableGroupName || `โต๊ะของ ${group.hostCompanyName}`)}
           </p>
           <p className="text-sm text-gray-600 mt-1">
             {group.members.length} คน • {group.hostContactName}

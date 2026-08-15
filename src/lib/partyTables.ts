@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import {
   PartyTable,
   CreatePartyTableData,
+  CreateReservationTableData,
   UpdatePartyTableData,
   TableMember,
   AddMembersToTableData,
@@ -38,7 +39,7 @@ function generateHistoryId(): string {
 /**
  * Create a new Party Table
  */
-export async function createPartyTable(data: CreatePartyTableData, createdBy: string, createdByName: string, isAdminCreated = false): Promise<PartyTable> {
+export async function createPartyTable(data: CreatePartyTableData, createdBy: string, createdByName: string, isJoinTable = false): Promise<PartyTable> {
   const db = adminDb();
   const tableId = generateTableId();
   const now = new Date().toISOString();
@@ -62,7 +63,7 @@ export async function createPartyTable(data: CreatePartyTableData, createdBy: st
     hostCompanyName: data.hostCompanyName,
     hostContactName: data.hostContactName,
     members: membersWithMetadata,
-    isAdminCreated, // NEW: Set admin-created flag
+    isJoinTable, // Set Join Table flag (created from registration codes)
     status: 'active',
     createdAt: now,
     updatedAt: now,
@@ -80,6 +81,53 @@ export async function createPartyTable(data: CreatePartyTableData, createdBy: st
     performedByName: createdByName,
     metadata: {
       memberCount: membersWithMetadata.length,
+    },
+  });
+
+  return table;
+}
+
+/**
+ * Create a new Reservation Table (กลุ่มจองโต๊ะ)
+ * This creates a table group with only reserved seats, no actual members
+ */
+export async function createReservationTable(
+  data: CreateReservationTableData,
+  createdByName: string
+): Promise<PartyTable> {
+  const db = adminDb();
+  const tableId = generateTableId();
+  const now = new Date().toISOString();
+
+  // Create a reservation table with no members, only reserved seat count
+  const table: PartyTable = {
+    tableId,
+    eventId: data.eventId,
+    tableGroupName: data.tableGroupName,
+    // Use a placeholder for host fields since this is admin-created
+    hostRegistrationId: 'SYSTEM_RESERVATION',
+    hostCompanyName: 'ระบบจองโต๊ะ',
+    hostContactName: createdByName,
+    members: [], // No actual members, only reserved seats
+    isReservation: true, // Mark as reservation group
+    reservedSeats: data.reservedSeats,
+    status: 'active',
+    createdAt: now,
+    updatedAt: now,
+    createdBy: data.createdBy,
+  };
+
+  await db.collection('partyTables').doc(tableId).set(table);
+
+  // Log history
+  await logTableHistory({
+    eventId: data.eventId,
+    tableId,
+    action: 'table_created',
+    performedBy: data.createdBy,
+    performedByName: createdByName,
+    metadata: {
+      memberCount: data.reservedSeats, // Use reserved seats as member count
     },
   });
 
@@ -151,7 +199,7 @@ export async function updatePartyTable(
 /**
  * Add members to Party Table Group
  *
- * IMPORTANT: Can only add members to UNASSIGNED groups OR admin-created groups.
+ * IMPORTANT: Can only add members to UNASSIGNED groups OR Join Tables.
  * Member-created groups that are assigned cannot be modified.
  */
 export async function addMembersToTable(
@@ -165,8 +213,8 @@ export async function addMembersToTable(
   }
 
   // Prevent adding members to assigned member-created groups
-  // Allow adding to admin-created groups (Join โต๊ะ) even when assigned
-  if (table.assignedTableNumber && !table.isAdminCreated) {
+  // Allow adding to Join Tables (isJoinTable) even when assigned
+  if (table.assignedTableNumber && !table.isJoinTable) {
     throw new Error(
       `Cannot add members directly to a member-created group assigned to table #${table.assignedTableNumber}. ` +
       'To modify this table, either unassign the group first, or create a new group.'
@@ -220,7 +268,7 @@ export async function addMembersToTable(
 /**
  * Remove members from Party Table Group
  *
- * IMPORTANT: Can only remove members from UNASSIGNED groups OR admin-created groups.
+ * IMPORTANT: Can only remove members from UNASSIGNED groups OR Join Tables.
  * Member-created groups that are assigned cannot have individual members removed.
  */
 export async function removeMembersFromTable(
@@ -234,8 +282,8 @@ export async function removeMembersFromTable(
   }
 
   // Prevent removing members from assigned member-created groups
-  // Allow removing from admin-created groups (Join โต๊ะ) even when assigned
-  if (table.assignedTableNumber && !table.isAdminCreated) {
+  // Allow removing from Join Tables (isJoinTable) even when assigned
+  if (table.assignedTableNumber && !table.isJoinTable) {
     throw new Error(
       `Cannot remove individual members from a member-created group assigned to table #${table.assignedTableNumber}. ` +
       'To modify this table, either unassign the entire group, or manage members before assignment.'
@@ -369,6 +417,10 @@ export async function hardDeletePartyTable(tableId: string): Promise<void> {
  * IMPORTANT: This function assigns a table number to a SINGLE group.
  * The group keeps its members, and assignedTableNumber is set.
  * For assigning MULTIPLE groups to one table number, use assignGroupsToTableNumber instead.
+ *
+ * BUSINESS RULE: Only 1 Join Table per table number.
+ * If assigning a Join Table to a table number that already has a Join Table,
+ * the new Join Table's members will be merged into the existing one, and the new one will be deleted.
  */
 export async function assignTableNumber(data: AssignTableNumberData): Promise<void> {
   const db = adminDb();
@@ -390,8 +442,30 @@ export async function assignTableNumber(data: AssignTableNumberData): Promise<vo
     tableNumber: data.tableNumber,
     groupName: table.tableGroupName,
     memberCount: table.members.length,
+    isJoinTable: table.isJoinTable,
   });
 
+  // BUSINESS RULE: Check if this is a Join Table being assigned to a table that already has a Join Table
+  if (table.isJoinTable) {
+    const existingJoinTable = await findJoinTableAtTableNumber(table.eventId, data.tableNumber);
+
+    if (existingJoinTable) {
+      console.log('[assignTableNumber] Found existing Join Table at this table number, merging...');
+
+      // Merge this Join Table into the existing one, then delete this one
+      await mergeJoinTables(
+        data.tableId,  // source (this table being assigned)
+        existingJoinTable.tableId,  // destination (existing Join Table)
+        data.assignedBy,
+        data.assignedByName
+      );
+
+      console.log('[assignTableNumber] Join Tables merged successfully');
+      return; // Exit early - table was merged and deleted
+    }
+  }
+
+  // Normal assignment (no merge needed)
   await db.collection('partyTables').doc(data.tableId).update({
     assignedTableNumber: data.tableNumber,
     updatedAt: new Date().toISOString(),
@@ -816,4 +890,100 @@ export async function getTableNumberMemberCount(
 ): Promise<number> {
   const groups = await getGroupsByTableNumber(eventId, tableNumber);
   return groups.reduce((total, group) => total + group.members.length, 0);
+}
+
+/**
+ * Find existing Join Table group at a specific table number
+ * Returns null if no Join Table exists at this table number
+ */
+export async function findJoinTableAtTableNumber(
+  eventId: string,
+  tableNumber: number
+): Promise<PartyTable | null> {
+  const groups = await getGroupsByTableNumber(eventId, tableNumber);
+  const joinTable = groups.find((g) => g.isJoinTable === true);
+  return joinTable || null;
+}
+
+/**
+ * Merge members from source Join Table into destination Join Table, then delete source
+ * Used when assigning/moving a Join Table to a table number that already has a Join Table
+ */
+export async function mergeJoinTables(
+  sourceTableId: string,
+  destinationTableId: string,
+  mergedBy: string,
+  mergedByName: string
+): Promise<void> {
+  const db = adminDb();
+
+  const sourceTable = await getPartyTableById(sourceTableId);
+  const destTable = await getPartyTableById(destinationTableId);
+
+  if (!sourceTable) {
+    throw new Error('Source Join Table not found');
+  }
+
+  if (!destTable) {
+    throw new Error('Destination Join Table not found');
+  }
+
+  if (!sourceTable.isJoinTable || !destTable.isJoinTable) {
+    throw new Error('Both tables must be Join Tables for merging');
+  }
+
+  console.log('[mergeJoinTables] Merging Join Tables:', {
+    sourceTableId,
+    destinationTableId,
+    sourceMemberCount: sourceTable.members.length,
+    destMemberCount: destTable.members.length,
+  });
+
+  // Add source members to destination (avoiding duplicates)
+  const destMemberKeys = new Set(
+    destTable.members.map((m) => `${m.registrationId}::${m.attendeeIndex}`)
+  );
+
+  const membersToAdd = sourceTable.members.filter(
+    (m) => !destMemberKeys.has(`${m.registrationId}::${m.attendeeIndex}`)
+  );
+
+  if (membersToAdd.length > 0) {
+    const now = new Date().toISOString();
+    const updatedMembers = [
+      ...destTable.members,
+      ...membersToAdd.map((m) => ({
+        ...m,
+        joinedAt: now,
+        joinedBy: mergedBy,
+        joinedByName: mergedByName,
+      })),
+    ];
+
+    await db.collection('partyTables').doc(destinationTableId).update({
+      members: updatedMembers,
+      updatedAt: now,
+    });
+
+    console.log('[mergeJoinTables] Added members to destination:', membersToAdd.length);
+  }
+
+  // Delete source table
+  await deletePartyTable(sourceTableId, mergedBy, mergedByName, 'Merged into another Join Table');
+
+  console.log('[mergeJoinTables] Source table deleted');
+
+  // Log history for destination table
+  await logTableHistory({
+    eventId: destTable.eventId,
+    tableId: destinationTableId,
+    action: 'member_added',
+    performedBy: mergedBy,
+    performedByName: mergedByName,
+    metadata: {
+      reason: `Merged ${membersToAdd.length} members from another Join Table`,
+      sourceTableId,
+      memberCount: membersToAdd.length,
+    },
+  });
 }

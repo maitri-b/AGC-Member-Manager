@@ -39,7 +39,9 @@ export interface PartyTable {
 
   // For Party Table Groups (when NOT assigned to table number)
   members: TableMember[];             // Array of table members
-  isAdminCreated?: boolean;           // True if admin created this group (not member-initiated)
+  isJoinTable?: boolean;              // True if created from registration codes (Join โต๊ะ)
+  isReservation?: boolean;            // True if this is a reservation group (จองโต๊ะ)
+  reservedSeats?: number;             // Number of seats reserved (for reservation groups only)
 
   // For Table Number Assignments (when assigned to table number)
   assignedTableNumber?: number;       // Admin-assigned table number (1 to N)
@@ -118,7 +120,19 @@ export interface CreatePartyTableData {
   hostContactName: string;
   initialMembers?: Omit<TableMember, 'joinedAt' | 'joinedBy' | 'joinedByName'>[];
   createdBy: string;
-  isAdminCreated?: boolean;  // NEW: True if admin creates from registration codes
+  isJoinTable?: boolean;  // True if created from registration codes (Join โต๊ะ)
+  isReservation?: boolean;  // True if this is a reservation group (จองโต๊ะ)
+  reservedSeats?: number;   // Number of seats to reserve (for reservation groups)
+}
+
+/**
+ * Create Reservation Table Data - Input for creating reservation table
+ */
+export interface CreateReservationTableData {
+  eventId: string;
+  tableGroupName: string;
+  reservedSeats: number;
+  createdBy: string;
 }
 
 /**
@@ -129,6 +143,7 @@ export interface UpdatePartyTableData {
   assignedTableNumber?: number;
   status?: 'active' | 'deleted';
   deletionReason?: string;
+  reservedSeats?: number;  // For updating reservation group seat count
 }
 
 /**
@@ -329,4 +344,14 @@ export function formatTableDisplayName(table: PartyTable): string {
 export function formatTableNumber(tableNumber: number | undefined): string {
   if (!tableNumber) return 'ยังไม่ได้จัดโต๊ะ';
   return `โต๊ะ #${tableNumber}`;
+}
+
+/**
+ * Helper: Get effective member count (including reserved seats)
+ */
+export function getEffectiveMemberCount(table: PartyTable): number {
+  if (table.isReservation && table.reservedSeats) {
+    return table.reservedSeats;
+  }
+  return table.members.length;
 }

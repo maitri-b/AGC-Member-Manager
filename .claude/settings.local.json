@@ -76,7 +76,11 @@
       "Bash(npm run migrate-permissions:*)",
       "Bash(npx next:*)",
       "Bash(awk:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix: Remove unused selectedTableNumber variable in TabTableNumbers\n\nBuild was failing due to reference to selectedTableNumber which was\nremoved in the previous refactoring. This variable is no longer needed\nsince we changed to a modal-based assignment flow.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix: Remove unused selectedTableNumber variable in TabTableNumbers\n\nBuild was failing due to reference to selectedTableNumber which was\nremoved in the previous refactoring. This variable is no longer needed\nsince we changed to a modal-based assignment flow.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(powershell -Command \"if \\(Test-Path .next\\) { Remove-Item -Recurse -Force .next }\")",
+      "Bash(tasklist:*)",
+      "Bash(rd /s /q \".next\")",
+      "Bash(if exist \".next\" rmdir /s /q \".next\")"
     ]
   }
 }

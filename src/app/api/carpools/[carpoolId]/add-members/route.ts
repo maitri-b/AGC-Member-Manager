@@ -4,10 +4,32 @@ import { getEffectiveSession } from '@/lib/impersonation';
 import { hasPermission } from '@/lib/permissions';
 import { getCarpoolById, addMembersToCarpool } from '@/lib/carpools';
 import { CarpoolMember } from '@/types/carpool';
+import { adminDb } from '@/lib/firebase-admin';
+
+/**
+ * Helper function to get user's registration for an event
+ */
+async function getUserRegistrationId(lineUserId: string, eventId: string): Promise<string | null> {
+  const db = adminDb();
+  const snapshot = await db
+    .collection('eventRegistrations')
+    .where('lineUserId', '==', lineUserId)
+    .where('eventId', '==', eventId)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  return snapshot.docs[0].data().registrationId || null;
+}
 
 /**
  * POST /api/carpools/[carpoolId]/add-members
  * Add members to existing Carpool
+ * - Admins can add members to any carpool
+ * - Members can only add members to their own carpool (where ownerRegistrationId matches)
  */
 export async function POST(
   request: NextRequest,
@@ -18,11 +40,6 @@ export async function POST(
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Require admin:access permission
-    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
     const { carpoolId } = params;
@@ -41,6 +58,23 @@ export async function POST(
     const existingCarpool = await getCarpoolById(carpoolId);
     if (!existingCarpool) {
       return NextResponse.json({ error: 'Carpool not found' }, { status: 404 });
+    }
+
+    // Check permissions: Admin can modify any carpool, member can only modify their own
+    const isAdmin = hasPermission(session.user.permissions || [], 'admin:access');
+
+    // Get user's registration ID for this event to check ownership
+    const userRegistrationId = await getUserRegistrationId(
+      session.user.lineUserId,
+      existingCarpool.eventId
+    );
+    const isOwner = userRegistrationId === existingCarpool.ownerRegistrationId;
+
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json(
+        { error: 'Permission denied. You can only add members to your own carpool.' },
+        { status: 403 }
+      );
     }
 
     // Add members to Carpool

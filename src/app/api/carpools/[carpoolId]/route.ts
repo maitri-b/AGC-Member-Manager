@@ -4,6 +4,26 @@ import { getEffectiveSession } from '@/lib/impersonation';
 import { hasPermission } from '@/lib/permissions';
 import { getCarpoolById, updateCarpool, deleteCarpool } from '@/lib/carpools';
 import { UpdateCarpoolData } from '@/types/carpool';
+import { adminDb } from '@/lib/firebase-admin';
+
+/**
+ * Helper function to get user's registration for an event
+ */
+async function getUserRegistrationId(lineUserId: string, eventId: string): Promise<string | null> {
+  const db = adminDb();
+  const snapshot = await db
+    .collection('eventRegistrations')
+    .where('lineUserId', '==', lineUserId)
+    .where('eventId', '==', eventId)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  return snapshot.docs[0].data().registrationId || null;
+}
 
 /**
  * GET /api/carpools/[carpoolId]
@@ -49,7 +69,9 @@ export async function GET(
 
 /**
  * PUT /api/carpools/[carpoolId]
- * Update Carpool
+ * Update Carpool (e.g., license plate)
+ * - Admins can update any carpool
+ * - Members can only update their own carpool (where ownerRegistrationId matches)
  */
 export async function PUT(
   request: NextRequest,
@@ -60,11 +82,6 @@ export async function PUT(
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Require admin:access permission
-    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
     const { carpoolId } = params;
@@ -79,6 +96,23 @@ export async function PUT(
     const existingCarpool = await getCarpoolById(carpoolId);
     if (!existingCarpool) {
       return NextResponse.json({ error: 'Carpool not found' }, { status: 404 });
+    }
+
+    // Check permissions: Admin can modify any carpool, member can only modify their own
+    const isAdmin = hasPermission(session.user.permissions || [], 'admin:access');
+
+    // Get user's registration ID for this event to check ownership
+    const userRegistrationId = await getUserRegistrationId(
+      session.user.lineUserId,
+      existingCarpool.eventId
+    );
+    const isOwner = userRegistrationId === existingCarpool.ownerRegistrationId;
+
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json(
+        { error: 'Permission denied. You can only update your own carpool.' },
+        { status: 403 }
+      );
     }
 
     // Update the Carpool
@@ -100,6 +134,8 @@ export async function PUT(
 /**
  * DELETE /api/carpools/[carpoolId]
  * Delete Carpool
+ * - Admins can delete any carpool
+ * - Members can only delete their own carpool (where ownerRegistrationId matches their registration)
  */
 export async function DELETE(
   request: NextRequest,
@@ -112,11 +148,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Require admin:access permission
-    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
-
     const { carpoolId } = params;
 
     if (!carpoolId) {
@@ -127,6 +158,23 @@ export async function DELETE(
     const existingCarpool = await getCarpoolById(carpoolId);
     if (!existingCarpool) {
       return NextResponse.json({ error: 'Carpool not found' }, { status: 404 });
+    }
+
+    // Check permissions: Admin can delete any carpool, member can only delete their own
+    const isAdmin = hasPermission(session.user.permissions || [], 'admin:access');
+
+    // Get user's registration ID for this event to check ownership
+    const userRegistrationId = await getUserRegistrationId(
+      session.user.lineUserId,
+      existingCarpool.eventId
+    );
+    const isOwner = userRegistrationId === existingCarpool.ownerRegistrationId;
+
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json(
+        { error: 'Permission denied. You can only delete your own carpool.' },
+        { status: 403 }
+      );
     }
 
     // Delete the Carpool

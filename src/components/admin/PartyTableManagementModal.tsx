@@ -611,6 +611,7 @@ export default function PartyTableManagementModal({
             hostCompanyName: firstMember.companyName,
             hostContactName: hostRegistration.registration.contactName || '',
             initialMembers,
+            isAdminCreated: true, // Mark as admin-created group (Join โต๊ะ)
           }),
         });
 
@@ -1584,7 +1585,7 @@ function TabTableNumbers({
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">โต๊ะ {slot.tableNumber}</span>
                       {isOccupied && (
-                        <span className="text-xs bg-white bg-opacity-30 px-1.5 py-0.5 rounded">
+                        <span className="text-xs bg-purple-800 text-white px-1.5 py-0.5 rounded">
                           {totalMembers} คน
                         </span>
                       )}
@@ -1607,40 +1608,78 @@ function TabTableNumbers({
                     {isOccupied ? (
                       <div className="space-y-3">
                         {/* Display each group separately */}
-                        {slot.groups.map((group) => (
-                          <div key={group.tableId} className="border border-gray-200 rounded-lg p-2 bg-white">
-                            {/* Group Header */}
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1">
-                                <p className="font-medium text-xs text-gray-900">
-                                  {group.tableGroupName || `กลุ่ม: ${group.hostCompanyName}`}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                  {group.members.length} คน
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => onUnassignTableNumber(group.tableId)}
-                                className="text-red-600 hover:text-red-800 p-1"
-                                title="ลบกลุ่มนี้ออกจากโต๊ะ"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
+                        {slot.groups.map((group) => {
+                          const isJoinTable = group.isAdminCreated;
+                          const borderColor = isJoinTable ? 'border-orange-300' : 'border-gray-200';
+                          const groupName = isJoinTable
+                            ? `Join โต๊ะ: ${group.hostCompanyName}`
+                            : (group.tableGroupName || `กลุ่มโต๊ะ: ${group.hostCompanyName}`);
 
-                            {/* Member List */}
-                            <div className="space-y-0.5 max-h-24 overflow-y-auto">
-                              {group.members.map((member, idx) => (
-                                <div key={idx} className="text-xs text-gray-600 flex items-center gap-1">
-                                  <span className="text-purple-400">•</span>
-                                  <span className="flex-1">{displayMemberName(member.name, member.attendeeIndex)}</span>
+                          return (
+                            <div key={group.tableId} className={`border-2 ${borderColor} rounded-lg p-2 bg-white`}>
+                              {/* Group Header */}
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <p className="font-medium text-xs text-gray-900">
+                                    {groupName}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {group.members.length} คน
+                                  </p>
                                 </div>
-                              ))}
+                                <div className="flex gap-1">
+                                  {/* Move table button */}
+                                  <button
+                                    onClick={() => onChangeTableNumber(group)}
+                                    className="text-blue-600 hover:text-blue-800 p-1"
+                                    title="ย้ายกลุ่มนี้ไปเลขโต๊ะอื่น"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                    </svg>
+                                  </button>
+                                  {/* Remove group button */}
+                                  <button
+                                    onClick={() => onUnassignTableNumber(group.tableId)}
+                                    className="text-red-600 hover:text-red-800 p-1"
+                                    title="ลบกลุ่มนี้ออกจากโต๊ะ"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Member List */}
+                              <div className="space-y-0.5 max-h-24 overflow-y-auto">
+                                {group.members.map((member, idx) => (
+                                  <div key={idx} className="text-xs text-gray-600 flex items-center gap-1 group/member">
+                                    <span className="text-purple-400">•</span>
+                                    <span className="flex-1">{displayMemberName(member.name, member.attendeeIndex)}</span>
+                                    {/* Show remove button only for Join tables */}
+                                    {isJoinTable && (
+                                      <button
+                                        onClick={() => onRemoveMember(
+                                          group.tableId,
+                                          member.registrationId,
+                                          member.attendeeIndex,
+                                          displayMemberName(member.name, member.attendeeIndex)
+                                        )}
+                                        className="opacity-0 group-hover/member:opacity-100 text-red-500 hover:text-red-700 transition-opacity p-0.5"
+                                        title="ลบออกจากกลุ่ม"
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <button

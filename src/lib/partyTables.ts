@@ -38,7 +38,7 @@ function generateHistoryId(): string {
 /**
  * Create a new Party Table
  */
-export async function createPartyTable(data: CreatePartyTableData, createdBy: string, createdByName: string): Promise<PartyTable> {
+export async function createPartyTable(data: CreatePartyTableData, createdBy: string, createdByName: string, isAdminCreated = false): Promise<PartyTable> {
   const db = adminDb();
   const tableId = generateTableId();
   const now = new Date().toISOString();
@@ -62,6 +62,7 @@ export async function createPartyTable(data: CreatePartyTableData, createdBy: st
     hostCompanyName: data.hostCompanyName,
     hostContactName: data.hostContactName,
     members: membersWithMetadata,
+    isAdminCreated, // NEW: Set admin-created flag
     status: 'active',
     createdAt: now,
     updatedAt: now,
@@ -150,8 +151,8 @@ export async function updatePartyTable(
 /**
  * Add members to Party Table Group
  *
- * IMPORTANT: Can only add members to UNASSIGNED groups (no table number).
- * If you want to add members to a table number, create a new group first.
+ * IMPORTANT: Can only add members to UNASSIGNED groups OR admin-created groups.
+ * Member-created groups that are assigned cannot be modified.
  */
 export async function addMembersToTable(
   data: AddMembersToTableData
@@ -163,10 +164,11 @@ export async function addMembersToTable(
     throw new Error('Party Table not found');
   }
 
-  // Prevent adding members to assigned groups
-  if (table.assignedTableNumber) {
+  // Prevent adding members to assigned member-created groups
+  // Allow adding to admin-created groups (Join โต๊ะ) even when assigned
+  if (table.assignedTableNumber && !table.isAdminCreated) {
     throw new Error(
-      `Cannot add members directly to a group assigned to table #${table.assignedTableNumber}. ` +
+      `Cannot add members directly to a member-created group assigned to table #${table.assignedTableNumber}. ` +
       'To modify this table, either unassign the group first, or create a new group.'
     );
   }
@@ -218,8 +220,8 @@ export async function addMembersToTable(
 /**
  * Remove members from Party Table Group
  *
- * IMPORTANT: Can only remove members from UNASSIGNED groups (no table number).
- * If you want to remove from a table number, remove the entire group instead.
+ * IMPORTANT: Can only remove members from UNASSIGNED groups OR admin-created groups.
+ * Member-created groups that are assigned cannot have individual members removed.
  */
 export async function removeMembersFromTable(
   data: RemoveMembersFromTableData
@@ -231,10 +233,11 @@ export async function removeMembersFromTable(
     throw new Error('Party Table not found');
   }
 
-  // Prevent removing members from assigned groups
-  if (table.assignedTableNumber) {
+  // Prevent removing members from assigned member-created groups
+  // Allow removing from admin-created groups (Join โต๊ะ) even when assigned
+  if (table.assignedTableNumber && !table.isAdminCreated) {
     throw new Error(
-      `Cannot remove individual members from a group assigned to table #${table.assignedTableNumber}. ` +
+      `Cannot remove individual members from a member-created group assigned to table #${table.assignedTableNumber}. ` +
       'To modify this table, either unassign the entire group, or manage members before assignment.'
     );
   }

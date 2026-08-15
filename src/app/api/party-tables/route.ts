@@ -69,7 +69,9 @@ export async function POST(request: NextRequest) {
     // Create the Party Table
     const createdBy = session.user.id;
     const createdByName = session.user.name || session.user.email || 'Unknown';
-    const table = await createPartyTable(body, createdBy, createdByName);
+    // Check if this is an admin-created table (from request body)
+    const isAdminCreated = body.isAdminCreated === true;
+    const table = await createPartyTable(body, createdBy, createdByName, isAdminCreated);
 
     return NextResponse.json({ success: true, table }, { status: 201 });
   } catch (error) {

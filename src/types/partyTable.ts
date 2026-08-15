@@ -39,6 +39,7 @@ export interface PartyTable {
 
   // For Party Table Groups (when NOT assigned to table number)
   members: TableMember[];             // Array of table members
+  isAdminCreated?: boolean;           // True if admin created this group (not member-initiated)
 
   // For Table Number Assignments (when assigned to table number)
   assignedTableNumber?: number;       // Admin-assigned table number (1 to N)
@@ -117,6 +118,7 @@ export interface CreatePartyTableData {
   hostContactName: string;
   initialMembers?: Omit<TableMember, 'joinedAt' | 'joinedBy' | 'joinedByName'>[];
   createdBy: string;
+  isAdminCreated?: boolean;  // NEW: True if admin creates from registration codes
 }
 
 /**

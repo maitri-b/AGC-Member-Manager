@@ -7,6 +7,7 @@ import { Toast, useToast } from '@/components/Toast';
 import PaymentSlipUploadModal from '@/components/PaymentSlipUploadModal';
 import CancellationModal from '@/components/member/CancellationModal';
 import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
+import type { ImpersonatedSession } from '@/lib/impersonation';
 // TEMP: Hidden until PDF generation is fixed on Vercel
 // import ReceiptCertificateModal from '@/components/ReceiptCertificateModal';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier, CancellationPolicy } from '@/types/event';
@@ -165,7 +166,7 @@ interface UserRegistration {
 }
 
 export default function EventDetailPage() {
-  const { data: session, status } = useEffectiveSessionContext();
+  const { data: session, status } = useEffectiveSessionContext() as { data: ImpersonatedSession | null; status: string };
   const router = useRouter();
   const params = useParams();
   const toast = useToast();
@@ -1003,9 +1004,15 @@ export default function EventDetailPage() {
     }
   };
 
-  const isCommitteeOrAdmin = !!(session?.user?.permissions?.includes('admin:access') ||
-                              session?.user?.permissions?.includes('members:list') ||
-                              session?.user?.permissions?.includes('members:view'));
+  // When impersonating, use impersonated user's permissions for UI visibility
+  // This allows admin to test member experience accurately
+  const isCommitteeOrAdmin = !!(
+    !session?.isImpersonating && (
+      session?.user?.permissions?.includes('admin:access') ||
+      session?.user?.permissions?.includes('members:list') ||
+      session?.user?.permissions?.includes('members:view')
+    )
+  );
 
   const isFull = event?.maxCapacity && event.maxCapacity > 0 && summary
     ? summary.totalAttendees >= event.maxCapacity

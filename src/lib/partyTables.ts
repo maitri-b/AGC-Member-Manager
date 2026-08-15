@@ -349,23 +349,37 @@ export async function assignTableNumber(data: AssignTableNumberData): Promise<vo
 
   const oldTableNumber = table.assignedTableNumber;
 
+  console.log('[assignTableNumber] Updating table:', {
+    tableId: data.tableId,
+    tableNumber: data.tableNumber,
+    oldTableNumber,
+  });
+
   await db.collection('partyTables').doc(data.tableId).update({
     assignedTableNumber: data.tableNumber,
     updatedAt: new Date().toISOString(),
   });
 
+  console.log('[assignTableNumber] Table updated successfully, logging history...');
+
   // Log history
-  await logTableHistory({
-    eventId: table.eventId,
-    tableId: data.tableId,
-    action: 'number_assigned',
-    performedBy: data.assignedBy,
-    performedByName: data.assignedByName,
-    metadata: {
-      oldTableNumber,
-      newTableNumber: data.tableNumber,
-    },
-  });
+  try {
+    await logTableHistory({
+      eventId: table.eventId,
+      tableId: data.tableId,
+      action: 'number_assigned',
+      performedBy: data.assignedBy,
+      performedByName: data.assignedByName,
+      metadata: {
+        oldTableNumber,
+        newTableNumber: data.tableNumber,
+      },
+    });
+    console.log('[assignTableNumber] History logged successfully');
+  } catch (historyError) {
+    console.error('[assignTableNumber] Error logging history (but table was updated):', historyError);
+    // Don't throw - table was already updated successfully
+  }
 }
 
 /**

@@ -57,14 +57,20 @@ export async function POST(
       assignedByName,
     };
 
+    console.log('[assign-number API] Assigning table number:', data);
+
     await assignTableNumber(data);
+
+    console.log('[assign-number API] Table number assigned, fetching updated table...');
 
     // Fetch updated table
     const updatedTable = await getPartyTableById(tableId);
 
+    console.log('[assign-number API] Updated table fetched:', updatedTable ? 'success' : 'null');
+
     return NextResponse.json({ success: true, table: updatedTable });
   } catch (error) {
-    console.error('Error assigning table number:', error);
+    console.error('[assign-number API] Error assigning table number:', error);
     return NextResponse.json(
       { error: 'Failed to assign table number', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

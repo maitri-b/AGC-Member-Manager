@@ -518,6 +518,15 @@ export default function CarpoolSection({
                 </p>
               </div>
             )}
+
+            {/* Warning when some members haven't specified transportation */}
+            {!allMembersInCarpools && allCarpoolsLoaded && ownedCarpoolsCount > 0 && membersNotInCarpool.length > 0 && (
+              <div className="mt-3 p-2 bg-orange-50 border border-orange-300 rounded-lg">
+                <p className="text-xs text-orange-800 text-center font-medium">
+                  ⚠️ มีสมาชิกในทีม {membersNotInCarpool.length} คน ยังไม่ระบุวิธีเดินทาง
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

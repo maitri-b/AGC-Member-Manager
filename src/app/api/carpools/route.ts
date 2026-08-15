@@ -1,7 +1,6 @@
 // API Route: Carpool Management - Create Carpool
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { hasPermission } from '@/lib/permissions';
 import { createCarpool } from '@/lib/carpools';
 import { CreateCarpoolData } from '@/types/carpool';
@@ -12,7 +11,7 @@ import { CreateCarpoolData } from '@/types/carpool';
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

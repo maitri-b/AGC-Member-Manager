@@ -1,7 +1,6 @@
 // API Route: Assign Car Number to Carpool
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { hasPermission } from '@/lib/permissions';
 import { getCarpoolById, assignCarNumber, getCarpoolByCarNumber } from '@/lib/carpools';
 
@@ -14,7 +13,7 @@ export async function PUT(
   { params }: { params: { carpoolId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

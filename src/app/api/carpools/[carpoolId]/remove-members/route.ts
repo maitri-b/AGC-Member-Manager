@@ -1,7 +1,6 @@
 // API Route: Carpool Management - Remove Members from Carpool
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { hasPermission } from '@/lib/permissions';
 import { getCarpoolById, removeMembersFromCarpool } from '@/lib/carpools';
 
@@ -14,7 +13,7 @@ export async function POST(
   { params }: { params: { carpoolId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -241,7 +241,10 @@ export default function PartyTableManagementModal({
       const data = await response.json();
       // Filter out deleted and canceled registrations
       const activeRegistrations = (data.attendees || []).filter(
-        (reg: any) => reg.status !== 'deleted' && reg.status !== 'canceled'
+        (reg: any) => {
+          const status = reg.registration?.status || reg.status;
+          return status !== 'deleted' && status !== 'canceled' && status !== 'cancelled';
+        }
       );
       setAllRegistrations(activeRegistrations);
     } catch (err) {
@@ -391,7 +394,7 @@ export default function PartyTableManagementModal({
       const data = await response.json();
 
       // Check if registration is deleted or canceled
-      if (data.registration.status === 'deleted' || data.registration.status === 'canceled') {
+      if (data.registration.status === 'deleted' || data.registration.status === 'cancelled' || data.registration.status === 'canceled') {
         throw new Error('รหัสลงทะเบียนนี้ถูกยกเลิกหรือลบแล้ว');
       }
 

@@ -102,7 +102,7 @@ interface EnrichedPartyTable extends PartyTable {
 
 interface TableSlot {
   tableNumber: number;
-  table: EnrichedPartyTable | null;
+  groups: EnrichedPartyTable[];  // Changed from single table to array of groups
 }
 
 export default function PartyTableManagementModal({
@@ -202,13 +202,14 @@ export default function PartyTableManagementModal({
   }, [isOpen, eventId]);
 
   // Generate table slots based on totalTables and tables
+  // IMPORTANT: Each table number can have MULTIPLE groups assigned
   useEffect(() => {
     const slots: TableSlot[] = [];
     for (let i = 1; i <= totalTables; i++) {
-      const assignedTable = tables.find((t) => t.assignedTableNumber === i);
+      const assignedGroups = tables.filter((t) => t.assignedTableNumber === i);
       slots.push({
         tableNumber: i,
-        table: assignedTable || null,
+        groups: assignedGroups,
       });
     }
     setTableSlots(slots);
@@ -1567,7 +1568,8 @@ function TabTableNumbers({
         </p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {tableSlots.map((slot) => {
-            const isOccupied = !!slot.table;
+            const isOccupied = slot.groups.length > 0;
+            const totalMembers = slot.groups.reduce((sum, g) => sum + g.members.length, 0);
 
             return (
               <div key={slot.tableNumber} className="relative">
@@ -1579,83 +1581,73 @@ function TabTableNumbers({
                   <div className={`p-3 flex items-center justify-between ${
                     isOccupied ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700'
                   }`}>
-                    <span className="font-semibold">โต๊ะ {slot.tableNumber}</span>
-                    {isOccupied && slot.table && (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => onChangeTableNumber(slot.table!)}
-                          className="p-1 bg-white rounded hover:bg-gray-100 transition-colors"
-                          title="เปลี่ยนเลขโต๊ะ"
-                        >
-                          <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => onUnassignTableNumber(slot.table!.tableId)}
-                          className="p-1 bg-white rounded hover:bg-gray-100 transition-colors"
-                          title="ยกเลิกการจัดเลขโต๊ะ"
-                        >
-                          <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">โต๊ะ {slot.tableNumber}</span>
+                      {isOccupied && (
+                        <span className="text-xs bg-white bg-opacity-30 px-1.5 py-0.5 rounded">
+                          {totalMembers} คน
+                        </span>
+                      )}
+                    </div>
+                    {isOccupied && (
+                      <button
+                        onClick={() => onTableNumberClick(slot.tableNumber)}
+                        className="p-1 bg-white rounded hover:bg-gray-100 transition-colors"
+                        title="เพิ่มกลุ่มเข้าโต๊ะนี้"
+                      >
+                        <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
                     )}
                   </div>
 
                   {/* Content */}
                   <div className="p-3">
-                    {isOccupied && slot.table ? (
-                      <div className="space-y-2">
-                        {/* Group Name */}
-                        <p className="font-medium text-sm text-gray-900">
-                          {slot.table.tableGroupName || `กลุ่มโต๊ะ: ${slot.table.hostCompanyName}`}
-                        </p>
-
-                        {/* Member Count */}
-                        <p className="text-xs text-gray-600">
-                          {slot.table.members.length} / {defaultSeats} คน
-                        </p>
-
-                        {/* Member List */}
-                        <div className="space-y-1 mt-2 max-h-32 overflow-y-auto">
-                          {slot.table.members.map((member, idx) => (
-                            <div key={idx} className="text-xs text-gray-700 flex items-center gap-1 group">
-                              <span className="text-purple-600">•</span>
-                              <span className="flex-1">{displayMemberName(member.name, member.attendeeIndex)}</span>
+                    {isOccupied ? (
+                      <div className="space-y-3">
+                        {/* Display each group separately */}
+                        {slot.groups.map((group) => (
+                          <div key={group.tableId} className="border border-gray-200 rounded-lg p-2 bg-white">
+                            {/* Group Header */}
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <p className="font-medium text-xs text-gray-900">
+                                  {group.tableGroupName || `กลุ่ม: ${group.hostCompanyName}`}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {group.members.length} คน
+                                </p>
+                              </div>
                               <button
-                                onClick={() => onRemoveMember(
-                                  slot.table!.tableId,
-                                  member.registrationId,
-                                  member.attendeeIndex,
-                                  displayMemberName(member.name, member.attendeeIndex)
-                                )}
-                                className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 transition-opacity p-0.5"
-                                title="ลบออกจากโต๊ะ"
+                                onClick={() => onUnassignTableNumber(group.tableId)}
+                                className="text-red-600 hover:text-red-800 p-1"
+                                title="ลบกลุ่มนี้ออกจากโต๊ะ"
                               >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                               </button>
                             </div>
-                          ))}
-                        </div>
 
-                        {/* Add Member Button */}
-                        <button
-                          onClick={() => onManageMembers(slot.table!.tableId)}
-                          className="w-full mt-3 px-3 py-2 bg-purple-100 text-purple-700 text-xs rounded hover:bg-purple-200 transition-colors font-medium"
-                        >
-                          + เพิ่มสมาชิก
-                        </button>
+                            {/* Member List */}
+                            <div className="space-y-0.5 max-h-24 overflow-y-auto">
+                              {group.members.map((member, idx) => (
+                                <div key={idx} className="text-xs text-gray-600 flex items-center gap-1">
+                                  <span className="text-purple-400">•</span>
+                                  <span className="flex-1">{displayMemberName(member.name, member.attendeeIndex)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <button
                         onClick={() => onTableNumberClick(slot.tableNumber)}
                         className="w-full py-6 text-sm text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
                       >
-                        + จัดสมาชิกเข้าโต๊ะ
+                        + จัดกลุ่มเข้าโต๊ะ
                       </button>
                     )}
                   </div>

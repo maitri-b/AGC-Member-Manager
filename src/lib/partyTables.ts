@@ -9,6 +9,8 @@ import {
   AddMembersToTableData,
   RemoveMembersFromTableData,
   AssignTableNumberData,
+  AssignGroupsToTableNumberData,
+  RemoveGroupFromTableNumberData,
   MoveMembersData,
   PartyTableHistory,
   PartyTableAction,
@@ -146,7 +148,10 @@ export async function updatePartyTable(
 }
 
 /**
- * Add members to Party Table
+ * Add members to Party Table Group
+ *
+ * IMPORTANT: Can only add members to UNASSIGNED groups (no table number).
+ * If you want to add members to a table number, create a new group first.
  */
 export async function addMembersToTable(
   data: AddMembersToTableData
@@ -156,6 +161,14 @@ export async function addMembersToTable(
 
   if (!table) {
     throw new Error('Party Table not found');
+  }
+
+  // Prevent adding members to assigned groups
+  if (table.assignedTableNumber) {
+    throw new Error(
+      `Cannot add members directly to a group assigned to table #${table.assignedTableNumber}. ` +
+      'To modify this table, either unassign the group first, or create a new group.'
+    );
   }
 
   const now = new Date().toISOString();
@@ -203,7 +216,10 @@ export async function addMembersToTable(
 }
 
 /**
- * Remove members from Party Table
+ * Remove members from Party Table Group
+ *
+ * IMPORTANT: Can only remove members from UNASSIGNED groups (no table number).
+ * If you want to remove from a table number, remove the entire group instead.
  */
 export async function removeMembersFromTable(
   data: RemoveMembersFromTableData
@@ -213,6 +229,14 @@ export async function removeMembersFromTable(
 
   if (!table) {
     throw new Error('Party Table not found');
+  }
+
+  // Prevent removing members from assigned groups
+  if (table.assignedTableNumber) {
+    throw new Error(
+      `Cannot remove individual members from a group assigned to table #${table.assignedTableNumber}. ` +
+      'To modify this table, either unassign the entire group, or manage members before assignment.'
+    );
   }
 
   const now = new Date().toISOString();
@@ -337,7 +361,11 @@ export async function hardDeletePartyTable(tableId: string): Promise<void> {
 }
 
 /**
- * Assign table number to Party Table
+ * Assign table number to a Party Table Group
+ *
+ * IMPORTANT: This function assigns a table number to a SINGLE group.
+ * The group keeps its members, and assignedTableNumber is set.
+ * For assigning MULTIPLE groups to one table number, use assignGroupsToTableNumber instead.
  */
 export async function assignTableNumber(data: AssignTableNumberData): Promise<void> {
   const db = adminDb();
@@ -347,12 +375,18 @@ export async function assignTableNumber(data: AssignTableNumberData): Promise<vo
     throw new Error('Party Table not found');
   }
 
+  // Check if this is a group (has members) or already assigned
+  if (table.assignedTableNumber) {
+    throw new Error('This table group is already assigned to a table number');
+  }
+
   const oldTableNumber = table.assignedTableNumber;
 
-  console.log('[assignTableNumber] Updating table:', {
+  console.log('[assignTableNumber] Assigning table number to group:', {
     tableId: data.tableId,
     tableNumber: data.tableNumber,
-    oldTableNumber,
+    groupName: table.tableGroupName,
+    memberCount: table.members.length,
   });
 
   await db.collection('partyTables').doc(data.tableId).update({
@@ -360,7 +394,7 @@ export async function assignTableNumber(data: AssignTableNumberData): Promise<vo
     updatedAt: new Date().toISOString(),
   });
 
-  console.log('[assignTableNumber] Table updated successfully, logging history...');
+  console.log('[assignTableNumber] Table number assigned successfully');
 
   // Log history
   try {
@@ -373,12 +407,11 @@ export async function assignTableNumber(data: AssignTableNumberData): Promise<vo
       metadata: {
         oldTableNumber,
         newTableNumber: data.tableNumber,
+        memberCount: table.members.length,
       },
     });
-    console.log('[assignTableNumber] History logged successfully');
   } catch (historyError) {
-    console.error('[assignTableNumber] Error logging history (but table was updated):', historyError);
-    // Don't throw - table was already updated successfully
+    console.error('[assignTableNumber] Error logging history:', historyError);
   }
 }
 
@@ -654,4 +687,130 @@ export async function getEventTableHistory(eventId: string): Promise<PartyTableH
     .get();
 
   return snapshot.docs.map(doc => doc.data() as PartyTableHistory);
+}
+
+/**
+ * Add a group to an existing table number assignment
+ *
+ * This allows multiple groups to be assigned to the same table number.
+ * Each group maintains its own identity and members.
+ */
+export async function addGroupToTableNumber(
+  tableNumber: number,
+  groupId: string,
+  eventId: string,
+  assignedBy: string,
+  assignedByName: string
+): Promise<void> {
+  const db = adminDb();
+
+  // Validate that the group exists and is not already assigned
+  const group = await getPartyTableById(groupId);
+  if (!group) {
+    throw new Error('Group not found');
+  }
+
+  if (group.assignedTableNumber && group.assignedTableNumber !== tableNumber) {
+    throw new Error(`This group is already assigned to table #${group.assignedTableNumber}`);
+  }
+
+  // Assign the group to this table number
+  await db.collection('partyTables').doc(groupId).update({
+    assignedTableNumber: tableNumber,
+    updatedAt: new Date().toISOString(),
+  });
+
+  console.log('[addGroupToTableNumber] Group added to table number:', {
+    groupId,
+    tableNumber,
+    groupName: group.tableGroupName,
+  });
+
+  // Log history
+  await logTableHistory({
+    eventId,
+    tableId: groupId,
+    action: 'number_assigned',
+    performedBy: assignedBy,
+    performedByName: assignedByName,
+    metadata: {
+      newTableNumber: tableNumber,
+      memberCount: group.members.length,
+    },
+  });
+}
+
+/**
+ * Remove a group from a table number assignment
+ *
+ * This unassigns the group from the table number, making it a standalone group again.
+ */
+export async function removeGroupFromTableNumber(
+  groupId: string,
+  removedBy: string,
+  removedByName: string
+): Promise<void> {
+  const db = adminDb();
+
+  const group = await getPartyTableById(groupId);
+  if (!group) {
+    throw new Error('Group not found');
+  }
+
+  if (!group.assignedTableNumber) {
+    throw new Error('This group is not assigned to any table number');
+  }
+
+  const oldTableNumber = group.assignedTableNumber;
+
+  await db.collection('partyTables').doc(groupId).update({
+    assignedTableNumber: FieldValue.delete(),
+    updatedAt: new Date().toISOString(),
+  });
+
+  console.log('[removeGroupFromTableNumber] Group removed from table number:', {
+    groupId,
+    oldTableNumber,
+  });
+
+  // Log history
+  await logTableHistory({
+    eventId: group.eventId,
+    tableId: groupId,
+    action: 'number_unassigned',
+    performedBy: removedBy,
+    performedByName: removedByName,
+    metadata: {
+      oldTableNumber,
+    },
+  });
+}
+
+/**
+ * Get all groups assigned to a specific table number
+ */
+export async function getGroupsByTableNumber(
+  eventId: string,
+  tableNumber: number
+): Promise<PartyTable[]> {
+  const db = adminDb();
+  const snapshot = await db
+    .collection('partyTables')
+    .where('eventId', '==', eventId)
+    .where('assignedTableNumber', '==', tableNumber)
+    .where('status', '==', 'active')
+    .get();
+
+  return snapshot.docs.map(doc => doc.data() as PartyTable);
+}
+
+/**
+ * Get total member count for a table number (from all assigned groups)
+ */
+export async function getTableNumberMemberCount(
+  eventId: string,
+  tableNumber: number
+): Promise<number> {
+  const groups = await getGroupsByTableNumber(eventId, tableNumber);
+  return groups.reduce((total, group) => total + group.members.length, 0);
 }

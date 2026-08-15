@@ -18,6 +18,16 @@ export interface TableMember {
 
 /**
  * Party Table - Represents a table group for event seating
+ *
+ * IMPORTANT: This serves TWO purposes:
+ * 1. Party Table Group (กลุ่มโต๊ะ) - When assignedTableNumber is NOT set
+ *    - members[] contains the group's members
+ *    - Can be managed (add/remove members)
+ *
+ * 2. Table Number Assignment (เลขโต๊ะ) - When assignedTableNumber IS set
+ *    - assignedGroupIds[] references other Party Table Groups
+ *    - individualMembers[] contains individual attendees added directly
+ *    - members[] is IGNORED for display (kept for backward compatibility)
  */
 export interface PartyTable {
   tableId: string;                    // Auto-generated unique ID
@@ -26,8 +36,15 @@ export interface PartyTable {
   hostRegistrationId: string;         // Table host (creator)
   hostCompanyName: string;            // Host's company
   hostContactName: string;            // Host's contact name
+
+  // For Party Table Groups (when NOT assigned to table number)
   members: TableMember[];             // Array of table members
+
+  // For Table Number Assignments (when assigned to table number)
   assignedTableNumber?: number;       // Admin-assigned table number (1 to N)
+  assignedGroupIds?: string[];        // tableIds of groups assigned to this table number
+  individualMembers?: TableMember[];  // Individual members added directly (not from groups)
+
   status: 'active' | 'deleted';       // Table status
   createdAt: string;                  // ISO timestamp
   updatedAt: string;                  // ISO timestamp
@@ -134,13 +151,34 @@ export interface RemoveMembersFromTableData {
 }
 
 /**
- * Assign Table Number Data - Input for assigning table number
+ * Assign Table Number Data - Input for assigning table number to a group
  */
 export interface AssignTableNumberData {
-  tableId: string;
+  tableId: string;  // The group table ID to assign
   tableNumber: number;
   assignedBy: string;
   assignedByName: string;
+}
+
+/**
+ * Assign Groups To Table Number - Input for assigning multiple groups + individuals to a table number
+ */
+export interface AssignGroupsToTableNumberData {
+  tableNumber: number;
+  groupIds: string[];  // tableIds of groups to assign
+  individualMembers?: Omit<TableMember, 'joinedAt' | 'joinedBy' | 'joinedByName'>[];
+  assignedBy: string;
+  assignedByName: string;
+}
+
+/**
+ * Remove Group From Table Number - Input for removing a group from table number
+ */
+export interface RemoveGroupFromTableNumberData {
+  tableNumber: number;
+  groupId: string;  // tableId of group to remove
+  removedBy: string;
+  removedByName: string;
 }
 
 /**

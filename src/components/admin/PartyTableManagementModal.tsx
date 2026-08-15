@@ -126,6 +126,7 @@ interface EnrichedPartyTable extends PartyTable {
   hostContactName: string;
   isJoinTable?: boolean;      // Explicitly declare for TypeScript in Vercel builds
   isReservation?: boolean;    // Explicitly declare for TypeScript in Vercel builds
+  reservedSeats?: number;     // Explicitly declare for TypeScript in Vercel builds
 }
 
 interface TableSlot {

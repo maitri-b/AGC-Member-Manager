@@ -1,29 +1,26 @@
 // API Route: Get Registration by ID
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
-import { hasPermission } from '@/lib/permissions';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { adminDb } from '@/lib/firebase-admin';
 
 /**
  * GET /api/registrations/[registrationId]
  * Get registration details by registration ID
+ * - Supports impersonation mode
+ * - Available to all authenticated users (members can search for inviting to carpools/tables)
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: { registrationId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Require admin:access permission
-    if (!hasPermission(session.user.permissions || [], 'admin:access')) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
+    // No admin permission required - members need this for inviting to carpools/tables
 
     const { registrationId } = params;
 

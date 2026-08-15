@@ -1,5 +1,6 @@
 // Party Table Management Library Functions
 import { adminDb } from './firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import {
   PartyTable,
   CreatePartyTableData,
@@ -385,7 +386,7 @@ export async function unassignTableNumber(
   const oldTableNumber = table.assignedTableNumber;
 
   await db.collection('partyTables').doc(tableId).update({
-    assignedTableNumber: undefined,
+    assignedTableNumber: FieldValue.delete(),
     updatedAt: new Date().toISOString(),
   });
 

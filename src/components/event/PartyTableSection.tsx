@@ -722,6 +722,17 @@ export default function PartyTableSection({
                     </div>
                   </div>
 
+                  {/* Warning for assigned table */}
+                  {table.assignedTableNumber && !table.isJoinTable && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-2">
+                      <p className="text-xs text-yellow-800">
+                        ⚠️ โต๊ะนี้ถูกจัดเลขโต๊ะแล้ว ไม่สามารถลบสมาชิกออกได้
+                        <br />
+                        หากต้องการแก้ไข กรุณาติดต่อ Admin
+                      </p>
+                    </div>
+                  )}
+
                   {/* Members List */}
                   <div className="space-y-2 mb-4">
                     <p className="text-xs font-medium text-gray-600">
@@ -745,7 +756,7 @@ export default function PartyTableSection({
                               <p className="text-xs text-gray-500">{member.companyName}</p>
                             </div>
                           </div>
-                          {member.registrationId !== table.hostRegistrationId && (
+                          {member.registrationId !== table.hostRegistrationId && !table.assignedTableNumber && (
                             <button
                               onClick={() =>
                                 setPendingMemberRemoval({
@@ -1078,9 +1089,10 @@ export default function PartyTableSection({
                     {searchedRegistration.companyName || searchedRegistration.contactName}
                   </p>
                   <div className="space-y-2">
-                    {searchedRegistration.attendeeNames
-                      ?.split(',')
-                      .map((name: string, index: number) => {
+                    {(Array.isArray(searchedRegistration.attendeeNames)
+                      ? searchedRegistration.attendeeNames
+                      : searchedRegistration.attendeeNames?.split(',') || []
+                    ).map((name: string, index: number) => {
                         // Check if this member is already in any table
                         const isInTable = searchedRegistrationTables.some((table) =>
                           table.members.some(

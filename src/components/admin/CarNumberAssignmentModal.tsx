@@ -162,11 +162,6 @@ export default function CarNumberAssignmentModal({
       member.name?.toLowerCase().includes(query)
     )) return true;
 
-    // Search in LINE display names (if available)
-    if (carpool.members?.some(member =>
-      member.lineDisplayName?.toLowerCase().includes(query)
-    )) return true;
-
     return false;
   });
 

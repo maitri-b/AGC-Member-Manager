@@ -158,6 +158,14 @@ export async function removeMembersFromCarpool(
     throw new Error('Carpool not found');
   }
 
+  // Prevent removing members from assigned carpools
+  if (carpool.assignedCarNumber) {
+    throw new Error(
+      `ไม่สามารถลบสมาชิกออกจากรถที่ถูกจัดเลขรถแล้ว (รถ #${carpool.assignedCarNumber})\n` +
+      'หากต้องการแก้ไข กรุณาติดต่อ Admin เพื่อยกเลิกการจัดเลขรถก่อน'
+    );
+  }
+
   // Filter members to remove
   // If name is empty string, remove all members with that lineUserId (legacy support)
   // Otherwise, remove only the specific member with lineUserId + name

@@ -652,10 +652,20 @@ export default function CarpoolSection({
                             <p className="text-xs font-medium text-blue-800 mb-1">
                               รายชื่อสมาชิกทะเบียนรถคันนี้:
                             </p>
+                            {ownedCarpool.assignedCarNumber && (
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-2">
+                                <p className="text-xs text-yellow-800">
+                                  ⚠️ รถคันนี้ถูกจัดเลขรถแล้ว ไม่สามารถลบสมาชิกออกได้
+                                  <br />
+                                  หากต้องการแก้ไข กรุณาติดต่อ Admin
+                                </p>
+                              </div>
+                            )}
                             <div className="space-y-1">
                               {ownedCarpool.members.map((member: any) => {
                                 const isMyTeamMember =
                                   member.registrationId === userRegistration?.registrationId;
+                                const canRemove = !ownedCarpool.assignedCarNumber;
 
                                 let displayName = member.name;
                                 try {
@@ -681,14 +691,16 @@ export default function CarpoolSection({
                                         </span>
                                       )}
                                     </span>
-                                    <button
-                                      onClick={() =>
-                                        handleRemoveTeamMember(member.lineUserId, member.name)
-                                      }
-                                      className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                                    >
-                                      ย้ายออก
-                                    </button>
+                                    {canRemove && (
+                                      <button
+                                        onClick={() =>
+                                          handleRemoveTeamMember(member.lineUserId, member.name)
+                                        }
+                                        className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                                      >
+                                        ย้ายออก
+                                      </button>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -754,10 +766,20 @@ export default function CarpoolSection({
                             <p className="text-xs font-medium text-green-800 mb-1">
                               รายชื่อสมาชิกทะเบียนรถคันนี้:
                             </p>
+                            {carpool.assignedCarNumber && (
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-2">
+                                <p className="text-xs text-yellow-800">
+                                  ⚠️ รถคันนี้ถูกจัดเลขรถแล้ว ไม่สามารถลบสมาชิกออกได้
+                                  <br />
+                                  หากต้องการแก้ไข กรุณาติดต่อ Admin
+                                </p>
+                              </div>
+                            )}
                             <div className="space-y-1">
                               {carpool.members.map((member: any) => {
                                 const isMyTeamMember =
                                   member.registrationId === userRegistration?.registrationId;
+                                const canLeave = !carpool.assignedCarNumber;
 
                                 let displayName = member.name;
                                 try {
@@ -783,7 +805,7 @@ export default function CarpoolSection({
                                         </span>
                                       )}
                                     </span>
-                                    {isMyTeamMember && (
+                                    {isMyTeamMember && canLeave && (
                                       <button
                                         onClick={() =>
                                           handleRemoveTeamMember(

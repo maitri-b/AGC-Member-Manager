@@ -665,17 +665,10 @@ export default function CarpoolSection({
                               {ownedCarpool.members.map((member: any) => {
                                 const isMyTeamMember =
                                   member.registrationId === userRegistration?.registrationId;
-                                const canRemove = !ownedCarpool.assignedCarNumber;
-
-                                // Debug logging
-                                if (ownedCarpool.licensePlate === 'สต3893') {
-                                  console.log('[Carpool Debug]', {
-                                    licensePlate: ownedCarpool.licensePlate,
-                                    assignedCarNumber: ownedCarpool.assignedCarNumber,
-                                    canRemove,
-                                    memberName: member.name
-                                  });
-                                }
+                                // Check if carpool has assigned car number (block removal if assigned)
+                                // assignedCarNumber can be undefined (not assigned) or a number (assigned)
+                                const hasAssignedNumber = typeof ownedCarpool.assignedCarNumber === 'number' && ownedCarpool.assignedCarNumber > 0;
+                                const canRemove = !hasAssignedNumber;
 
                                 let displayName = member.name;
                                 try {
@@ -789,7 +782,9 @@ export default function CarpoolSection({
                               {carpool.members.map((member: any) => {
                                 const isMyTeamMember =
                                   member.registrationId === userRegistration?.registrationId;
-                                const canLeave = !carpool.assignedCarNumber;
+                                // Check if carpool has assigned car number (block leaving if assigned)
+                                const hasAssignedNumber = typeof carpool.assignedCarNumber === 'number' && carpool.assignedCarNumber > 0;
+                                const canLeave = !hasAssignedNumber;
 
                                 let displayName = member.name;
                                 try {

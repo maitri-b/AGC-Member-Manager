@@ -100,9 +100,9 @@ export async function POST(
     // 1. Admin can remove anyone from any table (bypass all checks)
     // 2. Host can remove anyone from their own table
     // 3. Any member can remove themselves (leave table)
-    const hasPermission = isAdmin || isHost || isRemovingSelf;
+    const hasRemovePermission = isAdmin || isHost || isRemovingSelf;
 
-    if (!hasPermission) {
+    if (!hasRemovePermission) {
       return NextResponse.json(
         { error: 'Permission denied. You can only leave tables you joined or remove members from your own table.' },
         { status: 403 }

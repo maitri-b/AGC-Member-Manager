@@ -2349,21 +2349,25 @@ export default function EventDetailPage() {
                                             <p className="text-lg font-semibold text-blue-900">
                                               เลขทะเบียน: {ownedCarpool.licensePlate}
                                             </p>
-                                            <button
-                                              onClick={() => {
-                                                setEditingLicensePlate(true);
-                                                setNewLicensePlate(ownedCarpool.licensePlate);
-                                              }}
-                                              className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                                            >
-                                              ✏️ แก้ไข
-                                            </button>
-                                            <button
-                                              onClick={() => handleDeleteCarpool(ownedCarpool.carpoolId)}
-                                              className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                                            >
-                                              🗑️ ลบ
-                                            </button>
+                                            {!ownedCarpool.assignedCarNumber && (
+                                              <>
+                                                <button
+                                                  onClick={() => {
+                                                    setEditingLicensePlate(true);
+                                                    setNewLicensePlate(ownedCarpool.licensePlate);
+                                                  }}
+                                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                                >
+                                                  ✏️ แก้ไข
+                                                </button>
+                                                <button
+                                                  onClick={() => handleDeleteCarpool(ownedCarpool.carpoolId)}
+                                                  className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                                                >
+                                                  🗑️ ลบ
+                                                </button>
+                                              </>
+                                            )}
                                           </div>
                                         )}
                                         <p className="text-xs text-blue-700">
@@ -2436,16 +2440,18 @@ export default function EventDetailPage() {
 
                                       {/* Action buttons */}
                                       <div className="mt-3 pt-2 border-t border-blue-200">
-                                        <button
-                                          onClick={() => {
-                                            setInvitingToCarpoolId(ownedCarpool.carpoolId);
-                                            setShowInviteModal(true);
-                                            fetchAllCarpools(); // Fetch all carpools for validation
-                                          }}
-                                          className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                                        >
-                                          👥 ชวนเพื่อนไปด้วยกัน
-                                        </button>
+                                        {!ownedCarpool.assignedCarNumber && (
+                                          <button
+                                            onClick={() => {
+                                              setInvitingToCarpoolId(ownedCarpool.carpoolId);
+                                              setShowInviteModal(true);
+                                              fetchAllCarpools(); // Fetch all carpools for validation
+                                            }}
+                                            className="w-full text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                          >
+                                            👥 ชวนเพื่อนไปด้วยกัน
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                     </div>

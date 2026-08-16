@@ -104,7 +104,7 @@ export async function POST(
   } catch (error) {
     console.error('Error removing members from Carpool:', error);
     return NextResponse.json(
-      { error: 'Failed to remove members from Carpool', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error instanceof Error ? error.message : 'ไม่สามารถลบสมาชิกออกจากรถได้' },
       { status: 500 }
     );
   }

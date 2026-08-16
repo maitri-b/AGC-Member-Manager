@@ -57,6 +57,7 @@ export async function GET(
         ownerCompanyName: ownerReg?.registration.companyName || '',
         ownerContactName: ownerReg?.registration.contactName || '',
         members: enrichedMembers,
+        assignedCarNumber: carpool.assignedCarNumber, // Ensure assignedCarNumber is included
       };
     });
 

@@ -784,6 +784,9 @@ export default function PartyTableManagementModal({
             throw new Error(errorData.error || 'Failed to add members to existing Join Table');
           }
 
+          // Refresh tables to show updated member list
+          await fetchTables();
+
           setShowAssignModal(false);
           setSelectedMembersForNewGroup([]);
           alert(

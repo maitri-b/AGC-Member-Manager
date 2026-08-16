@@ -114,6 +114,7 @@ export default function CarpoolSection({
       const response = await fetch(`/api/events/${eventId}/my-carpool`);
       if (response.ok) {
         const data = await response.json();
+        console.log('[Carpool API Response]', JSON.stringify(data.carpools, null, 2));
         setMemberCarpools(data.carpools || []);
       }
     } catch (err) {

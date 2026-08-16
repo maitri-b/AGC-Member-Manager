@@ -54,6 +54,12 @@ export async function POST(
       return NextResponse.json({ error: 'Party Table not found' }, { status: 404 });
     }
 
+    const body = await request.json();
+
+    if (!body.memberIds || !Array.isArray(body.memberIds)) {
+      return NextResponse.json({ error: 'memberIds array is required' }, { status: 400 });
+    }
+
     // Check permissions: Admin can modify any table, member can only modify their own
     const isAdmin = hasPermission(session.user.permissions || [], 'admin:access');
 
@@ -64,21 +70,43 @@ export async function POST(
     );
     const isHost = userRegistrationId === table.hostRegistrationId;
 
-    if (!isAdmin && !isHost) {
+    // Check if user is removing themselves (leaving the table)
+    const isRemovingSelf = body.memberIds.every(
+      (memberId: { registrationId: string; attendeeIndex: number }) =>
+        memberId.registrationId === userRegistrationId
+    );
+
+    // Permission logic:
+    // 1. Admin can remove anyone from any table
+    // 2. Host can remove anyone from their own table
+    // 3. Any member can remove themselves (leave table)
+    if (!isAdmin && !isHost && !isRemovingSelf) {
       return NextResponse.json(
-        { error: 'Permission denied. You can only remove members from your own party table.' },
+        { error: 'Permission denied. You can only leave tables you joined or remove members from your own table.' },
         { status: 403 }
       );
     }
 
-    const body = await request.json();
-
-    if (!body.memberIds || !Array.isArray(body.memberIds)) {
-      return NextResponse.json({ error: 'memberIds array is required' }, { status: 400 });
-    }
-
     const removedBy = session.user.id;
-    const removedByName = session.user.name || session.user.email || 'Unknown';
+
+    // Get user's display name from session or Firestore
+    let removedByName = session.user.name || session.user.email || 'Unknown';
+
+    // If session doesn't have a name, try to fetch from Firestore users collection
+    if (!session.user.name || session.user.name === 'Unknown') {
+      try {
+        const db = adminDb();
+        const userDoc = await db.collection('users').doc(session.user.lineUserId).get();
+
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          removedByName = userData?.displayName || userData?.lineDisplayName || userData?.name || session.user.email || 'Unknown User';
+        }
+      } catch (error) {
+        console.error('[Remove Members] Error fetching user display name:', error);
+        // Continue with fallback name
+      }
+    }
 
     const data: RemoveMembersFromTableData = {
       tableId,

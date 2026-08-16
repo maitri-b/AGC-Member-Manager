@@ -687,16 +687,16 @@ export default function CarpoolSection({
                                   member.registrationId === userRegistration?.registrationId;
                                 // Check if carpool has assigned car number (block removal if assigned)
                                 // assignedCarNumber can be undefined (not assigned) or a number (assigned)
+                                const hasAssignedNumber = typeof ownedCarpool.assignedCarNumber === 'number' && ownedCarpool.assignedCarNumber > 0;
+                                const canRemove = !hasAssignedNumber;
                                 console.log('[Button Logic]', {
                                   carpoolId: ownedCarpool.carpoolId,
                                   assignedCarNumber: ownedCarpool.assignedCarNumber,
                                   typeOf: typeof ownedCarpool.assignedCarNumber,
                                   isNumber: typeof ownedCarpool.assignedCarNumber === 'number',
-                                  greaterThanZero: ownedCarpool.assignedCarNumber > 0,
+                                  hasAssignedNumber,
+                                  canRemove,
                                 });
-                                const hasAssignedNumber = typeof ownedCarpool.assignedCarNumber === 'number' && ownedCarpool.assignedCarNumber > 0;
-                                const canRemove = !hasAssignedNumber;
-                                console.log('[Button Logic] Result:', { hasAssignedNumber, canRemove });
 
                                 let displayName = member.name;
                                 try {

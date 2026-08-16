@@ -58,6 +58,13 @@ export default function CarpoolSection({
   isCommitteeOrAdmin,
   attendeeNames,
 }: CarpoolSectionProps) {
+  console.log('[CarpoolSection] Component rendered', {
+    eventId,
+    hasCarpoolFeature: event?.hasCarpoolFeature,
+    hasUserRegistration: !!userRegistration,
+    attendeeNamesCount: attendeeNames?.length || 0,
+  });
+
   // State management
   const [memberCarpools, setMemberCarpools] = useState<Carpool[]>([]);
   const [carpoolLoading, setCarpoolLoading] = useState(false);

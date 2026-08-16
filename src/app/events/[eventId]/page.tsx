@@ -2385,9 +2385,22 @@ export default function EventDetailPage() {
                                     {ownedCarpool.members && ownedCarpool.members.length > 0 && (
                                       <div className="mt-2 pt-2 border-t border-blue-200">
                                         <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิกทะเบียนรถคันนี้:</p>
+                                        {ownedCarpool.assignedCarNumber && (
+                                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-2">
+                                            <p className="text-xs text-yellow-800">
+                                              ⚠️ รถคันนี้ถูกจัดเลขรถแล้ว ไม่สามารถลบสมาชิกออกได้
+                                              <br />
+                                              หากต้องการแก้ไข กรุณาติดต่อ Admin
+                                            </p>
+                                          </div>
+                                        )}
                                         <div className="space-y-1">
                                           {ownedCarpool.members.map((member: any, idx: number) => {
                                             const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
+
+                                            // Check if carpool has assigned car number (block removal if assigned)
+                                            const hasAssignedNumber = typeof ownedCarpool.assignedCarNumber === 'number' && ownedCarpool.assignedCarNumber > 0;
+                                            const canRemove = !hasAssignedNumber;
 
                                             // Clean member name
                                             let displayName = member.name;
@@ -2406,12 +2419,14 @@ export default function EventDetailPage() {
                                                     <span className="italic font-light text-blue-500"> ({member.companyName}) - joined</span>
                                                   )}
                                                 </span>
-                                                <button
-                                                  onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
-                                                  className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                                                >
-                                                  ย้ายออก
-                                                </button>
+                                                {canRemove && (
+                                                  <button
+                                                    onClick={() => handleRemoveTeamMember(member.lineUserId, member.name)}
+                                                    className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                                                  >
+                                                    ย้ายออก
+                                                  </button>
+                                                )}
                                               </div>
                                             );
                                           })}
@@ -2475,6 +2490,10 @@ export default function EventDetailPage() {
                                               {carpool.members.map((member: any, idx: number) => {
                                                 const isMyTeamMember = member.registrationId === userRegistration?.registrationId;
 
+                                                // Check if carpool has assigned car number (block removal if assigned)
+                                                const hasAssignedNumber = typeof carpool.assignedCarNumber === 'number' && carpool.assignedCarNumber > 0;
+                                                const canRemove = !hasAssignedNumber;
+
                                                 // Clean member name
                                                 let displayName = member.name;
                                                 try {
@@ -2492,7 +2511,7 @@ export default function EventDetailPage() {
                                                         <span className="italic font-light text-green-500"> - joined</span>
                                                       )}
                                                     </span>
-                                                    {isMyTeamMember && (
+                                                    {isMyTeamMember && canRemove && (
                                                       <button
                                                         onClick={() => handleRemoveTeamMember(member.lineUserId, member.name, carpool.carpoolId)}
                                                         className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"

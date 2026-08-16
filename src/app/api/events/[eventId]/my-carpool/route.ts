@@ -53,11 +53,17 @@ export async function GET(
       }) || [];
 
       return {
-        ...carpool,
+        carpoolId: carpool.carpoolId,
+        eventId: carpool.eventId,
+        ownerRegistrationId: carpool.ownerRegistrationId,
+        licensePlate: carpool.licensePlate,
+        status: carpool.status,
+        createdAt: carpool.createdAt,
+        updatedAt: carpool.updatedAt,
+        assignedCarNumber: carpool.assignedCarNumber, // CRITICAL: Include assigned car number
         ownerCompanyName: ownerReg?.registration.companyName || '',
         ownerContactName: ownerReg?.registration.contactName || '',
         members: enrichedMembers,
-        assignedCarNumber: carpool.assignedCarNumber, // Ensure assignedCarNumber is included
       };
     });
 

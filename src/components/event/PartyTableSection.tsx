@@ -551,68 +551,89 @@ export default function PartyTableSection({
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          <h2 className="text-lg font-semibold text-gray-900">โต๊ะนั่ง (Party Table)</h2>
-
-          {/* Info Tooltip */}
+      {/* Header */}
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className="text-base font-semibold text-gray-900">
+            🪑 โต๊ะนั่ง (Party Table)
+          </h3>
           <div className="relative">
             <button
               type="button"
               onMouseEnter={() => setShowTableTooltip(true)}
               onMouseLeave={() => setShowTableTooltip(false)}
-              className="text-gray-400 hover:text-gray-600"
+              onClick={() => setShowTableTooltip(!showTableTooltip)}
+              className="text-blue-500 hover:text-blue-700 transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
               </svg>
             </button>
             {showTableTooltip && (
-              <div className="absolute left-0 top-6 z-10 w-80 bg-gray-800 text-white text-xs rounded-lg p-3 shadow-lg">
-                <p className="mb-2"><strong>Party Table คืออะไร?</strong></p>
-                <p className="mb-2">ระบบจัดโต๊ะนั่งในงาน ให้คุณสามารถสร้างกลุ่มโต๊ะและนั่งโต๊ะเดียวกันกับเพื่อนได้</p>
-                <p className="mb-2"><strong>วิธีการสร้างโต๊ะ:</strong></p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>กดปุ่ม "สร้างกลุ่มโต๊ะใหม่"</li>
-                  <li>เลือกสมาชิกในรหัสลงทะเบียนของคุณ</li>
-                  <li>เชิญเพื่อนจากรหัสลงทะเบียนอื่นๆ ได้ภายหลัง</li>
-                </ul>
-                <p className="mb-2 mt-3"><strong>วิธีการ Join โต๊ะ:</strong></p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li><strong>วิธีที่ 1:</strong> รอให้เจ้าของโต๊ะเชิญคุณ</li>
-                  <li><strong>วิธีที่ 2:</strong> กดปุ่ม "Join โต๊ะ" ค้นหารหัสลงทะเบียนของเพื่อน แล้วขอ Join โต๊ะของเขา</li>
-                </ul>
-                <p className="text-xs text-gray-300 mt-3">💡 Admin จะจัดเลขโต๊ะให้ภายหลัง</p>
+              <div className="absolute left-0 top-6 z-50 w-80 p-4 bg-white border-2 border-purple-300 rounded-lg shadow-xl">
+                <div className="space-y-3 text-xs text-gray-700">
+                  <div>
+                    <p className="font-semibold text-purple-700 mb-1">
+                      🪑 โต๊ะนั่ง (Party Table)
+                    </p>
+                    <p>
+                      ระบบจัดโต๊ะนั่งในงาน ให้คุณสามารถสร้างกลุ่มโต๊ะและนั่งโต๊ะเดียวกันกับเพื่อนได้
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-purple-700 mb-1">📌 วิธีการสร้างโต๊ะ:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>กดปุ่ม "สร้างกลุ่มโต๊ะใหม่"</li>
+                      <li>เลือกสมาชิกในรหัสลงทะเบียนของคุณ</li>
+                      <li>เชิญเพื่อนจากรหัสลงทะเบียนอื่นๆ ได้ภายหลัง</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-purple-700 mb-1">🤝 วิธีการ Join โต๊ะ:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li><strong>วิธีที่ 1:</strong> รอให้เจ้าของโต๊ะเชิญคุณ</li>
+                      <li><strong>วิธีที่ 2:</strong> กดปุ่ม "Join โต๊ะ" ค้นหารหัสลงทะเบียนของเพื่อน แล้วขอ Join โต๊ะของเขา</li>
+                    </ul>
+                  </div>
+                  <div className="pt-2 border-t border-purple-200">
+                    <p className="text-gray-600">
+                      💡 Admin จะจัดเลขโต๊ะให้ภายหลัง
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Action Buttons in header */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowJoinTableModal(true)}
-            className="px-3 py-1.5 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-md hover:bg-green-50 transition-colors flex items-center gap-1.5"
-            title="Join โต๊ะที่เพื่อนสร้างไว้"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-            <span className="hidden sm:inline">Join โต๊ะ</span>
-          </button>
-          <button
-            onClick={() => setShowCreateTableModal(true)}
-            className="px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors flex items-center gap-1.5"
-            title="สร้างกลุ่มโต๊ะใหม่"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="hidden sm:inline">สร้างกลุ่มโต๊ะ</span>
-          </button>
+          {/* Action Buttons - Only show if user has tables and has available members */}
+          {memberTables.length > 0 && attendeeIndexesInTables.size < attendeeNames.length && (
+            <div className="flex items-center gap-1 ml-auto">
+              <button
+                onClick={() => setShowJoinTableModal(true)}
+                className="px-2 py-1 bg-white border border-green-500 text-green-700 text-xs font-medium rounded hover:bg-green-50 transition-colors flex items-center gap-1"
+                title="Join โต๊ะที่เพื่อนสร้างไว้"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                <span className="hidden sm:inline">Join โต๊ะ</span>
+              </button>
+              <button
+                onClick={() => setShowCreateTableModal(true)}
+                className="px-2 py-1 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition-colors flex items-center gap-1"
+                title="สร้างกลุ่มโต๊ะใหม่"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span className="hidden sm:inline">สร้างกลุ่มโต๊ะ</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

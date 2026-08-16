@@ -667,6 +667,16 @@ export default function CarpoolSection({
                                   member.registrationId === userRegistration?.registrationId;
                                 const canRemove = !ownedCarpool.assignedCarNumber;
 
+                                // Debug logging
+                                if (ownedCarpool.licensePlate === 'สต3893') {
+                                  console.log('[Carpool Debug]', {
+                                    licensePlate: ownedCarpool.licensePlate,
+                                    assignedCarNumber: ownedCarpool.assignedCarNumber,
+                                    canRemove,
+                                    memberName: member.name
+                                  });
+                                }
+
                                 let displayName = member.name;
                                 try {
                                   const parsed = JSON.parse(member.name);

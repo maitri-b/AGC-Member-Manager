@@ -282,7 +282,7 @@ export async function unassignCarNumber(carpoolId: string): Promise<void> {
 }
 
 /**
- * Get Carpool by car number
+ * Get Carpool by car number (excluding deleted carpools)
  */
 export async function getCarpoolByCarNumber(
   eventId: string,
@@ -300,7 +300,12 @@ export async function getCarpoolByCarNumber(
     return null;
   }
 
-  return snapshot.docs[0].data() as Carpool;
+  // Filter out deleted carpools in JavaScript (Firestore can't use != in query with multiple where clauses)
+  const carpools = snapshot.docs
+    .map(doc => doc.data() as Carpool)
+    .filter(carpool => carpool.status !== 'deleted');
+
+  return carpools.length > 0 ? carpools[0] : null;
 }
 
 /**

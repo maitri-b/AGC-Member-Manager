@@ -69,14 +69,14 @@ export async function POST(
     }
 
     // Check permissions: Admin can modify any table, member can only modify their own
-    const isAdmin = hasPermission(session.user.permissions || [], 'admin:access');
+    const isAdmin: boolean = hasPermission(session.user.permissions || [], 'admin:access');
 
     // Get user's registration ID for this event to check ownership
     const userRegistrationId = await getUserRegistrationId(
       session.user.lineUserId,
       table.eventId
     );
-    const isHost = userRegistrationId === table.hostRegistrationId;
+    const isHost: boolean = userRegistrationId === table.hostRegistrationId;
 
     // Check if user is removing themselves (leaving the table)
     const isRemovingSelf = body.memberIds.every(

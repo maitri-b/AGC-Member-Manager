@@ -14,14 +14,18 @@ export async function GET(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
+    console.log('[my-carpool] API called');
+
     // Use effective session to support impersonation
     const session = await getEffectiveSession();
+    console.log('[my-carpool] Session:', { hasUser: !!session?.user, lineUserId: session?.user?.lineUserId });
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { eventId } = await params;
+    console.log('[my-carpool] EventId:', eventId);
 
     // Get member's LINE user ID (from effective session)
     const lineUserId = session.user.lineUserId;
@@ -31,15 +35,29 @@ export async function GET(
     }
 
     // Get ALL carpools where member has team members
+    console.log('[my-carpool] Fetching carpools for lineUserId:', lineUserId);
     const carpools = await getAllMemberCarpools(lineUserId, eventId);
+    console.log('[my-carpool] Found carpools:', carpools.length);
 
     if (carpools.length === 0) {
+      console.log('[my-carpool] No carpools found, returning empty array');
       return NextResponse.json({ carpools: [] });
     }
 
     // Enrich Carpools with owner registration data and member company names
-    const { attendees } = await getEventAttendanceSummary(eventId);
+    console.log('[my-carpool] Fetching event attendance summary...');
+    let attendees: any[] = [];
+    try {
+      const result = await getEventAttendanceSummary(eventId);
+      attendees = result.attendees;
+      console.log('[my-carpool] Found attendees:', attendees.length);
+    } catch (error) {
+      console.error('[my-carpool] Error fetching attendance summary:', error);
+      // If quota exceeded or other error, continue without enrichment
+      console.log('[my-carpool] Continuing without company name enrichment due to error');
+    }
 
+    console.log('[my-carpool] Enriching carpools...');
     const enrichedCarpools = carpools.map(carpool => {
       const ownerReg = attendees.find(a => a.registration.registrationId === carpool.ownerRegistrationId);
 

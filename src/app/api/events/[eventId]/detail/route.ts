@@ -121,6 +121,9 @@ export async function GET(
       // Carpool feature (New)
       hasCarpoolFeature: eventData?.hasCarpoolFeature ?? false,
       carpoolSettings: eventData?.carpoolSettings || undefined,
+      // Party Table feature (New)
+      hasPartyTableFeature: eventData?.hasPartyTableFeature ?? false,
+      partyTableSettings: eventData?.partyTableSettings || undefined,
       // Cancellation policy (New)
       cancellationPolicy: eventData?.cancellationPolicy || undefined,
     };

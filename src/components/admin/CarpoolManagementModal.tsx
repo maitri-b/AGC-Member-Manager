@@ -95,6 +95,11 @@ export default function CarpoolManagementModal({
   const [assigning, setAssigning] = useState(false);
   const [assignmentSearchQuery, setAssignmentSearchQuery] = useState('');
 
+  // Batch assignment modal state
+  const [showBatchAssignmentModal, setShowBatchAssignmentModal] = useState(false);
+  const [batchAssignments, setBatchAssignments] = useState<Record<string, number>>({});
+  const [savingBatchAssignments, setSavingBatchAssignments] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       fetchCarpools();
@@ -496,6 +501,86 @@ export default function CarpoolManagementModal({
 
   const availableCarpools = carpools.filter((cp) => !cp.assignedCarNumber);
 
+  const handleOpenBatchAssignment = () => {
+    // Initialize batch assignments with current values
+    const initialAssignments: Record<string, number> = {};
+    carpools.forEach((carpool) => {
+      if (carpool.assignedCarNumber) {
+        initialAssignments[carpool.carpoolId] = carpool.assignedCarNumber;
+      }
+    });
+    setBatchAssignments(initialAssignments);
+    setShowBatchAssignmentModal(true);
+  };
+
+  const handleBatchAssignmentChange = (carpoolId: string, carNumber: number) => {
+    setBatchAssignments((prev) => {
+      const updated = { ...prev };
+      if (carNumber === 0) {
+        delete updated[carpoolId];
+      } else {
+        updated[carpoolId] = carNumber;
+      }
+      return updated;
+    });
+  };
+
+  const handleSaveBatchAssignments = async () => {
+    setSavingBatchAssignments(true);
+    try {
+      // Get current assignments
+      const currentAssignments: Record<string, number> = {};
+      carpools.forEach((carpool) => {
+        if (carpool.assignedCarNumber) {
+          currentAssignments[carpool.carpoolId] = carpool.assignedCarNumber;
+        }
+      });
+
+      // Find changes
+      const toAssign: Array<{ carpoolId: string; carNumber: number }> = [];
+      const toUnassign: string[] = [];
+
+      // Check for new assignments or changes
+      Object.entries(batchAssignments).forEach(([carpoolId, carNumber]) => {
+        if (currentAssignments[carpoolId] !== carNumber) {
+          toAssign.push({ carpoolId, carNumber });
+        }
+      });
+
+      // Check for removals
+      Object.keys(currentAssignments).forEach((carpoolId) => {
+        if (!batchAssignments[carpoolId]) {
+          toUnassign.push(carpoolId);
+        }
+      });
+
+      // Execute unassignments first
+      for (const carpoolId of toUnassign) {
+        await fetch(`/api/carpools/${carpoolId}/unassign-car-number`, {
+          method: 'PUT',
+        });
+      }
+
+      // Execute assignments
+      for (const { carpoolId, carNumber } of toAssign) {
+        await fetch(`/api/carpools/${carpoolId}/assign-car-number`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ carNumber }),
+        });
+      }
+
+      await fetchCarpools();
+      setShowBatchAssignmentModal(false);
+      alert(`บันทึกการจัดเลขรถสำเร็จ! (${toAssign.length + toUnassign.length} รายการ)`);
+    } catch (err) {
+      console.error('Error saving batch assignments:', err);
+      alert(err instanceof Error ? err.message : 'Failed to save batch assignments');
+    } finally {
+      setSavingBatchAssignments(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -510,13 +595,22 @@ export default function CarpoolManagementModal({
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {activeTab === 'carpools' && (
-                <button
-                  onClick={handleCreateCarpool}
-                  className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-                >
-                  <span className="hidden sm:inline">+ สร้าง Carpool</span>
-                  <span className="sm:hidden">+ สร้าง</span>
-                </button>
+                <>
+                  <button
+                    onClick={handleOpenBatchAssignment}
+                    className="px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+                  >
+                    <span className="hidden sm:inline">📋 จัดเลขรถแบบ Batch</span>
+                    <span className="sm:hidden">📋 Batch</span>
+                  </button>
+                  <button
+                    onClick={handleCreateCarpool}
+                    className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                  >
+                    <span className="hidden sm:inline">+ สร้าง Carpool</span>
+                    <span className="sm:hidden">+ สร้าง</span>
+                  </button>
+                </>
               )}
               <button
                 onClick={onClose}
@@ -1723,6 +1817,128 @@ export default function CarpoolManagementModal({
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
                 >
                   ยืนยันลบ Carpool
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Car Number Assignment Modal */}
+      {showBatchAssignmentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8 max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-xl font-semibold text-gray-900">
+                จัดเลขรถแบบ Batch
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                เลือกเลขรถสำหรับแต่ละ Carpool พร้อมกันทีเดียว
+              </p>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {carpools.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">ไม่มี Carpool</p>
+              ) : (
+                <div className="space-y-3">
+                  {carpools.map((carpool) => {
+                    // Get available car numbers (excluding those assigned to other carpools in current batch)
+                    const usedNumbers = Object.entries(batchAssignments)
+                      .filter(([id, _]) => id !== carpool.carpoolId)
+                      .map(([_, num]) => num);
+
+                    return (
+                      <div
+                        key={carpool.carpoolId}
+                        className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors"
+                      >
+                        <div className="flex items-start gap-4">
+                          {/* Carpool Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="text-sm font-semibold text-gray-900 truncate">
+                                🚗 {carpool.licensePlate}
+                              </h4>
+                              {carpool.assignedCarNumber && (
+                                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded flex-shrink-0">
+                                  รถคันที่ {carpool.assignedCarNumber}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-600 truncate">
+                              {carpool.ownerCompanyName}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {carpool.members.length} สมาชิก • รหัส: {carpool.ownerRegistrationId}
+                            </p>
+                          </div>
+
+                          {/* Car Number Selection */}
+                          <div className="w-40 flex-shrink-0">
+                            <select
+                              value={batchAssignments[carpool.carpoolId] || 0}
+                              onChange={(e) =>
+                                handleBatchAssignmentChange(carpool.carpoolId, parseInt(e.target.value))
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            >
+                              <option value={0}>-- ไม่กำหนด --</option>
+                              {Array.from({ length: totalCars }, (_, i) => i + 1).map((num) => {
+                                const isUsedByOther = usedNumbers.includes(num);
+                                const isCurrentAssignment = carpool.assignedCarNumber === num;
+
+                                return (
+                                  <option
+                                    key={num}
+                                    value={num}
+                                    disabled={isUsedByOther && !isCurrentAssignment}
+                                  >
+                                    รถคันที่ {num}
+                                    {isUsedByOther && !isCurrentAssignment ? ' (ถูกเลือกแล้ว)' : ''}
+                                    {isCurrentAssignment ? ' (ปัจจุบัน)' : ''}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 flex-shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">
+                    {Object.keys(batchAssignments).length}
+                  </span>{' '}
+                  จาก {carpools.length} รายการได้รับเลขรถ
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowBatchAssignmentModal(false);
+                    setBatchAssignments({});
+                  }}
+                  disabled={savingBatchAssignments}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleSaveBatchAssignments}
+                  disabled={savingBatchAssignments}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                >
+                  {savingBatchAssignments ? 'กำลังบันทึก...' : 'บันทึกการจัดเลขรถ'}
                 </button>
               </div>
             </div>

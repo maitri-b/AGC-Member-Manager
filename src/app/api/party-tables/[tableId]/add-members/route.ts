@@ -78,7 +78,25 @@ export async function POST(
     }
 
     const addedBy = session.user.id;
-    const addedByName = session.user.name || session.user.email || 'Unknown';
+
+    // Get user's display name from session or Firestore
+    let addedByName = session.user.name || session.user.email || 'Unknown';
+
+    // If session doesn't have a name, try to fetch from Firestore users collection
+    if (!session.user.name || session.user.name === 'Unknown') {
+      try {
+        const db = adminDb();
+        const userDoc = await db.collection('users').doc(session.user.lineUserId).get();
+
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          addedByName = userData?.displayName || userData?.lineDisplayName || userData?.name || session.user.email || 'Unknown User';
+        }
+      } catch (error) {
+        console.error('[Add Members] Error fetching user display name:', error);
+        // Continue with fallback name
+      }
+    }
 
     const data: AddMembersToTableData = {
       tableId,

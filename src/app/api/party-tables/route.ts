@@ -68,7 +68,27 @@ export async function POST(request: NextRequest) {
 
     // Create the Party Table
     const createdBy = session.user.id;
-    const createdByName = session.user.name || session.user.email || 'Unknown';
+
+    // Get creator's display name from session or Firestore
+    let createdByName = session.user.name || session.user.email || 'Unknown';
+
+    // If session doesn't have a name, try to fetch from Firestore users collection
+    if (!session.user.name || session.user.name === 'Unknown') {
+      try {
+        const { adminDb } = await import('@/lib/firebase-admin');
+        const db = adminDb();
+        const userDoc = await db.collection('users').doc(session.user.lineUserId).get();
+
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          createdByName = userData?.displayName || userData?.lineDisplayName || userData?.name || session.user.email || 'Unknown User';
+        }
+      } catch (error) {
+        console.error('[Party Table Creation] Error fetching user display name:', error);
+        // Continue with fallback name
+      }
+    }
+
     // Check if this is a Join Table (created from registration codes)
     const isJoinTable = body.isJoinTable === true;
     const table = await createPartyTable(body, createdBy, createdByName, isJoinTable);

@@ -6,7 +6,10 @@ import { adminDb } from '@/lib/firebase-admin';
 
 /**
  * GET /api/events/[eventId]/my-party-tables
- * Get all party tables where the current user has members
+ * Get all party tables where the current user (or specified registration) has members
+ *
+ * Query params:
+ * - registrationId (optional): Get tables for a specific registration instead of current user
  */
 export async function GET(
   request: NextRequest,
@@ -25,24 +28,35 @@ export async function GET(
       return NextResponse.json({ error: 'Event ID is required' }, { status: 400 });
     }
 
-    // Get user's registration for this event
-    const db = adminDb();
-    const regSnapshot = await db
-      .collection('eventRegistrations')
-      .where('lineUserId', '==', session.user.lineUserId)  // Use lineUserId instead of id for impersonation support
-      .where('eventId', '==', eventId)
-      .limit(1)
-      .get();
+    // Check if a specific registrationId is requested (for Join Table search)
+    const { searchParams } = new URL(request.url);
+    const queryRegistrationId = searchParams.get('registrationId');
 
-    if (regSnapshot.empty) {
-      // User not registered for this event
-      return NextResponse.json({ tables: [] });
+    let registrationId: string;
+
+    if (queryRegistrationId) {
+      // If registrationId is provided, use it directly (for Join Table feature)
+      registrationId = queryRegistrationId;
+    } else {
+      // Otherwise, get the current user's registration for this event
+      const db = adminDb();
+      const regSnapshot = await db
+        .collection('eventRegistrations')
+        .where('lineUserId', '==', session.user.lineUserId)  // Use lineUserId instead of id for impersonation support
+        .where('eventId', '==', eventId)
+        .limit(1)
+        .get();
+
+      if (regSnapshot.empty) {
+        // User not registered for this event
+        return NextResponse.json({ tables: [] });
+      }
+
+      const registration = regSnapshot.docs[0].data();
+      registrationId = registration.registrationId;
     }
 
-    const registration = regSnapshot.docs[0].data();
-    const registrationId = registration.registrationId;
-
-    // Get all tables where this user has members
+    // Get all tables where this registration has members
     const tables = await getAllMemberTables(registrationId, eventId);
 
     return NextResponse.json({ tables });

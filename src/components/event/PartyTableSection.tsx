@@ -23,6 +23,7 @@ interface PartyTable {
   hostContactName: string;
   members: TableMember[];
   assignedTableNumber?: number;
+  isJoinTable?: boolean;
   status: 'active' | 'deleted';
   createdAt: string;
   updatedAt: string;

@@ -794,6 +794,10 @@ export default function EventDetailPage() {
   }>({ attendeeCount: 1, attendeeNames: [''], status: 'รอดำเนินการ' });
   const [updating, setUpdating] = useState(false);
 
+  // Toast notification for copy registration ID
+  const [showCopyToast, setShowCopyToast] = useState(false);
+  const [copiedRegistrationId, setCopiedRegistrationId] = useState('');
+
   // Room management state - Lifted to parent level to prevent N+1 queries
   const [availableRooms, setAvailableRooms] = useState<Array<{
     roomId: string;
@@ -1823,7 +1827,12 @@ export default function EventDetailPage() {
   const handleCopyRegistrationId = (registrationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(registrationId);
-    alert('คัดลอกรหัสการจองแล้ว: ' + registrationId);
+    setCopiedRegistrationId(registrationId);
+    setShowCopyToast(true);
+    // Auto hide toast after 3 seconds
+    setTimeout(() => {
+      setShowCopyToast(false);
+    }, 3000);
   };
 
   // Check if registration has approved payments
@@ -6663,6 +6672,18 @@ function RoomNumberWithTooltip({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification for Copy Registration ID */}
+      {showCopyToast && (
+        <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
+          <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="font-medium">คัดลอกรหัสการจองแล้ว: {copiedRegistrationId}</span>
           </div>
         </div>
       )}

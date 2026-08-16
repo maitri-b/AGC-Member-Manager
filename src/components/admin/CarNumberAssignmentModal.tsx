@@ -37,6 +37,7 @@ export default function CarNumberAssignmentModal({
   const [assigningCarNumber, setAssigningCarNumber] = useState<number | null>(null);
   const [selectedCarpoolId, setSelectedCarpoolId] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -137,6 +138,37 @@ export default function CarNumberAssignmentModal({
 
   // Get available carpools (not assigned to any car)
   const availableCarpools = carpools.filter((cp) => !cp.assignedCarNumber);
+
+  // Filter carpools based on search query
+  const filteredCarpools = availableCarpools.filter((carpool) => {
+    if (!searchQuery.trim()) return true;
+
+    const query = searchQuery.toLowerCase();
+
+    // Search in company name
+    if (carpool.ownerCompanyName?.toLowerCase().includes(query)) return true;
+
+    // Search in contact name
+    if (carpool.ownerContactName?.toLowerCase().includes(query)) return true;
+
+    // Search in registration ID
+    if (carpool.ownerRegistrationId?.toLowerCase().includes(query)) return true;
+
+    // Search in license plate
+    if (carpool.licensePlate?.toLowerCase().includes(query)) return true;
+
+    // Search in member names
+    if (carpool.members?.some(member =>
+      member.name?.toLowerCase().includes(query)
+    )) return true;
+
+    // Search in LINE display names (if available)
+    if (carpool.members?.some(member =>
+      member.lineDisplayName?.toLowerCase().includes(query)
+    )) return true;
+
+    return false;
+  });
 
   if (!isOpen) return null;
 
@@ -249,10 +281,11 @@ export default function CarNumberAssignmentModal({
 
       {/* Assignment Modal */}
       {showAssignmentModal && assigningCarNumber && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-[60] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full my-4 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                 กำหนด Carpool ให้รถคันที่ {assigningCarNumber}
               </h3>
               <button
@@ -260,8 +293,9 @@ export default function CarNumberAssignmentModal({
                   setShowAssignmentModal(false);
                   setAssigningCarNumber(null);
                   setSelectedCarpoolId(null);
+                  setSearchQuery('');
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -269,17 +303,69 @@ export default function CarNumberAssignmentModal({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
+            {/* Search Box */}
+            {availableCarpools.length > 0 && (
+              <div className="px-4 sm:px-6 pt-4 flex-shrink-0">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="ค้นหา: บริษัท, ผู้ติดต่อ, สมาชิก, รหัสลงทะเบียน, ทะเบียนรถ..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <svg
+                    className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {searchQuery && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    พบ {filteredCarpools.length} จาก {availableCarpools.length} รายการ
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               {availableCarpools.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">
                   ไม่มี Carpool ที่ว่างสำหรับกำหนดเลขรถ
                 </p>
+              ) : filteredCarpools.length === 0 ? (
+                <div className="text-center py-8">
+                  <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <p className="text-gray-500">ไม่พบ Carpool ที่ค้นหา</p>
+                  <p className="text-sm text-gray-400 mt-1">ลองใช้คำค้นหาอื่น</p>
+                </div>
               ) : (
                 <div className="space-y-2">
-                  {availableCarpools.map((carpool) => (
+                  {filteredCarpools.map((carpool) => (
                     <label
                       key={carpool.carpoolId}
-                      className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                      className={`flex items-start gap-3 p-3 sm:p-4 border rounded-lg cursor-pointer transition-colors ${
                         selectedCarpoolId === carpool.carpoolId
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:bg-gray-50'
@@ -290,16 +376,37 @@ export default function CarNumberAssignmentModal({
                         name="carpool"
                         checked={selectedCarpoolId === carpool.carpoolId}
                         onChange={() => setSelectedCarpoolId(carpool.carpoolId)}
-                        className="mt-1"
+                        className="mt-1 flex-shrink-0"
                       />
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 mb-1 text-sm sm:text-base">
                           🚗 {carpool.licensePlate}
                         </div>
-                        <div className="space-y-1 text-sm text-gray-600">
-                          <p><strong>บริษัท:</strong> {carpool.ownerCompanyName}</p>
-                          <p><strong>ผู้ติดต่อ:</strong> {carpool.ownerContactName}</p>
-                          <p><strong>จำนวนสมาชิก:</strong> {carpool.members.length} คน</p>
+                        <div className="space-y-1 text-xs sm:text-sm text-gray-600">
+                          <p className="truncate">
+                            <strong>บริษัท:</strong> {carpool.ownerCompanyName}
+                          </p>
+                          <p className="truncate">
+                            <strong>ผู้ติดต่อ:</strong> {carpool.ownerContactName}
+                          </p>
+                          <p>
+                            <strong>รหัส:</strong> {carpool.ownerRegistrationId}
+                          </p>
+                          <p>
+                            <strong>สมาชิก:</strong> {carpool.members.length} คน
+                          </p>
+                          {carpool.members.length > 0 && (
+                            <details className="mt-2">
+                              <summary className="text-blue-600 cursor-pointer hover:text-blue-700 text-xs">
+                                ดูรายชื่อสมาชิก
+                              </summary>
+                              <ul className="mt-1 ml-4 space-y-0.5 text-xs text-gray-600">
+                                {carpool.members.map((member, idx) => (
+                                  <li key={idx}>• {member.name}</li>
+                                ))}
+                              </ul>
+                            </details>
+                          )}
                         </div>
                       </div>
                     </label>
@@ -309,22 +416,23 @@ export default function CarNumberAssignmentModal({
             </div>
 
             {availableCarpools.length > 0 && (
-              <div className="flex gap-3 p-6 border-t border-gray-200">
+              <div className="flex gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200 flex-shrink-0">
                 <button
                   onClick={() => {
                     setShowAssignmentModal(false);
                     setAssigningCarNumber(null);
                     setSelectedCarpoolId(null);
+                    setSearchQuery('');
                   }}
                   disabled={assigning}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                  className="flex-1 px-3 sm:px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
                 >
                   ยกเลิก
                 </button>
                 <button
                   onClick={handleConfirmAssignment}
                   disabled={assigning || !selectedCarpoolId}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="flex-1 px-3 sm:px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {assigning ? 'กำลังกำหนด...' : 'กำหนดเลขรถ'}
                 </button>

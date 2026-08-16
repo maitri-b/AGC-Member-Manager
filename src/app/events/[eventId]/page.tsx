@@ -2386,18 +2386,18 @@ export default function EventDetailPage() {
                                     <div className="text-xs text-blue-700">
                                       จำนวนสมาชิกร่วมรถคันนี้: {ownedCarpool.members?.length || 0} คน
                                     </div>
+                                    {ownedCarpool.assignedCarNumber && (
+                                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mt-2">
+                                        <p className="text-xs text-yellow-800">
+                                          ⚠️ รถคันนี้ถูกจัดเลขรถแล้ว ไม่สามารถแก้ไขข้อมูลหรือลบได้
+                                          <br />
+                                          หากต้องการแก้ไข กรุณาติดต่อ Admin
+                                        </p>
+                                      </div>
+                                    )}
                                     {ownedCarpool.members && ownedCarpool.members.length > 0 && (
                                       <div className="mt-2 pt-2 border-t border-blue-200">
                                         <p className="text-xs font-medium text-blue-800 mb-1">รายชื่อสมาชิกทะเบียนรถคันนี้:</p>
-                                        {ownedCarpool.assignedCarNumber && (
-                                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-2">
-                                            <p className="text-xs text-yellow-800">
-                                              ⚠️ รถคันนี้ถูกจัดเลขรถแล้ว ไม่สามารถลบสมาชิกออกได้
-                                              <br />
-                                              หากต้องการแก้ไข กรุณาติดต่อ Admin
-                                            </p>
-                                          </div>
-                                        )}
                                         <div className="space-y-1">
                                           {ownedCarpool.members.map((member: any, idx: number) => {
                                             const isMyTeamMember = member.registrationId === userRegistration?.registrationId;

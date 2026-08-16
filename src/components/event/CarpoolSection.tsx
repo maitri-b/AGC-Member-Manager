@@ -110,7 +110,13 @@ export default function CarpoolSection({
 
   // Fetch member carpools on mount and when dependencies change
   useEffect(() => {
+    console.log('[CarpoolSection] useEffect triggered', {
+      hasCarpoolFeature: event?.hasCarpoolFeature,
+      hasUserRegistration: !!userRegistration,
+      willFetch: !!(event?.hasCarpoolFeature && userRegistration)
+    });
     if (event?.hasCarpoolFeature && userRegistration) {
+      console.log('[CarpoolSection] Calling fetchMemberCarpool...');
       fetchMemberCarpool();
       fetchAllCarpools(); // Also fetch all carpools to validate member status
     }
@@ -118,23 +124,31 @@ export default function CarpoolSection({
 
   // API functions
   const fetchMemberCarpool = async () => {
+    console.log('[CarpoolSection] fetchMemberCarpool called', {
+      hasCarpoolFeature: event?.hasCarpoolFeature,
+      hasUserRegistration: !!userRegistration,
+      eventId
+    });
+
     if (!event?.hasCarpoolFeature || !userRegistration) {
+      console.log('[CarpoolSection] Skipping fetch - conditions not met');
       return;
     }
 
     setCarpoolLoading(true);
     try {
-      console.log('[Carpool Debug] Calling API:', `/api/events/${eventId}/my-carpool`);
+      console.log('[CarpoolSection API] Calling:', `/api/events/${eventId}/my-carpool`);
       const response = await fetch(`/api/events/${eventId}/my-carpool`);
-      console.log('[Carpool Debug] Response status:', response.status, response.ok);
+      console.log('[CarpoolSection API] Response status:', response.status, response.ok);
       if (response.ok) {
         const data = await response.json();
-        console.log('[Carpool API Response]', JSON.stringify(data.carpools, null, 2));
+        console.log('[CarpoolSection API] Full Response:', JSON.stringify(data.carpools, null, 2));
         setMemberCarpools(data.carpools || []);
-        // Log after state update (will show in next render due to async state)
-        console.log('[Carpool Debug] Set memberCarpools, length:', data.carpools?.length);
+        console.log('[CarpoolSection API] Set memberCarpools, count:', data.carpools?.length);
       } else {
-        console.error('[Carpool Debug] API call failed:', response.status);
+        console.error('[CarpoolSection API] Failed with status:', response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[CarpoolSection API] Error data:', errorData);
       }
     } catch (err) {
       console.error('Error fetching member carpools:', err);

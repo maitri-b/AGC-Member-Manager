@@ -69,6 +69,7 @@ export async function GET(
           ...carpool,
           ownerCompanyName,
           ownerContactName,
+          assignedCarNumber: carpool.assignedCarNumber, // Ensure assignedCarNumber is included
         };
       })
     );

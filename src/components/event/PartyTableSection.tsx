@@ -95,6 +95,14 @@ export default function PartyTableSection({
   const [editingTableName, setEditingTableName] = useState(false);
   const [newTableName, setNewTableName] = useState('');
   const [savingTableName, setSavingTableName] = useState(false);
+  // Join Table states
+  const [joinSearchRegistrationId, setJoinSearchRegistrationId] = useState('');
+  const [joinSearchedRegistration, setJoinSearchedRegistration] = useState<any>(null);
+  const [joinSearchedTables, setJoinSearchedTables] = useState<PartyTable[]>([]);
+  const [joinSearchLoading, setJoinSearchLoading] = useState(false);
+  const [selectedTableToJoin, setSelectedTableToJoin] = useState<string | null>(null);
+  const [selectedMembersToJoin, setSelectedMembersToJoin] = useState<number[]>([]);
+  const [joiningTable, setJoiningTable] = useState(false);
 
   // Derived state
   const ownedTables = memberTables.filter(
@@ -360,6 +368,101 @@ export default function PartyTableSection({
     }
   };
 
+  // Search registration for joining table
+  const handleJoinSearchRegistration = async () => {
+    if (!joinSearchRegistrationId.trim()) {
+      toast.error('กรุณากรอกรหัสลงทะเบียน');
+      return;
+    }
+
+    setJoinSearchLoading(true);
+    try {
+      // First, search for the registration
+      const regResponse = await fetch(
+        `/api/registrations/${joinSearchRegistrationId}`
+      );
+
+      if (!regResponse.ok) {
+        throw new Error('ไม่พบรหัสลงทะเบียนนี้');
+      }
+
+      const regData = await regResponse.json();
+      setJoinSearchedRegistration(regData.registration);
+
+      // Then, fetch their party tables
+      const tablesResponse = await fetch(
+        `/api/events/${eventId}/my-party-tables?registrationId=${joinSearchRegistrationId}`
+      );
+
+      if (!tablesResponse.ok) {
+        throw new Error('ไม่สามารถดึงข้อมูลโต๊ะได้');
+      }
+
+      const tablesData = await tablesResponse.json();
+      // Filter for tables where they are the host (owner)
+      const ownedTables = (tablesData.tables || []).filter(
+        (table: PartyTable) => table.hostRegistrationId === joinSearchRegistrationId
+      );
+      setJoinSearchedTables(ownedTables);
+      setSelectedTableToJoin(null);
+      setSelectedMembersToJoin([]);
+    } catch (error: any) {
+      console.error('Error searching registration:', error);
+      toast.error(error.message || 'ไม่พบรหัสลงทะเบียนนี้');
+      setJoinSearchedRegistration(null);
+      setJoinSearchedTables([]);
+    } finally {
+      setJoinSearchLoading(false);
+    }
+  };
+
+  // Handle join table
+  const handleJoinTable = async () => {
+    if (!selectedTableToJoin || selectedMembersToJoin.length === 0 || !userRegistration) {
+      toast.error('กรุณาเลือกโต๊ะและสมาชิกที่ต้องการ Join');
+      return;
+    }
+
+    setJoiningTable(true);
+    try {
+      // Build members array
+      const members = selectedMembersToJoin.map((index) => ({
+        registrationId: userRegistration.registrationId,
+        lineUserId: userRegistration.lineUserId,
+        name: attendeeNames[index] || '',
+        attendeeIndex: index,
+        companyName: userRegistration.companyName || '',
+      }));
+
+      const response = await fetch(`/api/party-tables/${selectedTableToJoin}/add-members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to join table');
+      }
+
+      toast.success(`Join โต๊ะสำเร็จ! ${members.length} คน`);
+
+      // Reset and refresh
+      setShowJoinTableModal(false);
+      setJoinSearchRegistrationId('');
+      setJoinSearchedRegistration(null);
+      setJoinSearchedTables([]);
+      setSelectedTableToJoin(null);
+      setSelectedMembersToJoin([]);
+      await fetchMemberTables();
+    } catch (error: any) {
+      console.error('Error joining table:', error);
+      toast.error(error.message || 'ไม่สามารถ Join โต๊ะได้');
+    } finally {
+      setJoiningTable(false);
+    }
+  };
+
   // Update table name
   const handleUpdateTableName = async (tableId: string) => {
     if (!newTableName.trim()) {
@@ -443,31 +546,47 @@ export default function PartyTableSection({
               </svg>
             </button>
             {showTableTooltip && (
-              <div className="absolute left-0 top-6 z-10 w-72 bg-gray-800 text-white text-xs rounded-lg p-3 shadow-lg">
+              <div className="absolute left-0 top-6 z-10 w-80 bg-gray-800 text-white text-xs rounded-lg p-3 shadow-lg">
                 <p className="mb-2"><strong>Party Table คืออะไร?</strong></p>
-                <p className="mb-2">ระบบจัดโต๊ะนั่งในงาน ให้คุณสามารถสร้างกลุ่มโต๊ะและชวนเพื่อนมานั่งโต๊ะเดียวกันได้</p>
-                <p className="mb-2"><strong>วิธีใช้:</strong></p>
+                <p className="mb-2">ระบบจัดโต๊ะนั่งในงาน ให้คุณสามารถสร้างกลุ่มโต๊ะและนั่งโต๊ะเดียวกันกับเพื่อนได้</p>
+                <p className="mb-2"><strong>วิธีการสร้างโต๊ะ:</strong></p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>สร้างโต๊ะของคุณเอง</li>
+                  <li>กดปุ่ม "สร้างกลุ่มโต๊ะใหม่"</li>
                   <li>เลือกสมาชิกในรหัสลงทะเบียนของคุณ</li>
-                  <li>ชวนเพื่อนจากรหัสลงทะเบียนอื่นๆ</li>
-                  <li>Admin จะจัดเลขโต๊ะให้ภายหลัง</li>
+                  <li>เชิญเพื่อนจากรหัสลงทะเบียนอื่นๆ ได้ภายหลัง</li>
                 </ul>
+                <p className="mb-2 mt-3"><strong>วิธีการ Join โต๊ะ:</strong></p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li><strong>วิธีที่ 1:</strong> รอให้เจ้าของโต๊ะเชิญคุณ</li>
+                  <li><strong>วิธีที่ 2:</strong> กดปุ่ม "Join โต๊ะ" ค้นหารหัสลงทะเบียนของเพื่อน แล้วขอ Join โต๊ะของเขา</li>
+                </ul>
+                <p className="text-xs text-gray-300 mt-3">💡 Admin จะจัดเลขโต๊ะให้ภายหลัง</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Create Table Button - Always visible in header */}
-        <button
-          onClick={() => setShowCreateTableModal(true)}
-          className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          สร้างกลุ่มโต๊ะใหม่
-        </button>
+        {/* Action Buttons in header */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowJoinTableModal(true)}
+            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            Join โต๊ะ
+          </button>
+          <button
+            onClick={() => setShowCreateTableModal(true)}
+            className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            สร้างกลุ่มโต๊ะใหม่
+          </button>
+        </div>
       </div>
 
       {tableLoading ? (
@@ -487,85 +606,97 @@ export default function PartyTableSection({
               </h3>
               {ownedTables.map((table) => (
                 <div key={table.tableId} className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      {editingTableName ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={newTableName}
-                            onChange={(e) => setNewTableName(e.target.value)}
-                            placeholder="ชื่อกลุ่มโต๊ะ (ไม่บังคับ)"
-                            className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          />
-                          <button
-                            onClick={() => handleUpdateTableName(table.tableId)}
-                            disabled={savingTableName}
-                            className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                          >
-                            {savingTableName ? 'กำลังบันทึก...' : 'บันทึก'}
-                          </button>
+                  <div className="mb-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        {editingTableName ? (
+                          <div>
+                            <input
+                              type="text"
+                              value={newTableName}
+                              onChange={(e) => setNewTableName(e.target.value)}
+                              placeholder="ชื่อกลุ่มโต๊ะ (ไม่บังคับ)"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleUpdateTableName(table.tableId)}
+                                disabled={savingTableName}
+                                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:bg-gray-400 flex items-center gap-1"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                {savingTableName ? 'กำลังบันทึก...' : 'บันทึก'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingTableName(false);
+                                  setNewTableName('');
+                                }}
+                                className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-400"
+                              >
+                                ยกเลิก
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-base font-semibold text-purple-900">
+                              {table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`}
+                            </h4>
+                            <button
+                              onClick={() => {
+                                setEditingTableName(true);
+                                setNewTableName(table.tableGroupName || '');
+                              }}
+                              className="p-1.5 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded transition-colors"
+                              title="แก้ไขชื่อกลุ่ม"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Table Number */}
+                        {event?.partyTableSettings?.showTableNumbersToMembers && table.assignedTableNumber && (
+                          <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-full">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                            </svg>
+                            โต๊ะ #{table.assignedTableNumber}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons - Only show when NOT editing */}
+                      {!editingTableName && (
+                        <div className="flex items-center gap-3 ml-4">
                           <button
                             onClick={() => {
-                              setEditingTableName(false);
-                              setNewTableName('');
+                              setInvitingToTableId(table.tableId);
+                              setShowInviteModal(true);
                             }}
-                            className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400"
-                          >
-                            ยกเลิก
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-base font-semibold text-purple-900">
-                            {table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`}
-                          </h4>
-                          <button
-                            onClick={() => {
-                              setEditingTableName(true);
-                              setNewTableName(table.tableGroupName || '');
-                            }}
-                            className="text-purple-600 hover:text-purple-800"
-                            title="แก้ไขชื่อกลุ่ม"
+                            className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 flex items-center gap-2"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                             </svg>
+                            เชิญ
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTable(table.tableId)}
+                            className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            ลบโต๊ะ
                           </button>
                         </div>
                       )}
-
-                      {/* Table Number */}
-                      {event?.partyTableSettings?.showTableNumbersToMembers && table.assignedTableNumber && (
-                        <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-full">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                          </svg>
-                          โต๊ะ #{table.assignedTableNumber}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setInvitingToTableId(table.tableId);
-                          setShowInviteModal(true);
-                        }}
-                        className="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 flex items-center gap-1"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                        </svg>
-                        เชิญ
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTable(table.tableId)}
-                        className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
-                      >
-                        ลบโต๊ะ
-                      </button>
                     </div>
                   </div>
 
@@ -936,6 +1067,195 @@ export default function PartyTableSection({
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 นำออก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Join Table Modal */}
+      {showJoinTableModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Join โต๊ะ</h3>
+              <button
+                onClick={() => {
+                  setShowJoinTableModal(false);
+                  setJoinSearchRegistrationId('');
+                  setJoinSearchedRegistration(null);
+                  setJoinSearchedTables([]);
+                  setSelectedTableToJoin(null);
+                  setSelectedMembersToJoin([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                💡 <strong>วิธี Join โต๊ะ:</strong> กรอกรหัสลงทะเบียนของเพื่อนที่สร้างโต๊ะแล้ว เลือกโต๊ะที่ต้องการ Join และเลือกสมาชิกในรหัสลงทะเบียนของคุณที่จะนั่งโต๊ะนั้น
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  รหัสลงทะเบียนของเพื่อน
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={joinSearchRegistrationId}
+                    onChange={(e) => setJoinSearchRegistrationId(e.target.value.toUpperCase())}
+                    placeholder="กรอกรหัสลงทะเบียน (เช่น ABC123)"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleJoinSearchRegistration();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleJoinSearchRegistration}
+                    disabled={joinSearchLoading || !joinSearchRegistrationId.trim()}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                  >
+                    {joinSearchLoading ? 'ค้นหา...' : 'ค้นหา'}
+                  </button>
+                </div>
+              </div>
+
+              {joinSearchedRegistration && (
+                <div className="border border-green-300 rounded-lg p-4 bg-green-50">
+                  <p className="text-sm font-medium text-gray-900 mb-1">
+                    {joinSearchedRegistration.companyName || joinSearchedRegistration.contactName}
+                  </p>
+                  <p className="text-xs text-gray-600 mb-3">
+                    ผู้ติดต่อ: {joinSearchedRegistration.contactName}
+                  </p>
+
+                  {joinSearchedTables.length > 0 ? (
+                    <>
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        เลือกโต๊ะที่ต้องการ Join:
+                      </p>
+                      <div className="space-y-2 mb-4">
+                        {joinSearchedTables.map((table) => (
+                          <label
+                            key={table.tableId}
+                            className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              selectedTableToJoin === table.tableId
+                                ? 'border-green-600 bg-green-100'
+                                : 'border-gray-300 bg-white hover:border-green-400'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="joinTable"
+                              checked={selectedTableToJoin === table.tableId}
+                              onChange={() => setSelectedTableToJoin(table.tableId)}
+                              className="mt-1 w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                สมาชิก: {table.members.length} คน
+                                {event?.partyTableSettings?.defaultSeatsPerTable &&
+                                  ` / ${event.partyTableSettings.defaultSeatsPerTable} ที่นั่ง`
+                                }
+                              </p>
+                              {table.assignedTableNumber && (
+                                <p className="text-xs text-purple-600 font-medium mt-1">
+                                  โต๊ะ #{table.assignedTableNumber}
+                                </p>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-600 italic">
+                      รหัสลงทะเบียนนี้ยังไม่ได้สร้างโต๊ะ
+                    </p>
+                  )}
+
+                  {selectedTableToJoin && (
+                    <div className="border-t border-green-300 pt-4 mt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        เลือกสมาชิกในรหัสลงทะเบียนของคุณที่จะ Join:
+                      </p>
+                      <div className="border border-gray-300 rounded-lg p-3 max-h-40 overflow-y-auto bg-white">
+                        {attendeeNames.map((name, index) => (
+                          <label
+                            key={index}
+                            className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedMembersToJoin.includes(index)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedMembersToJoin([...selectedMembersToJoin, index]);
+                                } else {
+                                  setSelectedMembersToJoin(
+                                    selectedMembersToJoin.filter((i) => i !== index)
+                                  );
+                                }
+                              }}
+                              className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                            />
+                            <span className="text-sm text-gray-900">{name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowJoinTableModal(false);
+                  setJoinSearchRegistrationId('');
+                  setJoinSearchedRegistration(null);
+                  setJoinSearchedTables([]);
+                  setSelectedTableToJoin(null);
+                  setSelectedMembersToJoin([]);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleJoinTable}
+                disabled={
+                  joiningTable ||
+                  !selectedTableToJoin ||
+                  selectedMembersToJoin.length === 0
+                }
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
+              >
+                {joiningTable ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    กำลัง Join...
+                  </>
+                ) : (
+                  'Join โต๊ะ'
+                )}
               </button>
             </div>
           </div>

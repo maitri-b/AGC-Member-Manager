@@ -149,9 +149,14 @@ export async function POST(
       deleted: updatedTable === null || updatedTable.status === 'deleted'
     });
   } catch (error) {
-    console.error('Error removing members from Party Table:', error);
+    console.error('[Remove Members] ERROR:', error);
+    console.error('[Remove Members] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: 'Failed to remove members', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Failed to remove members',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     );
   }

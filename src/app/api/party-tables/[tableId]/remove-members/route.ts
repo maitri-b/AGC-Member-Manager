@@ -76,6 +76,18 @@ export async function POST(
         memberId.registrationId === userRegistrationId
     );
 
+    // Debug logging
+    console.log('[Remove Members] Permission check:', {
+      userLineUserId: session.user.lineUserId,
+      userRegistrationId,
+      tableId,
+      hostRegistrationId: table.hostRegistrationId,
+      isAdmin,
+      isHost,
+      isRemovingSelf,
+      memberIds: body.memberIds,
+    });
+
     // Permission logic:
     // 1. Admin can remove anyone from any table
     // 2. Host can remove anyone from their own table

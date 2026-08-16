@@ -38,6 +38,12 @@ export async function POST(
   try {
     const session = await getEffectiveSession();
 
+    console.log('[Remove Members] START - Session:', {
+      userId: session?.user?.id,
+      lineUserId: session?.user?.lineUserId,
+      name: session?.user?.name,
+    });
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -55,6 +61,8 @@ export async function POST(
     }
 
     const body = await request.json();
+
+    console.log('[Remove Members] Body received:', body);
 
     if (!body.memberIds || !Array.isArray(body.memberIds)) {
       return NextResponse.json({ error: 'memberIds array is required' }, { status: 400 });

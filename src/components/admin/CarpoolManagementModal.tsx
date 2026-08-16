@@ -42,6 +42,9 @@ export default function CarpoolManagementModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Car number assignment state - initialized from carpoolSettings
   const totalCars = carpoolSettings?.totalCarNumbers || 10;
   const [carSlots, setCarSlots] = useState<CarSlot[]>([]);
@@ -84,6 +87,12 @@ export default function CarpoolManagementModal({
   const [changingCarpool, setChangingCarpool] = useState<EnrichedCarpool | null>(null);
   const [newCarNumber, setNewCarNumber] = useState<number>(0);
   const [changingCarNumber, setChangingCarNumber] = useState(false);
+
+  // Car number assignment modal state
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [assigningCarNumber, setAssigningCarNumber] = useState<number | null>(null);
+  const [selectedCarpoolId, setSelectedCarpoolId] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -424,12 +433,6 @@ export default function CarpoolManagementModal({
     }
   };
 
-  // Car number assignment handlers
-  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
-  const [assigningCarNumber, setAssigningCarNumber] = useState<number | null>(null);
-  const [selectedCarpoolId, setSelectedCarpoolId] = useState<string | null>(null);
-  const [assigning, setAssigning] = useState(false);
-
   const handleAssignClick = (carNumber: number) => {
     setAssigningCarNumber(carNumber);
     setSelectedCarpoolId(null);
@@ -621,134 +624,202 @@ export default function CarpoolManagementModal({
           )}
 
           {!loading && !error && carpools.length > 0 && (
-            <div className="grid gap-3 sm:gap-4">
-              {carpools.map((carpool) => {
-                const isExpanded = expandedCarpoolId === carpool.carpoolId;
-                return (
-                  <div
-                    key={carpool.carpoolId}
-                    className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow"
-                  >
-                    {/* Line 1: License Plate + Car Number */}
-                    <div className="flex items-center gap-2 sm:gap-3 mb-1.5">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                        🚗 {carpool.licensePlate}
-                      </h3>
-                      {carpool.assignedCarNumber && (
-                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
-                          รถคันที่ {carpool.assignedCarNumber}
-                        </span>
-                      )}
-                    </div>
+            <>
+              {/* Search Box */}
+              <div className="mb-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="ค้นหา: บริษัท, ผู้ติดต่อ, สมาชิก, รหัสลงทะเบียน, ทะเบียนรถ..."
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                  <svg className="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {searchQuery && (() => {
+                  const filteredCount = carpools.filter((carpool) => {
+                    const query = searchQuery.toLowerCase();
+                    if (carpool.ownerCompanyName?.toLowerCase().includes(query)) return true;
+                    if (carpool.ownerContactName?.toLowerCase().includes(query)) return true;
+                    if (carpool.ownerRegistrationId?.toLowerCase().includes(query)) return true;
+                    if (carpool.licensePlate?.toLowerCase().includes(query)) return true;
+                    if (carpool.members?.some(member => member.name?.toLowerCase().includes(query))) return true;
+                    return false;
+                  }).length;
+                  return (
+                    <p className="text-xs text-gray-500 mt-2">
+                      พบ {filteredCount} จาก {carpools.length} รายการ
+                    </p>
+                  );
+                })()}
+              </div>
 
-                    {/* Line 2: Company + Contact */}
-                    <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 mb-1.5">
-                      <span className="font-medium text-gray-700">{carpool.ownerCompanyName}</span>
-                      <span className="text-gray-400">•</span>
-                      <span>{carpool.ownerContactName}</span>
-                    </div>
+              <div className="grid gap-3 sm:gap-4">
+                {carpools
+                  .filter((carpool) => {
+                    if (!searchQuery.trim()) return true;
+                    const query = searchQuery.toLowerCase();
+                    if (carpool.ownerCompanyName?.toLowerCase().includes(query)) return true;
+                    if (carpool.ownerContactName?.toLowerCase().includes(query)) return true;
+                    if (carpool.ownerRegistrationId?.toLowerCase().includes(query)) return true;
+                    if (carpool.licensePlate?.toLowerCase().includes(query)) return true;
+                    if (carpool.members?.some(member => member.name?.toLowerCase().includes(query))) return true;
+                    return false;
+                  })
+                  .map((carpool) => {
+                    const isExpanded = expandedCarpoolId === carpool.carpoolId;
 
-                    {/* Line 3: Registration ID + Member Count + Actions */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-600">
-                        <span>รหัส: {carpool.ownerRegistrationId}</span>
-                        <span className="text-gray-400">•</span>
-                        <span className="font-medium text-blue-600">{carpool.members.length} สมาชิก</span>
-                      </div>
+                    // Check if this carpool has members from multiple registrations (Join badge)
+                    const uniqueRegistrationIds = new Set(carpool.members.map(m => m.registrationId));
+                    const isJoinedCarpool = uniqueRegistrationIds.size > 1;
 
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <button
-                          onClick={() => handleEditCarpool(carpool)}
-                          className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                          title="แก้ไข"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(carpool.carpoolId)}
-                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                          title="ลบ"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleToggleExpand(carpool.carpoolId)}
-                          className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors ml-1"
-                          title={isExpanded ? 'ซ่อนรายละเอียด' : 'แสดงรายละเอียด'}
-                        >
-                          <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Expanded Member List */}
-                    {isExpanded && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-semibold text-gray-900">รายชื่อสมาชิก</h4>
-                          <button
-                            onClick={() => handleManageMembers(carpool.carpoolId)}
-                            className="px-3 py-1.5 text-sm bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors"
-                          >
-                            + เพิ่มสมาชิก
-                          </button>
+                    return (
+                      <div
+                        key={carpool.carpoolId}
+                        className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow"
+                      >
+                        {/* Line 1: License Plate + Car Number + Join Badge */}
+                        <div className="flex items-center gap-2 sm:gap-3 mb-1.5">
+                          <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                            🚗 {carpool.licensePlate}
+                          </h3>
+                          {carpool.assignedCarNumber && (
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
+                              รถคันที่ {carpool.assignedCarNumber}
+                            </span>
+                          )}
+                          {isJoinedCarpool && (
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                              </svg>
+                              Join
+                            </span>
+                          )}
                         </div>
 
-                        {carpool.members.length === 0 ? (
-                          <p className="text-sm text-gray-500 italic">ยังไม่มีสมาชิก</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {carpool.members.map((member, index) => {
-                              // Clean member name - remove JSON formatting if present
-                              let displayName = member.name;
-                              try {
-                                // If name is JSON string like '["Name"]', parse it
-                                const parsed = JSON.parse(member.name);
-                                displayName = Array.isArray(parsed) ? parsed[0] : parsed;
-                              } catch {
-                                // Not JSON, use as-is but remove quotes/brackets
-                                displayName = member.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
-                              }
+                        {/* Line 2: Company + Contact */}
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 mb-1.5">
+                          <span className="font-medium text-gray-700">{carpool.ownerCompanyName}</span>
+                          <span className="text-gray-400">•</span>
+                          <span>{carpool.ownerContactName}</span>
+                        </div>
 
-                              return (
-                                <div
-                                  key={`${member.lineUserId}-${index}`}
-                                  className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-gray-900">
-                                      {displayName}
-                                    </span>
-                                    <span className="text-xs text-gray-500">
-                                      ({member.registrationId})
-                                    </span>
-                                  </div>
-                                  <button
-                                    onClick={() => handleRemoveMember(carpool.carpoolId, member.lineUserId, member.name)}
-                                    className="text-xs text-red-600 hover:text-red-800 transition-colors"
-                                  >
-                                    ลบ
-                                  </button>
-                                </div>
-                              );
-                            })}
+                        {/* Line 3: Registration ID + Member Count + Actions */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-600">
+                            <span>รหัส: {carpool.ownerRegistrationId}</span>
+                            <span className="text-gray-400">•</span>
+                            <span className="font-medium text-blue-600">{carpool.members.length} สมาชิก</span>
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <button
+                              onClick={() => handleEditCarpool(carpool)}
+                              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                              title="แก้ไข"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(carpool.carpoolId)}
+                              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                              title="ลบ"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleToggleExpand(carpool.carpoolId)}
+                              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors ml-1"
+                              title={isExpanded ? 'ซ่อนรายละเอียด' : 'แสดงรายละเอียด'}
+                            >
+                              <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Expanded Member List */}
+                        {isExpanded && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-gray-900">รายชื่อสมาชิก</h4>
+                              <button
+                                onClick={() => handleManageMembers(carpool.carpoolId)}
+                                className="px-3 py-1.5 text-sm bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors"
+                              >
+                                + เพิ่มสมาชิก
+                              </button>
+                            </div>
+
+                            {carpool.members.length === 0 ? (
+                              <p className="text-sm text-gray-500 italic">ยังไม่มีสมาชิก</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {carpool.members.map((member, index) => {
+                                  // Clean member name - remove JSON formatting if present
+                                  let displayName = member.name;
+                                  try {
+                                    // If name is JSON string like '["Name"]', parse it
+                                    const parsed = JSON.parse(member.name);
+                                    displayName = Array.isArray(parsed) ? parsed[0] : parsed;
+                                  } catch {
+                                    // Not JSON, use as-is but remove quotes/brackets
+                                    displayName = member.name.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                                  }
+
+                                  return (
+                                    <div
+                                      key={`${member.lineUserId}-${index}`}
+                                      className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-gray-900">
+                                          {displayName}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          ({member.registrationId})
+                                        </span>
+                                      </div>
+                                      <button
+                                        onClick={() => handleRemoveMember(carpool.carpoolId, member.lineUserId, member.name)}
+                                        className="text-xs text-red-600 hover:text-red-800 transition-colors"
+                                      >
+                                        ลบ
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                    );
+                  })}
+              </div>
             </>
+          )}
+          </>
           )}
 
           {/* Tab: Car Numbers Assignment */}

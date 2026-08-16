@@ -464,7 +464,7 @@ export default function PartyTableManagementModal({
     setSearchLoading(true);
     try {
       const response = await fetch(
-        `/api/events/${eventId}/registrations/${searchRegistrationId}`
+        `/api/registrations/${searchRegistrationId}`
       );
 
       if (!response.ok) {

@@ -756,7 +756,7 @@ export default function PartyTableSection({
                               <p className="text-xs text-gray-500">{member.companyName}</p>
                             </div>
                           </div>
-                          {member.registrationId !== table.hostRegistrationId && !table.assignedTableNumber && (
+                          {!table.assignedTableNumber && (
                             <button
                               onClick={() =>
                                 setPendingMemberRemoval({
@@ -767,7 +767,7 @@ export default function PartyTableSection({
                                 })
                               }
                               className="text-red-600 hover:text-red-800"
-                              title="นำออกจากโต๊ะ"
+                              title={member.registrationId === userRegistration?.registrationId ? "ออกจากโต๊ะ" : "นำออกจากโต๊ะ"}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1082,6 +1082,65 @@ export default function PartyTableSection({
                   </button>
                 </div>
               </div>
+
+              {/* Section: Own Team Members Not in Any Table */}
+              {userRegistration && attendeeNames.length > 0 && (
+                <div className="border border-purple-300 bg-purple-50 rounded-lg p-3">
+                  <p className="text-sm font-medium text-purple-900 mb-2">
+                    สมาชิกของคุณที่ยังไม่ได้อยู่ในโต๊ะ
+                  </p>
+                  <div className="space-y-2">
+                    {attendeeNames.map((name, index) => {
+                      const isInTable = attendeeIndexesInTables.has(index);
+                      if (isInTable) return null; // Skip members already in tables
+
+                      const isSelected = selectedMembersToInvite.some(
+                        (m) =>
+                          m.registrationId === userRegistration.registrationId &&
+                          m.attendeeIndex === index
+                      );
+
+                      return (
+                        <label
+                          key={index}
+                          className="flex items-center gap-3 p-2 rounded hover:bg-purple-100 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedMembersToInvite([
+                                  ...selectedMembersToInvite,
+                                  {
+                                    registrationId: userRegistration.registrationId,
+                                    lineUserId: userRegistration.lineUserId,
+                                    name: name,
+                                    attendeeIndex: index,
+                                    companyName: userRegistration.companyName || '',
+                                  },
+                                ]);
+                              } else {
+                                setSelectedMembersToInvite(
+                                  selectedMembersToInvite.filter(
+                                    (m) =>
+                                      !(
+                                        m.registrationId === userRegistration.registrationId &&
+                                        m.attendeeIndex === index
+                                      )
+                                  )
+                                );
+                              }
+                            }}
+                            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                          />
+                          <span className="text-sm text-gray-900">{name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {searchedRegistration && (
                 <div className="border border-gray-300 rounded-lg p-3">

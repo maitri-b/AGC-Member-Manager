@@ -570,21 +570,23 @@ export default function PartyTableSection({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowJoinTableModal(true)}
-            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2"
+            className="px-3 py-1.5 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-md hover:bg-green-50 transition-colors flex items-center gap-1.5"
+            title="Join โต๊ะที่เพื่อนสร้างไว้"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
-            Join โต๊ะ
+            <span className="hidden sm:inline">Join โต๊ะ</span>
           </button>
           <button
             onClick={() => setShowCreateTableModal(true)}
-            className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center gap-2"
+            className="px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors flex items-center gap-1.5"
+            title="สร้างกลุ่มโต๊ะใหม่"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            สร้างกลุ่มโต๊ะใหม่
+            <span className="hidden sm:inline">สร้างกลุ่มโต๊ะ</span>
           </button>
         </div>
       </div>
@@ -861,21 +863,21 @@ export default function PartyTableSection({
                       <span><strong>Join โต๊ะ</strong> ที่เพื่อนสร้างไว้แล้ว</span>
                     </li>
                   </ul>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setShowCreateTableModal(true)}
-                      className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 inline-flex items-center gap-2"
+                      className="px-3 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors inline-flex items-center gap-1.5"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      สร้างกลุ่มโต๊ะใหม่
+                      สร้างกลุ่มโต๊ะ
                     </button>
                     <button
                       onClick={() => setShowJoinTableModal(true)}
-                      className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 inline-flex items-center gap-2"
+                      className="px-3 py-2 bg-white border border-green-600 text-green-700 text-sm font-medium rounded-md hover:bg-green-50 transition-colors inline-flex items-center gap-1.5"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                       </svg>
                       Join โต๊ะ

@@ -81,6 +81,7 @@ export default function PartyTableSection({
   const [showJoinTableModal, setShowJoinTableModal] = useState(false);
   const [searchRegistrationId, setSearchRegistrationId] = useState('');
   const [searchedRegistration, setSearchedRegistration] = useState<any>(null);
+  const [searchedRegistrationTables, setSearchedRegistrationTables] = useState<PartyTable[]>([]);
   const [selectedMembersToInvite, setSelectedMembersToInvite] = useState<any[]>([]);
   const [inviting, setInviting] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -112,6 +113,16 @@ export default function PartyTableSection({
     (table) => table.hostRegistrationId !== userRegistration?.registrationId
   );
   const memberTable = ownedTables[0] || null;
+
+  // Get set of attendee indexes that are already in any table
+  const attendeeIndexesInTables = new Set<number>();
+  memberTables.forEach((table) => {
+    table.members.forEach((member) => {
+      if (member.registrationId === userRegistration?.registrationId) {
+        attendeeIndexesInTables.add(member.attendeeIndex);
+      }
+    });
+  });
 
   // Fetch member tables on mount and when dependencies change
   useEffect(() => {
@@ -320,10 +331,23 @@ export default function PartyTableSection({
       const data = await response.json();
       setSearchedRegistration(data.registration);
       setSelectedMembersToInvite([]);
+
+      // Fetch tables for this registration to check which members are already in tables
+      const tablesResponse = await fetch(
+        `/api/events/${eventId}/my-party-tables?registrationId=${searchRegistrationId}`
+      );
+
+      if (tablesResponse.ok) {
+        const tablesData = await tablesResponse.json();
+        setSearchedRegistrationTables(tablesData.tables || []);
+      } else {
+        setSearchedRegistrationTables([]);
+      }
     } catch (error: any) {
       console.error('Error searching registration:', error);
       toast.error(error.message || 'ไม่พบรหัสลงทะเบียนนี้');
       setSearchedRegistration(null);
+      setSearchedRegistrationTables([]);
     } finally {
       setSearchLoading(false);
     }
@@ -358,6 +382,7 @@ export default function PartyTableSection({
       setInvitingToTableId(null);
       setSearchRegistrationId('');
       setSearchedRegistration(null);
+      setSearchedRegistrationTables([]);
       setSelectedMembersToInvite([]);
       await fetchMemberTables();
     } catch (error: any) {
@@ -609,8 +634,8 @@ export default function PartyTableSection({
               {ownedTables.map((table) => (
                 <div key={table.tableId} className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <div className="mb-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
+                    <div className="mb-2">
+                      <div className="w-full">
                         {editingTableName ? (
                           <div>
                             <input
@@ -672,38 +697,11 @@ export default function PartyTableSection({
                           </div>
                         )}
                       </div>
-
-                      {/* Action Buttons - Only show when NOT editing */}
-                      {!editingTableName && (
-                        <div className="flex items-center gap-3 ml-4">
-                          <button
-                            onClick={() => {
-                              setInvitingToTableId(table.tableId);
-                              setShowInviteModal(true);
-                            }}
-                            className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 flex items-center gap-2"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                            </svg>
-                            เชิญ
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTable(table.tableId)}
-                            className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            ลบโต๊ะ
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
 
                   {/* Members List */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 mb-4">
                     <p className="text-xs font-medium text-gray-600">
                       สมาชิกในโต๊ะ ({table.members.length} คน
                       {event?.partyTableSettings?.defaultSeatsPerTable &&
@@ -747,6 +745,33 @@ export default function PartyTableSection({
                       ))}
                     </div>
                   </div>
+
+                  {/* Action Buttons - Moved to bottom, only show when NOT editing */}
+                  {!editingTableName && (
+                    <div className="flex items-center gap-2 pt-3 border-t border-purple-200">
+                      <button
+                        onClick={() => {
+                          setInvitingToTableId(table.tableId);
+                          setShowInviteModal(true);
+                        }}
+                        className="flex-1 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                        เชิญ
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTable(table.tableId)}
+                        className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        ลบโต๊ะ
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -921,28 +946,40 @@ export default function PartyTableSection({
                   เลือกสมาชิกในรหัสลงทะเบียนของคุณ (ต้องเลือกอย่างน้อย 1 คน)
                 </label>
                 <div className="border border-gray-300 rounded-lg p-3 max-h-60 overflow-y-auto">
-                  {attendeeNames.map((name, index) => (
-                    <label
-                      key={index}
-                      className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedMembersForTable.includes(index)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedMembersForTable([...selectedMembersForTable, index]);
-                          } else {
-                            setSelectedMembersForTable(
-                              selectedMembersForTable.filter((i) => i !== index)
-                            );
-                          }
-                        }}
-                        className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                      />
-                      <span className="text-sm text-gray-900">{name}</span>
-                    </label>
-                  ))}
+                  {attendeeNames.map((name, index) => {
+                    const isAlreadyInTable = attendeeIndexesInTables.has(index);
+                    return (
+                      <label
+                        key={index}
+                        className={`flex items-center gap-3 p-2 rounded ${
+                          isAlreadyInTable
+                            ? 'bg-gray-100 cursor-not-allowed'
+                            : 'hover:bg-gray-50 cursor-pointer'
+                        }`}
+                        title={isAlreadyInTable ? 'สมาชิกคนนี้อยู่ในกลุ่มโต๊ะอื่นอยู่แล้ว' : ''}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedMembersForTable.includes(index)}
+                          disabled={isAlreadyInTable}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedMembersForTable([...selectedMembersForTable, index]);
+                            } else {
+                              setSelectedMembersForTable(
+                                selectedMembersForTable.filter((i) => i !== index)
+                              );
+                            }
+                          }}
+                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                        <span className={`text-sm ${isAlreadyInTable ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                          {name}
+                          {isAlreadyInTable && <span className="ml-2 text-xs">(อยู่ในโต๊ะอื่นแล้ว)</span>}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1011,49 +1048,68 @@ export default function PartyTableSection({
                   <div className="space-y-2">
                     {searchedRegistration.attendeeNames
                       ?.split(',')
-                      .map((name: string, index: number) => (
-                        <label
-                          key={index}
-                          className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedMembersToInvite.some(
-                              (m) =>
-                                m.registrationId === searchedRegistration.registrationId &&
-                                m.attendeeIndex === index
-                            )}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedMembersToInvite([
-                                  ...selectedMembersToInvite,
-                                  {
-                                    registrationId: searchedRegistration.registrationId,
-                                    lineUserId: searchedRegistration.lineUserId,
-                                    name: name.trim(),
-                                    attendeeIndex: index,
-                                    companyName:
-                                      searchedRegistration.companyName || '',
-                                  },
-                                ]);
-                              } else {
-                                setSelectedMembersToInvite(
-                                  selectedMembersToInvite.filter(
-                                    (m) =>
-                                      !(
-                                        m.registrationId ===
-                                          searchedRegistration.registrationId &&
-                                        m.attendeeIndex === index
-                                      )
-                                  )
-                                );
-                              }
-                            }}
-                            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                          />
-                          <span className="text-sm text-gray-900">{name.trim()}</span>
-                        </label>
-                      ))}
+                      .map((name: string, index: number) => {
+                        // Check if this member is already in any table
+                        const isInTable = searchedRegistrationTables.some((table) =>
+                          table.members.some(
+                            (m) =>
+                              m.registrationId === searchedRegistration.registrationId &&
+                              m.attendeeIndex === index
+                          )
+                        );
+                        return (
+                          <label
+                            key={index}
+                            className={`flex items-center gap-3 p-2 rounded ${
+                              isInTable
+                                ? 'bg-gray-100 cursor-not-allowed'
+                                : 'hover:bg-gray-50 cursor-pointer'
+                            }`}
+                            title={isInTable ? 'สมาชิกคนนี้อยู่ในกลุ่มโต๊ะอื่นอยู่แล้ว' : ''}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedMembersToInvite.some(
+                                (m) =>
+                                  m.registrationId === searchedRegistration.registrationId &&
+                                  m.attendeeIndex === index
+                              )}
+                              disabled={isInTable}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedMembersToInvite([
+                                    ...selectedMembersToInvite,
+                                    {
+                                      registrationId: searchedRegistration.registrationId,
+                                      lineUserId: searchedRegistration.lineUserId,
+                                      name: name.trim(),
+                                      attendeeIndex: index,
+                                      companyName:
+                                        searchedRegistration.companyName || '',
+                                    },
+                                  ]);
+                                } else {
+                                  setSelectedMembersToInvite(
+                                    selectedMembersToInvite.filter(
+                                      (m) =>
+                                        !(
+                                          m.registrationId ===
+                                            searchedRegistration.registrationId &&
+                                          m.attendeeIndex === index
+                                        )
+                                    )
+                                  );
+                                }
+                              }}
+                              className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            />
+                            <span className={`text-sm ${isInTable ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                              {name.trim()}
+                              {isInTable && <span className="ml-2 text-xs">(อยู่ในโต๊ะอื่นแล้ว)</span>}
+                            </span>
+                          </label>
+                        );
+                      })}
                   </div>
                 </div>
               )}
@@ -1066,6 +1122,7 @@ export default function PartyTableSection({
                   setInvitingToTableId(null);
                   setSearchRegistrationId('');
                   setSearchedRegistration(null);
+                  setSearchedRegistrationTables([]);
                   setSelectedMembersToInvite([]);
                 }}
                 className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
@@ -1230,28 +1287,40 @@ export default function PartyTableSection({
                         เลือกสมาชิกในรหัสลงทะเบียนของคุณที่จะ Join:
                       </p>
                       <div className="border border-gray-300 rounded-lg p-3 max-h-40 overflow-y-auto bg-white">
-                        {attendeeNames.map((name, index) => (
-                          <label
-                            key={index}
-                            className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedMembersToJoin.includes(index)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedMembersToJoin([...selectedMembersToJoin, index]);
-                                } else {
-                                  setSelectedMembersToJoin(
-                                    selectedMembersToJoin.filter((i) => i !== index)
-                                  );
-                                }
-                              }}
-                              className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                            />
-                            <span className="text-sm text-gray-900">{name}</span>
-                          </label>
-                        ))}
+                        {attendeeNames.map((name, index) => {
+                          const isAlreadyInTable = attendeeIndexesInTables.has(index);
+                          return (
+                            <label
+                              key={index}
+                              className={`flex items-center gap-3 p-2 rounded ${
+                                isAlreadyInTable
+                                  ? 'bg-gray-100 cursor-not-allowed'
+                                  : 'hover:bg-gray-50 cursor-pointer'
+                              }`}
+                              title={isAlreadyInTable ? 'สมาชิกคนนี้อยู่ในกลุ่มโต๊ะอื่นอยู่แล้ว' : ''}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedMembersToJoin.includes(index)}
+                                disabled={isAlreadyInTable}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedMembersToJoin([...selectedMembersToJoin, index]);
+                                  } else {
+                                    setSelectedMembersToJoin(
+                                      selectedMembersToJoin.filter((i) => i !== index)
+                                    );
+                                  }
+                                }}
+                                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+                              />
+                              <span className={`text-sm ${isAlreadyInTable ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                                {name}
+                                {isAlreadyInTable && <span className="ml-2 text-xs">(อยู่ในโต๊ะอื่นแล้ว)</span>}
+                              </span>
+                            </label>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

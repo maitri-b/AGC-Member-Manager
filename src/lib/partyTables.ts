@@ -52,6 +52,22 @@ export async function createPartyTable(data: CreatePartyTableData, createdBy: st
     joinedByName: createdByName,
   }));
 
+  // VALIDATION: Check if any member is already in another table (server-side)
+  for (const member of membersWithMetadata) {
+    const existingTable = await findMemberTable(
+      member.registrationId,
+      member.attendeeIndex,
+      data.eventId
+    );
+
+    if (existingTable) {
+      throw new Error(
+        `สมาชิก "${member.name}" อยู่ในกลุ่มโต๊ะอื่นอยู่แล้ว (${existingTable.tableGroupName || `โต๊ะของ ${existingTable.hostCompanyName}`}). ` +
+        'แต่ละคนสามารถอยู่ได้เพียง 1 กลุ่มโต๊ะเท่านั้น'
+      );
+    }
+  }
+
   // Auto-generate table group name from company name if not provided
   const tableGroupName = data.tableGroupName || `กลุ่มโต๊ะ: ${data.hostCompanyName}`;
 
@@ -242,6 +258,22 @@ export async function addMembersToTable(
 
   if (uniqueMembersToAdd.length === 0) {
     return; // No new members to add
+  }
+
+  // VALIDATION: Check if any member is already in another table (server-side)
+  for (const member of uniqueMembersToAdd) {
+    const existingTable = await findMemberTable(
+      member.registrationId,
+      member.attendeeIndex,
+      table.eventId
+    );
+
+    if (existingTable && existingTable.tableId !== data.tableId) {
+      throw new Error(
+        `สมาชิก "${member.name}" อยู่ในกลุ่มโต๊ะอื่นอยู่แล้ว (${existingTable.tableGroupName || `โต๊ะของ ${existingTable.hostCompanyName}`}). ` +
+        'แต่ละคนสามารถอยู่ได้เพียง 1 กลุ่มโต๊ะเท่านั้น'
+      );
+    }
   }
 
   const updatedMembers = [...table.members, ...uniqueMembersToAdd];

@@ -80,7 +80,8 @@
       "Bash(powershell -Command \"if \\(Test-Path .next\\) { Remove-Item -Recurse -Force .next }\")",
       "Bash(tasklist:*)",
       "Bash(rd /s /q \".next\")",
-      "Bash(if exist \".next\" rmdir /s /q \".next\")"
+      "Bash(if exist \".next\" rmdir /s /q \".next\")",
+      "Bash(หมายเหตุ: ทีมงานจะจัดที่นั่งให้สำหรับสมาชิกที่ไม่ได้แจ้งกลุ่มโต๊ะมาล่วงหน้า\"\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

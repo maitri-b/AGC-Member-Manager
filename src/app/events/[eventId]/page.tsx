@@ -1417,7 +1417,7 @@ export default function EventDetailPage() {
                     )}
 
                     {/* Party Table - Only show if party table is active */}
-                    {event.partyTableSettings?.partyTableActive && (
+                    {event.partyTableSettings?.tableActive && (
                       <a
                         href="#party-table-section"
                         className="flex items-center gap-3 p-3 bg-white hover:bg-blue-50 border border-blue-200 rounded-lg transition-all group"

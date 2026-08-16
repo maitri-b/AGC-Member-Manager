@@ -1750,28 +1750,6 @@ function TabTableGroups({
 
   return (
     <div className="space-y-4">
-      {/* Action Buttons Header */}
-      <div className="flex gap-2 justify-end pb-4 border-b border-gray-200">
-        <button
-          onClick={onCreateNewGroup}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 inline-flex items-center gap-2 text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          สร้างกลุ่มโต๊ะใหม่
-        </button>
-        <button
-          onClick={onCreateReservation}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-flex items-center gap-2 text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          สร้างกลุ่มจองโต๊ะ
-        </button>
-      </div>
-
       {activeTables.map((table) => {
         const isExpanded = expandedTableId === table.tableId;
         const isReservation = table.isReservation === true;
@@ -1820,7 +1798,7 @@ function TabTableGroups({
                   <span className={`text-xs font-medium px-2 py-1 rounded ${statusColor}`}>
                     {isReservation
                       ? `${memberCount} ที่จอง / ${maxSeats || defaultSeats} ที่นั่ง (${capacityPercentage}%)`
-                      : `${memberCount} / {maxSeats || defaultSeats} ที่นั่ง ({capacityPercentage}%)`
+                      : `${memberCount} / ${maxSeats || defaultSeats} ที่นั่ง (${capacityPercentage}%)`
                     }
                   </span>
                 </div>

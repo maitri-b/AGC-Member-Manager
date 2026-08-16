@@ -833,10 +833,20 @@ export default function PartyTableSection({
                     <p className="text-xs font-medium text-gray-600">
                       สมาชิกในโต๊ะ ({table.members.length} คน)
                     </p>
+                    {table.assignedTableNumber && !table.isJoinTable && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-2">
+                        <p className="text-xs text-yellow-800">
+                          ⚠️ โต๊ะนี้ถูกจัดเลขโต๊ะแล้ว ไม่สามารถลบสมาชิกออกได้
+                          <br />
+                          หากต้องการแก้ไข กรุณาติดต่อ Admin
+                        </p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {table.members.map((member) => {
                         const isMyMember =
                           member.registrationId === userRegistration?.registrationId;
+                        const canLeave = !table.assignedTableNumber || table.isJoinTable;
                         return (
                           <div
                             key={`${member.registrationId}-${member.attendeeIndex}`}
@@ -862,7 +872,7 @@ export default function PartyTableSection({
                                 <p className="text-xs text-gray-500">{member.companyName}</p>
                               </div>
                             </div>
-                            {isMyMember && (
+                            {isMyMember && canLeave && (
                               <button
                                 onClick={() => handleLeaveTable(table.tableId, member.attendeeIndex)}
                                 className="text-red-600 hover:text-red-800 text-xs font-medium"

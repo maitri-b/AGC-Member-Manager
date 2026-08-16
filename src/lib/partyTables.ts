@@ -317,8 +317,8 @@ export async function removeMembersFromTable(
   // Allow removing from Join Tables (isJoinTable) even when assigned
   if (table.assignedTableNumber && !table.isJoinTable) {
     throw new Error(
-      `Cannot remove individual members from a member-created group assigned to table #${table.assignedTableNumber}. ` +
-      'To modify this table, either unassign the entire group, or manage members before assignment.'
+      `ไม่สามารถลบสมาชิกออกจากโต๊ะที่ถูกจัดเลขโต๊ะแล้ว (โต๊ะ #${table.assignedTableNumber})\n` +
+      'หากต้องการแก้ไข กรุณาติดต่อ Admin เพื่อยกเลิกการจัดเลขโต๊ะก่อน'
     );
   }
 

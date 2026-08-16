@@ -1,12 +1,35 @@
 // API Route: Party Table - Remove Members
 import { NextRequest, NextResponse } from 'next/server';
 import { getEffectiveSession } from '@/lib/impersonation';
+import { hasPermission } from '@/lib/permissions';
 import { removeMembersFromTable, getPartyTableById } from '@/lib/partyTables';
 import { RemoveMembersFromTableData } from '@/types/partyTable';
+import { adminDb } from '@/lib/firebase-admin';
+
+/**
+ * Helper function to get user's registration for an event
+ */
+async function getUserRegistrationId(lineUserId: string, eventId: string): Promise<string | null> {
+  const db = adminDb();
+  const snapshot = await db
+    .collection('eventRegistrations')
+    .where('lineUserId', '==', lineUserId)
+    .where('eventId', '==', eventId)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  return snapshot.docs[0].data().registrationId || null;
+}
 
 /**
  * POST /api/party-tables/[tableId]/remove-members
  * Remove members from a Party Table
+ * - Admins can remove members from any party table
+ * - Members can only remove members from their own party table (where hostRegistrationId matches)
  */
 export async function POST(
   request: NextRequest,
@@ -29,6 +52,23 @@ export async function POST(
     const table = await getPartyTableById(tableId);
     if (!table) {
       return NextResponse.json({ error: 'Party Table not found' }, { status: 404 });
+    }
+
+    // Check permissions: Admin can modify any table, member can only modify their own
+    const isAdmin = hasPermission(session.user.permissions || [], 'admin:access');
+
+    // Get user's registration ID for this event to check ownership
+    const userRegistrationId = await getUserRegistrationId(
+      session.user.lineUserId,
+      table.eventId
+    );
+    const isHost = userRegistrationId === table.hostRegistrationId;
+
+    if (!isAdmin && !isHost) {
+      return NextResponse.json(
+        { error: 'Permission denied. You can only remove members from your own party table.' },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();

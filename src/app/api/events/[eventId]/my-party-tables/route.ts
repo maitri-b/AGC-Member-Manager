@@ -29,7 +29,7 @@ export async function GET(
     const db = adminDb();
     const regSnapshot = await db
       .collection('eventRegistrations')
-      .where('lineUserId', '==', session.user.id)
+      .where('lineUserId', '==', session.user.lineUserId)  // Use lineUserId instead of id for impersonation support
       .where('eventId', '==', eventId)
       .limit(1)
       .get();

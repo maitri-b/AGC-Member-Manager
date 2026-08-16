@@ -1463,17 +1463,19 @@ export default function CarpoolManagementModal({
 
       {/* Assignment Modal - Select Carpool for Car Number */}
       {showAssignmentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full my-8 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-gray-900">
                 เลือก Carpool สำหรับรถคันที่ {assigningCarNumber}
               </h3>
+            </div>
 
+            <div className="p-6 overflow-y-auto flex-1">
               {availableCarpools.length === 0 ? (
                 <p className="text-sm text-gray-500">ไม่มี Carpool ที่ว่างให้เลือก</p>
               ) : (
-                <div className="space-y-2 mb-6">
+                <div className="space-y-2">
                   {availableCarpools.map((carpool) => (
                     <label
                       key={carpool.carpoolId}
@@ -1502,7 +1504,9 @@ export default function CarpoolManagementModal({
                   ))}
                 </div>
               )}
+            </div>
 
+            <div className="p-6 border-t border-gray-200 flex-shrink-0">
               <div className="flex gap-3">
                 <button
                   onClick={() => {

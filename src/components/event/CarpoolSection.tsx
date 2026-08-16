@@ -95,6 +95,19 @@ export default function CarpoolSection({
   );
   const memberCarpool = ownedCarpools[0] || null;
 
+  // Debug: Log owned carpools whenever they change
+  useEffect(() => {
+    if (ownedCarpools.length > 0) {
+      console.log('[Owned Carpools Debug]', ownedCarpools.map(cp => ({
+        carpoolId: cp.carpoolId,
+        licensePlate: cp.licensePlate,
+        assignedCarNumber: cp.assignedCarNumber,
+        assignedCarNumberType: typeof cp.assignedCarNumber,
+        members: cp.members?.length || 0,
+      })));
+    }
+  }, [ownedCarpools]);
+
   // Fetch member carpools on mount and when dependencies change
   useEffect(() => {
     if (event?.hasCarpoolFeature && userRegistration) {
@@ -111,11 +124,17 @@ export default function CarpoolSection({
 
     setCarpoolLoading(true);
     try {
+      console.log('[Carpool Debug] Calling API:', `/api/events/${eventId}/my-carpool`);
       const response = await fetch(`/api/events/${eventId}/my-carpool`);
+      console.log('[Carpool Debug] Response status:', response.status, response.ok);
       if (response.ok) {
         const data = await response.json();
         console.log('[Carpool API Response]', JSON.stringify(data.carpools, null, 2));
         setMemberCarpools(data.carpools || []);
+        // Log after state update (will show in next render due to async state)
+        console.log('[Carpool Debug] Set memberCarpools, length:', data.carpools?.length);
+      } else {
+        console.error('[Carpool Debug] API call failed:', response.status);
       }
     } catch (err) {
       console.error('Error fetching member carpools:', err);
@@ -668,8 +687,16 @@ export default function CarpoolSection({
                                   member.registrationId === userRegistration?.registrationId;
                                 // Check if carpool has assigned car number (block removal if assigned)
                                 // assignedCarNumber can be undefined (not assigned) or a number (assigned)
+                                console.log('[Button Logic]', {
+                                  carpoolId: ownedCarpool.carpoolId,
+                                  assignedCarNumber: ownedCarpool.assignedCarNumber,
+                                  typeOf: typeof ownedCarpool.assignedCarNumber,
+                                  isNumber: typeof ownedCarpool.assignedCarNumber === 'number',
+                                  greaterThanZero: ownedCarpool.assignedCarNumber > 0,
+                                });
                                 const hasAssignedNumber = typeof ownedCarpool.assignedCarNumber === 'number' && ownedCarpool.assignedCarNumber > 0;
                                 const canRemove = !hasAssignedNumber;
+                                console.log('[Button Logic] Result:', { hasAssignedNumber, canRemove });
 
                                 let displayName = member.name;
                                 try {

@@ -1733,7 +1733,7 @@ export default function RoomManagementModal({
                 lockedRoomsWs[cell] = { v: '', t: 's' };
               }
               lockedRoomsWs[cell].s = {
-                font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
+                font: { bold: true, sz: 14, color: { rgb: '262626' } },
                 fill: { fgColor: { rgb: 'D2691E' } },
                 alignment: { horizontal: 'left', vertical: 'center' },
                 border: {

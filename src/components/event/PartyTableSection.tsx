@@ -1054,7 +1054,7 @@ export default function PartyTableSection({
                           className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
                         />
                         <span className={`text-sm ${isAlreadyInTable ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                          {name}
+                          {displayMemberName(name, index)}
                           {isAlreadyInTable && <span className="ml-2 text-xs">(อยู่ในโต๊ะอื่นแล้ว)</span>}
                         </span>
                       </label>
@@ -1171,7 +1171,7 @@ export default function PartyTableSection({
                             }}
                             className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                           />
-                          <span className="text-sm text-gray-900">{name}</span>
+                          <span className="text-sm text-gray-900">{displayMemberName(name, index)}</span>
                         </label>
                       );
                     })}
@@ -1244,7 +1244,7 @@ export default function PartyTableSection({
                               className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
                             />
                             <span className={`text-sm ${isInTable ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                              {name.trim()}
+                              {displayMemberName(name.trim(), index)}
                               {isInTable && <span className="ml-2 text-xs">(อยู่ในโต๊ะอื่นแล้ว)</span>}
                             </span>
                           </label>
@@ -1455,7 +1455,7 @@ export default function PartyTableSection({
                                 className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
                               />
                               <span className={`text-sm ${isAlreadyInTable ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                                {name}
+                                {displayMemberName(name, index)}
                                 {isAlreadyInTable && <span className="ml-2 text-xs">(อยู่ในโต๊ะอื่นแล้ว)</span>}
                               </span>
                             </label>

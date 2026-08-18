@@ -3,6 +3,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getEffectiveSession } from '@/lib/impersonation';
 import { adminDb } from '@/lib/firebase-admin';
 
+// Helper function to normalize member names from JSON array format
+function normalizeMemberName(name: any): string {
+  if (!name) return '';
+  let current = name;
+
+  // Handle multiple levels of JSON encoding
+  while (typeof current === 'string' && (current.startsWith('[') || current.startsWith('{'))) {
+    try {
+      const parsed = JSON.parse(current);
+      if (Array.isArray(parsed)) {
+        if (parsed.length === 1) {
+          current = parsed[0];
+          continue;
+        }
+        return parsed.join(', ').trim();
+      }
+      current = parsed;
+    } catch {
+      break;
+    }
+  }
+
+  if (Array.isArray(current)) {
+    return current.join(', ').trim();
+  }
+  return String(current).trim();
+}
+
 /**
  * GET /api/registrations/[registrationId]
  * Get registration details by registration ID
@@ -41,9 +69,19 @@ export async function GET(
     }
 
     const doc = snapshot.docs[0];
+    const data = doc.data();
+
+    // Normalize attendeeNames if it's a string (could be JSON array format or comma-separated)
+    let normalizedAttendeeNames = data.attendeeNames;
+    if (typeof data.attendeeNames === 'string') {
+      const names = data.attendeeNames.split(',').map((name: string) => normalizeMemberName(name.trim()));
+      normalizedAttendeeNames = names.join(', ');
+    }
+
     const registration = {
       id: doc.id,
-      ...doc.data(),
+      ...data,
+      attendeeNames: normalizedAttendeeNames,
     };
 
     return NextResponse.json({ registration });

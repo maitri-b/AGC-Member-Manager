@@ -82,6 +82,7 @@ export async function GET(
 
     // Get all carpools for this event (if event has carpool feature)
     const carpoolOwnerRegistrationIds = new Set<string>();
+    const carpoolMemberRegistrationIds = new Set<string>();
     if (event.hasCarpoolFeature) {
       try {
         const carpoolsSnapshot = await db
@@ -95,9 +96,17 @@ export async function GET(
           if (carpool.ownerRegistrationId) {
             carpoolOwnerRegistrationIds.add(carpool.ownerRegistrationId);
           }
+          // Track members who joined other people's carpools
+          if (carpool.members && Array.isArray(carpool.members)) {
+            carpool.members.forEach((member: any) => {
+              if (member.registrationId) {
+                carpoolMemberRegistrationIds.add(member.registrationId);
+              }
+            });
+          }
         });
 
-        console.log(`[Event API] Found ${carpoolOwnerRegistrationIds.size} active carpool owners for event ${eventId}`);
+        console.log(`[Event API] Found ${carpoolOwnerRegistrationIds.size} carpool owners and ${carpoolMemberRegistrationIds.size} carpool members for event ${eventId}`);
       } catch (error) {
         console.error('[Event API] Error fetching carpools:', error);
       }
@@ -215,6 +224,7 @@ export async function GET(
         } : null,
         // Carpool registration status
         hasRegisteredCarpool: carpoolOwnerRegistrationIds.has(attendee.registration.registrationId),
+        hasJoinedCarpool: carpoolMemberRegistrationIds.has(attendee.registration.registrationId),
         isConfirmed,
       };
     });

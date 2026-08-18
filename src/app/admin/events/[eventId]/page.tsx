@@ -140,6 +140,7 @@ interface Attendee {
     role: string;
   } | null;
   hasRegisteredCarpool?: boolean;
+  hasJoinedCarpool?: boolean;
   isConfirmed: boolean;
 }
 
@@ -4036,6 +4037,20 @@ export default function EventDetailPage() {
                               <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
                             </svg>
                             <span className="hidden sm:inline">ลงทะเบียนรถ</span>
+                          </span>
+                        )}
+
+                        {/* Carpool Join Badge */}
+                        {eventData?.event?.hasCarpoolFeature && !isCancelled && attendee.hasJoinedCarpool && (
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800 cursor-help sm:gap-1"
+                            title="เข้าร่วมรถของเอเจ้นท์อื่น"
+                          >
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                              <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+                            </svg>
+                            <span className="hidden sm:inline">Join รถ</span>
                           </span>
                         )}
                       </div>

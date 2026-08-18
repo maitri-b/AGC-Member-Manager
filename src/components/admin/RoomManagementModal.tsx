@@ -1583,18 +1583,17 @@ export default function RoomManagementModal({
         lockedRoomsSheetData.push(['วันที่ออกรายงาน:', new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })]);
         lockedRoomsSheetData.push([]);
 
+        // Find the maximum occupancy across ALL groups for consistent header width
+        const globalMaxOccupancy = Math.max(...lockedRoomsData.map(r => r.maxOccupancy));
+
         // Process each note group
         Object.entries(groupedByNote).forEach(([note, rooms], groupIndex) => {
-          // Group header
-          lockedRoomsSheetData.push([`หมายเหตุ: ${note}`]);
-          lockedRoomsSheetData.push([]);
+          // Group header (note text only, no "หมายเหตุ:" prefix)
+          lockedRoomsSheetData.push([note]);
 
-          // Determine max occupancy across ALL rooms in this note group (not by building)
-          const maxOccupancyInGroup = Math.max(...rooms.map(r => r.maxOccupancy));
-
-          // Table header - single header for all rooms in this note group
+          // Table header - use global max occupancy for consistent width
           const headerRow = ['อาคาร', 'เลขห้อง', 'จำนวนที่รับได้'];
-          for (let i = 1; i <= maxOccupancyInGroup; i++) {
+          for (let i = 1; i <= globalMaxOccupancy; i++) {
             headerRow.push(`ผู้เข้าพัก ${i}`);
           }
           lockedRoomsSheetData.push(headerRow);
@@ -1622,8 +1621,8 @@ export default function RoomManagementModal({
             // Calculate how many slots need to be filled from note
             const remainingSlots = room.maxOccupancy - registeredOccupants.length;
 
-            // Fill occupant columns
-            for (let i = 0; i < maxOccupancyInGroup; i++) {
+            // Fill occupant columns (use global max for consistent columns)
+            for (let i = 0; i < globalMaxOccupancy; i++) {
               if (i < registeredOccupants.length) {
                 // Slot filled by registered person
                 row.push(registeredOccupants[i]);
@@ -1683,25 +1682,69 @@ export default function RoomManagementModal({
           }
         });
 
-        // Style table headers and data rows
+        // Track group boundaries for thick borders
+        const noteGroupRanges: Array<{ startRow: number; endRow: number }> = [];
+
+        // Identify all note groups
+        for (let R = 4; R <= lockedRange.e.r; R++) { // Start from row 4 (after title rows)
+          const cellA = lockedRoomsWs[XLSX.utils.encode_cell({ r: R, c: 0 })];
+          if (!cellA || !cellA.v) continue;
+
+          const cellValue = String(cellA.v);
+          const nextCell = lockedRoomsWs[XLSX.utils.encode_cell({ r: R + 1, c: 0 })];
+
+          // Check if this is a note row (next row is "อาคาร")
+          if (nextCell && String(nextCell.v) === 'อาคาร') {
+            const groupStart = R;
+            // Find the end of this group (next empty row or next note header)
+            let groupEnd = R + 1;
+            for (let i = R + 2; i <= lockedRange.e.r; i++) {
+              const checkCell = lockedRoomsWs[XLSX.utils.encode_cell({ r: i, c: 0 })];
+              if (!checkCell || !checkCell.v || String(checkCell.v).trim() === '') {
+                groupEnd = i - 1;
+                break;
+              }
+              const checkNextCell = lockedRoomsWs[XLSX.utils.encode_cell({ r: i + 1, c: 0 })];
+              if (checkNextCell && String(checkNextCell.v) === 'อาคาร') {
+                groupEnd = i - 1;
+                break;
+              }
+              groupEnd = i;
+            }
+            noteGroupRanges.push({ startRow: groupStart, endRow: groupEnd });
+          }
+        }
+
+        // Style all cells
         for (let R = 0; R <= lockedRange.e.r; R++) {
           const cellA = lockedRoomsWs[XLSX.utils.encode_cell({ r: R, c: 0 })];
           if (!cellA || !cellA.v) continue;
 
           const cellValue = String(cellA.v);
+          const nextCell = R < lockedRange.e.r ? lockedRoomsWs[XLSX.utils.encode_cell({ r: R + 1, c: 0 })] : null;
 
-          // Check if this is a note group header
-          if (cellValue.startsWith('หมายเหตุ:')) {
+          // Check if this is a note group header (next row is "อาคาร")
+          if (nextCell && String(nextCell.v) === 'อาคาร') {
+            // Style note header row
             for (let C = 0; C <= lockedRange.e.c; C++) {
               const cell = XLSX.utils.encode_cell({ r: R, c: C });
-              if (lockedRoomsWs[cell]) {
-                lockedRoomsWs[cell].s = {
-                  font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
-                  fill: { fgColor: { rgb: 'D2691E' } },
-                  alignment: { horizontal: 'left', vertical: 'center' }
-                };
+              // Create cell if it doesn't exist (for empty columns)
+              if (!lockedRoomsWs[cell]) {
+                lockedRoomsWs[cell] = { v: '', t: 's' };
               }
+              lockedRoomsWs[cell].s = {
+                font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
+                fill: { fgColor: { rgb: 'D2691E' } },
+                alignment: { horizontal: 'left', vertical: 'center' },
+                border: {
+                  top: { style: 'medium', color: { rgb: '000000' } },
+                  bottom: { style: 'thin', color: { rgb: '000000' } },
+                  left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
+                  right: C === lockedRange.e.c ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+                }
+              };
             }
+            // Merge note header across all columns
             if (!lockedRoomsWs['!merges']) lockedRoomsWs['!merges'] = [];
             lockedRoomsWs['!merges'].push({ s: { r: R, c: 0 }, e: { r: R, c: lockedRange.e.c } });
           }
@@ -1710,19 +1753,21 @@ export default function RoomManagementModal({
           if (cellValue === 'อาคาร') {
             for (let C = 0; C <= lockedRange.e.c; C++) {
               const cell = XLSX.utils.encode_cell({ r: R, c: C });
-              if (lockedRoomsWs[cell]) {
-                lockedRoomsWs[cell].s = {
-                  font: { bold: true, color: { rgb: 'FFFFFF' } },
-                  fill: { fgColor: { rgb: '8B7355' } },
-                  alignment: { horizontal: 'center', vertical: 'center' },
-                  border: {
-                    top: { style: 'thin', color: { rgb: '000000' } },
-                    bottom: { style: 'thin', color: { rgb: '000000' } },
-                    left: { style: 'thin', color: { rgb: '000000' } },
-                    right: { style: 'thin', color: { rgb: '000000' } }
-                  }
-                };
+              // Create cell if it doesn't exist (for empty columns)
+              if (!lockedRoomsWs[cell]) {
+                lockedRoomsWs[cell] = { v: '', t: 's' };
               }
+              lockedRoomsWs[cell].s = {
+                font: { bold: true, color: { rgb: 'FFFFFF' } },
+                fill: { fgColor: { rgb: '8B7355' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border: {
+                  top: { style: 'thin', color: { rgb: '000000' } },
+                  bottom: { style: 'thin', color: { rgb: '000000' } },
+                  left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
+                  right: C === lockedRange.e.c ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+                }
+              };
             }
           }
 
@@ -1730,28 +1775,36 @@ export default function RoomManagementModal({
           if (R > 0) {
             const prevCell = lockedRoomsWs[XLSX.utils.encode_cell({ r: R - 1, c: 0 })];
             if (prevCell && String(prevCell.v) === 'อาคาร') {
+              // Find which group this row belongs to
+              const currentGroup = noteGroupRanges.find(g => R > g.startRow && R <= g.endRow);
+              const isLastRowInGroup = currentGroup && R === currentGroup.endRow;
+
               // This and subsequent rows until empty row are data rows
               let dataRow = R;
               while (dataRow <= lockedRange.e.r) {
                 const checkCell = lockedRoomsWs[XLSX.utils.encode_cell({ r: dataRow, c: 0 })];
                 if (!checkCell || !checkCell.v || String(checkCell.v).trim() === '') break;
 
+                const isLastInGroup = currentGroup && dataRow === currentGroup.endRow;
+
                 for (let C = 0; C <= lockedRange.e.c; C++) {
                   const cell = XLSX.utils.encode_cell({ r: dataRow, c: C });
-                  if (lockedRoomsWs[cell]) {
-                    lockedRoomsWs[cell].s = {
-                      alignment: { horizontal: C <= 2 ? 'center' : 'left', vertical: 'center' }, // อาคาร, เลขห้อง, จำนวนที่รับได้ = center
-                      border: {
-                        top: { style: 'thin', color: { rgb: 'CCCCCC' } },
-                        bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
-                        left: { style: 'thin', color: { rgb: 'CCCCCC' } },
-                        right: { style: 'thin', color: { rgb: 'CCCCCC' } }
-                      }
-                    };
+                  if (!lockedRoomsWs[cell]) {
+                    lockedRoomsWs[cell] = { v: '', t: 's' };
                   }
+                  lockedRoomsWs[cell].s = {
+                    alignment: { horizontal: C <= 2 ? 'center' : 'left', vertical: 'center' },
+                    border: {
+                      top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                      bottom: isLastInGroup ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
+                      left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
+                      right: C === lockedRange.e.c ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } }
+                    }
+                  };
                 }
                 dataRow++;
               }
+              break; // Exit after processing data rows
             }
           }
         }

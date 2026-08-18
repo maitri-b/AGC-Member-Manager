@@ -211,7 +211,7 @@ export default function PartyTableSection({
       const initialMembers = selectedMembersForTable.map(index => ({
         registrationId: userRegistration.registrationId,
         lineUserId: userRegistration.lineUserId,
-        name: attendeeNames[index] || '',
+        name: normalizeMemberName(attendeeNames[index] || ''),
         attendeeIndex: index,
         companyName: userRegistration.companyName || '',
       }));
@@ -492,7 +492,7 @@ export default function PartyTableSection({
       const members = selectedMembersToJoin.map((index) => ({
         registrationId: userRegistration.registrationId,
         lineUserId: userRegistration.lineUserId,
-        name: attendeeNames[index] || '',
+        name: normalizeMemberName(attendeeNames[index] || ''),
         attendeeIndex: index,
         companyName: userRegistration.companyName || '',
       }));
@@ -1152,7 +1152,7 @@ export default function PartyTableSection({
                                   {
                                     registrationId: userRegistration.registrationId,
                                     lineUserId: userRegistration.lineUserId,
-                                    name: name,
+                                    name: normalizeMemberName(name),
                                     attendeeIndex: index,
                                     companyName: userRegistration.companyName || '',
                                   },
@@ -1222,7 +1222,7 @@ export default function PartyTableSection({
                                     {
                                       registrationId: searchedRegistration.registrationId,
                                       lineUserId: searchedRegistration.lineUserId,
-                                      name: name.trim(),
+                                      name: normalizeMemberName(name.trim()),
                                       attendeeIndex: index,
                                       companyName:
                                         searchedRegistration.companyName || '',

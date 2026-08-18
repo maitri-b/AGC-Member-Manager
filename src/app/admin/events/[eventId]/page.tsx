@@ -4028,7 +4028,7 @@ export default function EventDetailPage() {
                         {/* Carpool Registration Badge */}
                         {eventData?.event?.hasCarpoolFeature && !isCancelled && attendee.hasRegisteredCarpool && (
                           <span
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 cursor-help"
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 cursor-help sm:gap-1"
                             title="ลงทะเบียนรถยนต์แล้ว"
                           >
                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">

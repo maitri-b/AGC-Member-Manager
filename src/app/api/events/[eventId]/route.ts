@@ -87,7 +87,7 @@ export async function GET(
         const carpoolsSnapshot = await db
           .collection('carpools')
           .where('eventId', '==', eventId)
-          .where('status', '!=', 'deleted')
+          .where('status', '==', 'active')
           .get();
 
         carpoolsSnapshot.docs.forEach(doc => {
@@ -97,7 +97,7 @@ export async function GET(
           }
         });
 
-        console.log(`[Event API] Found ${carpoolOwnerRegistrationIds.size} carpool owners for event ${eventId}`);
+        console.log(`[Event API] Found ${carpoolOwnerRegistrationIds.size} active carpool owners for event ${eventId}`);
       } catch (error) {
         console.error('[Event API] Error fetching carpools:', error);
       }

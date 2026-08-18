@@ -2212,7 +2212,7 @@ function AssignModalGroupsTab({
             {group.isJoinTable ? 'Join โต๊ะ' : (group.tableGroupName || `โต๊ะของ ${group.hostCompanyName}`)}
           </p>
           <p className="text-sm text-gray-600 mt-1">
-            {group.members.length} คน • {group.hostContactName}
+            {group.isReservation ? (group.reservedSeats || 0) : group.members.length} คน • {group.hostContactName}
           </p>
           <div className="flex flex-wrap gap-1 mt-2">
             {group.members.slice(0, 3).map((member, idx) => (

@@ -3,6 +3,43 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
+// Helper function to normalize member names from JSON array format
+function normalizeMemberName(name: any): string {
+  if (!name) return '';
+  let current = name;
+
+  // Handle multiple levels of JSON encoding
+  while (typeof current === 'string' && (current.startsWith('[') || current.startsWith('{'))) {
+    try {
+      const parsed = JSON.parse(current);
+      if (Array.isArray(parsed)) {
+        if (parsed.length === 1) {
+          current = parsed[0];
+          continue;
+        }
+        return parsed.join(', ').trim();
+      }
+      current = parsed;
+    } catch {
+      break;
+    }
+  }
+
+  if (Array.isArray(current)) {
+    return current.join(', ').trim();
+  }
+  return String(current).trim();
+}
+
+// Helper function to display member name with fallback
+function displayMemberName(name: string, index?: number): string {
+  const normalized = normalizeMemberName(name);
+  if (!normalized || normalized.trim() === '') {
+    return index !== undefined ? `ผู้เข้าร่วมคนที่ ${index + 1}` : 'ไม่ระบุชื่อ';
+  }
+  return normalized;
+}
+
 interface TableMember {
   registrationId: string;
   lineUserId: string;
@@ -752,7 +789,7 @@ export default function PartyTableSection({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                             <div>
-                              <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                              <p className="text-sm font-medium text-gray-900">{displayMemberName(member.name, member.attendeeIndex)}</p>
                               <p className="text-xs text-gray-500">{member.companyName}</p>
                             </div>
                           </div>
@@ -874,7 +911,7 @@ export default function PartyTableSection({
                               </svg>
                               <div>
                                 <p className="text-sm font-medium text-gray-900">
-                                  {member.name}
+                                  {displayMemberName(member.name, member.attendeeIndex)}
                                   {isMyMember && (
                                     <span className="ml-2 text-xs text-blue-600 font-semibold">
                                       (คุณ)

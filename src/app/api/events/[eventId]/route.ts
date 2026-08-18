@@ -96,10 +96,11 @@ export async function GET(
           if (carpool.ownerRegistrationId) {
             carpoolOwnerRegistrationIds.add(carpool.ownerRegistrationId);
           }
-          // Track members who joined other people's carpools
+          // Track members who joined OTHER people's carpools (not their own)
           if (carpool.members && Array.isArray(carpool.members)) {
             carpool.members.forEach((member: any) => {
-              if (member.registrationId) {
+              if (member.registrationId && member.registrationId !== carpool.ownerRegistrationId) {
+                // Only track if member joined someone else's carpool
                 carpoolMemberRegistrationIds.add(member.registrationId);
               }
             });

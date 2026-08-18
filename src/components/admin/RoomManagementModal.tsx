@@ -1560,6 +1560,244 @@ export default function RoomManagementModal({
       // Add summary worksheet as the FIRST sheet
       XLSX.utils.book_append_sheet(wb, summaryWs, 'สรุปสถิติ');
 
+      // ========================================
+      // CREATE LOCKED ROOMS WORKSHEET
+      // ========================================
+
+      const lockedRoomsData = roomsWithOccupants.filter(r => r.isLocked);
+
+      if (lockedRoomsData.length > 0) {
+        // Group locked rooms by note (หมายเหตุ)
+        const groupedByNote = lockedRoomsData.reduce((acc, room) => {
+          const noteKey = room.note || 'ไม่มีหมายเหตุ';
+          if (!acc[noteKey]) acc[noteKey] = [];
+          acc[noteKey].push(room);
+          return acc;
+        }, {} as Record<string, RoomWithOccupants[]>);
+
+        const lockedRoomsSheetData: any[] = [];
+
+        // Title
+        lockedRoomsSheetData.push(['รายงานห้องที่ล็อค']);
+        lockedRoomsSheetData.push(['งาน:', eventName]);
+        lockedRoomsSheetData.push(['วันที่ออกรายงาน:', new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })]);
+        lockedRoomsSheetData.push([]);
+
+        // Process each note group
+        Object.entries(groupedByNote).forEach(([note, rooms], groupIndex) => {
+          // Group header
+          lockedRoomsSheetData.push([`หมายเหตุ: ${note}`]);
+          lockedRoomsSheetData.push([]);
+
+          // Group by building within this note group
+          const buildingGroups = rooms.reduce((acc, room) => {
+            if (!acc[room.buildingName]) acc[room.buildingName] = [];
+            acc[room.buildingName].push(room);
+            return acc;
+          }, {} as Record<string, RoomWithOccupants[]>);
+
+          Object.entries(buildingGroups).forEach(([buildingName, buildingRooms]) => {
+            // Building header
+            lockedRoomsSheetData.push([`อาคาร ${buildingName}`]);
+
+            // Table header - determine max occupancy for this building group
+            const maxOccupancyInGroup = Math.max(...buildingRooms.map(r => r.maxOccupancy));
+            const headerRow = ['เลขห้อง', 'จำนวนที่รับได้'];
+            for (let i = 1; i <= maxOccupancyInGroup; i++) {
+              headerRow.push(`ผู้เข้าพัก ${i}`);
+              headerRow.push(`บริษัท ${i}`);
+            }
+            lockedRoomsSheetData.push(headerRow);
+
+            // Sort rooms by room number
+            const sortedRooms = buildingRooms.sort((a, b) => {
+              const numA = parseInt(a.roomNumber) || 0;
+              const numB = parseInt(b.roomNumber) || 0;
+              return numA - numB;
+            });
+
+            // Add room data
+            sortedRooms.forEach(room => {
+              const row: any[] = [room.roomNumber, room.maxOccupancy];
+
+              // Collect all occupants (from registrations)
+              const registeredOccupants = room.occupants.map(occ => ({
+                name: occ.attendeeName,
+                company: occ.companyName
+              }));
+
+              // Parse note to get additional names
+              const noteNames: string[] = [];
+              if (room.note && room.note.trim()) {
+                // Try to parse names from note (assuming comma-separated)
+                const parsed = room.note.split(/[,\n]/).map(n => n.trim()).filter(n => n);
+                noteNames.push(...parsed);
+              }
+
+              // Calculate how many slots to fill from note
+              const remainingSlots = room.maxOccupancy - registeredOccupants.length;
+
+              // Fill occupant columns
+              for (let i = 0; i < room.maxOccupancy; i++) {
+                if (i < registeredOccupants.length) {
+                  // From registration
+                  row.push(registeredOccupants[i].name);
+                  row.push(registeredOccupants[i].company);
+                } else if (i - registeredOccupants.length < noteNames.length) {
+                  // From note
+                  const noteIndex = i - registeredOccupants.length;
+                  row.push(noteNames[noteIndex]);
+                  row.push('(จากหมายเหตุ)');
+                } else {
+                  // Empty slot
+                  row.push('-');
+                  row.push('-');
+                }
+              }
+
+              lockedRoomsSheetData.push(row);
+            });
+
+            lockedRoomsSheetData.push([]); // Spacing between buildings
+          });
+
+          lockedRoomsSheetData.push([]); // Spacing between note groups
+        });
+
+        // Create locked rooms worksheet
+        const lockedRoomsWs = XLSX.utils.aoa_to_sheet(lockedRoomsSheetData);
+
+        // Set column widths
+        const maxOccupancy = Math.max(...lockedRoomsData.map(r => r.maxOccupancy));
+        const colWidths = [
+          { wch: 12 }, // เลขห้อง
+          { wch: 15 }, // จำนวนที่รับได้
+        ];
+        for (let i = 0; i < maxOccupancy; i++) {
+          colWidths.push({ wch: 25 }); // ผู้เข้าพัก
+          colWidths.push({ wch: 30 }); // บริษัท
+        }
+        lockedRoomsWs['!cols'] = colWidths;
+
+        // Style the locked rooms worksheet
+        const lockedRange = XLSX.utils.decode_range(lockedRoomsWs['!ref'] || 'A1');
+
+        // Title styling (row 1)
+        if (lockedRoomsWs['A1']) {
+          lockedRoomsWs['A1'].s = {
+            font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '8B4513' } },
+            alignment: { horizontal: 'center', vertical: 'center' }
+          };
+          if (!lockedRoomsWs['!merges']) lockedRoomsWs['!merges'] = [];
+          const maxCol = 1 + (maxOccupancy * 2);
+          lockedRoomsWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: maxCol } });
+        }
+
+        // Event info rows (2-3)
+        ['A2', 'A3'].forEach((cell, idx) => {
+          if (lockedRoomsWs[cell]) {
+            lockedRoomsWs[cell].s = { font: { bold: true }, fill: { fgColor: { rgb: 'F5E6D3' } } };
+          }
+          const valCell = `B${idx + 2}`;
+          if (lockedRoomsWs[valCell]) {
+            lockedRoomsWs[valCell].s = { fill: { fgColor: { rgb: 'F5E6D3' } } };
+          }
+        });
+
+        // Style table headers and data rows
+        for (let R = 0; R <= lockedRange.e.r; R++) {
+          const cellA = lockedRoomsWs[XLSX.utils.encode_cell({ r: R, c: 0 })];
+          if (!cellA || !cellA.v) continue;
+
+          const cellValue = String(cellA.v);
+
+          // Check if this is a note group header
+          if (cellValue.startsWith('หมายเหตุ:')) {
+            for (let C = 0; C <= lockedRange.e.c; C++) {
+              const cell = XLSX.utils.encode_cell({ r: R, c: C });
+              if (lockedRoomsWs[cell]) {
+                lockedRoomsWs[cell].s = {
+                  font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
+                  fill: { fgColor: { rgb: 'D2691E' } },
+                  alignment: { horizontal: 'left', vertical: 'center' }
+                };
+              }
+            }
+            if (!lockedRoomsWs['!merges']) lockedRoomsWs['!merges'] = [];
+            lockedRoomsWs['!merges'].push({ s: { r: R, c: 0 }, e: { r: R, c: lockedRange.e.c } });
+          }
+
+          // Check if this is a building header
+          if (cellValue.startsWith('อาคาร ')) {
+            for (let C = 0; C <= lockedRange.e.c; C++) {
+              const cell = XLSX.utils.encode_cell({ r: R, c: C });
+              if (lockedRoomsWs[cell]) {
+                lockedRoomsWs[cell].s = {
+                  font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } },
+                  fill: { fgColor: { rgb: 'A0522D' } },
+                  alignment: { horizontal: 'left', vertical: 'center' }
+                };
+              }
+            }
+            if (!lockedRoomsWs['!merges']) lockedRoomsWs['!merges'] = [];
+            lockedRoomsWs['!merges'].push({ s: { r: R, c: 0 }, e: { r: R, c: lockedRange.e.c } });
+          }
+
+          // Check if this is a table header row (contains "เลขห้อง")
+          if (cellValue === 'เลขห้อง') {
+            for (let C = 0; C <= lockedRange.e.c; C++) {
+              const cell = XLSX.utils.encode_cell({ r: R, c: C });
+              if (lockedRoomsWs[cell]) {
+                lockedRoomsWs[cell].s = {
+                  font: { bold: true, color: { rgb: 'FFFFFF' } },
+                  fill: { fgColor: { rgb: '8B7355' } },
+                  alignment: { horizontal: 'center', vertical: 'center' },
+                  border: {
+                    top: { style: 'thin', color: { rgb: '000000' } },
+                    bottom: { style: 'thin', color: { rgb: '000000' } },
+                    left: { style: 'thin', color: { rgb: '000000' } },
+                    right: { style: 'thin', color: { rgb: '000000' } }
+                  }
+                };
+              }
+            }
+          }
+
+          // Style data rows (rows right after header)
+          if (R > 0) {
+            const prevCell = lockedRoomsWs[XLSX.utils.encode_cell({ r: R - 1, c: 0 })];
+            if (prevCell && String(prevCell.v) === 'เลขห้อง') {
+              // This and subsequent rows until empty row are data rows
+              let dataRow = R;
+              while (dataRow <= lockedRange.e.r) {
+                const checkCell = lockedRoomsWs[XLSX.utils.encode_cell({ r: dataRow, c: 0 })];
+                if (!checkCell || !checkCell.v || String(checkCell.v).trim() === '') break;
+
+                for (let C = 0; C <= lockedRange.e.c; C++) {
+                  const cell = XLSX.utils.encode_cell({ r: dataRow, c: C });
+                  if (lockedRoomsWs[cell]) {
+                    lockedRoomsWs[cell].s = {
+                      alignment: { horizontal: C === 0 || C === 1 ? 'center' : 'left', vertical: 'center' },
+                      border: {
+                        top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                        bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                        left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                        right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+                      }
+                    };
+                  }
+                }
+                dataRow++;
+              }
+            }
+          }
+        }
+
+        // Add locked rooms worksheet
+        XLSX.utils.book_append_sheet(wb, lockedRoomsWs, 'ห้องที่ล็อค');
+      }
+
       // Download file
       const fileName = `Room_Summary_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);

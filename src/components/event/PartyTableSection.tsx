@@ -1185,10 +1185,27 @@ export default function PartyTableSection({
                     {searchedRegistration.companyName || searchedRegistration.contactName}
                   </p>
                   <div className="space-y-2">
-                    {(Array.isArray(searchedRegistration.attendeeNames)
-                      ? searchedRegistration.attendeeNames
-                      : searchedRegistration.attendeeNames?.split(',') || []
-                    ).map((name: string, index: number) => {
+                    {/*
+                      IMPORTANT: attendeeNames from Firestore can be in multiple formats:
+                      1. String with comma-separated names: "name1, name2, name3"
+                      2. String with JSON-encoded names: '["name1"], ["name2"]'
+                      3. Array of names (in some old documents)
+
+                      Always normalize inline like Carpool does - try JSON.parse first, then fallback to regex cleanup
+                    */}
+                    {searchedRegistration.attendeeNames ? (
+                      searchedRegistration.attendeeNames.split(',').map((name: string, index: number) => {
+                        const trimmedName = name.trim();
+
+                        // Clean member name - remove JSON formatting if present (same as Carpool)
+                        let displayName = trimmedName;
+                        try {
+                          const parsed = JSON.parse(trimmedName);
+                          displayName = Array.isArray(parsed) ? parsed[0] : parsed;
+                        } catch {
+                          displayName = trimmedName.replace(/^\["|"\]$/g, '').replace(/^['"]|['"]$/g, '');
+                        }
+
                         // Check if this member is already in any table
                         const isInTable = searchedRegistrationTables.some((table) =>
                           table.members.some(
@@ -1197,6 +1214,7 @@ export default function PartyTableSection({
                               m.attendeeIndex === index
                           )
                         );
+
                         return (
                           <label
                             key={index}
@@ -1222,7 +1240,7 @@ export default function PartyTableSection({
                                     {
                                       registrationId: searchedRegistration.registrationId,
                                       lineUserId: searchedRegistration.lineUserId,
-                                      name: normalizeMemberName(name.trim()),
+                                      name: displayName,
                                       attendeeIndex: index,
                                       companyName:
                                         searchedRegistration.companyName || '',
@@ -1244,12 +1262,15 @@ export default function PartyTableSection({
                               className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
                             />
                             <span className={`text-sm ${isInTable ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                              {displayMemberName(name.trim(), index)}
+                              {displayName || `ผู้เข้าร่วมคนที่ ${index + 1}`}
                               {isInTable && <span className="ml-2 text-xs">(อยู่ในโต๊ะอื่นแล้ว)</span>}
                             </span>
                           </label>
                         );
-                      })}
+                      })
+                    ) : (
+                      <p className="text-sm text-gray-500 text-center py-4">ไม่มีรายชื่อผู้เข้าร่วม</p>
+                    )}
                   </div>
                 </div>
               )}

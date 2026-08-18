@@ -71,10 +71,16 @@ export async function GET(
     const doc = snapshot.docs[0];
     const data = doc.data();
 
-    // Normalize attendeeNames if it's a string (could be JSON array format or comma-separated)
+    // Normalize attendeeNames - handle both string and array formats
     let normalizedAttendeeNames = data.attendeeNames;
+
     if (typeof data.attendeeNames === 'string') {
+      // Split comma-separated string and normalize each name
       const names = data.attendeeNames.split(',').map((name: string) => normalizeMemberName(name.trim()));
+      normalizedAttendeeNames = names.join(', ');
+    } else if (Array.isArray(data.attendeeNames)) {
+      // If it's already an array, normalize each element
+      const names = data.attendeeNames.map((name: any) => normalizeMemberName(name));
       normalizedAttendeeNames = names.join(', ');
     }
 

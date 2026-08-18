@@ -1376,6 +1376,194 @@ export default function RoomManagementModal({
 
       XLSX.utils.book_append_sheet(wb, ws, 'สรุปห้องพัก');
 
+      // ========================================
+      // CREATE SUMMARY STATISTICS WORKSHEET
+      // ========================================
+
+      // Calculate statistics
+      const totalRooms = roomsWithOccupants.length;
+      const occupiedRooms = roomsWithOccupants.filter(r => r.occupants.length > 0 && !r.isLocked).length;
+      const lockedRooms = roomsWithOccupants.filter(r => r.isLocked).length;
+      const emptyRooms = roomsWithOccupants.filter(r => r.occupants.length === 0 && !r.isLocked).length;
+      const totalOccupants = roomsWithOccupants.reduce((sum, r) => sum + r.occupants.length, 0);
+
+      // Group by room type (single, double, triple)
+      const singleRooms = roomsWithOccupants.filter(r => r.maxOccupancy === 1);
+      const doubleRooms = roomsWithOccupants.filter(r => r.maxOccupancy === 2);
+      const tripleRooms = roomsWithOccupants.filter(r => r.maxOccupancy === 3);
+
+      // Create summary data
+      const summaryData = [
+        ['รายงานสรุปห้องพัก', ''],
+        ['งาน:', eventName],
+        ['วันที่ออกรายงาน:', new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })],
+        [''],
+        ['สรุปภาพรวม', ''],
+        ['ห้องพักทั้งหมด', totalRooms],
+        ['ห้องที่มีผู้เข้าพัก', occupiedRooms],
+        ['ห้องว่าง', emptyRooms],
+        ['ห้องที่ถูกล็อค', lockedRooms],
+        ['จำนวนผู้เข้าพักทั้งหมด', totalOccupants],
+        [''],
+        ['รายละเอียดตามประเภทห้อง', ''],
+        [''],
+        ['ประเภทห้อง', 'จำนวนห้อง', 'ห้องที่มีผู้เข้าพัก', 'เลขห้อง'],
+      ];
+
+      // Add room type details
+      if (singleRooms.length > 0) {
+        const occupied = singleRooms.filter(r => r.occupants.length > 0 && !r.isLocked);
+        const roomNumbers = occupied.map(r => r.roomNumber).sort().join(', ');
+        summaryData.push(['ห้องพักเดี่ยว (1 คน)', singleRooms.length, occupied.length, roomNumbers || '-']);
+      }
+
+      if (doubleRooms.length > 0) {
+        const occupied = doubleRooms.filter(r => r.occupants.length > 0 && !r.isLocked);
+        const roomNumbers = occupied.map(r => r.roomNumber).sort().join(', ');
+        summaryData.push(['ห้องพักคู่ (2 คน)', doubleRooms.length, occupied.length, roomNumbers || '-']);
+      }
+
+      if (tripleRooms.length > 0) {
+        const occupied = tripleRooms.filter(r => r.occupants.length > 0 && !r.isLocked);
+        const roomNumbers = occupied.map(r => r.roomNumber).sort().join(', ');
+        summaryData.push(['ห้องพัก 3 คน', tripleRooms.length, occupied.length, roomNumbers || '-']);
+      }
+
+      // Create worksheet
+      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+
+      // Set column widths
+      summaryWs['!cols'] = [
+        { wch: 30 }, // Column A
+        { wch: 20 }, // Column B
+        { wch: 20 }, // Column C
+        { wch: 60 }, // Column D (room numbers)
+      ];
+
+      // Style the summary worksheet
+      const summaryRange = XLSX.utils.decode_range(summaryWs['!ref'] || 'A1');
+
+      // Title (row 1)
+      if (summaryWs['A1']) {
+        summaryWs['A1'].s = {
+          font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '4472C4' } },
+          alignment: { horizontal: 'center', vertical: 'center' }
+        };
+      }
+
+      // Merge title across columns
+      if (!summaryWs['!merges']) summaryWs['!merges'] = [];
+      summaryWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+
+      // Event name row
+      if (summaryWs['A2']) {
+        summaryWs['A2'].s = { font: { bold: true }, fill: { fgColor: { rgb: 'E7E6E6' } } };
+      }
+      if (summaryWs['B2']) {
+        summaryWs['B2'].s = { fill: { fgColor: { rgb: 'E7E6E6' } } };
+      }
+      summaryWs['!merges'].push({ s: { r: 1, c: 1 }, e: { r: 1, c: 3 } });
+
+      // Date row
+      if (summaryWs['A3']) {
+        summaryWs['A3'].s = { font: { bold: true }, fill: { fgColor: { rgb: 'E7E6E6' } } };
+      }
+      if (summaryWs['B3']) {
+        summaryWs['B3'].s = { fill: { fgColor: { rgb: 'E7E6E6' } } };
+      }
+      summaryWs['!merges'].push({ s: { r: 2, c: 1 }, e: { r: 2, c: 3 } });
+
+      // Section headers (rows 5, 12)
+      ['A5', 'A12'].forEach(cell => {
+        if (summaryWs[cell]) {
+          summaryWs[cell].s = {
+            font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '70AD47' } },
+            alignment: { horizontal: 'left', vertical: 'center' },
+            border: {
+              top: { style: 'thin', color: { rgb: '000000' } },
+              bottom: { style: 'thin', color: { rgb: '000000' } },
+              left: { style: 'thin', color: { rgb: '000000' } },
+              right: { style: 'thin', color: { rgb: '000000' } }
+            }
+          };
+        }
+      });
+      summaryWs['!merges'].push({ s: { r: 4, c: 0 }, e: { r: 4, c: 3 } });
+      summaryWs['!merges'].push({ s: { r: 11, c: 0 }, e: { r: 11, c: 3 } });
+
+      // Summary data rows (6-10)
+      for (let R = 5; R <= 9; R++) {
+        const cellA = XLSX.utils.encode_cell({ r: R, c: 0 });
+        const cellB = XLSX.utils.encode_cell({ r: R, c: 1 });
+
+        if (summaryWs[cellA]) {
+          summaryWs[cellA].s = {
+            font: { bold: true },
+            fill: { fgColor: { rgb: 'F2F2F2' } },
+            alignment: { horizontal: 'left' },
+            border: {
+              top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+            }
+          };
+        }
+
+        if (summaryWs[cellB]) {
+          summaryWs[cellB].s = {
+            alignment: { horizontal: 'center' },
+            border: {
+              top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+            }
+          };
+        }
+      }
+
+      // Table header row (row 14)
+      for (let C = 0; C <= 3; C++) {
+        const cell = XLSX.utils.encode_cell({ r: 13, c: C });
+        if (summaryWs[cell]) {
+          summaryWs[cell].s = {
+            font: { bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '4472C4' } },
+            alignment: { horizontal: 'center', vertical: 'center' },
+            border: {
+              top: { style: 'thin', color: { rgb: '000000' } },
+              bottom: { style: 'thin', color: { rgb: '000000' } },
+              left: { style: 'thin', color: { rgb: '000000' } },
+              right: { style: 'thin', color: { rgb: '000000' } }
+            }
+          };
+        }
+      }
+
+      // Table data rows (15+)
+      for (let R = 14; R <= summaryRange.e.r; R++) {
+        for (let C = 0; C <= 3; C++) {
+          const cell = XLSX.utils.encode_cell({ r: R, c: C });
+          if (summaryWs[cell]) {
+            summaryWs[cell].s = {
+              alignment: { horizontal: C === 0 ? 'left' : (C === 3 ? 'left' : 'center'), vertical: 'center', wrapText: C === 3 },
+              border: {
+                top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+              }
+            };
+          }
+        }
+      }
+
+      // Add summary worksheet as the FIRST sheet
+      XLSX.utils.book_append_sheet(wb, summaryWs, 'สรุปสถิติ');
+
       // Download file
       const fileName = `Room_Summary_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);

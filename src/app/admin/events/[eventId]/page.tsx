@@ -4884,7 +4884,7 @@ export default function EventDetailPage() {
                     )}
 
                     {/* Special Charges Section - Always visible, reordered BEFORE Payment Status */}
-                    {attendee.registration.totalAmount > 0 && (() => {
+                    {(() => {
                       try {
                         const specialCharges = attendee.registration.specialCharges
                           ? JSON.parse(attendee.registration.specialCharges)
@@ -4949,7 +4949,7 @@ export default function EventDetailPage() {
                     })()}
 
                     {/* Discounts Section - Always visible, shown AFTER Special Charges */}
-                    {attendee.registration.totalAmount > 0 && (() => {
+                    {(() => {
                       try {
                         const discounts = attendee.registration.discounts
                           ? JSON.parse(attendee.registration.discounts)

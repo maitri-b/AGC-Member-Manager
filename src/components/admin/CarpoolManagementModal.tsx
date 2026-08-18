@@ -747,11 +747,17 @@ export default function CarpoolManagementModal({
                 {searchQuery && (() => {
                   const filteredCount = carpools.filter((carpool) => {
                     const query = searchQuery.toLowerCase();
+                    // Search in owner fields
                     if (carpool.ownerCompanyName?.toLowerCase().includes(query)) return true;
                     if (carpool.ownerContactName?.toLowerCase().includes(query)) return true;
                     if (carpool.ownerRegistrationId?.toLowerCase().includes(query)) return true;
                     if (carpool.licensePlate?.toLowerCase().includes(query)) return true;
-                    if (carpool.members?.some(member => member.name?.toLowerCase().includes(query))) return true;
+                    // Search in member fields
+                    if (carpool.members?.some(member =>
+                      member.name?.toLowerCase().includes(query) ||
+                      member.registrationId?.toLowerCase().includes(query) ||
+                      (member as any).companyName?.toLowerCase().includes(query)
+                    )) return true;
                     return false;
                   }).length;
                   return (
@@ -767,11 +773,17 @@ export default function CarpoolManagementModal({
                   .filter((carpool) => {
                     if (!searchQuery.trim()) return true;
                     const query = searchQuery.toLowerCase();
+                    // Search in owner fields
                     if (carpool.ownerCompanyName?.toLowerCase().includes(query)) return true;
                     if (carpool.ownerContactName?.toLowerCase().includes(query)) return true;
                     if (carpool.ownerRegistrationId?.toLowerCase().includes(query)) return true;
                     if (carpool.licensePlate?.toLowerCase().includes(query)) return true;
-                    if (carpool.members?.some(member => member.name?.toLowerCase().includes(query))) return true;
+                    // Search in member fields
+                    if (carpool.members?.some(member =>
+                      member.name?.toLowerCase().includes(query) ||
+                      member.registrationId?.toLowerCase().includes(query) ||
+                      (member as any).companyName?.toLowerCase().includes(query)
+                    )) return true;
                     return false;
                   })
                   .map((carpool) => {
@@ -1602,11 +1614,17 @@ export default function CarpoolManagementModal({
                       .filter((carpool) => {
                         if (!assignmentSearchQuery.trim()) return true;
                         const query = assignmentSearchQuery.toLowerCase();
+                        // Search in owner fields
                         if (carpool.ownerCompanyName?.toLowerCase().includes(query)) return true;
                         if (carpool.ownerContactName?.toLowerCase().includes(query)) return true;
                         if (carpool.ownerRegistrationId?.toLowerCase().includes(query)) return true;
                         if (carpool.licensePlate?.toLowerCase().includes(query)) return true;
-                        if (carpool.members?.some(member => member.name?.toLowerCase().includes(query))) return true;
+                        // Search in member fields
+                        if (carpool.members?.some(member =>
+                          member.name?.toLowerCase().includes(query) ||
+                          member.registrationId?.toLowerCase().includes(query) ||
+                          (member as any).companyName?.toLowerCase().includes(query)
+                        )) return true;
                         return false;
                       })
                       .map((carpool) => (
@@ -1641,11 +1659,17 @@ export default function CarpoolManagementModal({
                   {assignmentSearchQuery && (() => {
                     const filteredCount = availableCarpools.filter((carpool) => {
                       const query = assignmentSearchQuery.toLowerCase();
+                      // Search in owner fields
                       if (carpool.ownerCompanyName?.toLowerCase().includes(query)) return true;
                       if (carpool.ownerContactName?.toLowerCase().includes(query)) return true;
                       if (carpool.ownerRegistrationId?.toLowerCase().includes(query)) return true;
                       if (carpool.licensePlate?.toLowerCase().includes(query)) return true;
-                      if (carpool.members?.some(member => member.name?.toLowerCase().includes(query))) return true;
+                      // Search in member fields
+                      if (carpool.members?.some(member =>
+                        member.name?.toLowerCase().includes(query) ||
+                        member.registrationId?.toLowerCase().includes(query) ||
+                        (member as any).companyName?.toLowerCase().includes(query)
+                      )) return true;
                       return false;
                     }).length;
                     return (

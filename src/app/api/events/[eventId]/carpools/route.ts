@@ -45,30 +45,41 @@ export async function GET(
     // Get all Carpools for this event
     const carpools = await getCarpoolsByEvent(eventId);
 
-    // Enrich Carpools with registration data (company name, contact info)
+    // Get all registrations for this event to enrich member data
     const db = adminDb();
+    const registrationsSnapshot = await db
+      .collection('eventRegistrations')
+      .where('eventId', '==', eventId)
+      .get();
+
+    const registrationsMap = new Map();
+    registrationsSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      registrationsMap.set(data.registrationId, data);
+    });
+
+    // Enrich Carpools with registration data (company name, contact info)
     const enrichedCarpools = await Promise.all(
       carpools.map(async (carpool) => {
         // Get registration data for owner
-        const registrationSnapshot = await db
-          .collection('eventRegistrations')
-          .where('registrationId', '==', carpool.ownerRegistrationId)
-          .limit(1)
-          .get();
+        const ownerReg = registrationsMap.get(carpool.ownerRegistrationId);
+        const ownerCompanyName = ownerReg?.companyName || '';
+        const ownerContactName = ownerReg?.contactName || '';
 
-        let ownerCompanyName = '';
-        let ownerContactName = '';
-
-        if (!registrationSnapshot.empty) {
-          const regData = registrationSnapshot.docs[0].data();
-          ownerCompanyName = regData.companyName || '';
-          ownerContactName = regData.contactName || '';
-        }
+        // Enrich each member with their company name
+        const enrichedMembers = carpool.members?.map(member => {
+          const memberReg = registrationsMap.get(member.registrationId);
+          return {
+            ...member,
+            companyName: memberReg?.companyName || '',
+          };
+        }) || [];
 
         return {
           ...carpool,
           ownerCompanyName,
           ownerContactName,
+          members: enrichedMembers,
           assignedCarNumber: carpool.assignedCarNumber, // Ensure assignedCarNumber is included
         };
       })

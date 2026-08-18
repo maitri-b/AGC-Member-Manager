@@ -1382,15 +1382,15 @@ export default function RoomManagementModal({
 
       // Calculate statistics
       const totalRooms = roomsWithOccupants.length;
-      const occupiedRooms = roomsWithOccupants.filter(r => r.occupants.length > 0 && !r.isLocked).length;
       const lockedRooms = roomsWithOccupants.filter(r => r.isLocked).length;
       const emptyRooms = roomsWithOccupants.filter(r => r.occupants.length === 0 && !r.isLocked).length;
       const totalOccupants = roomsWithOccupants.reduce((sum, r) => sum + r.occupants.length, 0);
 
-      // Group by room type (single, double, triple)
-      const singleRooms = roomsWithOccupants.filter(r => r.maxOccupancy === 1);
-      const doubleRooms = roomsWithOccupants.filter(r => r.maxOccupancy === 2);
-      const tripleRooms = roomsWithOccupants.filter(r => r.maxOccupancy === 3);
+      // Group by ACTUAL occupancy count (not maxOccupancy)
+      const singleOccupancyRooms = roomsWithOccupants.filter(r => r.occupants.length === 1 && !r.isLocked);
+      const doubleOccupancyRooms = roomsWithOccupants.filter(r => r.occupants.length === 2 && !r.isLocked);
+      const tripleOccupancyRooms = roomsWithOccupants.filter(r => r.occupants.length === 3 && !r.isLocked);
+      const occupiedRooms = singleOccupancyRooms.length + doubleOccupancyRooms.length + tripleOccupancyRooms.length;
 
       // Create summary data
       const summaryData = [
@@ -1407,26 +1407,23 @@ export default function RoomManagementModal({
         [''],
         ['รายละเอียดตามประเภทห้อง', ''],
         [''],
-        ['ประเภทห้อง', 'จำนวนห้อง', 'ห้องที่มีผู้เข้าพัก', 'เลขห้อง'],
+        ['ประเภทห้อง', 'จำนวนห้อง', 'เลขห้อง'],
       ];
 
-      // Add room type details
-      if (singleRooms.length > 0) {
-        const occupied = singleRooms.filter(r => r.occupants.length > 0 && !r.isLocked);
-        const roomNumbers = occupied.map(r => r.roomNumber).sort().join(', ');
-        summaryData.push(['ห้องพักเดี่ยว (1 คน)', singleRooms.length, occupied.length, roomNumbers || '-']);
+      // Add room type details based on ACTUAL occupancy
+      if (singleOccupancyRooms.length > 0) {
+        const roomNumbers = singleOccupancyRooms.map(r => `${r.buildingName} - ${r.roomNumber}`).sort().join(', ');
+        summaryData.push(['ห้องพักเดี่ยว (1 คน)', singleOccupancyRooms.length, roomNumbers || '-']);
       }
 
-      if (doubleRooms.length > 0) {
-        const occupied = doubleRooms.filter(r => r.occupants.length > 0 && !r.isLocked);
-        const roomNumbers = occupied.map(r => r.roomNumber).sort().join(', ');
-        summaryData.push(['ห้องพักคู่ (2 คน)', doubleRooms.length, occupied.length, roomNumbers || '-']);
+      if (doubleOccupancyRooms.length > 0) {
+        const roomNumbers = doubleOccupancyRooms.map(r => `${r.buildingName} - ${r.roomNumber}`).sort().join(', ');
+        summaryData.push(['ห้องพักคู่ (2 คน)', doubleOccupancyRooms.length, roomNumbers || '-']);
       }
 
-      if (tripleRooms.length > 0) {
-        const occupied = tripleRooms.filter(r => r.occupants.length > 0 && !r.isLocked);
-        const roomNumbers = occupied.map(r => r.roomNumber).sort().join(', ');
-        summaryData.push(['ห้องพัก 3 คน', tripleRooms.length, occupied.length, roomNumbers || '-']);
+      if (tripleOccupancyRooms.length > 0) {
+        const roomNumbers = tripleOccupancyRooms.map(r => `${r.buildingName} - ${r.roomNumber}`).sort().join(', ');
+        summaryData.push(['ห้องพัก 3 คน', tripleOccupancyRooms.length, roomNumbers || '-']);
       }
 
       // Create worksheet
@@ -1434,10 +1431,9 @@ export default function RoomManagementModal({
 
       // Set column widths
       summaryWs['!cols'] = [
-        { wch: 30 }, // Column A
-        { wch: 20 }, // Column B
-        { wch: 20 }, // Column C
-        { wch: 60 }, // Column D (room numbers)
+        { wch: 30 }, // Column A (ประเภทห้อง)
+        { wch: 20 }, // Column B (จำนวนห้อง)
+        { wch: 80 }, // Column C (เลขห้อง - wider for building name + room number)
       ];
 
       // Style the summary worksheet
@@ -1454,7 +1450,7 @@ export default function RoomManagementModal({
 
       // Merge title across columns
       if (!summaryWs['!merges']) summaryWs['!merges'] = [];
-      summaryWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+      summaryWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } });
 
       // Event name row
       if (summaryWs['A2']) {
@@ -1463,7 +1459,7 @@ export default function RoomManagementModal({
       if (summaryWs['B2']) {
         summaryWs['B2'].s = { fill: { fgColor: { rgb: 'E7E6E6' } } };
       }
-      summaryWs['!merges'].push({ s: { r: 1, c: 1 }, e: { r: 1, c: 3 } });
+      summaryWs['!merges'].push({ s: { r: 1, c: 1 }, e: { r: 1, c: 2 } });
 
       // Date row
       if (summaryWs['A3']) {
@@ -1472,7 +1468,7 @@ export default function RoomManagementModal({
       if (summaryWs['B3']) {
         summaryWs['B3'].s = { fill: { fgColor: { rgb: 'E7E6E6' } } };
       }
-      summaryWs['!merges'].push({ s: { r: 2, c: 1 }, e: { r: 2, c: 3 } });
+      summaryWs['!merges'].push({ s: { r: 2, c: 1 }, e: { r: 2, c: 2 } });
 
       // Section headers (rows 5, 12)
       ['A5', 'A12'].forEach(cell => {
@@ -1526,7 +1522,7 @@ export default function RoomManagementModal({
       }
 
       // Table header row (row 14)
-      for (let C = 0; C <= 3; C++) {
+      for (let C = 0; C <= 2; C++) {
         const cell = XLSX.utils.encode_cell({ r: 13, c: C });
         if (summaryWs[cell]) {
           summaryWs[cell].s = {
@@ -1545,11 +1541,11 @@ export default function RoomManagementModal({
 
       // Table data rows (15+)
       for (let R = 14; R <= summaryRange.e.r; R++) {
-        for (let C = 0; C <= 3; C++) {
+        for (let C = 0; C <= 2; C++) {
           const cell = XLSX.utils.encode_cell({ r: R, c: C });
           if (summaryWs[cell]) {
             summaryWs[cell].s = {
-              alignment: { horizontal: C === 0 ? 'left' : (C === 3 ? 'left' : 'center'), vertical: 'center', wrapText: C === 3 },
+              alignment: { horizontal: C === 0 ? 'left' : (C === 2 ? 'left' : 'center'), vertical: 'center', wrapText: C === 2 },
               border: {
                 top: { style: 'thin', color: { rgb: 'CCCCCC' } },
                 bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },

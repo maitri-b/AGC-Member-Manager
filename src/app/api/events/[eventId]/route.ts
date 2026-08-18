@@ -80,6 +80,29 @@ export async function GET(
       }
     });
 
+    // Get all carpools for this event (if event has carpool feature)
+    const carpoolOwnerRegistrationIds = new Set<string>();
+    if (event.hasCarpoolFeature) {
+      try {
+        const carpoolsSnapshot = await db
+          .collection('carpools')
+          .where('eventId', '==', eventId)
+          .where('status', '!=', 'deleted')
+          .get();
+
+        carpoolsSnapshot.docs.forEach(doc => {
+          const carpool = doc.data();
+          if (carpool.ownerRegistrationId) {
+            carpoolOwnerRegistrationIds.add(carpool.ownerRegistrationId);
+          }
+        });
+
+        console.log(`[Event API] Found ${carpoolOwnerRegistrationIds.size} carpool owners for event ${eventId}`);
+      } catch (error) {
+        console.error('[Event API] Error fetching carpools:', error);
+      }
+    }
+
     // Enrich attendees with LINE profile data and count verified members
     let verifiedMemberCount = 0;
     let clubMemberCount = 0;
@@ -190,6 +213,8 @@ export async function GET(
           lineProfilePicture: lineProfile.lineProfilePicture,
           role: lineProfile.role,
         } : null,
+        // Carpool registration status
+        hasRegisteredCarpool: carpoolOwnerRegistrationIds.has(attendee.registration.registrationId),
         isConfirmed,
       };
     });

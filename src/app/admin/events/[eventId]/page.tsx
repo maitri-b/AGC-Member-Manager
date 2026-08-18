@@ -139,6 +139,7 @@ interface Attendee {
     lineProfilePicture: string;
     role: string;
   } | null;
+  hasRegisteredCarpool?: boolean;
   isConfirmed: boolean;
 }
 
@@ -4023,6 +4024,20 @@ export default function EventDetailPage() {
                           }
                           return null;
                         })()}
+
+                        {/* Carpool Registration Badge */}
+                        {eventData?.event?.hasCarpoolFeature && !isCancelled && attendee.hasRegisteredCarpool && (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 cursor-help"
+                            title="ลงทะเบียนรถยนต์แล้ว"
+                          >
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                              <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+                            </svg>
+                            <span className="hidden sm:inline">ลงทะเบียนรถ</span>
+                          </span>
+                        )}
                       </div>
 
                       {/* Company info */}

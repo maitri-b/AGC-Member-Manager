@@ -1777,13 +1777,16 @@ export default function RoomManagementModal({
             if (prevCell && String(prevCell.v) === 'อาคาร') {
               // Find which group this row belongs to
               const currentGroup = noteGroupRanges.find(g => R > g.startRow && R <= g.endRow);
-              const isLastRowInGroup = currentGroup && R === currentGroup.endRow;
 
-              // This and subsequent rows until empty row are data rows
+              // Style all data rows in this group
               let dataRow = R;
               while (dataRow <= lockedRange.e.r) {
                 const checkCell = lockedRoomsWs[XLSX.utils.encode_cell({ r: dataRow, c: 0 })];
                 if (!checkCell || !checkCell.v || String(checkCell.v).trim() === '') break;
+
+                // Check if we've hit the next group's header
+                const nextRowCell = dataRow < lockedRange.e.r ? lockedRoomsWs[XLSX.utils.encode_cell({ r: dataRow + 1, c: 0 })] : null;
+                if (nextRowCell && String(nextRowCell.v) === 'อาคาร') break; // Stop before next group
 
                 const isLastInGroup = currentGroup && dataRow === currentGroup.endRow;
 
@@ -1804,7 +1807,7 @@ export default function RoomManagementModal({
                 }
                 dataRow++;
               }
-              break; // Exit after processing data rows
+              // Don't break - continue to process next groups
             }
           }
         }

@@ -1589,76 +1589,54 @@ export default function RoomManagementModal({
           lockedRoomsSheetData.push([`หมายเหตุ: ${note}`]);
           lockedRoomsSheetData.push([]);
 
-          // Group by building within this note group
-          const buildingGroups = rooms.reduce((acc, room) => {
-            if (!acc[room.buildingName]) acc[room.buildingName] = [];
-            acc[room.buildingName].push(room);
-            return acc;
-          }, {} as Record<string, RoomWithOccupants[]>);
+          // Determine max occupancy across ALL rooms in this note group (not by building)
+          const maxOccupancyInGroup = Math.max(...rooms.map(r => r.maxOccupancy));
 
-          Object.entries(buildingGroups).forEach(([buildingName, buildingRooms]) => {
-            // Building header
-            lockedRoomsSheetData.push([`อาคาร ${buildingName}`]);
+          // Table header - single header for all rooms in this note group
+          const headerRow = ['อาคาร', 'เลขห้อง', 'จำนวนที่รับได้'];
+          for (let i = 1; i <= maxOccupancyInGroup; i++) {
+            headerRow.push(`ผู้เข้าพัก ${i}`);
+          }
+          lockedRoomsSheetData.push(headerRow);
 
-            // Table header - determine max occupancy for this building group
-            const maxOccupancyInGroup = Math.max(...buildingRooms.map(r => r.maxOccupancy));
-            const headerRow = ['เลขห้อง', 'จำนวนที่รับได้'];
-            for (let i = 1; i <= maxOccupancyInGroup; i++) {
-              headerRow.push(`ผู้เข้าพัก ${i}`);
-              headerRow.push(`บริษัท ${i}`);
+          // Sort rooms by building and room number
+          const sortedRooms = rooms.sort((a, b) => {
+            // First sort by building name
+            if (a.buildingName < b.buildingName) return -1;
+            if (a.buildingName > b.buildingName) return 1;
+            // Then by room number
+            const numA = parseInt(a.roomNumber) || 0;
+            const numB = parseInt(b.roomNumber) || 0;
+            return numA - numB;
+          });
+
+          // Add room data
+          sortedRooms.forEach(room => {
+            const row: any[] = [room.buildingName, room.roomNumber, room.maxOccupancy];
+
+            // Collect occupants from registrations (people who registered for this room)
+            const registeredOccupants = room.occupants.map(occ =>
+              `${occ.attendeeName} ${occ.companyName}`
+            );
+
+            // Calculate how many slots need to be filled from note
+            const remainingSlots = room.maxOccupancy - registeredOccupants.length;
+
+            // Fill occupant columns
+            for (let i = 0; i < maxOccupancyInGroup; i++) {
+              if (i < registeredOccupants.length) {
+                // Slot filled by registered person
+                row.push(registeredOccupants[i]);
+              } else if (i < room.maxOccupancy) {
+                // Remaining slots in this room - fill with note text
+                row.push(note);
+              } else {
+                // Beyond this room's capacity (for alignment with other rooms)
+                row.push('');
+              }
             }
-            lockedRoomsSheetData.push(headerRow);
 
-            // Sort rooms by room number
-            const sortedRooms = buildingRooms.sort((a, b) => {
-              const numA = parseInt(a.roomNumber) || 0;
-              const numB = parseInt(b.roomNumber) || 0;
-              return numA - numB;
-            });
-
-            // Add room data
-            sortedRooms.forEach(room => {
-              const row: any[] = [room.roomNumber, room.maxOccupancy];
-
-              // Collect all occupants (from registrations)
-              const registeredOccupants = room.occupants.map(occ => ({
-                name: occ.attendeeName,
-                company: occ.companyName
-              }));
-
-              // Parse note to get additional names
-              const noteNames: string[] = [];
-              if (room.note && room.note.trim()) {
-                // Try to parse names from note (assuming comma-separated)
-                const parsed = room.note.split(/[,\n]/).map(n => n.trim()).filter(n => n);
-                noteNames.push(...parsed);
-              }
-
-              // Calculate how many slots to fill from note
-              const remainingSlots = room.maxOccupancy - registeredOccupants.length;
-
-              // Fill occupant columns
-              for (let i = 0; i < room.maxOccupancy; i++) {
-                if (i < registeredOccupants.length) {
-                  // From registration
-                  row.push(registeredOccupants[i].name);
-                  row.push(registeredOccupants[i].company);
-                } else if (i - registeredOccupants.length < noteNames.length) {
-                  // From note
-                  const noteIndex = i - registeredOccupants.length;
-                  row.push(noteNames[noteIndex]);
-                  row.push('(จากหมายเหตุ)');
-                } else {
-                  // Empty slot
-                  row.push('-');
-                  row.push('-');
-                }
-              }
-
-              lockedRoomsSheetData.push(row);
-            });
-
-            lockedRoomsSheetData.push([]); // Spacing between buildings
+            lockedRoomsSheetData.push(row);
           });
 
           lockedRoomsSheetData.push([]); // Spacing between note groups
@@ -1670,12 +1648,12 @@ export default function RoomManagementModal({
         // Set column widths
         const maxOccupancy = Math.max(...lockedRoomsData.map(r => r.maxOccupancy));
         const colWidths = [
+          { wch: 10 }, // อาคาร
           { wch: 12 }, // เลขห้อง
           { wch: 15 }, // จำนวนที่รับได้
         ];
         for (let i = 0; i < maxOccupancy; i++) {
-          colWidths.push({ wch: 25 }); // ผู้เข้าพัก
-          colWidths.push({ wch: 30 }); // บริษัท
+          colWidths.push({ wch: 35 }); // ผู้เข้าพัก (ชื่อ + บริษัทในคอลัมน์เดียว)
         }
         lockedRoomsWs['!cols'] = colWidths;
 
@@ -1690,7 +1668,7 @@ export default function RoomManagementModal({
             alignment: { horizontal: 'center', vertical: 'center' }
           };
           if (!lockedRoomsWs['!merges']) lockedRoomsWs['!merges'] = [];
-          const maxCol = 1 + (maxOccupancy * 2);
+          const maxCol = 2 + maxOccupancy; // อาคาร + เลขห้อง + จำนวนที่รับได้ + ผู้เข้าพัก columns
           lockedRoomsWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: maxCol } });
         }
 
@@ -1728,24 +1706,8 @@ export default function RoomManagementModal({
             lockedRoomsWs['!merges'].push({ s: { r: R, c: 0 }, e: { r: R, c: lockedRange.e.c } });
           }
 
-          // Check if this is a building header
-          if (cellValue.startsWith('อาคาร ')) {
-            for (let C = 0; C <= lockedRange.e.c; C++) {
-              const cell = XLSX.utils.encode_cell({ r: R, c: C });
-              if (lockedRoomsWs[cell]) {
-                lockedRoomsWs[cell].s = {
-                  font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } },
-                  fill: { fgColor: { rgb: 'A0522D' } },
-                  alignment: { horizontal: 'left', vertical: 'center' }
-                };
-              }
-            }
-            if (!lockedRoomsWs['!merges']) lockedRoomsWs['!merges'] = [];
-            lockedRoomsWs['!merges'].push({ s: { r: R, c: 0 }, e: { r: R, c: lockedRange.e.c } });
-          }
-
-          // Check if this is a table header row (contains "เลขห้อง")
-          if (cellValue === 'เลขห้อง') {
+          // Check if this is a table header row (contains "อาคาร" in first cell)
+          if (cellValue === 'อาคาร') {
             for (let C = 0; C <= lockedRange.e.c; C++) {
               const cell = XLSX.utils.encode_cell({ r: R, c: C });
               if (lockedRoomsWs[cell]) {
@@ -1767,7 +1729,7 @@ export default function RoomManagementModal({
           // Style data rows (rows right after header)
           if (R > 0) {
             const prevCell = lockedRoomsWs[XLSX.utils.encode_cell({ r: R - 1, c: 0 })];
-            if (prevCell && String(prevCell.v) === 'เลขห้อง') {
+            if (prevCell && String(prevCell.v) === 'อาคาร') {
               // This and subsequent rows until empty row are data rows
               let dataRow = R;
               while (dataRow <= lockedRange.e.r) {
@@ -1778,7 +1740,7 @@ export default function RoomManagementModal({
                   const cell = XLSX.utils.encode_cell({ r: dataRow, c: C });
                   if (lockedRoomsWs[cell]) {
                     lockedRoomsWs[cell].s = {
-                      alignment: { horizontal: C === 0 || C === 1 ? 'center' : 'left', vertical: 'center' },
+                      alignment: { horizontal: C <= 2 ? 'center' : 'left', vertical: 'center' }, // อาคาร, เลขห้อง, จำนวนที่รับได้ = center
                       border: {
                         top: { style: 'thin', color: { rgb: 'CCCCCC' } },
                         bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },

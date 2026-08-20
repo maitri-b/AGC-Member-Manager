@@ -653,121 +653,115 @@ export default function CarpoolManagementModal({
           {/* Tab: Carpools List */}
           {activeTab === 'carpools' && (
             <>
-              {/* Dashboard Statistics */}
+              {/* Dashboard Statistics - 5 cards in one row */}
               {!loading && !error && carpools.length > 0 && (
-                <div className="space-y-4 mb-4 sm:mb-6">
-                  {/* First Row: Original 3 cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    {/* Total Carpools */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-                        </svg>
-                        <p className="text-xs sm:text-sm font-medium text-blue-900">จำนวนรถที่ลงทะเบียน</p>
-                      </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-blue-600">{carpools.length}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                  {/* Total Carpools */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                      </svg>
+                      <p className="text-xs sm:text-sm font-medium text-blue-900">จำนวนรถที่ลงทะเบียน</p>
                     </div>
-
-                    {/* Total Unique Car Owners - คนที่มีรถ */}
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <p className="text-xs sm:text-sm font-medium text-green-900">เอเจ้นท์ที่มีรถ</p>
-                      </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-green-600">
-                        {new Set(carpools.map(c => c.ownerRegistrationId)).size}
-                      </p>
-                    </div>
-
-                    {/* Total Members */}
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                        <p className="text-xs sm:text-sm font-medium text-purple-900">สมาชิกที่ join แล้ว</p>
-                      </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-purple-600">
-                        {carpools.reduce((sum, c) => sum + c.members.length, 0)}
-                      </p>
-                    </div>
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-600">{carpools.length}</p>
                   </div>
 
-                  {/* Second Row: New 2 cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    {/* Agents who only joined (no car) */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <p className="text-xs sm:text-sm font-medium text-amber-900">เอเจ้นท์ที่ Join อย่างเดียว (ไม่มีรถ)</p>
-                      </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-amber-600">
-                        {(() => {
-                          // Get all car owner registration IDs
-                          const carOwners = new Set(carpools.map(c => c.ownerRegistrationId));
+                  {/* Total Unique Car Owners - คนที่มีรถ */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <p className="text-xs sm:text-sm font-medium text-green-900">เอเจ้นท์ที่มีรถ</p>
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-bold text-green-600">
+                      {new Set(carpools.map(c => c.ownerRegistrationId)).size}
+                    </p>
+                  </div>
 
-                          // Get all member registration IDs (who joined carpools)
-                          const memberRegIds = new Set<string>();
-                          carpools.forEach(carpool => {
-                            carpool.members.forEach(member => {
-                              if (member.registrationId) {
-                                memberRegIds.add(member.registrationId);
-                              }
-                            });
-                          });
+                  {/* Agents who only joined (no car) */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <p className="text-xs sm:text-sm font-medium text-amber-900">เอเจ้นท์ที่ Join อย่างเดียว</p>
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-bold text-amber-600">
+                      {(() => {
+                        // Get all car owner registration IDs
+                        const carOwners = new Set(carpools.map(c => c.ownerRegistrationId));
 
-                          // Count members who are NOT car owners
-                          const joinOnlyAgents = new Set<string>();
-                          memberRegIds.forEach(regId => {
-                            if (!carOwners.has(regId)) {
-                              joinOnlyAgents.add(regId);
+                        // Get all member registration IDs (who joined carpools)
+                        const memberRegIds = new Set<string>();
+                        carpools.forEach(carpool => {
+                          carpool.members.forEach(member => {
+                            if (member.registrationId) {
+                              memberRegIds.add(member.registrationId);
                             }
                           });
+                        });
 
-                          return joinOnlyAgents.size;
-                        })()}
-                      </p>
+                        // Count members who are NOT car owners
+                        const joinOnlyAgents = new Set<string>();
+                        memberRegIds.forEach(regId => {
+                          if (!carOwners.has(regId)) {
+                            joinOnlyAgents.add(regId);
+                          }
+                        });
+
+                        return joinOnlyAgents.size;
+                      })()}
+                    </p>
+                  </div>
+
+                  {/* Total Members */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      <p className="text-xs sm:text-sm font-medium text-purple-900">สมาชิกที่ join แล้ว</p>
                     </div>
+                    <p className="text-2xl sm:text-3xl font-bold text-purple-600">
+                      {carpools.reduce((sum, c) => sum + c.members.length, 0)}
+                    </p>
+                  </div>
 
-                    {/* Agents who haven't declared transportation */}
-                    <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                        </svg>
-                        <p className="text-xs sm:text-sm font-medium text-gray-900">เอเจ้นท์ที่ยังไม่แจ้งการเดินทาง</p>
-                      </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-gray-600">
-                        {(() => {
-                          // Total registrations
-                          const totalRegistrations = allRegistrations.length;
+                  {/* Agents who haven't declared transportation */}
+                  <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                      <p className="text-xs sm:text-sm font-medium text-gray-900">เอเจ้นท์ที่ยังไม่แจ้งการเดินทาง</p>
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-bold text-gray-600">
+                      {(() => {
+                        // Total registrations
+                        const totalRegistrations = allRegistrations.length;
 
-                          // Get all car owner registration IDs
-                          const carOwners = new Set(carpools.map(c => c.ownerRegistrationId));
+                        // Get all car owner registration IDs
+                        const carOwners = new Set(carpools.map(c => c.ownerRegistrationId));
 
-                          // Get all member registration IDs (who joined carpools)
-                          const memberRegIds = new Set<string>();
-                          carpools.forEach(carpool => {
-                            carpool.members.forEach(member => {
-                              if (member.registrationId) {
-                                memberRegIds.add(member.registrationId);
-                              }
-                            });
+                        // Get all member registration IDs (who joined carpools)
+                        const memberRegIds = new Set<string>();
+                        carpools.forEach(carpool => {
+                          carpool.members.forEach(member => {
+                            if (member.registrationId) {
+                              memberRegIds.add(member.registrationId);
+                            }
                           });
+                        });
 
-                          // Combine both sets (car owners + members)
-                          const agentsWithTransportation = new Set([...carOwners, ...memberRegIds]);
+                        // Combine both sets (car owners + members)
+                        const agentsWithTransportation = new Set([...carOwners, ...memberRegIds]);
 
-                          // Agents who haven't declared = Total - (car owners + members)
-                          return totalRegistrations - agentsWithTransportation.size;
-                        })()}
-                      </p>
-                    </div>
+                        // Agents who haven't declared = Total - (car owners + members)
+                        return totalRegistrations - agentsWithTransportation.size;
+                      })()}
+                    </p>
                   </div>
                 </div>
               )}

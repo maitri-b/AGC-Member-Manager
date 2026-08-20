@@ -435,6 +435,70 @@ export async function PUT(
       }
     }
 
+    // ✅ NEW: Update party table member names if attendeeNames changed
+    if (updateData.attendee_names !== undefined) {
+      try {
+        // Parse new attendee names
+        const newAttendeeNames = typeof updateData.attendee_names === 'string'
+          ? JSON.parse(updateData.attendee_names)
+          : updateData.attendee_names;
+
+        if (Array.isArray(newAttendeeNames)) {
+          // Find all party tables where this registration is a member
+          const tablesSnapshot = await db.collection('partyTables')
+            .where('eventId', '==', eventId)
+            .where('status', '==', 'active')
+            .get();
+
+          const tableUpdates: Promise<any>[] = [];
+
+          for (const tableDoc of tablesSnapshot.docs) {
+            const tableData = tableDoc.data();
+            const members = tableData.members || [];
+
+            // Check if this registration has members in this table
+            let hasUpdates = false;
+            const updatedMembers = members.map((member: any) => {
+              if (member.registrationId === registrationId && member.attendeeIndex !== undefined) {
+                const index = member.attendeeIndex;
+                const newName = newAttendeeNames[index];
+
+                if (newName !== undefined && newName !== member.name) {
+                  hasUpdates = true;
+                  return {
+                    ...member,
+                    name: newName,
+                  };
+                }
+              }
+              return member;
+            });
+
+            // Update party table if there were changes
+            if (hasUpdates) {
+              tableUpdates.push(
+                tableDoc.ref.update({
+                  members: updatedMembers,
+                  updatedAt: new Date().toISOString(),
+                })
+              );
+              console.log(`[Admin Update] Updating party table ${tableDoc.id} with new attendee names`);
+            }
+          }
+
+          // Wait for all party table updates to complete
+          if (tableUpdates.length > 0) {
+            await Promise.all(tableUpdates);
+            console.log(`[Admin Update] Updated ${tableUpdates.length} party table(s) with new attendee names`);
+          }
+        }
+      } catch (tableUpdateError) {
+        console.error('[Admin Update] Error updating party table member names:', tableUpdateError);
+        // Don't fail the request if party table update fails
+        // The registration update was successful
+      }
+    }
+
     // Log the activity
     try {
       await logRegistrationUpdate({

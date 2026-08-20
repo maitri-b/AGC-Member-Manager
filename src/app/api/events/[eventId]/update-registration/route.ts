@@ -285,6 +285,53 @@ export async function PUT(
           console.error('[Update Registration] Error updating carpool names:', carpoolError);
           // Don't fail the entire update if carpool update fails
         }
+
+        // ✅ Update names in all party tables that contain members from this registration
+        try {
+          const tablesSnapshot = await db.collection('partyTables')
+            .where('eventId', '==', eventId)
+            .where('status', '==', 'active')
+            .get();
+
+          const tableUpdates: Promise<any>[] = [];
+
+          tablesSnapshot.docs.forEach(tableDoc => {
+            const tableData = tableDoc.data();
+            const members = tableData.members || [];
+
+            // Check if any members belong to this registration
+            const hasRegistrationMembers = members.some((m: any) => m.registrationId === userReg.registrationId);
+
+            if (hasRegistrationMembers) {
+              // Update member names using attendeeIndex
+              const updatedMembers = members.map((m: any) => {
+                if (m.registrationId === userReg.registrationId && m.attendeeIndex !== undefined) {
+                  // Update name from new attendeeNames array
+                  return {
+                    ...m,
+                    name: newAttendeeNames[m.attendeeIndex] || m.name,
+                  };
+                }
+                return m;
+              });
+
+              // Update party table with new member names
+              tableUpdates.push(
+                db.collection('partyTables').doc(tableDoc.id).update({
+                  members: updatedMembers,
+                  updatedAt: new Date().toISOString(),
+                })
+              );
+            }
+          });
+
+          // Wait for all party table updates to complete
+          await Promise.all(tableUpdates);
+          console.log(`[Update Registration] Updated names in ${tableUpdates.length} party table(s)`);
+        } catch (tableError) {
+          console.error('[Update Registration] Error updating party table names:', tableError);
+          // Don't fail the entire update if party table update fails
+        }
       }
     }
 

@@ -739,8 +739,14 @@ export default function CarpoolManagementModal({
                     </div>
                     <p className="text-2xl sm:text-3xl font-bold text-gray-600">
                       {(() => {
-                        // Total registrations
-                        const totalRegistrations = allRegistrations.length;
+                        // Filter out cancelled registrations (same as admin event detail page)
+                        const activeRegistrations = allRegistrations.filter((reg: any) => {
+                          const status = String(reg.registration?.status || '').toLowerCase();
+                          const isCancelled = status === 'cancelled' || reg.registration?.status?.includes('ยกเลิก');
+                          return !isCancelled;
+                        });
+
+                        const totalRegistrations = activeRegistrations.length;
 
                         // Get all car owner registration IDs
                         const carOwners = new Set(carpools.map(c => c.ownerRegistrationId));
@@ -758,7 +764,7 @@ export default function CarpoolManagementModal({
                         // Combine both sets (car owners + members)
                         const agentsWithTransportation = new Set([...carOwners, ...memberRegIds]);
 
-                        // Agents who haven't declared = Total - (car owners + members)
+                        // Agents who haven't declared = Total active registrations - (car owners + members)
                         return totalRegistrations - agentsWithTransportation.size;
                       })()}
                     </p>

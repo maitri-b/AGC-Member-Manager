@@ -309,7 +309,7 @@ export async function PUT(
                   // Update name from new attendeeNames array
                   return {
                     ...m,
-                    name: newAttendeeNames[m.attendeeIndex] || m.name,
+                    name: attendeeNames[m.attendeeIndex] || m.name,
                   };
                 }
                 return m;

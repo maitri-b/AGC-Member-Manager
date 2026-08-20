@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 
 // GET /api/line/message-history?eventId=xxx
 export async function GET(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch message history for this event
-    const historySnapshot = await db
+    const historySnapshot = await adminDb()
       .collection('messageHistory')
       .where('eventId', '==', eventId)
       .orderBy('sentAt', 'desc')
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save message history to Firestore
-    const historyRef = await db.collection('messageHistory').add({
+    const historyRef = await adminDb().collection('messageHistory').add({
       eventId,
       subject,
       message,

@@ -6673,6 +6673,20 @@ export default function EventDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Carpool Detail Modal */}
+      {selectedCarpoolRegistration && (
+        <CarpoolDetailModal
+          isOpen={showCarpoolDetailModal}
+          onClose={() => {
+            setShowCarpoolDetailModal(false);
+            setSelectedCarpoolRegistration(null);
+          }}
+          eventId={eventId as string}
+          registrationId={selectedCarpoolRegistration.registrationId}
+          contactName={selectedCarpoolRegistration.contactName}
+        />
+      )}
     </div>
   );
 }
@@ -6819,20 +6833,6 @@ function RoomNumberWithTooltip({
             ))}
           </div>
         </div>
-      )}
-
-      {/* Carpool Detail Modal */}
-      {selectedCarpoolRegistration && (
-        <CarpoolDetailModal
-          isOpen={showCarpoolDetailModal}
-          onClose={() => {
-            setShowCarpoolDetailModal(false);
-            setSelectedCarpoolRegistration(null);
-          }}
-          eventId={eventId as string}
-          registrationId={selectedCarpoolRegistration.registrationId}
-          contactName={selectedCarpoolRegistration.contactName}
-        />
       )}
     </div>
   );

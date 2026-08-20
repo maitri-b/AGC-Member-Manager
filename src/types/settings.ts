@@ -38,6 +38,14 @@ export interface SystemSettings {
   // Message Templates (for LINE notifications)
   messageTemplates?: Record<string, string>;  // Custom templates, keyed by template type
 
+  // Saved Message Templates (for custom messages)
+  savedMessageTemplates?: Array<{
+    id: string;
+    name: string;
+    content: string;
+    createdAt: string;
+  }>;
+
   // Metadata
   updatedAt: string;
   updatedBy: string;
@@ -58,6 +66,12 @@ export interface SystemSettingsInput {
   enableLineNotifications?: boolean;
   enableSmsNotifications?: boolean;
   messageTemplates?: Record<string, string>;
+  savedMessageTemplates?: Array<{
+    id: string;
+    name: string;
+    content: string;
+    createdAt: string;
+  }>;
 }
 
 // Default settings

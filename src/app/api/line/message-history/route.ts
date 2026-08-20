@@ -14,26 +14,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch message history for this event
+    // Fetch message history for this event (without orderBy to avoid composite index)
     const historySnapshot = await adminDb()
       .collection('messageHistory')
       .where('eventId', '==', eventId)
-      .orderBy('sentAt', 'desc')
       .limit(100)
       .get();
 
-    const history = historySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        eventId: data.eventId,
-        subject: data.subject || '',
-        message: data.message || '',
-        sentAt: data.sentAt?.toDate?.()?.toISOString() || data.sentAt,
-        recipients: data.recipients || [],
-        recipientCount: (data.recipients || []).length,
-      };
-    });
+    // Map to array and sort in JavaScript
+    const history = historySnapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          eventId: data.eventId,
+          subject: data.subject || '',
+          message: data.message || '',
+          sentAt: data.sentAt?.toDate?.()?.toISOString() || data.sentAt,
+          recipients: data.recipients || [],
+          recipientCount: (data.recipients || []).length,
+        };
+      })
+      .sort((a, b) => {
+        // Sort by sentAt descending (newest first)
+        const dateA = new Date(a.sentAt).getTime();
+        const dateB = new Date(b.sentAt).getTime();
+        return dateB - dateA;
+      });
 
     return NextResponse.json({ history }, { status: 200 });
   } catch (error: any) {

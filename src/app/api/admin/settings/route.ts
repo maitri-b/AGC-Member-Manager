@@ -38,41 +38,49 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
 
+    // Get current settings first
+    const currentSettings = await getSystemSettings();
+
+    // If only updating partial settings (e.g., savedMessageTemplates), merge with current
+    const baseUrl = body.baseUrl || currentSettings.baseUrl;
+    const websiteName = body.websiteName || currentSettings.websiteName;
+
     // Validate required fields
-    if (!body.baseUrl || !body.websiteName) {
+    if (!baseUrl || !websiteName) {
       return NextResponse.json(
         { error: 'Missing required fields: baseUrl, websiteName' },
         { status: 400 }
       );
     }
 
-    // Validate URL format
-    try {
-      new URL(body.baseUrl);
-    } catch (e) {
-      return NextResponse.json(
-        { error: 'Invalid baseUrl format. Must be a valid URL (e.g., https://example.com)' },
-        { status: 400 }
-      );
+    // Validate URL format only if baseUrl is being updated
+    if (body.baseUrl) {
+      try {
+        new URL(body.baseUrl);
+      } catch (e) {
+        return NextResponse.json(
+          { error: 'Invalid baseUrl format. Must be a valid URL (e.g., https://example.com)' },
+          { status: 400 }
+        );
+      }
     }
 
-    // Get current settings to preserve messageTemplates
-    const currentSettings = await getSystemSettings();
-
     const input: SystemSettingsInput = {
-      baseUrl: body.baseUrl.trim().replace(/\/$/, ''), // Remove trailing slash
-      websiteName: body.websiteName,
-      websiteNameEN: body.websiteNameEN,
-      contactEmail: body.contactEmail,
-      contactPhone: body.contactPhone,
-      lineOfficialAccount: body.lineOfficialAccount,
-      defaultLanguage: body.defaultLanguage || 'th',
-      timezone: body.timezone || 'Asia/Bangkok',
-      enableEmailNotifications: body.enableEmailNotifications ?? false,
-      enableLineNotifications: body.enableLineNotifications ?? true,
-      enableSmsNotifications: body.enableSmsNotifications ?? false,
+      baseUrl: baseUrl.trim().replace(/\/$/, ''), // Remove trailing slash
+      websiteName: websiteName,
+      websiteNameEN: body.websiteNameEN ?? currentSettings.websiteNameEN,
+      contactEmail: body.contactEmail ?? currentSettings.contactEmail,
+      contactPhone: body.contactPhone ?? currentSettings.contactPhone,
+      lineOfficialAccount: body.lineOfficialAccount ?? currentSettings.lineOfficialAccount,
+      defaultLanguage: body.defaultLanguage ?? currentSettings.defaultLanguage ?? 'th',
+      timezone: body.timezone ?? currentSettings.timezone ?? 'Asia/Bangkok',
+      enableEmailNotifications: body.enableEmailNotifications ?? currentSettings.enableEmailNotifications ?? false,
+      enableLineNotifications: body.enableLineNotifications ?? currentSettings.enableLineNotifications ?? true,
+      enableSmsNotifications: body.enableSmsNotifications ?? currentSettings.enableSmsNotifications ?? false,
       // Preserve existing messageTemplates unless explicitly provided
       messageTemplates: body.messageTemplates ?? currentSettings.messageTemplates ?? {},
+      // Add savedMessageTemplates support
+      savedMessageTemplates: body.savedMessageTemplates ?? currentSettings.savedMessageTemplates ?? [],
     };
 
     const settings = await updateSystemSettings(input, session.user.id);

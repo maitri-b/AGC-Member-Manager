@@ -769,7 +769,10 @@ export default function EventDetailPage() {
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled'>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | string>('all');
   const [roomTypeFilter, setRoomTypeFilter] = useState<'all' | string>('all');
+  const [managementFilter, setManagementFilter] = useState<'all' | 'no-room' | 'no-carpool' | 'no-table'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [allCarpools, setAllCarpools] = useState<any[]>([]);
+  const [allPartyTables, setAllPartyTables] = useState<any[]>([]);
   const [exportLoading, setExportLoading] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
   const [recalculateLoading, setRecalculateLoading] = useState(false);
@@ -1061,6 +1064,42 @@ export default function EventDetailPage() {
       fetchAllRooms(); // Load rooms once on mount
     }
   }, [eventId]);
+
+  // Fetch carpools and party tables when management filter is used
+  useEffect(() => {
+    if (eventId && (managementFilter === 'no-carpool' || managementFilter === 'no-table')) {
+      if (managementFilter === 'no-carpool') {
+        fetchCarpools();
+      }
+      if (managementFilter === 'no-table') {
+        fetchPartyTables();
+      }
+    }
+  }, [eventId, managementFilter]);
+
+  const fetchCarpools = async () => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/carpools`);
+      if (response.ok) {
+        const data = await response.json();
+        setAllCarpools(data.carpools || []);
+      }
+    } catch (err) {
+      console.error('Error fetching carpools:', err);
+    }
+  };
+
+  const fetchPartyTables = async () => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/party-tables`);
+      if (response.ok) {
+        const data = await response.json();
+        setAllPartyTables(data.tables || []);
+      }
+    } catch (err) {
+      console.error('Error fetching party tables:', err);
+    }
+  };
 
   const fetchEventData = async () => {
     try {
@@ -2920,9 +2959,15 @@ export default function EventDetailPage() {
         // Invalid JSON, skip this attendee
       }
 
-      // Special filter: "unassigned" shows registrations with unassigned attendees (no room number assignments)
-      if (roomTypeFilter === 'unassigned') {
-        // Check room assignments instead of room allocations
+      // Check if this attendee has selected the filtered room type
+      const hasRoomType = roomAllocations.some(ra => ra.roomTypeId === roomTypeFilter && ra.roomCount > 0);
+      if (!hasRoomType) return false;
+    }
+
+    // Filter by management (other filters)
+    if (managementFilter !== 'all') {
+      if (managementFilter === 'no-room') {
+        // Show registrations with unassigned attendees (no room number assignments)
         let roomAssignments: Array<{ roomId: string; attendeeIndex: number }> = [];
         try {
           if ((attendee.registration as any).roomAssignments) {
@@ -2938,10 +2983,42 @@ export default function EventDetailPage() {
 
         // Only show if there are unassigned attendees
         if (!hasUnassigned) return false;
-      } else {
-        // Check if this attendee has selected the filtered room type
-        const hasRoomType = roomAllocations.some(ra => ra.roomTypeId === roomTypeFilter && ra.roomCount > 0);
-        if (!hasRoomType) return false;
+      } else if (managementFilter === 'no-carpool') {
+        // Show agents who haven't registered a car and haven't joined any carpool
+        const registrationId = attendee.registration.registrationId;
+
+        // Check if this registration is a car owner
+        const isCarOwner = allCarpools.some(carpool =>
+          carpool.ownerRegistrationId === registrationId
+        );
+
+        // Check if any member from this registration has joined a carpool
+        const hasJoinedCarpool = allCarpools.some(carpool =>
+          carpool.members?.some((member: any) =>
+            member.registrationId === registrationId
+          )
+        );
+
+        // Only show if they haven't registered a car AND haven't joined
+        if (isCarOwner || hasJoinedCarpool) return false;
+      } else if (managementFilter === 'no-table') {
+        // Show registrations with attendees who don't have table assignments
+        const registrationId = attendee.registration.registrationId;
+        const attendeeCount = attendee.registration.attendeeCount || 1;
+
+        // Count how many attendees from this registration are in party tables
+        let assignedAttendeeCount = 0;
+        allPartyTables.forEach(table => {
+          if (table.members) {
+            const membersFromThisReg = table.members.filter((m: any) =>
+              m.registrationId === registrationId
+            );
+            assignedAttendeeCount += membersFromThisReg.length;
+          }
+        });
+
+        // Only show if not all attendees have been assigned to tables
+        if (assignedAttendeeCount >= attendeeCount) return false;
       }
     }
 
@@ -3380,7 +3457,7 @@ export default function EventDetailPage() {
             </div>
 
             {/* Filter Dropdowns - arranged in a row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Registration Status Filter */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-2">สถานะการลงทะเบียน</label>
@@ -3463,20 +3540,18 @@ export default function EventDetailPage() {
                 </select>
               </div>
 
-              {/* Room Type Filter - Only show if event has room types configured */}
-              {eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0 && (
-                <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">ประเภทการใช้ห้อง</label>
+              {/* Management Filter - Other management tasks */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">การจัดการอื่นๆ</label>
                 <select
-                  value={roomTypeFilter}
-                  onChange={(e) => setRoomTypeFilter(e.target.value)}
+                  value={managementFilter}
+                  onChange={(e) => setManagementFilter(e.target.value as 'all' | 'no-room' | 'no-carpool' | 'no-table')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="all">ทั้งหมด</option>
 
-                  {/* Unassigned Room Option */}
-                  {(() => {
-                    // Count registrations with no room allocations
+                  {/* No Room Assignment - moved from room type filter */}
+                  {eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0 && (() => {
                     const unassignedCount = eventData.attendees.reduce((count, attendee) => {
                       // Check if registration is cancelled
                       const status = String(attendee.registration.status || '').toLowerCase();
@@ -3537,11 +3612,30 @@ export default function EventDetailPage() {
                     }, 0);
 
                     return (
-                      <option value="unassigned">
+                      <option value="no-room">
                         ยังไม่ระบุห้อง ({unassignedCount})
                       </option>
                     );
                   })()}
+
+                  {/* No Carpool - agents who haven't registered car and haven't joined */}
+                  <option value="no-carpool">ยังไม่ลงทะเบียนรถยนต์</option>
+
+                  {/* No Table - registrations with attendees who don't have table numbers */}
+                  <option value="no-table">ยังไม่มีเลขโต๊ะ/ไม่ครบ</option>
+                </select>
+              </div>
+
+              {/* Room Type Filter - Only show if event has room types configured */}
+              {eventData?.event?.roomTypes && eventData.event.roomTypes.length > 0 && (
+                <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">ประเภทการใช้ห้อง</label>
+                <select
+                  value={roomTypeFilter}
+                  onChange={(e) => setRoomTypeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">ทั้งหมด</option>
 
                   {eventData.event.roomTypes
                     .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
@@ -3622,7 +3716,7 @@ export default function EventDetailPage() {
         </div>
 
         {/* Filter Navigator - Active Filters Display */}
-        {(searchTerm || filter !== 'all' || paymentFilter !== 'all' || roomTypeFilter !== 'all') && (
+        {(searchTerm || filter !== 'all' || paymentFilter !== 'all' || roomTypeFilter !== 'all' || managementFilter !== 'all') && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
@@ -3689,23 +3783,41 @@ export default function EventDetailPage() {
                     </div>
                   )}
 
+                  {/* Management Filter Chip */}
+                  {managementFilter !== 'all' && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-300 rounded-full text-sm">
+                      <span className="text-gray-700">การจัดการอื่นๆ:</span>
+                      <span className="font-medium text-gray-900">
+                        {managementFilter === 'no-room' ? 'ยังไม่ระบุห้อง' :
+                         managementFilter === 'no-carpool' ? 'ยังไม่ลงทะเบียนรถยนต์' :
+                         managementFilter === 'no-table' ? 'ยังไม่มีเลขโต๊ะ/ไม่ครบ' : ''}
+                      </span>
+                      <button
+                        onClick={() => setManagementFilter('all')}
+                        className="ml-1 text-gray-400 hover:text-gray-600 transition-colors"
+                        title="ล้างตัวกรอง"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+
                   {/* Room Type Chip */}
                   {roomTypeFilter !== 'all' && eventData?.event?.roomTypes && (
                     <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-300 rounded-full text-sm">
                       <span className="text-gray-700">ประเภทการใช้ห้อง:</span>
                       <span className="font-medium text-gray-900">
-                        {roomTypeFilter === 'unassigned'
-                          ? 'ยังไม่ระบุห้อง'
-                          : (() => {
-                              const selectedRoomType = eventData.event.roomTypes.find((rt: any) => rt.typeId === roomTypeFilter);
-                              if (selectedRoomType) {
-                                return selectedRoomType.isActive
-                                  ? selectedRoomType.typeName
-                                  : `${selectedRoomType.typeName} (ปิดใช้งาน)`;
-                              }
-                              return roomTypeFilter;
-                            })()
-                        }
+                        {(() => {
+                          const selectedRoomType = eventData.event.roomTypes.find((rt: any) => rt.typeId === roomTypeFilter);
+                          if (selectedRoomType) {
+                            return selectedRoomType.isActive
+                              ? selectedRoomType.typeName
+                              : `${selectedRoomType.typeName} (ปิดใช้งาน)`;
+                          }
+                          return roomTypeFilter;
+                        })()}
                       </span>
                       <button
                         onClick={() => setRoomTypeFilter('all')}
@@ -3728,6 +3840,7 @@ export default function EventDetailPage() {
                   setFilter('all');
                   setPaymentFilter('all');
                   setRoomTypeFilter('all');
+                  setManagementFilter('all');
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                 title="ล้างตัวกรองทั้งหมด"

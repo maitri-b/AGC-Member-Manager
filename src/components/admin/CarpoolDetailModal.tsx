@@ -74,7 +74,7 @@ export default function CarpoolDetailModal({
           carpoolId: foundCarpool.carpoolId,
           licensePlate: foundCarpool.licensePlate || 'ไม่ระบุ',
           ownerRegistrationId: foundCarpool.ownerRegistrationId,
-          ownerName: foundCarpool.ownerName || 'ไม่ระบุ',
+          ownerName: foundCarpool.ownerContactName || 'ไม่ระบุ',
           capacity: foundCarpool.capacity || 0,
           members: foundCarpool.members || [],
         });

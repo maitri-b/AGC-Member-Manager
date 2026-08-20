@@ -19,6 +19,7 @@ import CarpoolManagementModal from '@/components/admin/CarpoolManagementModal';
 import PartyTableManagementModal from '@/components/admin/PartyTableManagementModal';
 import CarNumberAssignmentModal from '@/components/admin/CarNumberAssignmentModal';
 import AdminCancellationModal from '@/components/admin/AdminCancellationModal';
+import CarpoolDetailModal from '@/components/admin/CarpoolDetailModal';
 import { Event as EventType, EventRegistration, CancellationPolicy } from '@/types/event';
 
 interface Event {
@@ -782,6 +783,11 @@ export default function EventDetailPage() {
   const [showCarpoolManagementModal, setShowCarpoolManagementModal] = useState(false);
   const [showPartyTableManagementModal, setShowPartyTableManagementModal] = useState(false);
   const [showCarNumberAssignmentModal, setShowCarNumberAssignmentModal] = useState(false);
+  const [showCarpoolDetailModal, setShowCarpoolDetailModal] = useState(false);
+  const [selectedCarpoolRegistration, setSelectedCarpoolRegistration] = useState<{
+    registrationId: string;
+    contactName: string;
+  } | null>(null);
   const [editingRegistration, setEditingRegistration] = useState<string | null>(null);
   const [originalAttendeeCount, setOriginalAttendeeCount] = useState<number>(1); // Track original count for validation
   const [editFormData, setEditFormData] = useState<{
@@ -4127,30 +4133,46 @@ export default function EventDetailPage() {
 
                         {/* Carpool Registration Badge */}
                         {eventData?.event?.hasCarpoolFeature && !isCancelled && attendee.hasRegisteredCarpool && (
-                          <span
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 cursor-help sm:gap-1"
-                            title="ลงทะเบียนรถยนต์แล้ว"
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCarpoolRegistration({
+                                registrationId: attendee.registration.registrationId,
+                                contactName: attendee.registration.contactName,
+                              });
+                              setShowCarpoolDetailModal(true);
+                            }}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors cursor-pointer sm:gap-1"
+                            title="คลิกเพื่อดูรายละเอียดรถที่ลงทะเบียน"
                           >
                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                               <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
                               <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
                             </svg>
                             <span className="hidden sm:inline">ลงทะเบียนรถ</span>
-                          </span>
+                          </button>
                         )}
 
                         {/* Carpool Join Badge */}
                         {eventData?.event?.hasCarpoolFeature && !isCancelled && attendee.hasJoinedCarpool && (
-                          <span
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800 cursor-help sm:gap-1"
-                            title="เข้าร่วมรถของเอเจ้นท์อื่น"
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCarpoolRegistration({
+                                registrationId: attendee.registration.registrationId,
+                                contactName: attendee.registration.contactName,
+                              });
+                              setShowCarpoolDetailModal(true);
+                            }}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800 hover:bg-pink-200 transition-colors cursor-pointer sm:gap-1"
+                            title="คลิกเพื่อดูรายละเอียดรถที่เข้าร่วม"
                           >
                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                               <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
                               <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
                             </svg>
                             <span className="hidden sm:inline">Join รถ</span>
-                          </span>
+                          </button>
                         )}
                       </div>
 
@@ -6796,6 +6818,20 @@ function RoomNumberWithTooltip({
             ))}
           </div>
         </div>
+      )}
+
+      {/* Carpool Detail Modal */}
+      {selectedCarpoolRegistration && (
+        <CarpoolDetailModal
+          isOpen={showCarpoolDetailModal}
+          onClose={() => {
+            setShowCarpoolDetailModal(false);
+            setSelectedCarpoolRegistration(null);
+          }}
+          eventId={eventId as string}
+          registrationId={selectedCarpoolRegistration.registrationId}
+          contactName={selectedCarpoolRegistration.contactName}
+        />
       )}
     </div>
   );

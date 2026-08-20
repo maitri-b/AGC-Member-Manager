@@ -13,7 +13,6 @@ import { calculateRegistrationFee } from '@/types/event';
 import { formatThaiDateTime, formatEventDateRange } from '@/lib/date-utils';
 import RegisterOnBehalfModal from './RegisterOnBehalfModal';
 import PaymentDetailsModal from '@/components/admin/PaymentDetailsModal';
-import PromoteEventModal from '@/components/admin/PromoteEventModal';
 import MessageTemplateModal from '@/components/admin/MessageTemplateModal';
 import RoomManagementModal from '@/components/admin/RoomManagementModal';
 import CarpoolManagementModal from '@/components/admin/CarpoolManagementModal';
@@ -779,7 +778,6 @@ export default function EventDetailPage() {
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedRegistrations, setExpandedRegistrations] = useState<Set<string>>(new Set());
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [showRoomManagementModal, setShowRoomManagementModal] = useState(false);
   const [showCarpoolManagementModal, setShowCarpoolManagementModal] = useState(false);
   const [showPartyTableManagementModal, setShowPartyTableManagementModal] = useState(false);
@@ -3212,18 +3210,6 @@ export default function EventDetailPage() {
                 <span className="hidden sm:inline">
                   แจ้งชำระเงิน ({selectedRegistrationsForMessage.size})
                 </span>
-              </button>
-
-              {/* Send LINE Message Button */}
-              <button
-                onClick={() => setShowPromoteModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
-                title="ส่งข้อความ LINE ถึงสมาชิก"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                <span className="hidden sm:inline">ส่งข้อความ LINE</span>
               </button>
 
               {/* Room Management Button */}
@@ -6462,25 +6448,6 @@ export default function EventDetailPage() {
         roomTypes={eventData?.event?.roomTypes}
         requireAttendeeNames={eventData?.event?.requireAttendeeNames ?? true}
         onSuccess={fetchEventData}
-      />
-
-      {/* Promote Event Modal */}
-      <PromoteEventModal
-        isOpen={showPromoteModal}
-        onClose={() => setShowPromoteModal(false)}
-        eventId={eventId as string}
-        eventName={eventData?.event?.eventName || ''}
-        eventDescription={eventData?.event?.description || ''}
-        registeredMembers={
-          eventData?.attendees
-            .filter(a => a.registration.lineUserId && a.registration.status !== 'cancelled')
-            .map(a => ({
-              lineUserId: a.registration.lineUserId,
-              contactName: a.registration.contactName,
-              companyName: a.registration.companyName,
-              lineDisplayName: a.lineProfile?.lineDisplayName,
-            })) || []
-        }
       />
 
       {/* Room Management Modal */}

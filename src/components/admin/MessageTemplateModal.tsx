@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { EventRegistration, Event } from '@/types/event';
 import {
   MessageTemplateType,
@@ -69,6 +69,9 @@ export default function MessageTemplateModal({
   const [messageHistory, setMessageHistory] = useState<MessageHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+
+  // Textarea ref for cursor position
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch base URL and custom templates from settings on mount
   useEffect(() => {
@@ -171,6 +174,33 @@ export default function MessageTemplateModal({
   const handleTemplateChange = (templateType: MessageTemplateType) => {
     setSelectedTemplate(templateType);
     updateMessageFromTemplate(templateType);
+  };
+
+  // Insert personalize tag at cursor position
+  const insertTag = (tag: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = customContent;
+
+    // Insert tag at cursor position
+    const newText = text.substring(0, start) + tag + text.substring(end);
+
+    // Check max length
+    if (newText.length > 1000) {
+      toast.error('ข้อความยาวเกิน 1,000 ตัวอักษร');
+      return;
+    }
+
+    setCustomContent(newText);
+
+    // Set cursor position after the inserted tag
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + tag.length, start + tag.length);
+    }, 0);
   };
 
   const handleSaveTemplate = async () => {
@@ -564,16 +594,80 @@ export default function MessageTemplateModal({
                     {customContent.length} / 1,000 ตัวอักษร
                   </span>
                 </div>
+
+                {/* Personalize Tag Buttons */}
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <span className="text-xs text-gray-600 font-medium mr-2 flex items-center">
+                    แทรก Personalize:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => insertTag('{{memberName}}')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-md hover:bg-blue-100 border border-blue-200 transition-colors"
+                    title="แทรกชื่อสมาชิก"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    ชื่อสมาชิก
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertTag('{{companyName}}')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-md hover:bg-green-100 border border-green-200 transition-colors"
+                    title="แทรกชื่อบริษัท"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    ชื่อบริษัท
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertTag('{{eventName}}')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-md hover:bg-purple-100 border border-purple-200 transition-colors"
+                    title="แทรกชื่อกิจกรรม"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    ชื่อกิจกรรม
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertTag('{{registrationId}}')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-md hover:bg-amber-100 border border-amber-200 transition-colors"
+                    title="แทรกรหัสการลงทะเบียน"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                    </svg>
+                    รหัสลงทะเบียน
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertTag('{{attendeeCount}}')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-50 text-pink-700 text-xs font-medium rounded-md hover:bg-pink-100 border border-pink-200 transition-colors"
+                    title="แทรกจำนวนผู้เข้าร่วม"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    จำนวนผู้เข้าร่วม
+                  </button>
+                </div>
+
                 <textarea
+                  ref={textareaRef}
                   value={customContent}
                   onChange={(e) => setCustomContent(e.target.value.slice(0, 1000))}
                   rows={12}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                  placeholder="พิมพ์ข้อความที่ต้องการส่ง... ใช้ {{memberName}}, {{companyName}}, {{eventName}}, {{registrationId}}, {{attendeeCount}} เพื่อ personalize"
+                  placeholder="พิมพ์ข้อความที่ต้องการส่ง... หรือใช้ปุ่มด้านบนเพื่อแทรก personalize tags"
                 />
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-xs text-gray-500">
-                    💡 ใช้ {'{{'} และ {'}}'}  เพื่อใส่ตัวแปร - ระบบจะแทนค่าสำหรับแต่ละคนอัตโนมัติ
+                    💡 กดปุ่มด้านบนเพื่อแทรก personalize tags - ระบบจะแทนค่าสำหรับแต่ละคนอัตโนมัติ
                   </p>
                   <button
                     onClick={() => setShowSaveDialog(true)}

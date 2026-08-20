@@ -11,6 +11,7 @@ import { CarpoolSettings } from '@/types/carpool';
 import { PartyTableSettings } from '@/types/partyTable';
 import { formatEventDateRange } from '@/lib/date-utils';
 import CancellationPolicySettings from '@/components/admin/CancellationPolicySettings';
+import PromoteEventModal from '@/components/admin/PromoteEventModal';
 
 interface BankAccount {
   id: string;
@@ -321,6 +322,10 @@ export default function AdminEventsPage() {
   const [deadlineChangeType, setDeadlineChangeType] = useState<'full' | 'deposit' | 'remaining' | null>(null);
   const [applyToExisting, setApplyToExisting] = useState<'new_only' | 'all'>('new_only');
   const [pendingRegistrationsCount, setPendingRegistrationsCount] = useState(0);
+
+  // Promote Event Modal state
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [promotingEvent, setPromotingEvent] = useState<Event | null>(null);
   const [originalDeadlines, setOriginalDeadlines] = useState<{
     paymentDeadlineType: string;
     paymentDeadlineFixed: string;
@@ -1390,6 +1395,22 @@ export default function AdminEventsPage() {
                       </svg>
                       จัดการรายชื่อ
                     </Link>
+
+                    {/* Promote Event Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPromotingEvent(event);
+                        setShowPromoteModal(true);
+                      }}
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                      title="ส่งข้อความประชาสัมพันธ์"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      ส่งข้อความประชาสัมพันธ์
+                    </button>
 
                     {/* Secondary: More Options Dropdown */}
                     <div className="relative dropdown-container">
@@ -3204,6 +3225,20 @@ export default function AdminEventsPage() {
             />
           </div>
         </div>
+      )}
+
+      {/* Promote Event Modal */}
+      {promotingEvent && (
+        <PromoteEventModal
+          isOpen={showPromoteModal}
+          onClose={() => {
+            setShowPromoteModal(false);
+            setPromotingEvent(null);
+          }}
+          eventId={promotingEvent.eventId}
+          eventName={promotingEvent.eventName}
+          eventDescription={promotingEvent.description}
+        />
       )}
     </div>
   );

@@ -783,6 +783,7 @@ export default function EventDetailPage() {
   const [showCarpoolManagementModal, setShowCarpoolManagementModal] = useState(false);
   const [showPartyTableManagementModal, setShowPartyTableManagementModal] = useState(false);
   const [showCarNumberAssignmentModal, setShowCarNumberAssignmentModal] = useState(false);
+  // Carpool detail modal state
   const [showCarpoolDetailModal, setShowCarpoolDetailModal] = useState(false);
   const [selectedCarpoolRegistration, setSelectedCarpoolRegistration] = useState<{
     registrationId: string;

@@ -596,7 +596,7 @@ export default function CarpoolManagementModal({
       carpools.forEach((carpool, index) => {
         const totalMembers = carpool.members.length + 1; // +1 for owner
         const seatsUsed = totalMembers;
-        const seatsAvailable = carpool.capacity - seatsUsed;
+        const seatsAvailable = (carpool.capacity || 0) - seatsUsed;
 
         // Owner row
         exportData.push({

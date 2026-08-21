@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Carpool, CarpoolMember } from '@/types/carpool';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 interface CarpoolManagementModalProps {
   isOpen: boolean;

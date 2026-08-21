@@ -6,7 +6,7 @@ import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { formatDeadline, getTimeRemaining } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass } from '@/lib/payment-status';
 import { calculateRegistrationFee } from '@/types/event';

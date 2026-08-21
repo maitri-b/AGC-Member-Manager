@@ -363,6 +363,14 @@ export default function MessageTemplateModal({
       // Upload image if file is selected
       let uploadedImageUrl = imageUrl;
       if (imageFile) {
+        // Ask user to upload image to their own hosting and provide URL instead
+        toast.error('กรุณาอัปโหลดรูปภาพไปที่ hosting service (เช่น Google Drive, Dropbox, หรือ hosting อื่น) แล้วใส่ URL รูปภาพแทน เนื่องจากระบบอัปโหลดอัตโนมัติมีข้อจำกัด', {
+          duration: 8000,
+        });
+        setIsSending(false);
+        return;
+
+        /* Temporarily disabled - Imgur rate limit issue
         const formData = new FormData();
         formData.append('image', imageFile);
 
@@ -372,13 +380,16 @@ export default function MessageTemplateModal({
         });
 
         if (!uploadResponse.ok) {
-          toast.error('ไม่สามารถอัปโหลดรูปภาพได้');
+          const errorData = await uploadResponse.json();
+          console.error('Upload error:', errorData);
+          toast.error('ไม่สามารถอัปโหลดรูปภาพได้ กรุณาใช้ URL รูปภาพแทน');
           setIsSending(false);
           return;
         }
 
         const uploadResult = await uploadResponse.json();
         uploadedImageUrl = uploadResult.url;
+        */
       }
 
       const results = await Promise.allSettled(

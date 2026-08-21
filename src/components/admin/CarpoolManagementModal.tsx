@@ -596,13 +596,21 @@ export default function CarpoolManagementModal({
       carpools.forEach((carpool, carpoolIndex) => {
         // Add all members in this carpool (owner is already in members list)
         carpool.members.forEach((member, memberIndex) => {
+          // Find registration data for this member
+          const registration = allRegistrations.find(
+            (reg: any) => reg.registration.registrationId === member.registrationId
+          );
+
+          const regData = registration?.registration || {};
+
           exportData.push({
             'ลำดับ': carpoolIndex + 1,
             'เลขรถ': carpool.assignedCarNumber || '-',
             'ทะเบียนรถ': carpool.licensePlate || 'ไม่ระบุ',
-            'ชื่อบริษัท': carpool.ownerCompanyName || '-',
-            'ผู้ติดต่อ': carpool.ownerContactName || '-',
-            'เบอร์โทร': carpool.ownerContactPhone || '-',
+            'ชื่อบริษัท': regData.companyName || '-',
+            'ผู้ติดต่อ': regData.contactName || '-',
+            'ชื่อ LINE': registration?.lineDisplayName || '-',
+            'เบอร์โทร': regData.contactPhone || '-',
             'รหัสลงทะเบียน': member.registrationId || '-',
             'ชื่อสมาชิก': member.name || '-',
           });
@@ -614,7 +622,7 @@ export default function CarpoolManagementModal({
 
       // Apply styling
       let currentRow = 1; // Start after header
-      const totalColumns = 8; // Reduced from 12
+      const totalColumns = 9; // Updated from 8 (added LINE name column)
 
       carpools.forEach((carpool, carpoolIndex) => {
         const isEvenCarpool = carpoolIndex % 2 === 0;
@@ -671,13 +679,14 @@ export default function CarpoolManagementModal({
         };
       }
 
-      // Set column widths (8 columns now)
+      // Set column widths (9 columns now)
       ws['!cols'] = [
         { wch: 8 },  // ลำดับ
         { wch: 10 }, // เลขรถ
         { wch: 15 }, // ทะเบียนรถ
         { wch: 30 }, // ชื่อบริษัท
         { wch: 25 }, // ผู้ติดต่อ
+        { wch: 20 }, // ชื่อ LINE
         { wch: 15 }, // เบอร์โทร
         { wch: 18 }, // รหัสลงทะเบียน
         { wch: 25 }, // ชื่อสมาชิก

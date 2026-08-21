@@ -597,11 +597,12 @@ export default function CarpoolManagementModal({
         // Add all members in this carpool (owner is already in members list)
         carpool.members.forEach((member, memberIndex) => {
           // Find registration data for this member
-          const registration = allRegistrations.find(
+          const attendee = allRegistrations.find(
             (reg: any) => reg.registration.registrationId === member.registrationId
           );
 
-          const regData = registration?.registration || {};
+          const regData = attendee?.registration || {};
+          const lineProfile = attendee?.lineProfile || null;
 
           exportData.push({
             'ลำดับ': carpoolIndex + 1,
@@ -609,7 +610,7 @@ export default function CarpoolManagementModal({
             'ทะเบียนรถ': carpool.licensePlate || 'ไม่ระบุ',
             'ชื่อบริษัท': regData.companyName || '-',
             'ผู้ติดต่อ': regData.contactName || '-',
-            'ชื่อ LINE': registration?.lineDisplayName || '-',
+            'ชื่อ LINE': lineProfile?.lineDisplayName || '-',
             'เบอร์โทร': regData.contactPhone || '-',
             'รหัสลงทะเบียน': member.registrationId || '-',
             'ชื่อสมาชิก': member.name || '-',

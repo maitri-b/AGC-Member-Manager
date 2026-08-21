@@ -6,6 +6,7 @@ import { Member, parseLicenseExpiryDate, parseThaiDate, formatThaiDate, formatTh
 import { Toast, useToast } from '@/components/Toast';
 import { hasPermission } from '@/lib/permissions';
 import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
+import Pagination from '@/components/Pagination';
 
 // Extended Member type with LINE profile from Firestore
 interface MemberWithProfile extends Member {
@@ -1358,6 +1359,10 @@ export default function MembersPage() {
   // Pending contacts map - tracks members with pending contact requests
   const [pendingContactsMap, setPendingContactsMap] = useState<Record<string, number>>({});
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(100);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
@@ -1608,6 +1613,23 @@ export default function MembersPage() {
       return numB - numA; // descending (high to low)
     });
   }, [allMembers, search, filterStatus, filterLineStatus, filterExpiry, filterVerified, filterActivity, attendanceMap]);
+
+  // Paginated members - slice the filtered results based on current page
+  const paginatedMembers = useMemo(() => {
+    if (itemsPerPage === -1) {
+      // Show all items
+      return filteredMembers;
+    }
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredMembers.slice(startIndex, endIndex);
+  }, [filteredMembers, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStatus, filterLineStatus, filterExpiry, filterVerified, filterActivity]);
 
   const handleClearFilters = () => {
     setSearch('');
@@ -2076,7 +2098,7 @@ export default function MembersPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredMembers.map((member) => (
+                    {paginatedMembers.map((member) => (
                       <tr key={member.memberId} className="hover:bg-gray-50">
                         <td className="px-2 py-2 text-center">
                           <div className="flex items-center justify-center gap-1">
@@ -2347,7 +2369,7 @@ export default function MembersPage() {
 
               {/* Mobile Card View - Hidden on Desktop */}
               <div className="md:hidden divide-y divide-gray-200">
-                {filteredMembers.map((member) => (
+                {paginatedMembers.map((member) => (
                   <div key={member.memberId} className="p-3 hover:bg-gray-50">
                     {/* Header Row */}
                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -2572,6 +2594,15 @@ export default function MembersPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Pagination */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredMembers.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+              />
             </>
           )}
         </div>

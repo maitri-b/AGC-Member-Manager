@@ -194,9 +194,9 @@ export default function MessageTemplateModal({
     // Insert tag at cursor position
     const newText = text.substring(0, start) + tag + text.substring(end);
 
-    // Check max length
-    if (newText.length > 1000) {
-      toast.error('ข้อความยาวเกิน 1,000 ตัวอักษร');
+    // Check max length (LINE supports up to 5000 characters)
+    if (newText.length > 5000) {
+      toast.error('ข้อความยาวเกิน 5,000 ตัวอักษร');
       return;
     }
 
@@ -675,8 +675,8 @@ export default function MessageTemplateModal({
                   <label className="block text-sm font-medium text-gray-700">
                     ข้อความ:
                   </label>
-                  <span className="text-xs text-gray-500">
-                    {customContent.length} / 1,000 ตัวอักษร
+                  <span className={`text-xs ${customContent.length > 4500 ? 'text-red-600 font-medium' : customContent.length > 4000 ? 'text-orange-600' : 'text-gray-500'}`}>
+                    {customContent.length} / 5,000 ตัวอักษร
                   </span>
                 </div>
 
@@ -745,10 +745,10 @@ export default function MessageTemplateModal({
                 <textarea
                   ref={textareaRef}
                   value={customContent}
-                  onChange={(e) => setCustomContent(e.target.value.slice(0, 1000))}
+                  onChange={(e) => setCustomContent(e.target.value.slice(0, 5000))}
                   rows={12}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                  placeholder="พิมพ์ข้อความที่ต้องการส่ง... หรือใช้ปุ่มด้านบนเพื่อแทรก personalize tags"
+                  placeholder="พิมพ์ข้อความที่ต้องการส่ง... หรือใช้ปุ่มด้านบนเพื่อแทรก personalize tags (สูงสุด 5,000 ตัวอักษร)"
                 />
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-xs text-gray-500">

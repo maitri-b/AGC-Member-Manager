@@ -5095,6 +5095,13 @@ export default function EventDetailPage() {
 
                     setJoining(true);
                     try {
+                      // Validate lineUserId
+                      const lineUserId = session?.user?.lineUserId || session?.user?.id;
+                      if (!lineUserId) {
+                        toast.error('ไม่พบข้อมูล LINE User ID กรุณาลองออกจากระบบและเข้าสู่ระบบใหม่');
+                        return;
+                      }
+
                       // Parse attendee names
                       let names: string[] = [];
                       try {
@@ -5107,10 +5114,12 @@ export default function EventDetailPage() {
                       // Build members array
                       const membersToAdd = selectedMembersToJoin.map(index => ({
                         registrationId: userRegistration.registrationId,
-                        lineUserId: session?.user?.lineUserId || '',
+                        lineUserId: lineUserId,
                         name: names[index] || '',
                         attendeeIndex: index,  // Store index as stable identifier
                       }));
+
+                      console.log('Joining carpool with members:', membersToAdd);
 
                       const response = await fetch(`/api/carpools/${joinSearchedCarpool.carpoolId}/add-members`, {
                         method: 'POST',
@@ -5119,7 +5128,9 @@ export default function EventDetailPage() {
                       });
 
                       if (!response.ok) {
-                        throw new Error('Failed to join carpool');
+                        const errorData = await response.json();
+                        console.error('API Error:', errorData);
+                        throw new Error(errorData.error || errorData.details || 'Failed to join carpool');
                       }
 
                       toast.success('เข้าร่วม Carpool สำเร็จ!');
@@ -5133,7 +5144,8 @@ export default function EventDetailPage() {
                       await fetchAllCarpools();
                     } catch (err) {
                       console.error('Error joining carpool:', err);
-                      toast.error('เกิดข้อผิดพลาดในการเข้าร่วม Carpool');
+                      const errorMessage = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการเข้าร่วม Carpool';
+                      toast.error(errorMessage);
                     } finally {
                       setJoining(false);
                     }
@@ -5314,6 +5326,13 @@ export default function EventDetailPage() {
 
                     setJoining(true);
                     try {
+                      // Validate lineUserId
+                      const lineUserId = session?.user?.lineUserId || session?.user?.id;
+                      if (!lineUserId) {
+                        toast.error('ไม่พบข้อมูล LINE User ID กรุณาลองออกจากระบบและเข้าสู่ระบบใหม่');
+                        return;
+                      }
+
                       // Parse attendee names
                       let names: string[] = [];
                       try {
@@ -5326,10 +5345,12 @@ export default function EventDetailPage() {
                       // Build members array
                       const membersToAdd = selectedMembersForOwnCarpool.map(index => ({
                         registrationId: userRegistration.registrationId,
-                        lineUserId: session?.user?.lineUserId || '',
+                        lineUserId: lineUserId,
                         name: names[index] || '',
                         attendeeIndex: index,
                       }));
+
+                      console.log('Joining own carpool with members:', membersToAdd);
 
                       const response = await fetch(`/api/carpools/${selectedCarpoolToJoin}/add-members`, {
                         method: 'POST',
@@ -5338,7 +5359,9 @@ export default function EventDetailPage() {
                       });
 
                       if (!response.ok) {
-                        throw new Error('Failed to join carpool');
+                        const errorData = await response.json();
+                        console.error('API Error:', errorData);
+                        throw new Error(errorData.error || errorData.details || 'Failed to join carpool');
                       }
 
                       toast.success('เข้าร่วม Carpool สำเร็จ!');
@@ -5351,7 +5374,8 @@ export default function EventDetailPage() {
                       await fetchAllCarpools();
                     } catch (err) {
                       console.error('Error joining carpool:', err);
-                      toast.error('เกิดข้อผิดพลาดในการเข้าร่วม Carpool');
+                      const errorMessage = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการเข้าร่วม Carpool';
+                      toast.error(errorMessage);
                     } finally {
                       setJoining(false);
                     }

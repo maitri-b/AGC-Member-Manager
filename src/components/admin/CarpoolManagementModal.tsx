@@ -851,7 +851,7 @@ export default function CarpoolManagementModal({
                       <p className="text-xs sm:text-sm font-medium text-purple-900">สมาชิกที่ join แล้ว</p>
                     </div>
                     <p className="text-2xl sm:text-3xl font-bold text-purple-600">
-                      {carpools.reduce((sum, c) => sum + Math.max(0, c.members.length - 1), 0)}
+                      {carpools.reduce((sum, c) => sum + c.members.length, 0)}
                     </p>
                   </div>
 
@@ -1033,7 +1033,7 @@ export default function CarpoolManagementModal({
                           <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-600">
                             <span>รหัส: {carpool.ownerRegistrationId}</span>
                             <span className="text-gray-400">•</span>
-                            <span className="font-medium text-blue-600">{Math.max(0, carpool.members.length - 1)} ผู้ร่วมรถ</span>
+                            <span className="font-medium text-blue-600">{carpool.members.length} คน</span>
                           </div>
 
                           {/* Action buttons */}
@@ -1081,8 +1081,8 @@ export default function CarpoolManagementModal({
                               </button>
                             </div>
 
-                            {carpool.members.length <= 1 ? (
-                              <p className="text-sm text-gray-500 italic">ยังไม่มีผู้ร่วมรถ (มีแค่เจ้าของรถ)</p>
+                            {carpool.members.length === 0 ? (
+                              <p className="text-sm text-gray-500 italic">ยังไม่มีสมาชิก</p>
                             ) : (
                               <div className="space-y-2">
                                 {carpool.members.map((member, index) => {
@@ -1851,7 +1851,7 @@ export default function CarpoolManagementModal({
                           🚗 {carpool.licensePlate}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {carpool.ownerCompanyName} • {Math.max(0, carpool.members.length - 1)} ผู้ร่วมรถ
+                          {carpool.ownerCompanyName} • {carpool.members.length} คน
                         </p>
                       </div>
                     </label>

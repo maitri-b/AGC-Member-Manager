@@ -57,10 +57,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Make file publicly accessible
-    await fileRef.makePublic();
-
-    // Get public URL
+    // Get public URL (bucket already has uniform bucket-level access enabled)
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 
     return NextResponse.json({

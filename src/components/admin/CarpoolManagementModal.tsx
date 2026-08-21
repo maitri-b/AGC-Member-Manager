@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Carpool, CarpoolMember } from '@/types/carpool';
+import * as XLSX from 'xlsx';
 
 interface CarpoolManagementModalProps {
   isOpen: boolean;
@@ -99,6 +100,9 @@ export default function CarpoolManagementModal({
   const [showBatchAssignmentModal, setShowBatchAssignmentModal] = useState(false);
   const [batchAssignments, setBatchAssignments] = useState<Record<string, number>>({});
   const [savingBatchAssignments, setSavingBatchAssignments] = useState(false);
+
+  // Export state
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -581,6 +585,148 @@ export default function CarpoolManagementModal({
     }
   };
 
+  const handleExportExcel = () => {
+    setExportLoading(true);
+    try {
+      // Prepare export data
+      const exportData: Record<string, any>[] = [];
+
+      carpools.forEach((carpool, index) => {
+        const totalMembers = carpool.members.length + 1; // +1 for owner
+        const seatsUsed = totalMembers;
+        const seatsAvailable = carpool.capacity - seatsUsed;
+
+        // Owner row
+        exportData.push({
+          'ลำดับ': index + 1,
+          'เลขรถ': carpool.assignedCarNumber || '-',
+          'ทะเบียนรถ': carpool.licensePlate || 'ไม่ระบุ',
+          'ชื่อบริษัท': carpool.ownerCompanyName || '-',
+          'ผู้ติดต่อ': carpool.ownerContactName || '-',
+          'เบอร์โทร': carpool.ownerContactPhone || '-',
+          'รหัสลงทะเบียน': carpool.ownerRegistrationId || '-',
+          'จำนวนที่นั่ง': carpool.capacity || 0,
+          'ที่นั่งที่ใช้': seatsUsed,
+          'ที่นั่งว่าง': seatsAvailable,
+          'ประเภท': 'เจ้าของรถ',
+          'ชื่อสมาชิก': carpool.ownerContactName || '-',
+        });
+
+        // Member rows
+        carpool.members.forEach((member) => {
+          exportData.push({
+            'ลำดับ': '',
+            'เลขรถ': '',
+            'ทะเบียนรถ': '',
+            'ชื่อบริษัท': '',
+            'ผู้ติดต่อ': '',
+            'เบอร์โทร': '',
+            'รหัสลงทะเบียน': member.registrationId || '-',
+            'จำนวนที่นั่ง': '',
+            'ที่นั่งที่ใช้': '',
+            'ที่นั่งว่าง': '',
+            'ประเภท': 'ผู้ร่วมรถ',
+            'ชื่อสมาชิก': member.name || '-',
+          });
+        });
+      });
+
+      // Create worksheet
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Apply styling
+      let currentRow = 1; // Start after header
+      const totalColumns = 12;
+
+      carpools.forEach((carpool, carpoolIndex) => {
+        const isEvenCarpool = carpoolIndex % 2 === 0;
+        const bgColor = isEvenCarpool ? 'E8F5E9' : 'FFFFFF'; // Light green for even, white for odd
+        const rowCount = carpool.members.length + 1; // +1 for owner
+
+        // Style all rows in this carpool
+        for (let i = 0; i < rowCount; i++) {
+          const row = currentRow + i;
+          const isOwnerRow = i === 0;
+
+          for (let col = 0; col < totalColumns; col++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+            if (!ws[cellAddress]) ws[cellAddress] = { t: 's', v: '' };
+
+            ws[cellAddress].s = {
+              fill: { fgColor: { rgb: isOwnerRow ? (isEvenCarpool ? 'C8E6C9' : 'F5F5F5') : bgColor } },
+              border: {
+                top: { style: 'thin', color: { rgb: 'BDBDBD' } },
+                bottom: i === rowCount - 1 ? { style: 'medium', color: { rgb: '757575' } } : { style: 'thin', color: { rgb: 'E0E0E0' } },
+                left: { style: 'thin', color: { rgb: 'BDBDBD' } },
+                right: { style: 'thin', color: { rgb: 'BDBDBD' } },
+              },
+              alignment: {
+                vertical: 'center',
+                horizontal: col >= 7 && col <= 9 ? 'right' : 'left', // จำนวนที่นั่ง, ที่นั่งที่ใช้, ที่นั่งว่าง
+                wrapText: true,
+              },
+              font: {
+                bold: isOwnerRow,
+                sz: 10,
+              },
+            };
+          }
+        }
+
+        currentRow += rowCount;
+      });
+
+      // Style header row
+      const headerRow = 0;
+      for (let col = 0; col < totalColumns; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: col });
+        if (!ws[cellAddress]) continue;
+
+        ws[cellAddress].s = {
+          fill: { fgColor: { rgb: '1976D2' } }, // Blue background
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          border: {
+            top: { style: 'medium', color: { rgb: '0D47A1' } },
+            bottom: { style: 'medium', color: { rgb: '0D47A1' } },
+            left: { style: 'thin', color: { rgb: '1565C0' } },
+            right: { style: 'thin', color: { rgb: '1565C0' } },
+          },
+          alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+        };
+      }
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 8 },  // ลำดับ
+        { wch: 10 }, // เลขรถ
+        { wch: 15 }, // ทะเบียนรถ
+        { wch: 30 }, // ชื่อบริษัท
+        { wch: 25 }, // ผู้ติดต่อ
+        { wch: 15 }, // เบอร์โทร
+        { wch: 18 }, // รหัสลงทะเบียน
+        { wch: 12 }, // จำนวนที่นั่ง
+        { wch: 12 }, // ที่นั่งที่ใช้
+        { wch: 10 }, // ที่นั่งว่าง
+        { wch: 12 }, // ประเภท
+        { wch: 25 }, // ชื่อสมาชิก
+      ];
+
+      // Create workbook and save
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Carpool Summary');
+
+      const filename = `Carpool_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, filename);
+
+      alert('ดาวน์โหลดไฟล์สำเร็จ');
+    } catch (err) {
+      console.error('Error exporting Excel:', err);
+      alert('ไม่สามารถ Export ได้');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -596,6 +742,16 @@ export default function CarpoolManagementModal({
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {activeTab === 'carpools' && (
                 <>
+                  {carpools.length > 0 && (
+                    <button
+                      onClick={handleExportExcel}
+                      disabled={exportLoading}
+                      className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="hidden sm:inline">{exportLoading ? 'กำลังสร้างไฟล์...' : '📊 Export Excel'}</span>
+                      <span className="sm:hidden">{exportLoading ? '...' : '📊'}</span>
+                    </button>
+                  )}
                   <button
                     onClick={handleOpenBatchAssignment}
                     className="px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"

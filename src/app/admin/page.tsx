@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useEffectiveSessionContext } from '@/lib/EffectiveSessionProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { hasPermission } from '@/lib/permissions';
+import Pagination from '@/components/Pagination';
 
 interface LineHistoryEntry {
   lineUserId: string;
@@ -89,6 +90,10 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [userSearchQuery, setUserSearchQuery] = useState('');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(100);
 
   // Admin note states
   const [editingNoteUser, setEditingNoteUser] = useState<User | null>(null);
@@ -605,6 +610,82 @@ export default function AdminPage() {
     return new Date(timestamp._seconds * 1000).toLocaleString('th-TH');
   };
 
+  // Filter users based on search and filters
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      // Role filter
+      if (roleFilter !== 'all' && user.role !== roleFilter) {
+        return false;
+      }
+      // Status filter
+      if (statusFilter === 'verified' && user.verificationStatus !== 'verified') {
+        return false;
+      }
+      if (statusFilter === 'pending' && user.verificationStatus !== 'pending' && user.role === 'guest') {
+        // Show guests who haven't verified yet
+        return user.role === 'guest';
+      }
+      if (statusFilter === 'pending' && user.verificationStatus === 'pending') {
+        return true;
+      }
+      if (statusFilter === 'pending' && user.verificationStatus !== 'pending') {
+        return false;
+      }
+      if (statusFilter === 'locked' && !user.isSearchLocked) {
+        return false;
+      }
+      if (statusFilter === 'inactive' && user.isActive !== false) {
+        return false;
+      }
+
+      // Search filter
+      if (userSearchQuery) {
+        const query = userSearchQuery.toLowerCase();
+
+        // Search in user's own fields
+        const matchesUserFields =
+          user.lineDisplayName?.toLowerCase().includes(query) ||
+          user.memberId?.toLowerCase().includes(query) ||
+          user.licenseNumber?.toLowerCase().includes(query) ||
+          user.phone?.toLowerCase().includes(query) ||
+          user.lineUserId?.toLowerCase().includes(query);
+
+        // Search in member data from Google Sheets
+        const memberData = allMembersData.find(m => m.memberId === user.memberId);
+        const matchesMemberFields = memberData && (
+          memberData.fullNameTH?.toLowerCase().includes(query) ||
+          memberData.nickname?.toLowerCase().includes(query) ||
+          memberData.companyNameTH?.toLowerCase().includes(query) ||
+          memberData.companyNameEN?.toLowerCase().includes(query) ||
+          memberData.licenseNumber?.toLowerCase().includes(query)
+        );
+
+        if (!matchesUserFields && !matchesMemberFields) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [users, roleFilter, statusFilter, userSearchQuery, allMembersData]);
+
+  // Paginated users - slice the filtered results based on current page
+  const paginatedUsers = useMemo(() => {
+    if (itemsPerPage === -1) {
+      // Show all items
+      return filteredUsers;
+    }
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [roleFilter, statusFilter, userSearchQuery]);
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -844,63 +925,7 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users
-                  .filter((user) => {
-                    // Role filter
-                    if (roleFilter !== 'all' && user.role !== roleFilter) {
-                      return false;
-                    }
-                    // Status filter
-                    if (statusFilter === 'verified' && user.verificationStatus !== 'verified') {
-                      return false;
-                    }
-                    if (statusFilter === 'pending' && user.verificationStatus !== 'pending' && user.role === 'guest') {
-                      // Show guests who haven't verified yet
-                      return user.role === 'guest';
-                    }
-                    if (statusFilter === 'pending' && user.verificationStatus === 'pending') {
-                      return true;
-                    }
-                    if (statusFilter === 'pending' && user.verificationStatus !== 'pending') {
-                      return false;
-                    }
-                    if (statusFilter === 'locked' && !user.isSearchLocked) {
-                      return false;
-                    }
-                    if (statusFilter === 'inactive' && user.isActive !== false) {
-                      return false;
-                    }
-
-                    // Search filter
-                    if (userSearchQuery) {
-                      const query = userSearchQuery.toLowerCase();
-
-                      // Search in user's own fields
-                      const matchesUserFields =
-                        user.lineDisplayName?.toLowerCase().includes(query) ||
-                        user.memberId?.toLowerCase().includes(query) ||
-                        user.licenseNumber?.toLowerCase().includes(query) ||
-                        user.phone?.toLowerCase().includes(query) ||
-                        user.lineUserId?.toLowerCase().includes(query);
-
-                      // Search in member data from Google Sheets
-                      const memberData = allMembersData.find(m => m.memberId === user.memberId);
-                      const matchesMemberFields = memberData && (
-                        memberData.fullNameTH?.toLowerCase().includes(query) ||
-                        memberData.nickname?.toLowerCase().includes(query) ||
-                        memberData.companyNameTH?.toLowerCase().includes(query) ||
-                        memberData.companyNameEN?.toLowerCase().includes(query) ||
-                        memberData.licenseNumber?.toLowerCase().includes(query)
-                      );
-
-                      if (!matchesUserFields && !matchesMemberFields) {
-                        return false;
-                      }
-                    }
-
-                    return true;
-                  })
-                  .map((user) => {
+                {paginatedUsers.map((user) => {
                     // Get member data for this user
                     const memberData = allMembersData.find(m => m.memberId === user.memberId);
 
@@ -1095,6 +1120,15 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredUsers.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
         </div>
 
         {/* Edit Modal */}

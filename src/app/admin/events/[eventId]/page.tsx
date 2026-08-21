@@ -3204,18 +3204,18 @@ export default function EventDetailPage() {
                 <span className="hidden sm:inline">Copy รายงาน</span>
               </button>
 
-              {/* Send Payment Reminder Button */}
+              {/* Send LINE Message Button */}
               <button
                 onClick={handleOpenMessageModal}
                 disabled={selectedRegistrationsForMessage.size === 0}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                title={selectedRegistrationsForMessage.size === 0 ? 'กรุณาเลือกผู้รับก่อน' : 'ส่งข้อความแจ้งชำระเงิน'}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title={selectedRegistrationsForMessage.size === 0 ? 'กรุณาเลือกผู้รับก่อน' : 'ส่งข้อความ LINE'}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
                 <span className="hidden sm:inline">
-                  แจ้งชำระเงิน ({selectedRegistrationsForMessage.size})
+                  ส่งข้อความ LINE ({selectedRegistrationsForMessage.size})
                 </span>
               </button>
 

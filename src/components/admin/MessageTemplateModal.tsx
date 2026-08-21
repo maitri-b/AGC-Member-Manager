@@ -65,6 +65,11 @@ export default function MessageTemplateModal({
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
 
+  // Image attachment states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>('');
+
   // History tab states
   const [messageHistory, setMessageHistory] = useState<MessageHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -72,6 +77,7 @@ export default function MessageTemplateModal({
 
   // Textarea ref for cursor position
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch base URL and custom templates from settings on mount
   useEffect(() => {
@@ -203,6 +209,63 @@ export default function MessageTemplateModal({
     }, 0);
   };
 
+  // Handle image file selection
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+      return;
+    }
+
+    // Validate file size (max 10MB for LINE)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast.error('ขนาดรูปภาพต้องไม่เกิน 10MB');
+      return;
+    }
+
+    // Validate image dimensions (LINE supports up to 1024x1024 or 2048x2048)
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      img.onload = () => {
+        const maxDimension = 2048;
+        if (img.width > maxDimension || img.height > maxDimension) {
+          toast.error(`ขนาดรูปภาพต้องไม่เกิน ${maxDimension}x${maxDimension} พิกเซล`);
+          return;
+        }
+
+        setImageFile(file);
+        setImagePreview(event.target?.result as string);
+        setImageUrl(''); // Clear URL if file is selected
+      };
+      img.src = event.target?.result as string;
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageUrlChange = (url: string) => {
+    setImageUrl(url);
+    if (url) {
+      setImageFile(null); // Clear file if URL is entered
+      setImagePreview(null);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setImageUrl('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveTemplate = async () => {
     if (!newTemplateName.trim() || !customContent.trim()) {
       toast.error('กรุณาระบุชื่อ template และข้อความ');
@@ -297,6 +360,27 @@ export default function MessageTemplateModal({
     setIsSending(true);
 
     try {
+      // Upload image if file is selected
+      let uploadedImageUrl = imageUrl;
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+
+        const uploadResponse = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          toast.error('ไม่สามารถอัปโหลดรูปภาพได้');
+          setIsSending(false);
+          return;
+        }
+
+        const uploadResult = await uploadResponse.json();
+        uploadedImageUrl = uploadResult.url;
+      }
+
       const results = await Promise.allSettled(
         selectedRegistrations.map(async ({ registration, lineUserId }) => {
           let personalizedMsg = '';
@@ -313,6 +397,7 @@ export default function MessageTemplateModal({
             body: JSON.stringify({
               lineUserIds: [lineUserId],
               message: personalizedMsg,
+              imageUrl: uploadedImageUrl || undefined,
             }),
           });
 
@@ -679,6 +764,107 @@ export default function MessageTemplateModal({
                     </svg>
                     บันทึกเป็น Template
                   </button>
+                </div>
+              </div>
+
+              {/* Image Attachment Section */}
+              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    แนบรูปภาพ (ส่งต่อจากข้อความ):
+                  </label>
+                  {(imageFile || imagePreview || imageUrl) && (
+                    <button
+                      onClick={handleRemoveImage}
+                      className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      ลบรูป
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {/* File Upload */}
+                  <div>
+                    <label className="block">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFileSelect}
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-4 py-2 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          เลือกรูปจากเครื่อง
+                        </button>
+                        {imageFile && (
+                          <span className="text-xs text-gray-600">
+                            {imageFile.name} ({(imageFile.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* OR Divider */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 border-t border-gray-300"></div>
+                    <span className="text-xs text-gray-500">หรือ</span>
+                    <div className="flex-1 border-t border-gray-300"></div>
+                  </div>
+
+                  {/* URL Input */}
+                  <div>
+                    <input
+                      type="url"
+                      value={imageUrl}
+                      onChange={(e) => handleImageUrlChange(e.target.value)}
+                      placeholder="ใส่ URL รูปภาพ (https://...)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      disabled={!!imageFile}
+                    />
+                  </div>
+
+                  {/* Image Preview */}
+                  {(imagePreview || imageUrl) && (
+                    <div className="mt-3">
+                      <div className="text-xs text-gray-600 mb-2">ตัวอย่างรูป:</div>
+                      <img
+                        src={imagePreview || imageUrl}
+                        alt="Preview"
+                        className="max-w-xs max-h-48 rounded-lg border border-gray-300"
+                        onError={() => {
+                          if (!imageFile) {
+                            toast.error('ไม่สามารถโหลดรูปภาพจาก URL ได้');
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Image Requirements */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                    <div className="text-xs text-blue-800 space-y-1">
+                      <p className="font-medium mb-1">📋 ข้อจำกัดของรูปภาพ:</p>
+                      <ul className="list-disc list-inside space-y-0.5 text-blue-700">
+                        <li>ขนาดไฟล์: ไม่เกิน 10 MB</li>
+                        <li>ขนาดภาพ: ไม่เกิน 2048×2048 พิกเซล</li>
+                        <li>รูปแบบ: JPG, PNG, GIF</li>
+                        <li>รูปจะถูกส่งต่อจากข้อความ (ข้อความก่อน รูปตาม)</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
 

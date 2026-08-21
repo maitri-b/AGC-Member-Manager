@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       memberId,
       lineUserIds,
       message: customMessage,
+      imageUrl,
       subject,
       eventId,
       eventName,
@@ -124,6 +125,23 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          // Build messages array (text first, then image if provided)
+          const messages: any[] = [
+            {
+              type: 'text',
+              text: personalizedMessage,
+            },
+          ];
+
+          // Add image message if imageUrl is provided
+          if (imageUrl && imageUrl.trim()) {
+            messages.push({
+              type: 'image',
+              originalContentUrl: imageUrl.trim(),
+              previewImageUrl: imageUrl.trim(),
+            });
+          }
+
           const response = await fetch(LINE_API_URL, {
             method: 'POST',
             headers: {
@@ -132,12 +150,7 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify({
               to: lineUserId,
-              messages: [
-                {
-                  type: 'text',
-                  text: personalizedMessage,
-                },
-              ],
+              messages,
             }),
           });
 

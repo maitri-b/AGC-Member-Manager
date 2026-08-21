@@ -162,6 +162,8 @@ export default function MessageTemplateModal({
     message = message.replace(/\{\{eventName\}\}/g, event.eventName || '');
     message = message.replace(/\{\{registrationId\}\}/g, registration.registrationId || '');
     message = message.replace(/\{\{attendeeCount\}\}/g, String(registration.attendeeCount || 1));
+    message = message.replace(/\{\{eventUrl\}\}/g, `${baseUrl}/events/${event.eventId}`);
+    message = message.replace(/\{\{lineName\}\}/g, registration.contactName || 'สมาชิก');
 
     return message;
   };
@@ -715,6 +717,17 @@ export default function MessageTemplateModal({
                   </button>
                   <button
                     type="button"
+                    onClick={() => insertTag('{{lineName}}')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-50 text-cyan-700 text-xs font-medium rounded-md hover:bg-cyan-100 border border-cyan-200 transition-colors"
+                    title="แทรกชื่อ LINE"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    ชื่อ LINE
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => insertTag('{{companyName}}')}
                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-md hover:bg-green-100 border border-green-200 transition-colors"
                     title="แทรกชื่อบริษัท"
@@ -734,6 +747,17 @@ export default function MessageTemplateModal({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     ชื่อกิจกรรม
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertTag('{{eventUrl}}')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-md hover:bg-indigo-100 border border-indigo-200 transition-colors"
+                    title="แทรก URL กิจกรรม"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    URL กิจกรรม
                   </button>
                   <button
                     type="button"

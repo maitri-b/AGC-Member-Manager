@@ -21,6 +21,8 @@ interface CarpoolManagementModalProps {
 interface EnrichedCarpool extends Carpool {
   ownerCompanyName: string;
   ownerContactName: string;
+  ownerContactPhone?: string;
+  capacity?: number;
 }
 
 interface CarSlot {
@@ -742,16 +744,14 @@ export default function CarpoolManagementModal({
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {activeTab === 'carpools' && (
                 <>
-                  {carpools.length > 0 && (
-                    <button
-                      onClick={handleExportExcel}
-                      disabled={exportLoading}
-                      className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <span className="hidden sm:inline">{exportLoading ? 'กำลังสร้างไฟล์...' : '📊 Export Excel'}</span>
-                      <span className="sm:hidden">{exportLoading ? '...' : '📊'}</span>
-                    </button>
-                  )}
+                  <button
+                    onClick={handleExportExcel}
+                    disabled={exportLoading || carpools.length === 0}
+                    className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="hidden sm:inline">{exportLoading ? 'กำลังสร้างไฟล์...' : '📊 Export Excel'}</span>
+                    <span className="sm:hidden">{exportLoading ? '...' : '📊'}</span>
+                  </button>
                   <button
                     onClick={handleOpenBatchAssignment}
                     className="px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"

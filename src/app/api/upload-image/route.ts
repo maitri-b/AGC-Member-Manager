@@ -1,9 +1,8 @@
-// API Route: Upload Image for LINE Messages (using Imgur API)
+// API Route: Upload Image for LINE Messages (using Firebase Storage)
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-
-const IMGUR_CLIENT_ID = process.env.IMGUR_CLIENT_ID || ''; // Get from Imgur API
+import { adminStorage } from '@/lib/firebase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,48 +25,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File must be an image' }, { status: 400 });
     }
 
-    // Validate file size (max 10MB for LINE, Imgur allows up to 10MB for free tier)
+    // Validate file size (max 10MB for LINE)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json({ error: 'Image size must not exceed 10MB' }, { status: 400 });
     }
 
-    // Convert file to base64 for Imgur API
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const base64Image = buffer.toString('base64');
 
-    // Upload to Imgur
-    const imgurFormData = new FormData();
-    imgurFormData.append('image', base64Image);
-    imgurFormData.append('type', 'base64');
-    imgurFormData.append('name', file.name);
-    imgurFormData.append('title', `LINE Image ${new Date().toISOString()}`);
+    // Generate unique filename with timestamp
+    const timestamp = Date.now();
+    const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_'); // Sanitize filename
+    const filename = `${timestamp}_${originalName}`;
+    const storagePath = `images/Linepost/${filename}`;
 
-    const imgurResponse = await fetch('https://api.imgur.com/3/image', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Client-ID ${IMGUR_CLIENT_ID}`,
+    // Upload to Firebase Storage
+    const bucket = adminStorage().bucket();
+    const fileRef = bucket.file(storagePath);
+
+    await fileRef.save(buffer, {
+      metadata: {
+        contentType: file.type,
+        metadata: {
+          uploadedBy: session.user.id,
+          uploadedByName: session.user.name || 'Unknown',
+          uploadedAt: new Date().toISOString(),
+          originalName: file.name,
+        },
       },
-      body: imgurFormData,
     });
 
-    if (!imgurResponse.ok) {
-      const errorData = await imgurResponse.json();
-      console.error('Imgur API Error:', errorData);
-      return NextResponse.json(
-        { error: 'Failed to upload image to Imgur', details: errorData },
-        { status: 500 }
-      );
-    }
+    // Make file publicly accessible
+    await fileRef.makePublic();
 
-    const imgurData = await imgurResponse.json();
-    const imageUrl = imgurData.data.link; // Get direct image URL
+    // Get public URL
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
 
     return NextResponse.json({
       success: true,
-      url: imageUrl,
-      deleteHash: imgurData.data.deletehash, // Can be used to delete later
+      url: publicUrl,
+      path: storagePath,
+      filename: filename,
     });
 
   } catch (error) {

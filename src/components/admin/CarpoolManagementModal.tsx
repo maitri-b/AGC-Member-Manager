@@ -851,7 +851,7 @@ export default function CarpoolManagementModal({
                       <p className="text-xs sm:text-sm font-medium text-purple-900">สมาชิกที่ join แล้ว</p>
                     </div>
                     <p className="text-2xl sm:text-3xl font-bold text-purple-600">
-                      {carpools.reduce((sum, c) => sum + c.members.length, 0)}
+                      {carpools.reduce((sum, c) => sum + Math.max(0, c.members.length - 1), 0)}
                     </p>
                   </div>
 
@@ -1033,7 +1033,7 @@ export default function CarpoolManagementModal({
                           <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-600">
                             <span>รหัส: {carpool.ownerRegistrationId}</span>
                             <span className="text-gray-400">•</span>
-                            <span className="font-medium text-blue-600">{carpool.members.length} สมาชิก</span>
+                            <span className="font-medium text-blue-600">{Math.max(0, carpool.members.length - 1)} ผู้ร่วมรถ</span>
                           </div>
 
                           {/* Action buttons */}
@@ -1081,8 +1081,8 @@ export default function CarpoolManagementModal({
                               </button>
                             </div>
 
-                            {carpool.members.length === 0 ? (
-                              <p className="text-sm text-gray-500 italic">ยังไม่มีสมาชิก</p>
+                            {carpool.members.length <= 1 ? (
+                              <p className="text-sm text-gray-500 italic">ยังไม่มีผู้ร่วมรถ (มีแค่เจ้าของรถ)</p>
                             ) : (
                               <div className="space-y-2">
                                 {carpool.members.map((member, index) => {
@@ -1194,7 +1194,7 @@ export default function CarpoolManagementModal({
                               <p className="font-semibold text-gray-900">{slot.carpool.licensePlate}</p>
                               <p className="text-gray-600">{slot.carpool.ownerCompanyName}</p>
                               <p className="text-gray-500 text-xs">
-                                {slot.carpool.members.length} คน
+                                รวม {slot.carpool.members.length} คน
                               </p>
                             </div>
                             <div className="flex gap-2">
@@ -1851,7 +1851,7 @@ export default function CarpoolManagementModal({
                           🚗 {carpool.licensePlate}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {carpool.ownerCompanyName} • {carpool.members.length} สมาชิก
+                          {carpool.ownerCompanyName} • {Math.max(0, carpool.members.length - 1)} ผู้ร่วมรถ
                         </p>
                       </div>
                     </label>
@@ -1924,7 +1924,7 @@ export default function CarpoolManagementModal({
                   <strong>เลขรถปัจจุบัน:</strong> {changingCarpool.assignedCarNumber || '-'}
                 </p>
                 <p className="text-xs text-blue-700 mt-1">
-                  {changingCarpool.ownerCompanyName} • {changingCarpool.members.length} สมาชิก
+                  {changingCarpool.ownerCompanyName} • รวม {changingCarpool.members.length} คน
                 </p>
               </div>
 
@@ -2099,7 +2099,7 @@ export default function CarpoolManagementModal({
                               {carpool.ownerCompanyName}
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
-                              {carpool.members.length} สมาชิก • รหัส: {carpool.ownerRegistrationId}
+                              รวม {carpool.members.length} คน • รหัส: {carpool.ownerRegistrationId}
                             </p>
                           </div>
 

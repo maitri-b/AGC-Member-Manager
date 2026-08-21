@@ -153,16 +153,6 @@ export default function CarpoolDetailModal({
                         <span className="text-gray-600">ทะเบียนรถ:</span>
                         <span className="font-medium text-gray-900">{carpool.licensePlate}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">จำนวนที่นั่ง:</span>
-                        <span className="font-medium text-gray-900">{carpool.capacity} ที่นั่ง</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">ที่นั่งที่ใช้แล้ว:</span>
-                        <span className="font-medium text-gray-900">
-                          {totalMembers} / {carpool.capacity} ที่นั่ง
-                        </span>
-                      </div>
                     </div>
                   </div>
                 </div>

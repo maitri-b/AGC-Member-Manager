@@ -590,44 +590,20 @@ export default function CarpoolManagementModal({
   const handleExportExcel = () => {
     setExportLoading(true);
     try {
-      // Prepare export data
+      // Prepare export data - only members (including owner in members list)
       const exportData: Record<string, any>[] = [];
 
-      carpools.forEach((carpool, index) => {
-        const totalMembers = carpool.members.length + 1; // +1 for owner
-        const seatsUsed = totalMembers;
-        const seatsAvailable = (carpool.capacity || 0) - seatsUsed;
-
-        // Owner row
-        exportData.push({
-          'ลำดับ': index + 1,
-          'เลขรถ': carpool.assignedCarNumber || '-',
-          'ทะเบียนรถ': carpool.licensePlate || 'ไม่ระบุ',
-          'ชื่อบริษัท': carpool.ownerCompanyName || '-',
-          'ผู้ติดต่อ': carpool.ownerContactName || '-',
-          'เบอร์โทร': carpool.ownerContactPhone || '-',
-          'รหัสลงทะเบียน': carpool.ownerRegistrationId || '-',
-          'จำนวนที่นั่ง': carpool.capacity || 0,
-          'ที่นั่งที่ใช้': seatsUsed,
-          'ที่นั่งว่าง': seatsAvailable,
-          'ประเภท': 'เจ้าของรถ',
-          'ชื่อสมาชิก': carpool.ownerContactName || '-',
-        });
-
-        // Member rows
-        carpool.members.forEach((member) => {
+      carpools.forEach((carpool, carpoolIndex) => {
+        // Add all members in this carpool (owner is already in members list)
+        carpool.members.forEach((member, memberIndex) => {
           exportData.push({
-            'ลำดับ': '',
-            'เลขรถ': '',
-            'ทะเบียนรถ': '',
-            'ชื่อบริษัท': '',
-            'ผู้ติดต่อ': '',
-            'เบอร์โทร': '',
+            'ลำดับ': carpoolIndex + 1,
+            'เลขรถ': carpool.assignedCarNumber || '-',
+            'ทะเบียนรถ': carpool.licensePlate || 'ไม่ระบุ',
+            'ชื่อบริษัท': carpool.ownerCompanyName || '-',
+            'ผู้ติดต่อ': carpool.ownerContactName || '-',
+            'เบอร์โทร': carpool.ownerContactPhone || '-',
             'รหัสลงทะเบียน': member.registrationId || '-',
-            'จำนวนที่นั่ง': '',
-            'ที่นั่งที่ใช้': '',
-            'ที่นั่งว่าง': '',
-            'ประเภท': 'ผู้ร่วมรถ',
             'ชื่อสมาชิก': member.name || '-',
           });
         });
@@ -638,24 +614,23 @@ export default function CarpoolManagementModal({
 
       // Apply styling
       let currentRow = 1; // Start after header
-      const totalColumns = 12;
+      const totalColumns = 8; // Reduced from 12
 
       carpools.forEach((carpool, carpoolIndex) => {
         const isEvenCarpool = carpoolIndex % 2 === 0;
         const bgColor = isEvenCarpool ? 'E8F5E9' : 'FFFFFF'; // Light green for even, white for odd
-        const rowCount = carpool.members.length + 1; // +1 for owner
+        const rowCount = carpool.members.length; // No +1 since owner is in members list
 
         // Style all rows in this carpool
         for (let i = 0; i < rowCount; i++) {
           const row = currentRow + i;
-          const isOwnerRow = i === 0;
 
           for (let col = 0; col < totalColumns; col++) {
             const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
             if (!ws[cellAddress]) ws[cellAddress] = { t: 's', v: '' };
 
             ws[cellAddress].s = {
-              fill: { fgColor: { rgb: isOwnerRow ? (isEvenCarpool ? 'C8E6C9' : 'F5F5F5') : bgColor } },
+              fill: { fgColor: { rgb: bgColor } },
               border: {
                 top: { style: 'thin', color: { rgb: 'BDBDBD' } },
                 bottom: i === rowCount - 1 ? { style: 'medium', color: { rgb: '757575' } } : { style: 'thin', color: { rgb: 'E0E0E0' } },
@@ -664,11 +639,10 @@ export default function CarpoolManagementModal({
               },
               alignment: {
                 vertical: 'center',
-                horizontal: col >= 7 && col <= 9 ? 'right' : 'left', // จำนวนที่นั่ง, ที่นั่งที่ใช้, ที่นั่งว่าง
+                horizontal: 'left',
                 wrapText: true,
               },
               font: {
-                bold: isOwnerRow,
                 sz: 10,
               },
             };
@@ -697,7 +671,7 @@ export default function CarpoolManagementModal({
         };
       }
 
-      // Set column widths
+      // Set column widths (8 columns now)
       ws['!cols'] = [
         { wch: 8 },  // ลำดับ
         { wch: 10 }, // เลขรถ
@@ -706,10 +680,6 @@ export default function CarpoolManagementModal({
         { wch: 25 }, // ผู้ติดต่อ
         { wch: 15 }, // เบอร์โทร
         { wch: 18 }, // รหัสลงทะเบียน
-        { wch: 12 }, // จำนวนที่นั่ง
-        { wch: 12 }, // ที่นั่งที่ใช้
-        { wch: 10 }, // ที่นั่งว่าง
-        { wch: 12 }, // ประเภท
         { wch: 25 }, // ชื่อสมาชิก
       ];
 

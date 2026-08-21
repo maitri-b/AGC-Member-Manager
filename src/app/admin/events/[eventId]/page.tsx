@@ -1430,9 +1430,17 @@ export default function EventDetailPage() {
       // Create workbook with merged cells
       const ws = XLSX.utils.json_to_sheet(exportData);
 
-      // Apply merges for repeated data
+      // Apply merges for repeated data and styling
       const merges: XLSX.Range[] = [];
       let currentRow = 1; // Start after header
+      let registrationIndex = 0;
+
+      // Calculate total columns
+      const baseColumns = 6; // รหัส, บริษัท, ผู้ติดต่อ, เบอร์, ไลน์, จำนวน
+      const roomColumns = sortedRoomTypes.length;
+      const otherColumns = 7; // ค่าห้อง, สถานะ, สถานะชำระ, ยอดรวม, อนุมัติ, ความต้องการ, ค่าเสริม
+      const totalMergeColumns = baseColumns + roomColumns + otherColumns;
+      const totalColumns = totalMergeColumns + 2; // +2 for ลำดับ and ชื่อ
 
       filteredAttendees.forEach((attendee) => {
         let attendeeNamesList: string[] = [];
@@ -1448,14 +1456,8 @@ export default function EventDetailPage() {
         const attendeeCount = attendee.registration.attendeeCount || 1;
         const rowCount = attendeeNamesList.length || attendeeCount;
 
+        // Apply merges for multi-row registrations
         if (rowCount > 1) {
-          // Calculate total columns (excluding last 2: attendee order and name)
-          // Base columns: 6 + room types + 7 other fields
-          const baseColumns = 6; // รหัส, บริษัท, ผู้ติดต่อ, เบอร์, ไลน์, จำนวน
-          const roomColumns = sortedRoomTypes.length;
-          const otherColumns = 7; // ค่าห้อง, สถานะ, สถานะชำระ, ยอดรวม, อนุมัติ, ความต้องการ, ค่าเสริม
-          const totalMergeColumns = baseColumns + roomColumns + otherColumns;
-
           // Merge all columns except last 2 (attendee order and name)
           for (let col = 0; col < totalMergeColumns; col++) {
             merges.push({
@@ -1465,10 +1467,82 @@ export default function EventDetailPage() {
           }
         }
 
+        // Apply styling for each row in this registration
+        const isEvenRegistration = registrationIndex % 2 === 0;
+        const bgColor = isEvenRegistration ? 'F8F9FA' : 'FFFFFF'; // Light gray for even, white for odd
+
+        for (let i = 0; i < rowCount; i++) {
+          const row = currentRow + i;
+
+          // Apply background color and borders to all cells in this row
+          for (let col = 0; col < totalColumns; col++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+            if (!ws[cellAddress]) ws[cellAddress] = { t: 's', v: '' };
+
+            ws[cellAddress].s = {
+              fill: { fgColor: { rgb: bgColor } },
+              border: {
+                top: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                bottom: i === rowCount - 1 ? { style: 'medium', color: { rgb: '9CA3AF' } } : { style: 'thin', color: { rgb: 'E5E7EB' } },
+                left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                right: { style: 'thin', color: { rgb: 'D1D5DB' } },
+              },
+              alignment: {
+                vertical: 'center',
+                horizontal: col >= baseColumns && col < totalMergeColumns ? 'right' : 'left', // Align numbers to right
+                wrapText: true,
+              },
+            };
+          }
+        }
+
         currentRow += rowCount;
+        registrationIndex++;
       });
 
       ws['!merges'] = merges;
+
+      // Style header row
+      const headerRow = 0;
+      for (let col = 0; col < totalColumns; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: headerRow, c: col });
+        if (!ws[cellAddress]) continue;
+
+        ws[cellAddress].s = {
+          fill: { fgColor: { rgb: '3B82F6' } }, // Blue background
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          border: {
+            top: { style: 'medium', color: { rgb: '1E40AF' } },
+            bottom: { style: 'medium', color: { rgb: '1E40AF' } },
+            left: { style: 'thin', color: { rgb: '2563EB' } },
+            right: { style: 'thin', color: { rgb: '2563EB' } },
+          },
+          alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+        };
+      }
+
+      // Style summary row (last row)
+      const summaryRow = currentRow;
+      for (let col = 0; col < totalColumns; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: summaryRow, c: col });
+        if (!ws[cellAddress]) ws[cellAddress] = { t: 's', v: '' };
+
+        ws[cellAddress].s = {
+          fill: { fgColor: { rgb: 'FEF3C7' } }, // Yellow background
+          font: { bold: true, sz: 11 },
+          border: {
+            top: { style: 'medium', color: { rgb: 'D97706' } },
+            bottom: { style: 'medium', color: { rgb: 'D97706' } },
+            left: { style: 'thin', color: { rgb: 'F59E0B' } },
+            right: { style: 'thin', color: { rgb: 'F59E0B' } },
+          },
+          alignment: {
+            vertical: 'center',
+            horizontal: col >= baseColumns && col < totalMergeColumns ? 'right' : 'left',
+            wrapText: true,
+          },
+        };
+      }
 
       // Set column widths
       const colWidths = [

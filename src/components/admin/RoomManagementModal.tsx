@@ -1387,9 +1387,16 @@ export default function RoomManagementModal({
       const totalOccupants = roomsWithOccupants.reduce((sum, r) => sum + r.occupants.length, 0);
 
       // Group by ACTUAL occupancy count (not maxOccupancy)
-      const singleOccupancyRooms = roomsWithOccupants.filter(r => r.occupants.length === 1 && !r.isLocked);
-      const doubleOccupancyRooms = roomsWithOccupants.filter(r => r.occupants.length === 2 && !r.isLocked);
-      const tripleOccupancyRooms = roomsWithOccupants.filter(r => r.occupants.length === 3 && !r.isLocked);
+      // For locked rooms, use maxOccupancy to determine category
+      const singleOccupancyRooms = roomsWithOccupants.filter(r =>
+        (r.occupants.length === 1 && !r.isLocked) || (r.isLocked && r.maxOccupancy === 1)
+      );
+      const doubleOccupancyRooms = roomsWithOccupants.filter(r =>
+        (r.occupants.length === 2 && !r.isLocked) || (r.isLocked && r.maxOccupancy === 2)
+      );
+      const tripleOccupancyRooms = roomsWithOccupants.filter(r =>
+        (r.occupants.length === 3 && !r.isLocked) || (r.isLocked && r.maxOccupancy === 3)
+      );
       const occupiedRooms = singleOccupancyRooms.length + doubleOccupancyRooms.length + tripleOccupancyRooms.length;
 
       // Create summary data

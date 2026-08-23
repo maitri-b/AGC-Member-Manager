@@ -942,17 +942,15 @@ export default function ProfilePage() {
               </svg>
               <div className="flex-1">
                 <h3 className="font-medium text-blue-900 mb-2">ยินดีต้อนรับสู่ชมรมเอเจ้นท์คลับ</h3>
-                <p className="text-blue-800 mb-3">
-                  ท่านสามารถลงทะเบียนเข้าร่วมกิจกรรมต่างๆ ของชมรมได้แล้ว
-                </p>
-                <div className="bg-white rounded-lg p-4 border border-blue-100">
-                  <p className="text-sm text-gray-700 mb-2">
+                <div className="bg-white rounded-lg p-4 border border-blue-100 space-y-3">
+                  <p className="text-sm text-gray-700">
                     <strong className="text-blue-900">สำหรับสมาชิกเดิม:</strong> หากท่านเคยเป็นสมาชิกชมรมอยู่แล้ว
-                    กรุณาแจ้งผู้ดูแลระบบเพื่อยืนยันตัวตนและเชื่อมโยงข้อมูลสมาชิกของท่าน
+                    กรุณาแจ้งผู้ดูแลระบบเพื่อยืนยันตัวตนของท่าน
+                    หลังจากยืนยันตัวตนแล้ว ท่านจะสามารถลงทะเบียนเข้าร่วมกิจกรรมต่างๆ ได้
                   </p>
                   <p className="text-sm text-gray-700">
                     <strong className="text-blue-900">สำหรับผู้ที่สนใจ:</strong> หากท่านยังไม่ได้เป็นสมาชิก
-                    สามารถ<a href="/apply" className="text-blue-600 hover:underline font-medium">สมัครสมาชิกได้ที่นี่</a>
+                    สามารถ<a href="/apply" className="text-blue-600 hover:underline font-medium ml-1">สมัครสมาชิกได้ที่นี่</a>
                   </p>
                 </div>
               </div>

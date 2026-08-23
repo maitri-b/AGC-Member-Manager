@@ -1,7 +1,6 @@
 // API Route for Events - List all events and their attendance summary
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getEffectiveSession } from '@/lib/impersonation';
 import { hasPermission } from '@/lib/permissions';
 import { getTrackedEvents, getEventAttendanceSummary, getEventRegistrationsByEventId } from '@/lib/events';
 import { EventRegistration } from '@/types/event';
@@ -16,7 +15,7 @@ function isRegistrationCancelled(registration: EventRegistration): boolean {
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getEffectiveSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

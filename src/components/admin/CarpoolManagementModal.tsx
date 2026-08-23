@@ -693,14 +693,123 @@ export default function CarpoolManagementModal({
         { wch: 25 }, // ชื่อสมาชิก
       ];
 
-      // Create workbook and save
+      // ============================================
+      // Create 2nd Worksheet: Not Registered
+      // ============================================
+
+      // Build a Set of all registrationIds that are in carpools
+      const registrationIdsInCarpools = new Set<string>();
+      carpools.forEach(carpool => {
+        carpool.members.forEach(member => {
+          if (member.registrationId) {
+            registrationIdsInCarpools.add(member.registrationId);
+          }
+        });
+      });
+
+      // Filter registrations that are NOT in any carpool
+      const notRegisteredData: Record<string, any>[] = [];
+      allRegistrations.forEach((attendee: any, index: number) => {
+        const regId = attendee.registration.registrationId;
+        const regData = attendee.registration;
+        const lineProfile = attendee.lineProfile;
+
+        // Check if this registration is cancelled
+        const status = String(regData.status || '').toLowerCase();
+        const isCancelled = status === 'cancelled' || regData.status?.includes('ยกเลิก');
+
+        // Skip if registration is in a carpool OR is cancelled
+        if (registrationIdsInCarpools.has(regId) || isCancelled) {
+          return;
+        }
+
+        notRegisteredData.push({
+          'ลำดับ': notRegisteredData.length + 1,
+          'รหัสการจอง': regId || '-',
+          'ชื่อบริษัท': regData.companyName || '-',
+          'ชื่อติดต่อ': regData.contactName || '-',
+          'เบอร์ติดต่อ': regData.contactPhone || '-',
+          'ชื่อ LINE': lineProfile?.lineDisplayName || '-',
+          'จำนวนผู้เข้าร่วม': regData.attendeeCount || 0,
+          'Note/ความต้องการพิเศษ': regData.specialRequests || '-',
+        });
+      });
+
+      // Create 2nd worksheet
+      const ws2 = XLSX.utils.json_to_sheet(notRegisteredData);
+
+      // Apply styling for 2nd worksheet
+      const totalColumns2 = 8;
+      const totalRows2 = notRegisteredData.length;
+
+      // Style data rows (alternating colors)
+      for (let row = 1; row <= totalRows2; row++) {
+        const isEvenRow = row % 2 === 0;
+        const bgColor = isEvenRow ? 'FFF3E0' : 'FFFFFF'; // Light orange for even, white for odd
+
+        for (let col = 0; col < totalColumns2; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+          if (!ws2[cellAddress]) ws2[cellAddress] = { t: 's', v: '' };
+
+          ws2[cellAddress].s = {
+            fill: { fgColor: { rgb: bgColor } },
+            border: {
+              top: { style: 'thin', color: { rgb: 'BDBDBD' } },
+              bottom: { style: 'thin', color: { rgb: 'E0E0E0' } },
+              left: { style: 'thin', color: { rgb: 'BDBDBD' } },
+              right: { style: 'thin', color: { rgb: 'BDBDBD' } },
+            },
+            alignment: {
+              vertical: 'center',
+              horizontal: col === 0 || col === 6 ? 'center' : 'left', // Center for ลำดับ and จำนวน
+              wrapText: true,
+            },
+            font: {
+              sz: 10,
+            },
+          };
+        }
+      }
+
+      // Style header row for 2nd worksheet
+      for (let col = 0; col < totalColumns2; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        if (!ws2[cellAddress]) continue;
+
+        ws2[cellAddress].s = {
+          fill: { fgColor: { rgb: 'FF6F00' } }, // Orange background
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          border: {
+            top: { style: 'medium', color: { rgb: 'E65100' } },
+            bottom: { style: 'medium', color: { rgb: 'E65100' } },
+            left: { style: 'thin', color: { rgb: 'F57C00' } },
+            right: { style: 'thin', color: { rgb: 'F57C00' } },
+          },
+          alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+        };
+      }
+
+      // Set column widths for 2nd worksheet
+      ws2['!cols'] = [
+        { wch: 8 },  // ลำดับ
+        { wch: 18 }, // รหัสการจอง
+        { wch: 30 }, // ชื่อบริษัท
+        { wch: 25 }, // ชื่อติดต่อ
+        { wch: 15 }, // เบอร์ติดต่อ
+        { wch: 20 }, // ชื่อ LINE
+        { wch: 12 }, // จำนวนผู้เข้าร่วม
+        { wch: 40 }, // Note/ความต้องการพิเศษ
+      ];
+
+      // Create workbook with both worksheets
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Carpool Summary');
+      XLSX.utils.book_append_sheet(wb, ws2, 'ยังไม่ได้ลงทะเบียนรถ');
 
       const filename = `Carpool_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, filename);
 
-      alert('ดาวน์โหลดไฟล์สำเร็จ');
+      alert(`ดาวน์โหลดไฟล์สำเร็จ\n- Carpool Summary: ${exportData.length} รายการ\n- ยังไม่ได้ลงทะเบียนรถ: ${notRegisteredData.length} รายการ`);
     } catch (err) {
       console.error('Error exporting Excel:', err);
       alert('ไม่สามารถ Export ได้');

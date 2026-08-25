@@ -1824,7 +1824,7 @@ export default function RoomManagementModal({
       }
 
       // ==================== NEW WORKSHEET: สรุปบริษัทตามอาคาร ====================
-      // Group companies by building (only occupied rooms)
+      // Group companies by building (occupied rooms + locked rooms)
       const buildingCompaniesMap = new Map<string, Set<string>>();
 
       roomsWithOccupants.forEach(room => {
@@ -1837,6 +1837,12 @@ export default function RoomManagementModal({
           room.occupants.forEach(occupant => {
             buildingCompaniesMap.get(room.buildingName)!.add(occupant.companyName);
           });
+        } else if (room.isLocked && room.note) {
+          // Add locked rooms with note
+          if (!buildingCompaniesMap.has(room.buildingName)) {
+            buildingCompaniesMap.set(room.buildingName, new Set());
+          }
+          buildingCompaniesMap.get(room.buildingName)!.add(room.note);
         }
       });
 
@@ -1983,11 +1989,16 @@ export default function RoomManagementModal({
         companies.forEach((companyName, companyIndex) => {
           const isLastRow = companyIndex === companies.length - 1;
 
+          // Check if this is a locked room note (by checking if any locked room has this note)
+          const isLockedRoomNote = roomsWithOccupants.some(r => r.isLocked && r.note === companyName);
+
           for (let C = 0; C <= 1; C++) {
             const cell = XLSX.utils.encode_cell({ r: currentRow, c: C });
             if (buildingCompanySummaryWs[cell]) {
               buildingCompanySummaryWs[cell].s = {
                 alignment: { horizontal: C === 0 ? 'center' : 'left', vertical: 'center' },
+                fill: isLockedRoomNote ? { fgColor: { rgb: 'FFE6CC' } } : undefined, // Light orange for locked rooms
+                font: isLockedRoomNote ? { italic: true, color: { rgb: '8B4513' } } : undefined, // Brown italic for locked rooms
                 border: {
                   top: { style: 'thin', color: { rgb: 'CCCCCC' } },
                   bottom: isLastRow ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
@@ -2011,11 +2022,13 @@ export default function RoomManagementModal({
       XLSX.utils.book_append_sheet(wb, buildingCompanySummaryWs, 'สรุปบริษัทตามอาคาร');
 
       // ==================== NEW WORKSHEET: สรุปห้องพักตามบริษัท ====================
-      // Group rooms by company
+      // Group rooms by company (occupied rooms + locked rooms)
       const companyRoomsMap = new Map<string, Array<{
         buildingName: string;
         roomNumber: string;
         occupants: RoomOccupant[];
+        isLocked: boolean;
+        maxOccupancy?: number;
       }>>();
 
       roomsWithOccupants.forEach(room => {
@@ -2034,8 +2047,34 @@ export default function RoomManagementModal({
             companyRoomsMap.get(companyName)!.push({
               buildingName: room.buildingName,
               roomNumber: room.roomNumber,
-              occupants: companyOccupants
+              occupants: companyOccupants,
+              isLocked: room.isLocked
             });
+          });
+        } else if (room.isLocked && room.note) {
+          // Add locked rooms with note as "company"
+          const noteKey = room.note;
+          if (!companyRoomsMap.has(noteKey)) {
+            companyRoomsMap.set(noteKey, []);
+          }
+
+          // Create dummy occupants for locked room slots (Note 1, Note 2, ...)
+          const lockedOccupants: RoomOccupant[] = [];
+          for (let i = 1; i <= room.maxOccupancy; i++) {
+            lockedOccupants.push({
+              attendeeName: `${room.note} ${i}`,
+              attendeeIndex: i - 1,
+              companyName: room.note,
+              registrationId: `locked-${room.roomId}`
+            });
+          }
+
+          companyRoomsMap.get(noteKey)!.push({
+            buildingName: room.buildingName,
+            roomNumber: room.roomNumber,
+            occupants: lockedOccupants,
+            isLocked: true,
+            maxOccupancy: room.maxOccupancy
           });
         }
       });
@@ -2138,6 +2177,9 @@ export default function RoomManagementModal({
       sortedCompanies.forEach((companyName, companyIndex) => {
         const rooms = companyRoomsMap.get(companyName) || [];
 
+        // Check if this is a locked room group
+        const isLockedGroup = rooms.length > 0 && rooms[0].isLocked;
+
         // Company header row
         for (let C = 0; C <= 3; C++) {
           const cell = XLSX.utils.encode_cell({ r: currentCompanyRow, c: C });
@@ -2146,7 +2188,7 @@ export default function RoomManagementModal({
           }
           companyRoomsSummaryWs[cell].s = {
             font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
-            fill: { fgColor: { rgb: '2196F3' } }, // Medium blue
+            fill: { fgColor: { rgb: isLockedGroup ? 'D2691E' : '2196F3' } }, // Brown for locked, Blue for normal
             alignment: { horizontal: C === 0 ? 'left' : C === 1 ? 'right' : 'center', vertical: 'center' },
             border: {
               top: { style: 'medium', color: { rgb: '000000' } },
@@ -2169,7 +2211,7 @@ export default function RoomManagementModal({
           if (companyRoomsSummaryWs[cell]) {
             companyRoomsSummaryWs[cell].s = {
               font: { bold: true, color: { rgb: 'FFFFFF' } },
-              fill: { fgColor: { rgb: '64B5F6' } }, // Light blue
+              fill: { fgColor: { rgb: isLockedGroup ? 'CD853F' : '64B5F6' } }, // Peru (light brown) for locked, Light blue for normal
               alignment: { horizontal: 'center', vertical: 'center' },
               border: {
                 top: { style: 'thin', color: { rgb: '000000' } },
@@ -2192,6 +2234,8 @@ export default function RoomManagementModal({
             if (companyRoomsSummaryWs[cell]) {
               companyRoomsSummaryWs[cell].s = {
                 alignment: { horizontal: C === 0 ? 'center' : C === 3 ? 'left' : 'center', vertical: 'center' },
+                fill: isLockedGroup ? { fgColor: { rgb: 'FFE6CC' } } : undefined, // Light orange for locked rooms
+                font: isLockedGroup ? { italic: true, color: { rgb: '8B4513' } } : undefined, // Brown italic for locked rooms
                 border: {
                   top: { style: 'thin', color: { rgb: 'CCCCCC' } },
                   bottom: isLastRow ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },

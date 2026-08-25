@@ -487,24 +487,43 @@ export default function EventDetailPage() {
             }
           }
 
+          // Load attendee count first (needed for attendee names array length)
+          const regAttendeeCount = data.userRegistration.attendeeCount || 0;
+          if (regAttendeeCount > 0) {
+            setAttendeeCount(regAttendeeCount);
+          }
+
           // Load existing attendee names
           if (data.userRegistration.attendeeNames) {
             try {
               const names = JSON.parse(data.userRegistration.attendeeNames);
               if (Array.isArray(names)) {
-                setAttendeeNames(names);
+                // Ensure the array has the correct length
+                const paddedNames = [...names];
+                while (paddedNames.length < regAttendeeCount) {
+                  paddedNames.push('');
+                }
+                setAttendeeNames(paddedNames);
               } else {
-                setAttendeeNames([data.userRegistration.attendeeNames]);
+                // If not an array, treat as single name string and pad to attendeeCount
+                const namesArray = [data.userRegistration.attendeeNames];
+                while (namesArray.length < regAttendeeCount) {
+                  namesArray.push('');
+                }
+                setAttendeeNames(namesArray);
               }
             } catch {
-              // If not JSON, treat as single name string
-              setAttendeeNames([data.userRegistration.attendeeNames]);
+              // If not JSON, treat as single name string and pad to attendeeCount
+              const namesArray = [data.userRegistration.attendeeNames];
+              while (namesArray.length < regAttendeeCount) {
+                namesArray.push('');
+              }
+              setAttendeeNames(namesArray);
             }
-          }
-
-          // Load attendee count
-          if (data.userRegistration.attendeeCount) {
-            setAttendeeCount(data.userRegistration.attendeeCount);
+          } else {
+            // No attendee names - create empty array with correct length
+            const emptyNames = Array.from({ length: regAttendeeCount }, () => '');
+            setAttendeeNames(emptyNames);
           }
 
           // Load special requests
@@ -1881,7 +1900,12 @@ export default function EventDetailPage() {
                         <button
                           onClick={() => {
                             setIsEditingNames(true);
-                            setTempAttendeeNames([...attendeeNames]);
+                            // Ensure tempAttendeeNames has the correct length
+                            const names = [...attendeeNames];
+                            while (names.length < attendeeCount) {
+                              names.push('');
+                            }
+                            setTempAttendeeNames(names);
                             setTempSpecialRequests(specialRequests || '');
                           }}
                           className="flex items-center gap-1.5 p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

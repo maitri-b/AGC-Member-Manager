@@ -1823,6 +1823,401 @@ export default function RoomManagementModal({
         XLSX.utils.book_append_sheet(wb, lockedRoomsWs, 'ห้องที่ล็อค');
       }
 
+      // ==================== NEW WORKSHEET: สรุปบริษัทตามอาคาร ====================
+      // Group companies by building (only occupied rooms)
+      const buildingCompaniesMap = new Map<string, Set<string>>();
+
+      roomsWithOccupants.forEach(room => {
+        if (room.occupants.length > 0) {
+          if (!buildingCompaniesMap.has(room.buildingName)) {
+            buildingCompaniesMap.set(room.buildingName, new Set());
+          }
+
+          // Add all unique companies from this room
+          room.occupants.forEach(occupant => {
+            buildingCompaniesMap.get(room.buildingName)!.add(occupant.companyName);
+          });
+        }
+      });
+
+      // Prepare data for building-company summary worksheet
+      const buildingCompanySummaryData: any[] = [];
+
+      // Title row
+      buildingCompanySummaryData.push(['สรุปรายชื่อบริษัทที่พักแต่ละอาคาร']);
+
+      // Event info
+      buildingCompanySummaryData.push(['กิจกรรม:', eventName]);
+      buildingCompanySummaryData.push(['วันที่ Export:', new Date().toLocaleString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })]);
+      buildingCompanySummaryData.push([]); // Empty row
+
+      // Sort buildings alphabetically
+      const sortedBuildingsForSummary = Array.from(buildingCompaniesMap.keys()).sort();
+
+      sortedBuildingsForSummary.forEach((buildingName, buildingIndex) => {
+        const companies = Array.from(buildingCompaniesMap.get(buildingName) || []).sort();
+
+        // Building header
+        buildingCompanySummaryData.push([`อาคาร: ${buildingName}`, `จำนวนบริษัท: ${companies.length}`]);
+
+        // Column headers for this building
+        buildingCompanySummaryData.push(['ลำดับ', 'ชื่อบริษัท']);
+
+        // Company list
+        companies.forEach((companyName, index) => {
+          buildingCompanySummaryData.push([index + 1, companyName]);
+        });
+
+        // Empty row between buildings (except for the last one)
+        if (buildingIndex < sortedBuildingsForSummary.length - 1) {
+          buildingCompanySummaryData.push([]);
+        }
+      });
+
+      // Create worksheet
+      const buildingCompanySummaryWs = XLSX.utils.aoa_to_sheet(buildingCompanySummaryData);
+
+      // Set column widths
+      buildingCompanySummaryWs['!cols'] = [
+        { wch: 12 },  // ลำดับ / อาคาร
+        { wch: 50 },  // ชื่อบริษัท / จำนวนบริษัท
+      ];
+
+      // Style the worksheet
+      const summaryRange = XLSX.utils.decode_range(buildingCompanySummaryWs['!ref'] || 'A1');
+
+      // Title row styling (row 0)
+      if (buildingCompanySummaryWs['A1']) {
+        buildingCompanySummaryWs['A1'].s = {
+          font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '2E7D32' } }, // Dark green
+          alignment: { horizontal: 'center', vertical: 'center' }
+        };
+        if (!buildingCompanySummaryWs['!merges']) buildingCompanySummaryWs['!merges'] = [];
+        buildingCompanySummaryWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
+      }
+
+      // Event info rows styling (rows 1-2)
+      ['A2', 'A3'].forEach((cell, idx) => {
+        if (buildingCompanySummaryWs[cell]) {
+          buildingCompanySummaryWs[cell].s = {
+            font: { bold: true },
+            fill: { fgColor: { rgb: 'E8F5E9' } } // Light green
+          };
+        }
+        const valCell = `B${idx + 2}`;
+        if (buildingCompanySummaryWs[valCell]) {
+          buildingCompanySummaryWs[valCell].s = {
+            fill: { fgColor: { rgb: 'E8F5E9' } } // Light green
+          };
+        }
+      });
+
+      // Style building headers, column headers, and data rows
+      let currentRow = 4; // Start after title and event info rows
+
+      sortedBuildingsForSummary.forEach((buildingName, buildingIndex) => {
+        const companies = Array.from(buildingCompaniesMap.get(buildingName) || []).sort();
+
+        // Building header row
+        const buildingHeaderCell = XLSX.utils.encode_cell({ r: currentRow, c: 0 });
+        const buildingCountCell = XLSX.utils.encode_cell({ r: currentRow, c: 1 });
+
+        if (buildingCompanySummaryWs[buildingHeaderCell]) {
+          buildingCompanySummaryWs[buildingHeaderCell].s = {
+            font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '43A047' } }, // Medium green
+            alignment: { horizontal: 'left', vertical: 'center' },
+            border: {
+              top: { style: 'medium', color: { rgb: '000000' } },
+              bottom: { style: 'thin', color: { rgb: '000000' } },
+              left: { style: 'medium', color: { rgb: '000000' } },
+              right: { style: 'thin', color: { rgb: '000000' } }
+            }
+          };
+        }
+
+        if (buildingCompanySummaryWs[buildingCountCell]) {
+          buildingCompanySummaryWs[buildingCountCell].s = {
+            font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '43A047' } }, // Medium green
+            alignment: { horizontal: 'right', vertical: 'center' },
+            border: {
+              top: { style: 'medium', color: { rgb: '000000' } },
+              bottom: { style: 'thin', color: { rgb: '000000' } },
+              left: { style: 'thin', color: { rgb: '000000' } },
+              right: { style: 'medium', color: { rgb: '000000' } }
+            }
+          };
+        }
+
+        currentRow++;
+
+        // Column header row (ลำดับ, ชื่อบริษัท)
+        const col1Header = XLSX.utils.encode_cell({ r: currentRow, c: 0 });
+        const col2Header = XLSX.utils.encode_cell({ r: currentRow, c: 1 });
+
+        [col1Header, col2Header].forEach((cell, colIdx) => {
+          if (buildingCompanySummaryWs[cell]) {
+            buildingCompanySummaryWs[cell].s = {
+              font: { bold: true, color: { rgb: 'FFFFFF' } },
+              fill: { fgColor: { rgb: '66BB6A' } }, // Light green
+              alignment: { horizontal: 'center', vertical: 'center' },
+              border: {
+                top: { style: 'thin', color: { rgb: '000000' } },
+                bottom: { style: 'thin', color: { rgb: '000000' } },
+                left: colIdx === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
+                right: colIdx === 1 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+              }
+            };
+          }
+        });
+
+        currentRow++;
+
+        // Data rows (company list)
+        companies.forEach((companyName, companyIndex) => {
+          const isLastRow = companyIndex === companies.length - 1;
+
+          for (let C = 0; C <= 1; C++) {
+            const cell = XLSX.utils.encode_cell({ r: currentRow, c: C });
+            if (buildingCompanySummaryWs[cell]) {
+              buildingCompanySummaryWs[cell].s = {
+                alignment: { horizontal: C === 0 ? 'center' : 'left', vertical: 'center' },
+                border: {
+                  top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                  bottom: isLastRow ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
+                  left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
+                  right: C === 1 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } }
+                }
+              };
+            }
+          }
+
+          currentRow++;
+        });
+
+        // Empty row between buildings
+        if (buildingIndex < sortedBuildingsForSummary.length - 1) {
+          currentRow++;
+        }
+      });
+
+      // Add building-company summary worksheet
+      XLSX.utils.book_append_sheet(wb, buildingCompanySummaryWs, 'สรุปบริษัทตามอาคาร');
+
+      // ==================== NEW WORKSHEET: สรุปห้องพักตามบริษัท ====================
+      // Group rooms by company
+      const companyRoomsMap = new Map<string, Array<{
+        buildingName: string;
+        roomNumber: string;
+        occupants: RoomOccupant[];
+      }>>();
+
+      roomsWithOccupants.forEach(room => {
+        if (room.occupants.length > 0) {
+          // Get all unique companies in this room
+          const companiesInRoom = new Set(room.occupants.map(occ => occ.companyName));
+
+          companiesInRoom.forEach(companyName => {
+            if (!companyRoomsMap.has(companyName)) {
+              companyRoomsMap.set(companyName, []);
+            }
+
+            // Get only occupants from this company
+            const companyOccupants = room.occupants.filter(occ => occ.companyName === companyName);
+
+            companyRoomsMap.get(companyName)!.push({
+              buildingName: room.buildingName,
+              roomNumber: room.roomNumber,
+              occupants: companyOccupants
+            });
+          });
+        }
+      });
+
+      // Prepare data for company-rooms summary worksheet
+      const companyRoomsSummaryData: any[] = [];
+
+      // Title row
+      companyRoomsSummaryData.push(['สรุปห้องพักแยกตามบริษัท']);
+
+      // Event info
+      companyRoomsSummaryData.push(['กิจกรรม:', eventName]);
+      companyRoomsSummaryData.push(['วันที่ Export:', new Date().toLocaleString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })]);
+      companyRoomsSummaryData.push([]); // Empty row
+
+      // Sort companies alphabetically
+      const sortedCompanies = Array.from(companyRoomsMap.keys()).sort();
+
+      sortedCompanies.forEach((companyName, companyIndex) => {
+        const rooms = companyRoomsMap.get(companyName) || [];
+
+        // Sort rooms by building name, then room number
+        rooms.sort((a, b) => {
+          const buildingCompare = a.buildingName.localeCompare(b.buildingName);
+          if (buildingCompare !== 0) return buildingCompare;
+          return a.roomNumber.localeCompare(b.roomNumber);
+        });
+
+        // Company header
+        companyRoomsSummaryData.push([`บริษัท: ${companyName}`, `จำนวนห้อง: ${rooms.length}`]);
+
+        // Column headers
+        companyRoomsSummaryData.push(['ลำดับ', 'อาคาร', 'เลขห้อง', 'ผู้เข้าพัก']);
+
+        // Room list with occupants
+        rooms.forEach((room, index) => {
+          const occupantNames = room.occupants.map(occ => occ.attendeeName).join(', ');
+          companyRoomsSummaryData.push([
+            index + 1,
+            room.buildingName,
+            room.roomNumber,
+            occupantNames
+          ]);
+        });
+
+        // Empty row between companies (except for the last one)
+        if (companyIndex < sortedCompanies.length - 1) {
+          companyRoomsSummaryData.push([]);
+        }
+      });
+
+      // Create worksheet
+      const companyRoomsSummaryWs = XLSX.utils.aoa_to_sheet(companyRoomsSummaryData);
+
+      // Set column widths
+      companyRoomsSummaryWs['!cols'] = [
+        { wch: 12 },  // ลำดับ
+        { wch: 15 },  // อาคาร
+        { wch: 12 },  // เลขห้อง
+        { wch: 60 },  // ผู้เข้าพัก
+      ];
+
+      // Style the worksheet
+      const companyRoomsRange = XLSX.utils.decode_range(companyRoomsSummaryWs['!ref'] || 'A1');
+
+      // Title row styling (row 0)
+      if (companyRoomsSummaryWs['A1']) {
+        companyRoomsSummaryWs['A1'].s = {
+          font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '1976D2' } }, // Blue
+          alignment: { horizontal: 'center', vertical: 'center' }
+        };
+        if (!companyRoomsSummaryWs['!merges']) companyRoomsSummaryWs['!merges'] = [];
+        companyRoomsSummaryWs['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+      }
+
+      // Event info rows styling (rows 1-2)
+      ['A2', 'A3'].forEach((cell, idx) => {
+        if (companyRoomsSummaryWs[cell]) {
+          companyRoomsSummaryWs[cell].s = {
+            font: { bold: true },
+            fill: { fgColor: { rgb: 'BBDEFB' } } // Light blue
+          };
+        }
+        const valCell = `B${idx + 2}`;
+        if (companyRoomsSummaryWs[valCell]) {
+          companyRoomsSummaryWs[valCell].s = {
+            fill: { fgColor: { rgb: 'BBDEFB' } } // Light blue
+          };
+        }
+      });
+
+      // Style company headers, column headers, and data rows
+      let currentCompanyRow = 4; // Start after title and event info rows
+
+      sortedCompanies.forEach((companyName, companyIndex) => {
+        const rooms = companyRoomsMap.get(companyName) || [];
+
+        // Company header row
+        for (let C = 0; C <= 3; C++) {
+          const cell = XLSX.utils.encode_cell({ r: currentCompanyRow, c: C });
+          if (!companyRoomsSummaryWs[cell]) {
+            companyRoomsSummaryWs[cell] = { v: '', t: 's' };
+          }
+          companyRoomsSummaryWs[cell].s = {
+            font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '2196F3' } }, // Medium blue
+            alignment: { horizontal: C === 0 ? 'left' : C === 1 ? 'right' : 'center', vertical: 'center' },
+            border: {
+              top: { style: 'medium', color: { rgb: '000000' } },
+              bottom: { style: 'thin', color: { rgb: '000000' } },
+              left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
+              right: C === 3 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+            }
+          };
+        }
+
+        // Merge company name cells
+        if (!companyRoomsSummaryWs['!merges']) companyRoomsSummaryWs['!merges'] = [];
+        companyRoomsSummaryWs['!merges'].push({ s: { r: currentCompanyRow, c: 0 }, e: { r: currentCompanyRow, c: 2 } });
+
+        currentCompanyRow++;
+
+        // Column header row
+        for (let C = 0; C <= 3; C++) {
+          const cell = XLSX.utils.encode_cell({ r: currentCompanyRow, c: C });
+          if (companyRoomsSummaryWs[cell]) {
+            companyRoomsSummaryWs[cell].s = {
+              font: { bold: true, color: { rgb: 'FFFFFF' } },
+              fill: { fgColor: { rgb: '64B5F6' } }, // Light blue
+              alignment: { horizontal: 'center', vertical: 'center' },
+              border: {
+                top: { style: 'thin', color: { rgb: '000000' } },
+                bottom: { style: 'thin', color: { rgb: '000000' } },
+                left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
+                right: C === 3 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+              }
+            };
+          }
+        }
+
+        currentCompanyRow++;
+
+        // Data rows (room list)
+        rooms.forEach((room, roomIndex) => {
+          const isLastRow = roomIndex === rooms.length - 1;
+
+          for (let C = 0; C <= 3; C++) {
+            const cell = XLSX.utils.encode_cell({ r: currentCompanyRow, c: C });
+            if (companyRoomsSummaryWs[cell]) {
+              companyRoomsSummaryWs[cell].s = {
+                alignment: { horizontal: C === 0 ? 'center' : C === 3 ? 'left' : 'center', vertical: 'center' },
+                border: {
+                  top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                  bottom: isLastRow ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
+                  left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
+                  right: C === 3 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } }
+                }
+              };
+            }
+          }
+
+          currentCompanyRow++;
+        });
+
+        // Empty row between companies
+        if (companyIndex < sortedCompanies.length - 1) {
+          currentCompanyRow++;
+        }
+      });
+
+      // Add company-rooms summary worksheet
+      XLSX.utils.book_append_sheet(wb, companyRoomsSummaryWs, 'สรุปห้องพักตามบริษัท');
+
       // Download file
       const fileName = `Room_Summary_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);

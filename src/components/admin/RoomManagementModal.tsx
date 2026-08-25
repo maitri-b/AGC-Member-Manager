@@ -2048,7 +2048,7 @@ export default function RoomManagementModal({
               buildingName: room.buildingName,
               roomNumber: room.roomNumber,
               occupants: companyOccupants,
-              isLocked: room.isLocked
+              isLocked: room.isLocked || false
             });
           });
         } else if (room.isLocked && room.note) {

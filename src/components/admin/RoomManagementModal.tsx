@@ -1890,8 +1890,6 @@ export default function RoomManagementModal({
       ];
 
       // Style the worksheet
-      const summaryRange = XLSX.utils.decode_range(buildingCompanySummaryWs['!ref'] || 'A1');
-
       // Title row styling (row 0)
       if (buildingCompanySummaryWs['A1']) {
         buildingCompanySummaryWs['A1'].s = {
@@ -2107,8 +2105,6 @@ export default function RoomManagementModal({
       ];
 
       // Style the worksheet
-      const companyRoomsRange = XLSX.utils.decode_range(companyRoomsSummaryWs['!ref'] || 'A1');
-
       // Title row styling (row 0)
       if (companyRoomsSummaryWs['A1']) {
         companyRoomsSummaryWs['A1'].s = {

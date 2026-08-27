@@ -160,6 +160,8 @@ interface EventFormData {
   attendeeTypes: AttendeeType[];
   // Room allocation (New)
   roomTypes: RoomType[];
+  // Room settings (New)
+  roomSettings?: RoomSettings;
   // Carpool feature (New)
   hasCarpoolFeature?: boolean;
   carpoolSettings?: CarpoolSettings;

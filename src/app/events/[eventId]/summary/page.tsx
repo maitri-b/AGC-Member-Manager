@@ -79,7 +79,8 @@ export default function EventSummaryPage() {
     }
 
     fetchSummaryData();
-  }, [session, status, eventId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, eventId]); // Remove session from deps to prevent infinite loop
 
   const fetchSummaryData = async (registrationId?: string) => {
     setLoading(true);

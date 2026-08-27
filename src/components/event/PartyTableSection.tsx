@@ -184,6 +184,9 @@ export default function PartyTableSection({
       }
 
       const data = await response.json();
+      console.log('[PartyTableSection] Fetched tables:', data.tables);
+      console.log('[PartyTableSection] showTableNumbersToMembers:', event?.partyTableSettings?.showTableNumbersToMembers);
+      console.log('[PartyTableSection] Tables with assignedTableNumber:', data.tables?.filter((t: any) => t.assignedTableNumber));
       setMemberTables(data.tables || []);
     } catch (error) {
       console.error('Error fetching party tables:', error);
@@ -744,14 +747,18 @@ export default function PartyTableSection({
                               </svg>
                             </button>
                             {/* Table Number - Moved here for better visibility */}
-                            {event?.partyTableSettings?.showTableNumbersToMembers && table.assignedTableNumber && (
-                              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-base font-bold rounded-lg shadow-md">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                                </svg>
-                                โต๊ะ #{table.assignedTableNumber}
-                              </div>
-                            )}
+                            {(() => {
+                              const shouldShow = event?.partyTableSettings?.showTableNumbersToMembers && table.assignedTableNumber;
+                              console.log('[PartyTableSection Render] Table:', table.tableId, 'showSetting:', event?.partyTableSettings?.showTableNumbersToMembers, 'assignedNumber:', table.assignedTableNumber, 'shouldShow:', shouldShow);
+                              return shouldShow && (
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-base font-bold rounded-lg shadow-md">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                  </svg>
+                                  โต๊ะ #{table.assignedTableNumber}
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>

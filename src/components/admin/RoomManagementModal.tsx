@@ -2021,44 +2021,36 @@ export default function RoomManagementModal({
       // Add building-company summary worksheet
       XLSX.utils.book_append_sheet(wb, buildingCompanySummaryWs, 'สรุปบริษัทตามอาคาร');
 
-      // ==================== NEW WORKSHEET: สรุปห้องพักตามบริษัท ====================
-      // Group rooms by company (occupied rooms + locked rooms)
-      const companyRoomsMap = new Map<string, Array<{
+      // ==================== NEW WORKSHEET: สรุปห้องพักตามเลขห้อง ====================
+      // Group rooms by room number (occupied rooms + locked rooms)
+      const roomGroupsMap = new Map<string, {
         buildingName: string;
         roomNumber: string;
+        companies: string[]; // List of companies in this room
         occupants: RoomOccupant[];
         isLocked: boolean;
         maxOccupancy?: number;
-      }>>();
+        note?: string; // For locked rooms
+      }>();
 
       roomsWithOccupants.forEach(room => {
+        // Create unique room key (building + room number)
+        const roomKey = `${room.buildingName}|${room.roomNumber}`;
+
         if (room.occupants.length > 0) {
           // Get all unique companies in this room
-          const companiesInRoom = new Set(room.occupants.map(occ => occ.companyName));
+          const companiesInRoom = Array.from(new Set(room.occupants.map(occ => occ.companyName))).sort();
 
-          companiesInRoom.forEach(companyName => {
-            if (!companyRoomsMap.has(companyName)) {
-              companyRoomsMap.set(companyName, []);
-            }
-
-            // Get only occupants from this company
-            const companyOccupants = room.occupants.filter(occ => occ.companyName === companyName);
-
-            companyRoomsMap.get(companyName)!.push({
-              buildingName: room.buildingName,
-              roomNumber: room.roomNumber,
-              occupants: companyOccupants,
-              isLocked: room.isLocked || false
-            });
+          roomGroupsMap.set(roomKey, {
+            buildingName: room.buildingName,
+            roomNumber: room.roomNumber,
+            companies: companiesInRoom,
+            occupants: room.occupants, // All occupants from all companies
+            isLocked: room.isLocked || false
           });
         } else if (room.isLocked && room.note) {
-          // Add locked rooms with note as "company"
-          const noteKey = room.note;
-          if (!companyRoomsMap.has(noteKey)) {
-            companyRoomsMap.set(noteKey, []);
-          }
-
-          // Create dummy occupants for locked room slots (Note 1, Note 2, ...)
+          // Add locked rooms
+          // Create dummy occupants for locked room slots
           const lockedOccupants: RoomOccupant[] = [];
           for (let i = 1; i <= room.maxOccupancy; i++) {
             lockedOccupants.push({
@@ -2069,21 +2061,23 @@ export default function RoomManagementModal({
             });
           }
 
-          companyRoomsMap.get(noteKey)!.push({
+          roomGroupsMap.set(roomKey, {
             buildingName: room.buildingName,
             roomNumber: room.roomNumber,
+            companies: [room.note], // Locked room "company"
             occupants: lockedOccupants,
             isLocked: true,
-            maxOccupancy: room.maxOccupancy
+            maxOccupancy: room.maxOccupancy,
+            note: room.note
           });
         }
       });
 
-      // Prepare data for company-rooms summary worksheet
+      // Prepare data for room summary worksheet
       const companyRoomsSummaryData: any[] = [];
 
       // Title row
-      companyRoomsSummaryData.push(['สรุปห้องพักแยกตามบริษัท']);
+      companyRoomsSummaryData.push(['สรุปห้องพักแยกตามเลขห้อง']);
 
       // Event info
       companyRoomsSummaryData.push(['กิจกรรม:', eventName]);
@@ -2096,38 +2090,71 @@ export default function RoomManagementModal({
       })]);
       companyRoomsSummaryData.push([]); // Empty row
 
-      // Sort companies alphabetically
-      const sortedCompanies = Array.from(companyRoomsMap.keys()).sort();
+      // Convert map to array and separate locked vs agent rooms
+      const allRoomsList = Array.from(roomGroupsMap.values());
+      const lockedRoomsList = allRoomsList.filter(room => room.isLocked);
+      const agentRoomsList = allRoomsList.filter(room => !room.isLocked);
 
-      sortedCompanies.forEach((companyName, companyIndex) => {
-        const rooms = companyRoomsMap.get(companyName) || [];
-
-        // Sort rooms by building name, then room number
-        rooms.sort((a, b) => {
+      // Sort both groups by building name, then room number
+      const sortRooms = (rooms: typeof allRoomsList) => {
+        return rooms.sort((a, b) => {
           const buildingCompare = a.buildingName.localeCompare(b.buildingName);
           if (buildingCompare !== 0) return buildingCompare;
           return a.roomNumber.localeCompare(b.roomNumber);
         });
+      };
 
-        // Company header
-        companyRoomsSummaryData.push([`บริษัท: ${companyName}`, `จำนวนห้อง: ${rooms.length}`]);
+      sortRooms(lockedRoomsList);
+      sortRooms(agentRoomsList);
+
+      // Combine: locked rooms first, then agent rooms
+      const sortedRooms = [...lockedRoomsList, ...agentRoomsList];
+
+      // Track current section (locked or agent) for section headers
+      let currentSection: 'locked' | 'agent' | null = null;
+      let roomCounter = 0;
+
+      sortedRooms.forEach((room, roomIndex) => {
+        // Add section header when changing from locked to agent rooms
+        if (room.isLocked && currentSection !== 'locked') {
+          currentSection = 'locked';
+          companyRoomsSummaryData.push(['=== ห้องล็อค (Locked Rooms) ===']);
+          companyRoomsSummaryData.push([]); // Empty row
+          roomCounter = 0;
+        } else if (!room.isLocked && currentSection !== 'agent') {
+          currentSection = 'agent';
+          if (roomIndex > 0) {
+            companyRoomsSummaryData.push([]); // Empty row before section
+          }
+          companyRoomsSummaryData.push(['=== ห้องเอเจ้นท์ (Agent Rooms) ===']);
+          companyRoomsSummaryData.push([]); // Empty row
+          roomCounter = 0;
+        }
+
+        roomCounter++;
+
+        // Room header: Companies in this room
+        const companiesText = room.companies.join(' + ');
+        const occupantCount = room.occupants.length;
+        companyRoomsSummaryData.push([
+          `บริษัท: ${companiesText}`,
+          `จำนวนผู้เข้าพัก: ${occupantCount} คน`
+        ]);
 
         // Column headers
         companyRoomsSummaryData.push(['ลำดับ', 'อาคาร', 'เลขห้อง', 'ผู้เข้าพัก']);
 
-        // Room list with occupants
-        rooms.forEach((room, index) => {
-          const occupantNames = room.occupants.map(occ => occ.attendeeName).join(', ');
-          companyRoomsSummaryData.push([
-            index + 1,
-            room.buildingName,
-            room.roomNumber,
-            occupantNames
-          ]);
-        });
+        // Room data with all occupants
+        const occupantNames = room.occupants.map(occ => occ.attendeeName).join(', ');
+        companyRoomsSummaryData.push([
+          roomCounter,
+          room.buildingName,
+          room.roomNumber,
+          occupantNames
+        ]);
 
-        // Empty row between companies (except for the last one)
-        if (companyIndex < sortedCompanies.length - 1) {
+        // Empty row between rooms (except for the last one)
+        if (roomIndex < sortedRooms.length - 1) {
           companyRoomsSummaryData.push([]);
         }
       });
@@ -2171,24 +2198,44 @@ export default function RoomManagementModal({
         }
       });
 
-      // Style company headers, column headers, and data rows
-      let currentCompanyRow = 4; // Start after title and event info rows
+      // Style section headers, room headers, column headers, and data rows
+      let currentRoomRow = 4; // Start after title and event info rows
 
-      sortedCompanies.forEach((companyName, companyIndex) => {
-        const rooms = companyRoomsMap.get(companyName) || [];
+      sortedRooms.forEach((room, roomIndex) => {
+        const isLockedRoom = room.isLocked;
 
-        // Check if this is a locked room group
-        const isLockedGroup = rooms.length > 0 && rooms[0].isLocked;
+        // Check if we need to add section header
+        const cellValue = companyRoomsSummaryWs[XLSX.utils.encode_cell({ r: currentRoomRow, c: 0 })]?.v;
 
-        // Company header row
+        // Section header styling (=== ห้องล็อค === or === ห้องเอเจ้นท์ ===)
+        if (typeof cellValue === 'string' && cellValue.startsWith('===')) {
+          for (let C = 0; C <= 3; C++) {
+            const cell = XLSX.utils.encode_cell({ r: currentRoomRow, c: C });
+            if (!companyRoomsSummaryWs[cell]) {
+              companyRoomsSummaryWs[cell] = { v: '', t: 's' };
+            }
+            companyRoomsSummaryWs[cell].s = {
+              font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+              fill: { fgColor: { rgb: cellValue.includes('ล็อค') ? '8B4513' : '1976D2' } }, // Dark brown for locked, Dark blue for agent
+              alignment: { horizontal: 'center', vertical: 'center' }
+            };
+          }
+          if (!companyRoomsSummaryWs['!merges']) companyRoomsSummaryWs['!merges'] = [];
+          companyRoomsSummaryWs['!merges'].push({ s: { r: currentRoomRow, c: 0 }, e: { r: currentRoomRow, c: 3 } });
+
+          currentRoomRow++; // Skip empty row after section header
+          currentRoomRow++;
+        }
+
+        // Room header row (บริษัท + จำนวนผู้เข้าพัก)
         for (let C = 0; C <= 3; C++) {
-          const cell = XLSX.utils.encode_cell({ r: currentCompanyRow, c: C });
+          const cell = XLSX.utils.encode_cell({ r: currentRoomRow, c: C });
           if (!companyRoomsSummaryWs[cell]) {
             companyRoomsSummaryWs[cell] = { v: '', t: 's' };
           }
           companyRoomsSummaryWs[cell].s = {
             font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
-            fill: { fgColor: { rgb: isLockedGroup ? 'D2691E' : '2196F3' } }, // Brown for locked, Blue for normal
+            fill: { fgColor: { rgb: isLockedRoom ? 'D2691E' : '2196F3' } }, // Brown for locked, Blue for agent
             alignment: { horizontal: C === 0 ? 'left' : C === 1 ? 'right' : 'center', vertical: 'center' },
             border: {
               top: { style: 'medium', color: { rgb: '000000' } },
@@ -2199,19 +2246,19 @@ export default function RoomManagementModal({
           };
         }
 
-        // Merge company name cells
+        // Merge company cells
         if (!companyRoomsSummaryWs['!merges']) companyRoomsSummaryWs['!merges'] = [];
-        companyRoomsSummaryWs['!merges'].push({ s: { r: currentCompanyRow, c: 0 }, e: { r: currentCompanyRow, c: 2 } });
+        companyRoomsSummaryWs['!merges'].push({ s: { r: currentRoomRow, c: 0 }, e: { r: currentRoomRow, c: 2 } });
 
-        currentCompanyRow++;
+        currentRoomRow++;
 
         // Column header row
         for (let C = 0; C <= 3; C++) {
-          const cell = XLSX.utils.encode_cell({ r: currentCompanyRow, c: C });
+          const cell = XLSX.utils.encode_cell({ r: currentRoomRow, c: C });
           if (companyRoomsSummaryWs[cell]) {
             companyRoomsSummaryWs[cell].s = {
               font: { bold: true, color: { rgb: 'FFFFFF' } },
-              fill: { fgColor: { rgb: isLockedGroup ? 'CD853F' : '64B5F6' } }, // Peru (light brown) for locked, Light blue for normal
+              fill: { fgColor: { rgb: isLockedRoom ? 'CD853F' : '64B5F6' } }, // Peru for locked, Light blue for agent
               alignment: { horizontal: 'center', vertical: 'center' },
               border: {
                 top: { style: 'thin', color: { rgb: '000000' } },
@@ -2223,40 +2270,36 @@ export default function RoomManagementModal({
           }
         }
 
-        currentCompanyRow++;
+        currentRoomRow++;
 
-        // Data rows (room list)
-        rooms.forEach((room, roomIndex) => {
-          const isLastRow = roomIndex === rooms.length - 1;
-
-          for (let C = 0; C <= 3; C++) {
-            const cell = XLSX.utils.encode_cell({ r: currentCompanyRow, c: C });
-            if (companyRoomsSummaryWs[cell]) {
-              companyRoomsSummaryWs[cell].s = {
-                alignment: { horizontal: C === 0 ? 'center' : C === 3 ? 'left' : 'center', vertical: 'center' },
-                fill: isLockedGroup ? { fgColor: { rgb: 'FFE6CC' } } : undefined, // Light orange for locked rooms
-                font: isLockedGroup ? { italic: true, color: { rgb: '8B4513' } } : undefined, // Brown italic for locked rooms
-                border: {
-                  top: { style: 'thin', color: { rgb: 'CCCCCC' } },
-                  bottom: isLastRow ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
-                  left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
-                  right: C === 3 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } }
-                }
-              };
-            }
+        // Data row (room details)
+        for (let C = 0; C <= 3; C++) {
+          const cell = XLSX.utils.encode_cell({ r: currentRoomRow, c: C });
+          if (companyRoomsSummaryWs[cell]) {
+            companyRoomsSummaryWs[cell].s = {
+              alignment: { horizontal: C === 0 ? 'center' : C === 3 ? 'left' : 'center', vertical: 'center' },
+              fill: isLockedRoom ? { fgColor: { rgb: 'FFE6CC' } } : undefined, // Light orange for locked
+              font: isLockedRoom ? { italic: true, color: { rgb: '8B4513' } } : undefined, // Brown italic for locked
+              border: {
+                top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                bottom: { style: 'medium', color: { rgb: '000000' } },
+                left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
+                right: C === 3 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } }
+              }
+            };
           }
+        }
 
-          currentCompanyRow++;
-        });
+        currentRoomRow++;
 
-        // Empty row between companies
-        if (companyIndex < sortedCompanies.length - 1) {
-          currentCompanyRow++;
+        // Empty row between rooms
+        if (roomIndex < sortedRooms.length - 1) {
+          currentRoomRow++;
         }
       });
 
-      // Add company-rooms summary worksheet
-      XLSX.utils.book_append_sheet(wb, companyRoomsSummaryWs, 'สรุปห้องพักตามบริษัท');
+      // Add room summary worksheet
+      XLSX.utils.book_append_sheet(wb, companyRoomsSummaryWs, 'สรุปห้องพักตามเลขห้อง');
 
       // Download file
       const fileName = `Room_Summary_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`;

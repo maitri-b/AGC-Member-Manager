@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import { AttendeeType, RoomType, PriceTier, CancellationPolicy } from '@/types/event';
 import { CarpoolSettings } from '@/types/carpool';
 import { PartyTableSettings } from '@/types/partyTable';
+import { RoomSettings } from '@/types/room';
 import { formatEventDateRange } from '@/lib/date-utils';
 import CancellationPolicySettings from '@/components/admin/CancellationPolicySettings';
 import PromoteEventModal from '@/components/admin/PromoteEventModal';
@@ -74,6 +75,8 @@ interface Event {
   useAttendeeTypePricing?: boolean;
   attendeeTypes?: AttendeeType[];
   roomTypes?: RoomType[];
+  // Room settings (New)
+  roomSettings?: RoomSettings;
   // Carpool feature (New)
   hasCarpoolFeature?: boolean;
   carpoolSettings?: CarpoolSettings;
@@ -273,6 +276,8 @@ const initialFormData: EventFormData = {
       sortOrder: 4
     }
   ],
+  // Room settings (New)
+  roomSettings: undefined,
   // Carpool feature (New)
   hasCarpoolFeature: false,
   carpoolSettings: undefined,
@@ -550,6 +555,8 @@ export default function AdminEventsPage() {
         attendeeTypes: (event as any).attendeeTypes ?? [],
         // Room allocation (New)
         roomTypes: (event as any).roomTypes ?? [],
+        // Room settings (New)
+        roomSettings: (event as any).roomSettings ?? undefined,
         // Carpool feature (New)
         hasCarpoolFeature: (event as any).hasCarpoolFeature ?? false,
         carpoolSettings: (event as any).carpoolSettings ?? undefined,
@@ -2152,6 +2159,33 @@ export default function AdminEventsPage() {
                   <p className="text-xs text-blue-600 mt-1">
                     <strong>หมายเหตุ:</strong> ระบบจะตรวจสอบว่าจำนวนห้องพักที่เลือกรองรับจำนวนผู้เข้าร่วมพอดี
                   </p>
+
+                  {/* Room Settings - Show room numbers to members */}
+                  {formData.roomTypes && formData.roomTypes.length > 0 && (
+                    <div className="mt-4 p-3 bg-white border border-amber-300 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="showRoomNumbersToMembers"
+                          checked={formData.roomSettings?.showRoomNumbersToMembers || false}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            roomSettings: {
+                              showRoomNumbersToMembers: e.target.checked,
+                              roomActive: true
+                            }
+                          })}
+                          className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                        />
+                        <label htmlFor="showRoomNumbersToMembers" className="text-xs font-medium text-gray-700 cursor-pointer">
+                          แสดงเลขห้องพักให้สมาชิกเห็น (ที่หน้า Member Event Detail)
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2 ml-6">
+                        เมื่อเปิดใช้งาน สมาชิกจะสามารถเห็นข้อมูลห้องพักที่ตนได้รับการจัดสรร (อาคาร + เลขห้อง)
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Carpool Feature Configuration (NEW) */}

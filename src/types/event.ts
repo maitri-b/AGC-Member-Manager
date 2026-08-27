@@ -3,6 +3,7 @@
 
 import { CarpoolSettings } from './carpool';
 import { PartyTableSettings } from './partyTable';
+import { RoomSettings } from './room';
 
 // Event registration from Google Sheet "10 Yearth Meeting registration"
 export interface EventRegistration {
@@ -223,6 +224,9 @@ export interface Event {
   hasPartyTableFeature?: boolean;   // กิจกรรมนี้มีการจัดโต๊ะนั่ง (Party Table)
   partyTableSettings?: PartyTableSettings; // การตั้งค่า Party Table
 
+  // Room Settings (New - for room allocation display settings)
+  roomSettings?: RoomSettings; // การตั้งค่าการแสดงเลขห้องพัก
+
   // Cancellation Policy (New - for event cancellation rules)
   cancellationPolicy?: CancellationPolicy; // นโยบายการยกเลิกและคืนเงิน
 
@@ -314,6 +318,9 @@ export interface EventInput {
   // Party Table Feature (New - for event seating arrangements)
   hasPartyTableFeature?: boolean;   // กิจกรรมนี้มีการจัดโต๊ะนั่ง (Party Table)
   partyTableSettings?: PartyTableSettings; // การตั้งค่า Party Table
+
+  // Room Settings (New - for room allocation display settings)
+  roomSettings?: RoomSettings; // การตั้งค่าการแสดงเลขห้องพัก
 
   // Cancellation Policy (New - for event cancellation rules)
   cancellationPolicy?: CancellationPolicy; // นโยบายการยกเลิกและคืนเงิน

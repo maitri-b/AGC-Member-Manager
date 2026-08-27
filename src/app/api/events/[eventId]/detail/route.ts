@@ -118,6 +118,8 @@ export async function GET(
       attendeeTypes: eventData?.attendeeTypes || [],
       // Room allocation (New)
       roomTypes: eventData?.roomTypes || [],
+      // Room settings (New)
+      roomSettings: eventData?.roomSettings || undefined,
       // Carpool feature (New)
       hasCarpoolFeature: eventData?.hasCarpoolFeature ?? false,
       carpoolSettings: eventData?.carpoolSettings || undefined,

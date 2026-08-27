@@ -58,6 +58,16 @@ export async function GET(
       registrationsMap.set(data.registrationId, data);
     });
 
+    // Get all users for LINE display names
+    const usersSnapshot = await db.collection('users').get();
+    const usersMap = new Map();
+    usersSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.lineUserId) {
+        usersMap.set(data.lineUserId, data);
+      }
+    });
+
     // Enrich Carpools with registration data (company name, contact info)
     const enrichedCarpools = await Promise.all(
       carpools.map(async (carpool) => {
@@ -66,12 +76,14 @@ export async function GET(
         const ownerCompanyName = ownerReg?.companyName || '';
         const ownerContactName = ownerReg?.contactName || '';
 
-        // Enrich each member with their company name
+        // Enrich each member with their company name and LINE display name
         const enrichedMembers = carpool.members?.map(member => {
           const memberReg = registrationsMap.get(member.registrationId);
+          const memberUser = usersMap.get(member.lineUserId);
           return {
             ...member,
             companyName: memberReg?.companyName || '',
+            lineDisplayName: memberUser?.lineDisplayName || memberUser?.displayName || '',
           };
         }) || [];
 

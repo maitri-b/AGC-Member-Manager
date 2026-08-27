@@ -1078,7 +1078,8 @@ export default function CarpoolManagementModal({
                     if (carpool.members?.some(member =>
                       member.name?.toLowerCase().includes(query) ||
                       member.registrationId?.toLowerCase().includes(query) ||
-                      (member as any).companyName?.toLowerCase().includes(query)
+                      (member as any).companyName?.toLowerCase().includes(query) ||
+                      (member as any).lineDisplayName?.toLowerCase().includes(query)
                     )) return true;
                     return false;
                   }).length;
@@ -1104,7 +1105,8 @@ export default function CarpoolManagementModal({
                     if (carpool.members?.some(member =>
                       member.name?.toLowerCase().includes(query) ||
                       member.registrationId?.toLowerCase().includes(query) ||
-                      (member as any).companyName?.toLowerCase().includes(query)
+                      (member as any).companyName?.toLowerCase().includes(query) ||
+                      (member as any).lineDisplayName?.toLowerCase().includes(query)
                     )) return true;
                     return false;
                   })

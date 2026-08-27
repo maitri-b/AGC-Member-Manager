@@ -1567,13 +1567,11 @@ export default function RoomManagementModal({
       // Add summary worksheet as the FIRST sheet
       XLSX.utils.book_append_sheet(wb, summaryWs, 'สรุปสถิติ');
 
-      // ========================================
-      // CREATE LOCKED ROOMS WORKSHEET
-      // ========================================
+      // ==================== REMOVED OLD LOCKED ROOMS WORKSHEET ====================
+      // Old locked rooms logic has been replaced by new company-grouped sheets below
 
-      const lockedRoomsData = roomsWithOccupants.filter(r => r.isLocked);
-
-      if (lockedRoomsData.length > 0) {
+      // Skip old locked rooms worksheet generation (moved to new logic below)
+      if (false) {
         // Group locked rooms by note (หมายเหตุ)
         const groupedByNote = lockedRoomsData.reduce((acc, room) => {
           const noteKey = room.note || 'ไม่มีหมายเหตุ';

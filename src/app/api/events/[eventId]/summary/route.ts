@@ -132,21 +132,24 @@ export async function GET(
         const carpoolMembers = carpool.members || [];
 
         // Check if any of user's attendees are in this carpool
-        const matchingMembers = carpoolMembers.filter((member: any) =>
+        const hasUserMember = carpoolMembers.some((member: any) =>
           member.registrationId === targetRegistrationId
         );
 
-        if (matchingMembers.length > 0) {
+        if (hasUserMember) {
+          // Return ALL members in the carpool (not just user's members)
           userCarpools.push({
             carpoolId: carpool.carpoolId,
             licensePlate: carpool.licensePlate,
             carModel: carpool.carModel || '',
             assignedCarNumber: carpool.assignedCarNumber,
             ownerRegistrationId: carpool.ownerRegistrationId,
-            members: matchingMembers.map((m: any) => ({
+            members: carpoolMembers.map((m: any) => ({
               name: m.name,
               attendeeIndex: m.attendeeIndex,
+              registrationId: m.registrationId,
               isOwner: m.registrationId === carpool.ownerRegistrationId && m.attendeeIndex === 0,
+              isCurrentUser: m.registrationId === targetRegistrationId, // Flag for current user's members
             })),
           });
         }
@@ -157,40 +160,65 @@ export async function GET(
 
     // Get room assignments (if enabled)
     let roomData = null;
-    if (eventData?.roomSettings?.showRoomNumbersToMembers) {
-      const roomsSnapshot = await db
-        .collection('eventRooms')
-        .where('eventId', '==', eventId)
-        .where('status', '==', 'active')
-        .get();
+    if (eventData?.roomSettings?.showRoomNumbersToMembers && registration.roomAssignments) {
+      try {
+        const roomAssignments = JSON.parse(registration.roomAssignments);
 
-      const userRooms: any[] = [];
+        if (Array.isArray(roomAssignments) && roomAssignments.length > 0) {
+          // Get unique room IDs from assignments
+          const roomIds = [...new Set(roomAssignments.map((a: any) => a.roomId))];
 
-      roomsSnapshot.docs.forEach(doc => {
-        const room = doc.data();
-        const roomMembers = room.members || [];
+          // Fetch all assigned rooms
+          const roomsPromises = roomIds.map(roomId =>
+            db.collection('eventRooms').doc(roomId).get()
+          );
 
-        // Check if any of user's attendees are in this room
-        const matchingMembers = roomMembers.filter((member: any) =>
-          member.registrationId === targetRegistrationId
-        );
+          const roomDocs = await Promise.all(roomsPromises);
+          const roomsMap = new Map();
 
-        if (matchingMembers.length > 0) {
-          userRooms.push({
-            roomId: room.roomId,
-            roomName: room.roomName || '',
-            buildingName: room.buildingName || '',
-            companyName: room.companyName || '',
-            roomNumber: room.roomNumber,
-            members: matchingMembers.map((m: any) => ({
-              name: m.name,
-              attendeeIndex: m.attendeeIndex,
-            })),
+          roomDocs.forEach(doc => {
+            if (doc.exists) {
+              roomsMap.set(doc.id, doc.data());
+            }
           });
-        }
-      });
 
-      roomData = userRooms;
+          // Group assignments by room
+          const roomGroups = new Map<string, any[]>();
+
+          roomAssignments.forEach((assignment: any) => {
+            if (!roomGroups.has(assignment.roomId)) {
+              roomGroups.set(assignment.roomId, []);
+            }
+            roomGroups.get(assignment.roomId)!.push({
+              attendeeIndex: assignment.attendeeIndex,
+              attendeeName: attendeeNamesList[assignment.attendeeIndex] || `ผู้เข้าร่วมคนที่ ${assignment.attendeeIndex + 1}`,
+            });
+          });
+
+          // Build room data array
+          const userRooms: any[] = [];
+
+          roomGroups.forEach((members, roomId) => {
+            const roomData = roomsMap.get(roomId);
+            if (roomData) {
+              userRooms.push({
+                roomId,
+                buildingName: roomData.buildingName || '',
+                roomNumber: roomData.roomNumber || '',
+                roomTypeCategory: roomData.roomTypeCategory || '',
+                members: members.map(m => ({
+                  name: m.attendeeName,
+                  attendeeIndex: m.attendeeIndex,
+                })),
+              });
+            }
+          });
+
+          roomData = userRooms;
+        }
+      } catch (error) {
+        console.error('Error parsing room assignments:', error);
+      }
     }
 
     // Get party table assignments (if enabled)
@@ -209,19 +237,22 @@ export async function GET(
         const tableMembers = table.members || [];
 
         // Check if any of user's attendees are in this table
-        const matchingMembers = tableMembers.filter((member: any) =>
+        const hasUserMember = tableMembers.some((member: any) =>
           member.registrationId === targetRegistrationId
         );
 
-        if (matchingMembers.length > 0) {
+        if (hasUserMember) {
+          // Return ALL members in the table (not just user's members)
           userTables.push({
             tableId: table.tableId,
             tableGroupName: table.tableGroupName || '',
             hostCompanyName: table.hostCompanyName || '',
             assignedTableNumber: table.assignedTableNumber,
-            members: matchingMembers.map((m: any) => ({
+            members: tableMembers.map((m: any) => ({
               name: m.name,
               attendeeIndex: m.attendeeIndex,
+              registrationId: m.registrationId,
+              isCurrentUser: m.registrationId === targetRegistrationId, // Flag for current user's members
             })),
           });
         }

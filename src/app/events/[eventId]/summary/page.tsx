@@ -27,15 +27,16 @@ interface SummaryData {
     members: Array<{
       name: string;
       attendeeIndex: number;
+      registrationId: string;
       isOwner: boolean;
+      isCurrentUser: boolean;
     }>;
   }> | null;
   rooms: Array<{
     roomId: string;
-    roomName: string;
     buildingName: string;
-    companyName: string;
-    roomNumber?: number;
+    roomNumber: string;
+    roomTypeCategory?: string;
     members: Array<{
       name: string;
       attendeeIndex: number;
@@ -49,6 +50,8 @@ interface SummaryData {
     members: Array<{
       name: string;
       attendeeIndex: number;
+      registrationId: string;
+      isCurrentUser: boolean;
     }>;
   }> | null;
   settings: {
@@ -305,11 +308,6 @@ export default function EventSummaryPage() {
                         <ul className="space-y-2">
                           {carpool.members.map((member, idx) => (
                             <li key={idx} className="flex items-center gap-2 text-base">
-                              {member.isOwner && (
-                                <span className="inline-flex items-center px-3 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full">
-                                  เจ้าของรถ
-                                </span>
-                              )}
                               <span className="font-medium text-gray-900">{member.name}</span>
                             </li>
                           ))}
@@ -356,27 +354,17 @@ export default function EventSummaryPage() {
                     <div key={room.roomId} className="border-2 border-green-200 rounded-xl p-6 bg-green-50">
                       <div className="flex items-start justify-between mb-4">
                         <div>
-                          {room.buildingName && (
-                            <p className="text-sm font-medium text-gray-600 mb-1">อาคาร</p>
-                          )}
-                          {room.buildingName && (
-                            <p className="text-lg font-semibold text-gray-900">{room.buildingName}</p>
-                          )}
-                          {room.roomName && (
-                            <p className="text-base text-gray-700 mt-1">{room.roomName}</p>
-                          )}
-                          {room.companyName && (
-                            <p className="text-sm text-gray-600 mt-1">{room.companyName}</p>
-                          )}
-                        </div>
-                        {room.roomNumber && (
-                          <div className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl shadow-lg">
-                            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
-                            <span className="text-2xl font-bold">ห้อง {room.roomNumber}</span>
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="text-lg font-semibold text-gray-900">
+                              อาคาร {room.buildingName} ห้อง {room.roomNumber}
+                            </p>
+                            {room.roomTypeCategory && (
+                              <span className="inline-flex items-center px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">
+                                {room.roomTypeCategory}
+                              </span>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
 
                       <div>
@@ -384,7 +372,7 @@ export default function EventSummaryPage() {
                         <ul className="space-y-1">
                           {room.members.map((member, idx) => (
                             <li key={idx} className="text-base font-medium text-gray-900">
-                              {member.name}
+                              • {member.name}
                             </li>
                           ))}
                         </ul>
@@ -409,7 +397,7 @@ export default function EventSummaryPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 <div className="text-left">
-                  <h2 className="text-2xl font-bold">ข้อมูลโต๊ะ</h2>
+                  <h2 className="text-2xl font-bold">ข้อมูลโต๊ะงานปาร์ตี้กลางคืน</h2>
                   <p className="text-sm opacity-90">{summaryData.partyTables.length} กลุ่มโต๊ะ</p>
                 </div>
               </div>

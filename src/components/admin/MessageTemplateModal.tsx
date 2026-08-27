@@ -346,8 +346,9 @@ export default function MessageTemplateModal({
       messageToSend = editableTemplate;
       subject = DEFAULT_TEMPLATES[selectedTemplate!]?.name || 'แจ้งชำระเงิน';
     } else if (activeTab === 'custom') {
-      if (!customContent.trim()) {
-        toast.error('กรุณาระบุข้อความ');
+      // Allow sending image only (without text message)
+      if (!customContent.trim() && !imageFile && !imageUrl) {
+        toast.error('กรุณาระบุข้อความหรือแนบรูปภาพอย่างน้อย 1 อย่าง');
         return;
       }
       messageToSend = customContent;
@@ -415,7 +416,7 @@ export default function MessageTemplateModal({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               lineUserIds: [lineUserId],
-              message: personalizedMsg,
+              message: personalizedMsg || undefined, // Allow empty message if only sending image
               imageUrl: uploadedImageUrl || undefined,
             }),
           });
@@ -1059,7 +1060,7 @@ export default function MessageTemplateModal({
               </button>
               <button
                 onClick={handleSendMessages}
-                disabled={isSending || (activeTab === 'templates' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim())}
+                disabled={isSending || (activeTab === 'templates' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSending ? (

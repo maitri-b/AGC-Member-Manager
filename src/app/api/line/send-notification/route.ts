@@ -71,9 +71,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Custom message mode (new)
-    if (lineUserIds && customMessage) {
-      if (!customMessage.trim()) {
-        return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    if (lineUserIds) {
+      // Allow sending image only (without text message)
+      if (!customMessage?.trim() && !imageUrl?.trim()) {
+        return NextResponse.json({ error: 'Message or image is required' }, { status: 400 });
       }
 
       // Send custom message to multiple users
@@ -125,13 +126,16 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Build messages array (text first, then image if provided)
-          const messages: any[] = [
-            {
+          // Build messages array (text first if provided, then image if provided)
+          const messages: any[] = [];
+
+          // Add text message if provided
+          if (personalizedMessage && personalizedMessage.trim()) {
+            messages.push({
               type: 'text',
               text: personalizedMessage,
-            },
-          ];
+            });
+          }
 
           // Add image message if imageUrl is provided
           if (imageUrl && imageUrl.trim()) {

@@ -74,10 +74,10 @@ export default function EventSummaryQRModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col my-8">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-6 rounded-t-2xl">
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-6 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,8 +99,8 @@ export default function EventSummaryQRModal({
           </p>
         </div>
 
-        {/* Content */}
-        <div className="p-8">
+        {/* Content - Scrollable */}
+        <div className="p-8 overflow-y-auto flex-1">
           {/* QR Code Display */}
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-8 mb-6 flex justify-center">
             <div className="bg-white p-4 rounded-lg shadow-lg">

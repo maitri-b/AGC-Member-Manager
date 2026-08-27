@@ -96,8 +96,20 @@ export async function GET(
       ? ''
       : userDoc.docs[0].data().lineDisplayName || userDoc.docs[0].data().displayName || '';
 
+    // Parse attendeeNames - can be string or array
+    let attendeeNamesList: string[] = [];
+    if (typeof registration.attendeeNames === 'string') {
+      // Split by comma if it's a string
+      attendeeNamesList = registration.attendeeNames
+        .split(',')
+        .map((name: string) => name.trim())
+        .filter((name: string) => name.length > 0);
+    } else if (Array.isArray(registration.attendeeNames)) {
+      attendeeNamesList = registration.attendeeNames;
+    }
+
     // Prepare attendee list with indices
-    const attendees = (registration.attendeeNames || []).map((name: string, index: number) => ({
+    const attendees = attendeeNamesList.map((name: string, index: number) => ({
       name,
       attendeeIndex: index,
       registrationId: targetRegistrationId,
@@ -230,7 +242,7 @@ export async function GET(
         companyName: registration.companyName || '',
         contactName: registration.contactName || '',
         lineDisplayName,
-        attendeeNames: registration.attendeeNames || [],
+        attendeeNames: attendeeNamesList,
       },
       carpools: carpoolData,
       rooms: roomData,

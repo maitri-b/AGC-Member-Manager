@@ -1569,8 +1569,9 @@ export default function RoomManagementModal({
 
       // ==================== REMOVED OLD LOCKED ROOMS WORKSHEET ====================
       // Old locked rooms logic has been replaced by new company-grouped sheets below
+      // (Code removed to prevent TypeScript errors from dead code)
 
-      // Skip old locked rooms worksheet generation (moved to new logic below)
+      /* REMOVED OLD LOCKED ROOMS CODE - Replaced by company-grouped sheets
       if (false) {
         // Group locked rooms by note (หมายเหตุ)
         const groupedByNote = lockedRoomsData.reduce((acc, room) => {
@@ -1820,6 +1821,7 @@ export default function RoomManagementModal({
         // Add locked rooms worksheet
         XLSX.utils.book_append_sheet(wb, lockedRoomsWs, 'ห้องที่ล็อค');
       }
+      */
 
       // ==================== NEW WORKSHEET: สรุปบริษัทตามอาคาร ====================
       // Group companies by building (occupied rooms + locked rooms)

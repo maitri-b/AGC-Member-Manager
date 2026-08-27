@@ -13,6 +13,7 @@ import type { ImpersonatedSession } from '@/lib/impersonation';
 import { calculateRegistrationFee, getPricingSummary, AttendeeType, AttendeeTypeSelection, RoomType, RoomAllocation, PriceTier, CancellationPolicy } from '@/types/event';
 import { CarpoolSettings } from '@/types/carpool';
 import { PartyTableSettings } from '@/types/partyTable';
+import { RoomSettings } from '@/types/room';
 import PartyTableSection from '@/components/event/PartyTableSection';
 import { formatDeadline, getTimeRemaining, isDeadlinePassed } from '@/lib/payment-deadlines';
 import { getStatusBadgeClass, isFullyPaid, parseAdditionalPayments } from '@/lib/payment-status';
@@ -75,6 +76,8 @@ interface Event {
   attendeeTypes?: AttendeeType[];
   // Room allocation (New)
   roomTypes?: RoomType[];
+  // Room settings (New)
+  roomSettings?: RoomSettings;
   // Carpool feature (New)
   hasCarpoolFeature?: boolean;
   carpoolSettings?: CarpoolSettings;
@@ -206,6 +209,10 @@ export default function EventDetailPage() {
   const [roomAllocations, setRoomAllocations] = useState<RoomAllocation[]>([]);
   const [roomValidationError, setRoomValidationError] = useState<string | null>(null);
   const [calculatedRoomFee, setCalculatedRoomFee] = useState(0);
+
+  // Room assignments state (for displaying assigned rooms to members)
+  const [roomAssignments, setRoomAssignments] = useState<Array<{ roomId: string; attendeeIndex: number }>>([]);
+  const [eventRooms, setEventRooms] = useState<Array<{ roomId: string; buildingName: string; roomNumber: string }>>([]);
 
   // Carpool state (New)
   const [memberCarpools, setMemberCarpools] = useState<any[]>([]);
@@ -415,6 +422,30 @@ export default function EventDetailPage() {
     return texts[status] || status;
   };
 
+  const fetchEventRooms = async () => {
+    try {
+      // Fetch all rooms for this event (public endpoint for members to see their assigned rooms)
+      const response = await fetch(`/api/events/${eventId}/summary/rooms`);
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.rooms && Array.isArray(data.rooms)) {
+          // Store only the necessary fields
+          const roomsData = data.rooms.map((room: any) => ({
+            roomId: room.roomId,
+            buildingName: room.buildingName,
+            roomNumber: room.roomNumber
+          }));
+          setEventRooms(roomsData);
+        }
+      } else {
+        console.error('Failed to fetch event rooms:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching event rooms:', error);
+    }
+  };
+
   const fetchEventDetail = async () => {
     try {
       const response = await fetch(`/api/events/${eventId}/detail`);
@@ -524,6 +555,23 @@ export default function EventDetailPage() {
             // No attendee names - create empty array with correct length
             const emptyNames = Array.from({ length: regAttendeeCount }, () => '');
             setAttendeeNames(emptyNames);
+          }
+
+          // Load room assignments (for displaying assigned rooms)
+          if (data.userRegistration.roomAssignments) {
+            try {
+              const assignments = JSON.parse(data.userRegistration.roomAssignments);
+              if (Array.isArray(assignments)) {
+                setRoomAssignments(assignments);
+
+                // Fetch room details if showRoomNumbersToMembers is enabled
+                if (data.event.roomSettings?.showRoomNumbersToMembers && assignments.length > 0) {
+                  fetchEventRooms();
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing room assignments:', e);
+            }
           }
 
           // Load special requests
@@ -4589,6 +4637,18 @@ export default function EventDetailPage() {
                       }
                     });
 
+                    // Check if this attendee has a room assignment
+                    let roomInfo = '';
+                    if (event?.roomSettings?.showRoomNumbersToMembers && roomAssignments.length > 0 && eventRooms.length > 0) {
+                      const assignment = roomAssignments.find(a => a.attendeeIndex === index);
+                      if (assignment) {
+                        const room = eventRooms.find(r => r.roomId === assignment.roomId);
+                        if (room) {
+                          roomInfo = `ห้อง: ${room.buildingName} ${room.roomNumber}`;
+                        }
+                      }
+                    }
+
                     return (
                       <label
                         key={index}
@@ -4612,6 +4672,11 @@ export default function EventDetailPage() {
                           {isInCarpool && (
                             <span className="text-xs text-orange-600 ml-2 italic">
                               ({carpoolInfo})
+                            </span>
+                          )}
+                          {roomInfo && (
+                            <span className="text-xs text-blue-600 ml-2 italic">
+                              ({roomInfo})
                             </span>
                           )}
                         </span>
@@ -5539,6 +5604,19 @@ export default function EventDetailPage() {
                         const isSelected = selectedMembersToInvite.some(m => m.name === name && m.originalIndex === originalIndex);
                         // Display fallback if name is empty
                         const displayName = name && name.trim() ? name : `ผู้เข้าร่วมคนที่ ${originalIndex + 1}`;
+
+                        // Check if this attendee has a room assignment
+                        let roomInfo = '';
+                        if (event?.roomSettings?.showRoomNumbersToMembers && roomAssignments.length > 0 && eventRooms.length > 0) {
+                          const assignment = roomAssignments.find(a => a.attendeeIndex === originalIndex);
+                          if (assignment) {
+                            const room = eventRooms.find(r => r.roomId === assignment.roomId);
+                            if (room) {
+                              roomInfo = `ห้อง: ${room.buildingName} ${room.roomNumber}`;
+                            }
+                          }
+                        }
+
                         return (
                           <label
                             key={index}
@@ -5563,6 +5641,11 @@ export default function EventDetailPage() {
                             <span className="flex-1 text-sm font-medium text-gray-900">
                               {displayName}
                               {!name || !name.trim() ? <span className="text-xs text-gray-500 ml-2">(ยังไม่ได้ระบุชื่อ)</span> : ''}
+                              {roomInfo && (
+                                <span className="text-xs text-blue-600 ml-2 italic">
+                                  ({roomInfo})
+                                </span>
+                              )}
                             </span>
                           </label>
                         );

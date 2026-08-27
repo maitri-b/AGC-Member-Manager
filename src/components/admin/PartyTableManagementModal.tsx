@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PartyTable, TableMember, PartyTableSettings } from '@/types/partyTable';
 
 // Helper function to normalize member names
@@ -1051,6 +1051,7 @@ export default function PartyTableManagementModal({
               onRemoveMember={(tableId, registrationId, attendeeIndex, name) => {
                 setPendingMemberRemoval({ tableId, registrationId, attendeeIndex, name });
               }}
+              onEditTableName={handleEditTableName}
             />
           ) : (
             <TabTableNumbers
@@ -1786,6 +1787,7 @@ function TabTableGroups({
   onToggleExpand,
   expandedTableId,
   onRemoveMember,
+  onEditTableName,
 }: {
   tables: EnrichedPartyTable[];
   defaultSeats: number;
@@ -1798,8 +1800,43 @@ function TabTableGroups({
   onToggleExpand: (tableId: string) => void;
   expandedTableId: string | null;
   onRemoveMember: (tableId: string, registrationId: string, attendeeIndex: number, name: string) => void;
+  onEditTableName: (table: EnrichedPartyTable) => void;
 }) {
-  const activeTables = tables.filter((t) => t.status === 'active');
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Filter tables based on search query
+  const activeTables = React.useMemo(() => {
+    const active = tables.filter((t) => t.status === 'active');
+
+    if (!searchQuery.trim()) return active;
+
+    const query = searchQuery.toLowerCase();
+    return active.filter(table => {
+      // Search in table group name
+      if (table.tableGroupName?.toLowerCase().includes(query)) return true;
+
+      // Search in host company name
+      if (table.hostCompanyName?.toLowerCase().includes(query)) return true;
+
+      // Search in host contact name
+      if (table.hostContactName?.toLowerCase().includes(query)) return true;
+
+      // Search in members
+      if (table.members?.some(member => {
+        // Search in member name
+        if (member.name?.toLowerCase().includes(query)) return true;
+        // Search in member company name
+        if ((member as any).companyName?.toLowerCase().includes(query)) return true;
+        // Search in member LINE display name
+        if ((member as any).lineDisplayName?.toLowerCase().includes(query)) return true;
+        // Search in registration ID
+        if (member.registrationId?.toLowerCase().includes(query)) return true;
+        return false;
+      })) return true;
+
+      return false;
+    });
+  }, [tables, searchQuery]);
 
   if (activeTables.length === 0) {
     return (
@@ -1847,6 +1884,36 @@ function TabTableGroups({
 
   return (
     <div className="space-y-4">
+      {/* Search Box */}
+      <div className="relative">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="ค้นหา: ชื่อบริษัท, ชื่อ LINE, ชื่อผู้เข้าร่วม, รหัสการจอง, ชื่อโต๊ะ..."
+          className="w-full px-4 py-2.5 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+          >
+            ล้าง
+          </button>
+        )}
+      </div>
+
+      {/* Search Results Info */}
+      {searchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-800">
+            <span className="font-medium">พบ {activeTables.length} กลุ่มโต๊ะ</span>
+            {activeTables.length === 0 && ' ที่ตรงกับคำค้นหา'}
+          </p>
+        </div>
+      )}
+
+      {/* Table Groups List */}
       {activeTables.map((table) => {
         const isExpanded = expandedTableId === table.tableId;
         const isReservation = table.isReservation === true;
@@ -1875,11 +1942,23 @@ function TabTableGroups({
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <div className="flex items-center gap-3">
-                  <h3 className="font-semibold text-gray-900">
-                    {isReservation
-                      ? `🔖 ${table.tableGroupName || 'กลุ่มจองโต๊ะ'}`
-                      : (table.isJoinTable ? 'Join โต๊ะ' : (table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`))}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900">
+                      {isReservation
+                        ? `🔖 ${table.tableGroupName || 'กลุ่มจองโต๊ะ'}`
+                        : (table.isJoinTable ? 'Join โต๊ะ' : (table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`))}
+                    </h3>
+                    {/* Edit name button */}
+                    <button
+                      onClick={() => onEditTableName(table)}
+                      className="text-gray-400 hover:text-blue-600 p-1"
+                      title="แก้ไขชื่อกลุ่มโต๊ะ"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                  </div>
                   {table.assignedTableNumber && (
                     <span className="px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-full">
                       โต๊ะ #{table.assignedTableNumber}
@@ -2071,9 +2150,73 @@ function TabTableNumbers({
   onEditTableName: (table: EnrichedPartyTable) => void;
   defaultSeats: number;
 }) {
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Filter table slots based on search query
+  const filteredTableSlots = React.useMemo(() => {
+    if (!searchQuery.trim()) return tableSlots;
+
+    const query = searchQuery.toLowerCase();
+    return tableSlots.filter(slot => {
+      // Check if any group in this slot matches the search
+      return slot.groups.some(group => {
+        // Search in table group name
+        if (group.tableGroupName?.toLowerCase().includes(query)) return true;
+
+        // Search in host company name
+        if (group.hostCompanyName?.toLowerCase().includes(query)) return true;
+
+        // Search in host contact name
+        if (group.hostContactName?.toLowerCase().includes(query)) return true;
+
+        // Search in members
+        if (group.members?.some(member => {
+          // Search in member name
+          if (member.name?.toLowerCase().includes(query)) return true;
+          // Search in member company name
+          if ((member as any).companyName?.toLowerCase().includes(query)) return true;
+          // Search in member LINE display name
+          if ((member as any).lineDisplayName?.toLowerCase().includes(query)) return true;
+          // Search in registration ID
+          if (member.registrationId?.toLowerCase().includes(query)) return true;
+          return false;
+        })) return true;
+
+        return false;
+      });
+    });
+  }, [tableSlots, searchQuery]);
 
   return (
     <div className="space-y-6">
+      {/* Search Box */}
+      <div className="relative">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="ค้นหา: ชื่อบริษัท, ชื่อ LINE, ชื่อผู้เข้าร่วม, รหัสการจอง, ชื่อโต๊ะ..."
+          className="w-full px-4 py-2.5 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+          >
+            ล้าง
+          </button>
+        )}
+      </div>
+
+      {/* Search Results Info */}
+      {searchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-800">
+            <span className="font-medium">พบ {filteredTableSlots.length} โต๊ะ</span>
+            {filteredTableSlots.length === 0 && ' ที่ตรงกับคำค้นหา'}
+          </p>
+        </div>
+      )}
       {/* Info Box */}
       {unassignedTables.length > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
@@ -2110,7 +2253,7 @@ function TabTableNumbers({
           คลิกที่ช่องสีเทาเพื่อจัดสมาชิกเข้าโต๊ะ • ช่องสีม่วงคือโต๊ะที่จัดแล้ว
         </p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {tableSlots.map((slot) => {
+          {filteredTableSlots.map((slot) => {
             const isOccupied = slot.groups.length > 0;
             const totalMembers = slot.groups.reduce((sum, g) => {
               const memberCount = g.isReservation ? (g.reservedSeats || 0) : g.members.length;

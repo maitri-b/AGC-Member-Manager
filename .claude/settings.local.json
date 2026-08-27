@@ -89,7 +89,8 @@
       "Bash(git show:*)",
       "Bash(git fetch:*)",
       "Bash(bucket-level access is enabled\" โดยลบการเรียก makePublic\\(\\)\n\nเนื่องจาก Firebase Storage bucket ใช้ uniform bucket-level access \nไม่สามารถตั้งค่า ACL ของแต่ละไฟล์ได้ แต่ควบคุม permissions ที่ระดับ bucket\n\nใช้วิธีเดียวกับการอัปโหลดสลิปการชำระเงินที่ใช้งานได้อยู่แล้ว\n\nChanges:\n- Remove await fileRef.makePublic\\(\\) \n- Keep public URL generation the same\n- Bucket permissions already allow public read access\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(timeout 180 tail:*)"
+      "Bash(timeout 180 tail:*)",
+      "Bash(cd:*)"
     ]
   }
 }

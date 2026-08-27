@@ -317,6 +317,8 @@ export async function GET(
               roomAllocations,
               specialCharges,
               discounts,
+              // Room assignments (for displaying assigned rooms to members)
+              roomAssignments: latestReg.roomAssignments || '',
               // Payment slips from new collection (New)
               paymentSlips,
               paymentSummary,

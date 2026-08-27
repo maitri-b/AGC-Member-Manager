@@ -20,6 +20,7 @@ import PartyTableManagementModal from '@/components/admin/PartyTableManagementMo
 import CarNumberAssignmentModal from '@/components/admin/CarNumberAssignmentModal';
 import AdminCancellationModal from '@/components/admin/AdminCancellationModal';
 import CarpoolDetailModal from '@/components/admin/CarpoolDetailModal';
+import EventSummaryQRModal from '@/components/admin/EventSummaryQRModal';
 import { Event as EventType, EventRegistration, CancellationPolicy } from '@/types/event';
 
 interface Event {
@@ -782,6 +783,7 @@ export default function EventDetailPage() {
   const [showRoomManagementModal, setShowRoomManagementModal] = useState(false);
   const [showCarpoolManagementModal, setShowCarpoolManagementModal] = useState(false);
   const [showPartyTableManagementModal, setShowPartyTableManagementModal] = useState(false);
+  const [showEventSummaryQRModal, setShowEventSummaryQRModal] = useState(false);
   const [showCarNumberAssignmentModal, setShowCarNumberAssignmentModal] = useState(false);
   // Carpool detail modal state
   const [showCarpoolDetailModal, setShowCarpoolDetailModal] = useState(false);
@@ -3332,6 +3334,18 @@ export default function EventDetailPage() {
                   <span className="hidden sm:inline">จัดการ Party Table</span>
                 </button>
               )}
+
+              {/* Event Summary QR Code Button */}
+              <button
+                onClick={() => setShowEventSummaryQRModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors shadow-sm"
+                title="เว็บเช็คข้อมูล"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+                <span className="hidden sm:inline">เว็บเช็คข้อมูล</span>
+              </button>
             </div>
           </div>
         </div>
@@ -6574,6 +6588,13 @@ export default function EventDetailPage() {
         eventName={eventData?.event?.eventName || ''}
         partyTableSettings={eventData?.event?.partyTableSettings}
         onSettingsUpdate={fetchEventData}
+      />
+
+      {/* Event Summary QR Code Modal */}
+      <EventSummaryQRModal
+        isOpen={showEventSummaryQRModal}
+        onClose={() => setShowEventSummaryQRModal(false)}
+        eventId={eventId as string}
       />
 
       {/* Car Number Assignment Modal */}

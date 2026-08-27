@@ -727,7 +727,7 @@ export default function PartyTableSection({
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3 flex-wrap">
                             <h4 className="text-base font-semibold text-purple-900">
                               {table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`}
                             </h4>
@@ -743,16 +743,15 @@ export default function PartyTableSection({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                               </svg>
                             </button>
-                          </div>
-                        )}
-
-                        {/* Table Number */}
-                        {event?.partyTableSettings?.showTableNumbersToMembers && table.assignedTableNumber && (
-                          <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-full">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                            </svg>
-                            โต๊ะ #{table.assignedTableNumber}
+                            {/* Table Number - Moved here for better visibility */}
+                            {event?.partyTableSettings?.showTableNumbersToMembers && table.assignedTableNumber && (
+                              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-base font-bold rounded-lg shadow-md">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                </svg>
+                                โต๊ะ #{table.assignedTableNumber}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -859,21 +858,22 @@ export default function PartyTableSection({
               {joinedTables.map((table) => (
                 <div key={table.tableId} className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
                   <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="text-base font-semibold text-green-900">
-                        {table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`}
-                      </h4>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h4 className="text-base font-semibold text-green-900">
+                          {table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`}
+                        </h4>
+                        {/* Table Number - Moved here for better visibility */}
+                        {event?.partyTableSettings?.showTableNumbersToMembers && table.assignedTableNumber && (
+                          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-base font-bold rounded-lg shadow-md">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                            </svg>
+                            โต๊ะ #{table.assignedTableNumber}
+                          </div>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-600 mt-1">เจ้าของโต๊ะ: {table.hostContactName}</p>
-
-                      {/* Table Number */}
-                      {event?.partyTableSettings?.showTableNumbersToMembers && table.assignedTableNumber && (
-                        <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-green-600 text-white text-sm font-medium rounded-full">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-                          </svg>
-                          โต๊ะ #{table.assignedTableNumber}
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -1420,17 +1420,22 @@ export default function PartyTableSection({
                               <p className="text-sm font-semibold text-gray-900">
                                 {table.tableGroupName || `โต๊ะของ ${table.hostCompanyName}`}
                               </p>
-                              <p className="text-xs text-gray-600 mt-1">
-                                สมาชิก: {table.members.length} คน
-                                {event?.partyTableSettings?.defaultSeatsPerTable &&
-                                  ` / ${event.partyTableSettings.defaultSeatsPerTable} ที่นั่ง`
-                                }
-                              </p>
-                              {table.assignedTableNumber && (
-                                <p className="text-xs text-purple-600 font-medium mt-1">
-                                  โต๊ะ #{table.assignedTableNumber}
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <p className="text-xs text-gray-600">
+                                  สมาชิก: {table.members.length} คน
+                                  {event?.partyTableSettings?.defaultSeatsPerTable &&
+                                    ` / ${event.partyTableSettings.defaultSeatsPerTable} ที่นั่ง`
+                                  }
                                 </p>
-                              )}
+                                {event?.partyTableSettings?.showTableNumbersToMembers && table.assignedTableNumber && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-bold rounded-md">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                    </svg>
+                                    โต๊ะ #{table.assignedTableNumber}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </label>
                         ))}

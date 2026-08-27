@@ -99,13 +99,27 @@ export async function GET(
     // Parse attendeeNames - can be string or array
     let attendeeNamesList: string[] = [];
     if (typeof registration.attendeeNames === 'string') {
-      // Split by comma if it's a string
-      attendeeNamesList = registration.attendeeNames
-        .split(',')
-        .map((name: string) => name.trim())
-        .filter((name: string) => name.length > 0);
+      try {
+        // Try to parse as JSON first (in case it's a stringified array)
+        const parsed = JSON.parse(registration.attendeeNames);
+        if (Array.isArray(parsed)) {
+          attendeeNamesList = parsed.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
+        } else {
+          // If not an array, treat as comma-separated string
+          attendeeNamesList = registration.attendeeNames
+            .split(',')
+            .map((name: string) => name.trim())
+            .filter((name: string) => name.length > 0);
+        }
+      } catch {
+        // If JSON parse fails, treat as comma-separated string
+        attendeeNamesList = registration.attendeeNames
+          .split(',')
+          .map((name: string) => name.trim())
+          .filter((name: string) => name.length > 0);
+      }
     } else if (Array.isArray(registration.attendeeNames)) {
-      attendeeNamesList = registration.attendeeNames;
+      attendeeNamesList = registration.attendeeNames.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
     }
 
     // Prepare attendee list with indices

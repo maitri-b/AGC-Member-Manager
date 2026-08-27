@@ -744,11 +744,16 @@ export default function AdminEventsPage() {
         // ✅ Update editingEvent state so modal shows latest data if reopened
         setEditingEvent(updatedEventData.event);
 
-        // ✅ Update formData to reflect the saved changes (including cancellationPolicy)
-        setFormData({
-          ...formData,
-          cancellationPolicy: updatedEventData.event.cancellationPolicy
-        });
+        // ✅ Update formData to reflect ALL saved changes from server
+        // This ensures when modal is reopened, checkbox states are correct
+        setFormData(prev => ({
+          ...prev,
+          ...updatedEventData.event,
+          roomSettings: updatedEventData.event.roomSettings,
+          cancellationPolicy: updatedEventData.event.cancellationPolicy,
+          carpoolSettings: updatedEventData.event.carpoolSettings,
+          partyTableSettings: updatedEventData.event.partyTableSettings,
+        }));
 
         setSuccess('อัพเดทกิจกรรมเรียบร้อยแล้ว');
 
@@ -2169,10 +2174,11 @@ export default function AdminEventsPage() {
                         <input
                           type="checkbox"
                           id="showRoomNumbersToMembers"
-                          checked={formData.roomSettings?.showRoomNumbersToMembers || false}
+                          checked={formData.roomSettings?.showRoomNumbersToMembers === true}
                           onChange={(e) => setFormData({
                             ...formData,
                             roomSettings: {
+                              ...formData.roomSettings,
                               showRoomNumbersToMembers: e.target.checked,
                               roomActive: true
                             }

@@ -425,10 +425,12 @@ export default function EventDetailPage() {
   const fetchEventRooms = async () => {
     try {
       // Fetch all rooms for this event (public endpoint for members to see their assigned rooms)
+      console.log('[Event Detail] Fetching event rooms from:', `/api/events/${eventId}/summary/rooms`);
       const response = await fetch(`/api/events/${eventId}/summary/rooms`);
 
       if (response.ok) {
         const data = await response.json();
+        console.log('[Event Detail] Fetched rooms data:', data);
         if (data.rooms && Array.isArray(data.rooms)) {
           // Store only the necessary fields
           const roomsData = data.rooms.map((room: any) => ({
@@ -436,6 +438,7 @@ export default function EventDetailPage() {
             buildingName: room.buildingName,
             roomNumber: room.roomNumber
           }));
+          console.log('[Event Detail] Mapped rooms data:', roomsData);
           setEventRooms(roomsData);
         }
       } else {
@@ -558,14 +561,18 @@ export default function EventDetailPage() {
           }
 
           // Load room assignments (for displaying assigned rooms)
+          console.log('[Event Detail] roomAssignments raw:', data.userRegistration.roomAssignments);
+          console.log('[Event Detail] showRoomNumbersToMembers:', data.event.roomSettings?.showRoomNumbersToMembers);
           if (data.userRegistration.roomAssignments) {
             try {
               const assignments = JSON.parse(data.userRegistration.roomAssignments);
+              console.log('[Event Detail] Parsed room assignments:', assignments);
               if (Array.isArray(assignments)) {
                 setRoomAssignments(assignments);
 
                 // Fetch room details if showRoomNumbersToMembers is enabled
                 if (data.event.roomSettings?.showRoomNumbersToMembers && assignments.length > 0) {
+                  console.log('[Event Detail] Fetching room details...');
                   fetchEventRooms();
                 }
               }
@@ -1973,10 +1980,27 @@ export default function EventDetailPage() {
                         const isRequired = event.requireAttendeeNames === true;
                         const displayValue = isEditingNames ? tempAttendeeNames[index] : attendeeNames[index];
 
+                        // Check if this attendee has a room assignment
+                        let roomInfo = '';
+                        if (event?.roomSettings?.showRoomNumbersToMembers && roomAssignments.length > 0 && eventRooms.length > 0) {
+                          const assignment = roomAssignments.find(a => a.attendeeIndex === index);
+                          if (assignment) {
+                            const room = eventRooms.find(r => r.roomId === assignment.roomId);
+                            if (room) {
+                              roomInfo = `${room.buildingName} ห้อง ${room.roomNumber}`;
+                            }
+                          }
+                        }
+
                         return (
                           <div key={index}>
                             <label className="block text-xs font-medium text-gray-600 mb-1">
                               ผู้เข้าร่วมกิจกรรมท่านที่ {index + 1} {!isRequired && '(ถ้ามี)'}
+                              {roomInfo && (
+                                <span className="ml-2 text-green-600 font-semibold">
+                                  • ห้องพัก: {roomInfo}
+                                </span>
+                              )}
                             </label>
                             <input
                               type="text"
@@ -4637,17 +4661,7 @@ export default function EventDetailPage() {
                       }
                     });
 
-                    // Check if this attendee has a room assignment
-                    let roomInfo = '';
-                    if (event?.roomSettings?.showRoomNumbersToMembers && roomAssignments.length > 0 && eventRooms.length > 0) {
-                      const assignment = roomAssignments.find(a => a.attendeeIndex === index);
-                      if (assignment) {
-                        const room = eventRooms.find(r => r.roomId === assignment.roomId);
-                        if (room) {
-                          roomInfo = `ห้อง: ${room.buildingName} ${room.roomNumber}`;
-                        }
-                      }
-                    }
+                    // Room info is now shown in the attendee list section, not here
 
                     return (
                       <label
@@ -4672,11 +4686,6 @@ export default function EventDetailPage() {
                           {isInCarpool && (
                             <span className="text-xs text-orange-600 ml-2 italic">
                               ({carpoolInfo})
-                            </span>
-                          )}
-                          {roomInfo && (
-                            <span className="text-xs text-blue-600 ml-2 italic">
-                              ({roomInfo})
                             </span>
                           )}
                         </span>

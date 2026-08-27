@@ -196,6 +196,12 @@ export default function PartyTableManagementModal({
   } | null>(null);
   const [removingMember, setRemovingMember] = useState(false);
 
+  // Edit table name modal state
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [editingTable, setEditingTable] = useState<EnrichedPartyTable | null>(null);
+  const [newTableName, setNewTableName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+
   // Assign Table Number Modal state (new)
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedTableNumberForAssign, setSelectedTableNumberForAssign] = useState<number | null>(null);
@@ -322,6 +328,43 @@ export default function PartyTableManagementModal({
       alert(err instanceof Error ? err.message : 'Failed to delete table');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleEditTableName = (table: EnrichedPartyTable) => {
+    setEditingTable(table);
+    setNewTableName(table.tableGroupName || '');
+    setShowEditNameModal(true);
+  };
+
+  const handleSaveTableName = async () => {
+    if (!editingTable) return;
+
+    setSavingName(true);
+    try {
+      const response = await fetch(`/api/party-tables/${editingTable.tableId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableGroupName: newTableName.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update table name');
+      }
+
+      alert('บันทึกชื่อโต๊ะสำเร็จ!');
+      setShowEditNameModal(false);
+      setEditingTable(null);
+      setNewTableName('');
+      await fetchTables();
+    } catch (err) {
+      console.error('Error updating table name:', err);
+      alert(err instanceof Error ? err.message : 'Failed to update table name');
+    } finally {
+      setSavingName(false);
     }
   };
 
@@ -1030,6 +1073,7 @@ export default function PartyTableManagementModal({
               onRemoveMember={(tableId, registrationId, attendeeIndex, name) => {
                 setPendingMemberRemoval({ tableId, registrationId, attendeeIndex, name });
               }}
+              onEditTableName={handleEditTableName}
               defaultSeats={defaultSeats}
             />
           )}
@@ -1443,6 +1487,56 @@ export default function PartyTableManagementModal({
                   {updatingReservation ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Table Name Modal */}
+      {showEditNameModal && editingTable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">แก้ไขชื่อกลุ่มโต๊ะ</h3>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ชื่อกลุ่มโต๊ะ:
+              </label>
+              <input
+                type="text"
+                value={newTableName}
+                onChange={(e) => setNewTableName(e.target.value)}
+                placeholder="เช่น: เพื่อน Agent, กลุ่มมิตรภาพ"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveTableName();
+                  }
+                }}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                ถ้าไม่ระบุชื่อ จะใช้ชื่อบริษัทของเจ้าของโต๊ะเป็นค่าเริ่มต้น
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowEditNameModal(false);
+                  setEditingTable(null);
+                  setNewTableName('');
+                }}
+                disabled={savingName}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleSaveTableName}
+                disabled={savingName}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {savingName ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
             </div>
           </div>
         </div>
@@ -1961,6 +2055,7 @@ function TabTableNumbers({
   onTableNumberClick,
   onManageMembers,
   onRemoveMember,
+  onEditTableName,
   defaultSeats,
 }: {
   tableSlots: TableSlot[];
@@ -1973,6 +2068,7 @@ function TabTableNumbers({
   onTableNumberClick: (tableNumber: number) => void;
   onManageMembers: (tableId: string) => void;
   onRemoveMember: (tableId: string, registrationId: string, attendeeIndex: number, name: string) => void;
+  onEditTableName: (table: EnrichedPartyTable) => void;
   defaultSeats: number;
 }) {
 
@@ -2073,9 +2169,21 @@ function TabTableNumbers({
                               {/* Group Header */}
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1">
-                                  <p className="font-medium text-xs text-gray-900">
-                                    {groupName}
-                                  </p>
+                                  <div className="flex items-center gap-1">
+                                    <p className="font-medium text-xs text-gray-900">
+                                      {groupName}
+                                    </p>
+                                    {/* Edit name button */}
+                                    <button
+                                      onClick={() => onEditTableName(group)}
+                                      className="text-gray-400 hover:text-blue-600 p-0.5"
+                                      title="แก้ไขชื่อกลุ่มโต๊ะ"
+                                    >
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                      </svg>
+                                    </button>
+                                  </div>
                                   <p className="text-xs text-gray-500 mt-0.5">
                                     {isReservation ? `${memberCount} ที่จอง` : `${memberCount} คน`}
                                   </p>

@@ -2045,6 +2045,7 @@ export default function RoomManagementModal({
         rooms: Array<{
           buildingName: string;
           roomNumber: string;
+          roomTypeCategory?: string; // Room type (Twin, Double, Triple, etc.)
           occupants: RoomOccupant[];
         }>;
       }
@@ -2089,6 +2090,7 @@ export default function RoomManagementModal({
         companyGroupsMap.get(companyKey)!.rooms.push({
           buildingName: room.buildingName,
           roomNumber: room.roomNumber,
+          roomTypeCategory: room.roomTypeCategory,
           occupants
         });
       });
@@ -2119,7 +2121,7 @@ export default function RoomManagementModal({
       agentGroupsList.forEach(sortGroupRooms);
 
       // Helper function to generate worksheet data for a group list
-      const generateRoomSheetData = (groups: CompanyGroup[], sheetTitle: string, headerColor: string) => {
+      const generateRoomSheetData = (groups: CompanyGroup[], sheetTitle: string, headerColor: string, isLocked: boolean) => {
         const sheetData: any[] = [];
 
         // Title row
@@ -2138,16 +2140,12 @@ export default function RoomManagementModal({
 
         // Generate data for each company group
         groups.forEach((group, groupIndex) => {
-          // Company header
+          // Company header - just company name (will merge across all columns)
           const companiesText = group.companies.join(' + ');
-          const totalRooms = group.rooms.length;
-          sheetData.push([
-            `บริษัท: ${companiesText}`,
-            `จำนวนห้อง: ${totalRooms}`
-          ]);
+          sheetData.push([`บริษัท: ${companiesText}`]);
 
           // Column headers
-          sheetData.push(['ลำดับ', 'อาคาร', 'เลขห้อง', 'ผู้เข้าพัก']);
+          sheetData.push(['ลำดับ', 'อาคาร', 'เลขห้อง', 'ประเภทห้อง', 'ผู้เข้าพัก']);
 
           // Room list with occupants
           group.rooms.forEach((room, index) => {
@@ -2156,6 +2154,7 @@ export default function RoomManagementModal({
               index + 1,
               room.buildingName,
               room.roomNumber,
+              room.roomTypeCategory || '-',
               occupantNames
             ]);
           });
@@ -2177,11 +2176,12 @@ export default function RoomManagementModal({
         const dataFillColor = isLocked ? 'FFE6CC' : undefined; // Light orange for locked data rows
         const dataFontColor = isLocked ? '8B4513' : undefined; // Brown for locked text
 
-        // Set column widths
+        // Set column widths (now 5 columns)
         ws['!cols'] = [
-          { wch: 12 },  // ลำดับ
-          { wch: 15 },  // อาคาร
-          { wch: 12 },  // เลขห้อง
+          { wch: 8 },   // ลำดับ
+          { wch: 12 },  // อาคาร
+          { wch: 10 },  // เลขห้อง
+          { wch: 15 },  // ประเภทห้อง
           { wch: 60 },  // ผู้เข้าพัก
         ];
 
@@ -2193,7 +2193,7 @@ export default function RoomManagementModal({
             alignment: { horizontal: 'center', vertical: 'center' }
           };
           if (!ws['!merges']) ws['!merges'] = [];
-          ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+          ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }); // Merge across 5 columns
         }
 
         // Event info rows styling (rows 1-2)
@@ -2216,8 +2216,8 @@ export default function RoomManagementModal({
         let currentRow = 4; // Start after title and event info rows
 
         groups.forEach((group, groupIndex) => {
-          // Company header row
-          for (let C = 0; C <= 3; C++) {
+          // Company header row - merge across all 5 columns
+          for (let C = 0; C <= 4; C++) {
             const cell = XLSX.utils.encode_cell({ r: currentRow, c: C });
             if (!ws[cell]) {
               ws[cell] = { v: '', t: 's' };
@@ -2225,24 +2225,24 @@ export default function RoomManagementModal({
             ws[cell].s = {
               font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
               fill: { fgColor: { rgb: headerColor } },
-              alignment: { horizontal: C === 0 ? 'left' : C === 1 ? 'right' : 'center', vertical: 'center' },
+              alignment: { horizontal: 'left', vertical: 'center' },
               border: {
                 top: { style: 'medium', color: { rgb: '000000' } },
                 bottom: { style: 'thin', color: { rgb: '000000' } },
                 left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
-                right: C === 3 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+                right: C === 4 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
               }
             };
           }
 
-          // Merge company name cells
+          // Merge company name cells across all columns
           if (!ws['!merges']) ws['!merges'] = [];
-          ws['!merges'].push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 2 } });
+          ws['!merges'].push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 4 } });
 
           currentRow++;
 
           // Column header row
-          for (let C = 0; C <= 3; C++) {
+          for (let C = 0; C <= 4; C++) {
             const cell = XLSX.utils.encode_cell({ r: currentRow, c: C });
             if (ws[cell]) {
               ws[cell].s = {
@@ -2253,7 +2253,7 @@ export default function RoomManagementModal({
                   top: { style: 'thin', color: { rgb: '000000' } },
                   bottom: { style: 'thin', color: { rgb: '000000' } },
                   left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
-                  right: C === 3 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+                  right: C === 4 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
                 }
               };
             }
@@ -2265,18 +2265,21 @@ export default function RoomManagementModal({
           group.rooms.forEach((room, roomIndex) => {
             const isLastRow = roomIndex === group.rooms.length - 1;
 
-            for (let C = 0; C <= 3; C++) {
+            for (let C = 0; C <= 4; C++) {
               const cell = XLSX.utils.encode_cell({ r: currentRow, c: C });
               if (ws[cell]) {
                 ws[cell].s = {
-                  alignment: { horizontal: C === 0 ? 'center' : C === 3 ? 'left' : 'center', vertical: 'center' },
+                  alignment: {
+                    horizontal: C === 0 ? 'center' : C === 4 ? 'left' : 'center',
+                    vertical: 'center'
+                  },
                   fill: dataFillColor ? { fgColor: { rgb: dataFillColor } } : undefined,
                   font: dataFontColor ? { italic: true, color: { rgb: dataFontColor } } : undefined,
                   border: {
                     top: { style: 'thin', color: { rgb: 'CCCCCC' } },
                     bottom: isLastRow ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
                     left: C === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } },
-                    right: C === 3 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } }
+                    right: C === 4 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: 'CCCCCC' } }
                   }
                 };
               }
@@ -2294,7 +2297,7 @@ export default function RoomManagementModal({
 
       // Generate and style locked rooms sheet
       if (lockedGroupsList.length > 0) {
-        const lockedRoomsData = generateRoomSheetData(lockedGroupsList, 'สรุปห้องที่ล็อค', '8B4513');
+        const lockedRoomsData = generateRoomSheetData(lockedGroupsList, 'สรุปห้องที่ล็อค', '8B4513', true);
         const lockedRoomsWs = XLSX.utils.aoa_to_sheet(lockedRoomsData);
         styleRoomSheet(lockedRoomsWs, lockedGroupsList, true);
         XLSX.utils.book_append_sheet(wb, lockedRoomsWs, 'ห้องที่ล็อค');
@@ -2302,7 +2305,7 @@ export default function RoomManagementModal({
 
       // Generate and style agent rooms sheet
       if (agentGroupsList.length > 0) {
-        const agentRoomsData = generateRoomSheetData(agentGroupsList, 'สรุปห้องเอเจ้นท์', '1976D2');
+        const agentRoomsData = generateRoomSheetData(agentGroupsList, 'สรุปห้องเอเจ้นท์', '1976D2', false);
         const agentRoomsWs = XLSX.utils.aoa_to_sheet(agentRoomsData);
         styleRoomSheet(agentRoomsWs, agentGroupsList, false);
         XLSX.utils.book_append_sheet(wb, agentRoomsWs, 'ห้องเอเจ้นท์');

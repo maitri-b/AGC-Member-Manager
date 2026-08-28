@@ -367,7 +367,16 @@ export async function PUT(
     const firestoreUpdateData: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(finalUpdateData)) {
       const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-      firestoreUpdateData[camelKey] = value;
+
+      // Special handling for fields that should be stored as JSON strings
+      if (key === 'attendee_type_selections' || key === 'room_allocations' || key === 'room_assignments') {
+        firestoreUpdateData[camelKey] = typeof value === 'string' ? value : JSON.stringify(value);
+      } else if (key === 'attendee_names') {
+        // Store attendee_names as array, not JSON string
+        firestoreUpdateData[camelKey] = typeof value === 'string' ? JSON.parse(value) : value;
+      } else {
+        firestoreUpdateData[camelKey] = value;
+      }
     }
     await updateEventRegistrationInFirestore(registrationId, firestoreUpdateData);
 

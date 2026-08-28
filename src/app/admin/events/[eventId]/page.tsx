@@ -2058,7 +2058,7 @@ export default function EventDetailPage() {
     try {
       const updateData: any = {
         attendee_count: editFormData.attendeeCount,
-        attendee_names: JSON.stringify(editFormData.attendeeNames),
+        attendee_names: editFormData.attendeeNames, // Send as array, not JSON string
         status: editFormData.status,
       };
 

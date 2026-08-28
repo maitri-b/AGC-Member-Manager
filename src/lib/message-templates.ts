@@ -554,7 +554,7 @@ export function generateCarAssignmentFlexMessage(
 
   return {
     type: 'flex',
-    altText: `แจ้งเลขรถที่ได้รับมอบหมาย - ${carNumber}`,
+    altText: `แจ้งเลขรถแรลลี่ของคุณ - ${carNumber}`,
     contents: {
       type: 'bubble',
       header: {
@@ -563,7 +563,7 @@ export function generateCarAssignmentFlexMessage(
         contents: [
           {
             type: 'text',
-            text: '🚗 แจ้งเลขรถที่ได้รับมอบหมาย',
+            text: '🚗 แจ้งเลขรถแรลลี่ของคุณ',
             weight: 'bold',
             size: 'lg',
             color: '#ffffff',
@@ -741,7 +741,7 @@ export function generateCarAssignmentFlexMessage(
         contents: [
           {
             type: 'text',
-            text: '💡 กรุณาตรวจสอบข้อมูลให้ถูกต้อง',
+            text: '💡 โปรดแจ้งหมายเลขรถนี้ให้เจ้าหน้าที่ทราบ ณ จุดลงทะเบียน',
             size: 'xs',
             color: '#999999',
             align: 'center',

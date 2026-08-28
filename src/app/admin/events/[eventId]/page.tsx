@@ -1065,8 +1065,8 @@ export default function EventDetailPage() {
         const data = await response.json();
         const carpools = data.carpools || [];
 
-        // Build a map of registrationId to carpool data
-        const carpoolsMap: Record<string, any> = {};
+        // Build a map of registrationId to array of carpool data (support multiple cars per registration)
+        const carpoolsMap: Record<string, any[]> = {};
         carpools.forEach((carpool: any) => {
           if (carpool.assignedCarNumber) {
             // Parse attendee names from owner registration
@@ -1085,11 +1085,17 @@ export default function EventDetailPage() {
                 });
               }
 
-              carpoolsMap[carpool.ownerRegistrationId] = {
+              const carpoolData = {
                 licensePlate: carpool.licensePlate,
                 assignedCarNumber: carpool.assignedCarNumber,
                 members: memberNames,
               };
+
+              // Initialize array if not exists, then push this carpool
+              if (!carpoolsMap[carpool.ownerRegistrationId]) {
+                carpoolsMap[carpool.ownerRegistrationId] = [];
+              }
+              carpoolsMap[carpool.ownerRegistrationId].push(carpoolData);
             }
           }
         });

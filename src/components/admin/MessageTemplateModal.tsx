@@ -25,7 +25,7 @@ interface MessageTemplateModalProps {
     lineUserId: string;
   }>;
   event: Event;
-  carpoolsData?: Record<string, CarpoolData>; // Map registrationId to carpool data
+  carpoolsData?: Record<string, CarpoolData[]>; // Map registrationId to array of carpool data (support multiple cars)
 }
 
 interface SavedTemplate {
@@ -420,50 +420,78 @@ export default function MessageTemplateModal({
         }
       }
 
-      const results = await Promise.allSettled(
-        selectedRegistrations.map(async ({ registration, lineUserId }) => {
-          let personalizedMsg: string | undefined = '';
-          let flexMessage: any = undefined;
+      // Build send tasks - for car_assignment, send one message per car
+      const sendTasks: Promise<{ success: true; name: string }>[] = [];
 
-          if (activeTab === 'templates' && selectedTemplate) {
-            // Handle car_assignment template with Flex message
-            if (selectedTemplate === 'car_assignment' && carpoolsData) {
-              const carpoolData = carpoolsData[registration.registrationId];
-              if (carpoolData) {
-                flexMessage = generateCarAssignmentFlexMessage(
-                  carpoolData,
-                  registration,
-                  event.eventName
-                );
-                personalizedMsg = undefined; // Don't send text message when sending Flex
-              } else {
-                throw new Error(`No carpool data found for ${registration.contactName}`);
-              }
-            } else if (editableTemplate) {
-              personalizedMsg = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
+      for (const { registration, lineUserId } of selectedRegistrations) {
+        if (activeTab === 'templates' && selectedTemplate === 'car_assignment' && carpoolsData) {
+          // Car assignment: send separate message for each car
+          const carpools = carpoolsData[registration.registrationId];
+          if (carpools && carpools.length > 0) {
+            // Send one message per car
+            for (const carpoolData of carpools) {
+              sendTasks.push(
+                (async () => {
+                  const flexMessage = generateCarAssignmentFlexMessage(
+                    carpoolData,
+                    registration,
+                    event.eventName
+                  );
+
+                  const response = await fetch('/api/line/send-notification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      lineUserIds: [lineUserId],
+                      message: undefined, // No text message for Flex
+                      flexMessage: flexMessage,
+                    }),
+                  });
+
+                  if (!response.ok) {
+                    throw new Error(`Failed to send car ${carpoolData.assignedCarNumber} to ${registration.contactName}`);
+                  }
+
+                  return { success: true, name: `${registration.contactName} (รถ ${carpoolData.assignedCarNumber})` };
+                })()
+              );
             }
-          } else if (activeTab === 'custom') {
-            personalizedMsg = personalizeCustomMessage(messageToSend, registration);
+          } else {
+            throw new Error(`No carpool data found for ${registration.contactName}`);
           }
+        } else {
+          // Other templates: send one message per registration
+          sendTasks.push(
+            (async () => {
+              let personalizedMsg: string | undefined = '';
 
-          const response = await fetch('/api/line/send-notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              lineUserIds: [lineUserId],
-              message: personalizedMsg || undefined, // Allow empty message if only sending image or Flex
-              imageUrl: uploadedImageUrl || undefined,
-              flexMessage: flexMessage || undefined,
-            }),
-          });
+              if (activeTab === 'templates' && selectedTemplate && editableTemplate) {
+                personalizedMsg = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
+              } else if (activeTab === 'custom') {
+                personalizedMsg = personalizeCustomMessage(messageToSend, registration);
+              }
 
-          if (!response.ok) {
-            throw new Error(`Failed to send to ${registration.contactName}`);
-          }
+              const response = await fetch('/api/line/send-notification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lineUserIds: [lineUserId],
+                  message: personalizedMsg || undefined,
+                  imageUrl: uploadedImageUrl || undefined,
+                }),
+              });
 
-          return { success: true, name: registration.contactName };
-        })
-      );
+              if (!response.ok) {
+                throw new Error(`Failed to send to ${registration.contactName}`);
+              }
+
+              return { success: true, name: registration.contactName };
+            })()
+          );
+        }
+      }
+
+      const results = await Promise.allSettled(sendTasks);
 
       // Save to history
       await saveToHistory(subject, messageToSend);
@@ -588,51 +616,70 @@ export default function MessageTemplateModal({
       // Use preview recipient's data for personalization
       const registration = selectedRegistrations[previewRecipient].registration;
 
-      let personalizedMsg: string | undefined = '';
-      let flexMessage: any = undefined;
-
-      if (activeTab === 'templates' && selectedTemplate) {
-        // Handle car_assignment template with Flex message
-        if (selectedTemplate === 'car_assignment' && carpoolsData) {
-          const carpoolData = carpoolsData[registration.registrationId];
-          if (carpoolData) {
-            flexMessage = generateCarAssignmentFlexMessage(
-              carpoolData,
-              registration,
-              event.eventName
-            );
-            personalizedMsg = undefined;
-          } else {
-            toast.error(`ไม่พบข้อมูล carpool สำหรับ ${registration.contactName}`);
-            setIsSendingTest(false);
-            return;
-          }
-        } else if (editableTemplate) {
-          personalizedMsg = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
+      // For car_assignment: send test message for each car
+      if (activeTab === 'templates' && selectedTemplate === 'car_assignment' && carpoolsData) {
+        const carpools = carpoolsData[registration.registrationId];
+        if (!carpools || carpools.length === 0) {
+          toast.error(`ไม่พบข้อมูล carpool สำหรับ ${registration.contactName}`);
+          setIsSendingTest(false);
+          return;
         }
-      } else if (activeTab === 'custom') {
-        personalizedMsg = personalizeCustomMessage(messageToSend, registration);
+
+        // Send test message for each car
+        for (let i = 0; i < carpools.length; i++) {
+          const carpoolData = carpools[i];
+          const flexMessage = generateCarAssignmentFlexMessage(
+            carpoolData,
+            registration,
+            event.eventName
+          );
+
+          const response = await fetch('/api/line/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lineUserIds: [adminLineUserId],
+              message: undefined,
+              flexMessage: flexMessage,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (รถคันที่ ${i + 1})`);
+          }
+        }
+
+        toast.success(
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nข้อมูลที่ใช้ทดสอบ: ${registration.contactName}\nส่งข้อความ ${carpools.length} ข้อความ (${carpools.length} คัน)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+        );
+      } else {
+        // Other templates: send single test message
+        let personalizedMsg: string | undefined = '';
+
+        if (activeTab === 'templates' && selectedTemplate && editableTemplate) {
+          personalizedMsg = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
+        } else if (activeTab === 'custom') {
+          personalizedMsg = personalizeCustomMessage(messageToSend, registration);
+        }
+
+        const response = await fetch('/api/line/send-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lineUserIds: [adminLineUserId],
+            message: personalizedMsg || undefined,
+            imageUrl: uploadedImageUrl || undefined,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('ไม่สามารถส่งข้อความทดสอบได้');
+        }
+
+        toast.success(
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nข้อมูลที่ใช้ทดสอบ: ${registration.contactName}\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+        );
       }
-
-      // Send test message to admin's LINE
-      const response = await fetch('/api/line/send-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lineUserIds: [adminLineUserId],
-          message: personalizedMsg || undefined,
-          imageUrl: uploadedImageUrl || undefined,
-          flexMessage: flexMessage || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('ไม่สามารถส่งข้อความทดสอบได้');
-      }
-
-      toast.success(
-        `✅ ส่งข้อความทดสอบสำเร็จ!\n\nข้อมูลที่ใช้ทดสอบ: ${registration.contactName}\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
-      );
     } catch (error) {
       console.error('Error sending test message:', error);
       toast.error('เกิดข้อผิดพลาดในการส่งข้อความทดสอบ');
@@ -804,29 +851,38 @@ export default function MessageTemplateModal({
                     ✨ ตัวอย่างข้อความที่จะส่งถึง: {currentRecipient.registration.contactName}
                   </div>
                   {selectedTemplate === 'car_assignment' ? (
-                    <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="text-2xl">🚗</div>
-                        <div className="flex-1">
-                          <div className="font-bold text-blue-900 mb-2">Flex Message - แจ้งเลขรถที่ได้รับ</div>
-                          <div className="text-sm text-blue-800 space-y-1">
-                            {carpoolsData && carpoolsData[currentRecipient.registration.registrationId] ? (
-                              <>
-                                <p>• <strong>เลขรถ:</strong> {String(carpoolsData[currentRecipient.registration.registrationId].assignedCarNumber || 0).padStart(3, '0')}</p>
-                                <p>• <strong>ทะเบียนรถ:</strong> {carpoolsData[currentRecipient.registration.registrationId].licensePlate}</p>
-                                <p>• <strong>บริษัท:</strong> {currentRecipient.registration.companyName}</p>
-                                <p>• <strong>รหัสจอง:</strong> {currentRecipient.registration.registrationId}</p>
-                                <p>• <strong>ผู้ร่วมรถ:</strong> {carpoolsData[currentRecipient.registration.registrationId].members.length} คน</p>
-                                <div className="mt-2 text-xs text-blue-700">
-                                  💡 ข้อความจะถูกส่งเป็น Flex Message แบบ Rich Card พร้อมรายละเอียดครบถ้วน
-                                </div>
-                              </>
-                            ) : (
-                              <p className="text-red-700">⚠️ ไม่พบข้อมูลรถสำหรับการลงทะเบียนนี้</p>
-                            )}
+                    <div className="space-y-3">
+                      {carpoolsData && carpoolsData[currentRecipient.registration.registrationId] && carpoolsData[currentRecipient.registration.registrationId].length > 0 ? (
+                        <>
+                          <div className="text-xs text-gray-600 mb-2">
+                            จะส่ง {carpoolsData[currentRecipient.registration.registrationId].length} ข้อความ (แยกทุกคัน):
                           </div>
+                          {carpoolsData[currentRecipient.registration.registrationId].map((carpool, index) => (
+                            <div key={index} className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="text-2xl">🚗</div>
+                                <div className="flex-1">
+                                  <div className="font-bold text-blue-900 mb-2">Flex Message - แจ้งเลขรถแรลลี่ (คันที่ {index + 1})</div>
+                                  <div className="text-sm text-blue-800 space-y-1">
+                                    <p>• <strong>เลขรถ:</strong> {String(carpool.assignedCarNumber || 0).padStart(3, '0')}</p>
+                                    <p>• <strong>ทะเบียนรถ:</strong> {carpool.licensePlate}</p>
+                                    <p>• <strong>บริษัท:</strong> {currentRecipient.registration.companyName}</p>
+                                    <p>• <strong>รหัสจอง:</strong> {currentRecipient.registration.registrationId}</p>
+                                    <p>• <strong>ผู้ร่วมรถ:</strong> {carpool.members.length} คน</p>
+                                    <div className="mt-2 text-xs text-blue-700">
+                                      💡 ข้อความจะถูกส่งเป็น Flex Message แบบ Rich Card พร้อมรายละเอียดครบถ้วน
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+                          <p className="text-red-700">⚠️ ไม่พบข้อมูลรถสำหรับการลงทะเบียนนี้</p>
                         </div>
-                      </div>
+                      )}
                     </div>
                   ) : (
                     <div className="bg-white border border-gray-300 rounded-lg p-3 text-sm whitespace-pre-wrap font-sans">

@@ -848,15 +848,228 @@ export default function CarpoolManagementModal({
         { wch: 40 }, // Note/ความต้องการพิเศษ
       ];
 
-      // Create workbook with both worksheets
+      // ===== Create 3rd worksheet: ข้อมูลรถแบ่งตามบริษัท =====
+      interface CompanyCarData {
+        registrationId: string;
+        companyName: string;
+        attendeeCount: number;
+        contactName: string;
+        contactPhone: string;
+        cars: Array<{
+          carNumber: number;
+          licensePlate: string;
+          memberNames: string[];
+        }>;
+        minCarNumber: number; // For sorting
+      }
+
+      // Group carpools by registration/company
+      const companyCarMap = new Map<string, CompanyCarData>();
+
+      sortedCarpools.forEach(carpool => {
+        if (!carpool.assignedCarNumber) return; // Skip cars without assigned numbers
+
+        // Process each unique registration in this carpool
+        const processedRegs = new Set<string>();
+
+        carpool.members.forEach(member => {
+          if (processedRegs.has(member.registrationId)) return;
+          processedRegs.add(member.registrationId);
+
+          const attendee = allRegistrations.find(
+            (reg: any) => reg.registration.registrationId === member.registrationId
+          );
+
+          const regData = attendee?.registration || {};
+          const companyName = regData.companyName || 'ไม่ระบุบริษัท';
+
+          // Get all members from this registration in this car
+          const membersInThisCar = carpool.members
+            .filter(m => m.registrationId === member.registrationId)
+            .map(m => m.name);
+
+          if (!companyCarMap.has(member.registrationId)) {
+            companyCarMap.set(member.registrationId, {
+              registrationId: member.registrationId,
+              companyName: companyName,
+              attendeeCount: regData.attendeeCount || 0,
+              contactName: regData.contactName || '-',
+              contactPhone: regData.contactPhone || '-',
+              cars: [],
+              minCarNumber: carpool.assignedCarNumber,
+            });
+          }
+
+          const companyData = companyCarMap.get(member.registrationId)!;
+          companyData.cars.push({
+            carNumber: carpool.assignedCarNumber,
+            licensePlate: carpool.licensePlate || '-',
+            memberNames: membersInThisCar,
+          });
+
+          // Update minCarNumber
+          if (carpool.assignedCarNumber < companyData.minCarNumber) {
+            companyData.minCarNumber = carpool.assignedCarNumber;
+          }
+        });
+      });
+
+      // Sort by minimum car number
+      const sortedCompanyData = Array.from(companyCarMap.values()).sort(
+        (a, b) => a.minCarNumber - b.minCarNumber
+      );
+
+      // Build the data rows with merging
+      const companyCarExportData: any[] = [];
+      let runningNo = 1;
+
+      sortedCompanyData.forEach(company => {
+        company.cars.forEach((car, carIndex) => {
+          car.memberNames.forEach((memberName, memberIndex) => {
+            companyCarExportData.push({
+              'รัน No.': carIndex === 0 && memberIndex === 0 ? runningNo : '', // Only first row
+              'รหัสการจอง': carIndex === 0 && memberIndex === 0 ? company.registrationId : '',
+              'ชื่อบริษัท': carIndex === 0 && memberIndex === 0 ? company.companyName : '',
+              'จำนวนผู้เข้าร่วม': carIndex === 0 && memberIndex === 0 ? company.attendeeCount : '',
+              'ชื่อผู้ติดต่อ': carIndex === 0 && memberIndex === 0 ? company.contactName : '',
+              'เบอร์ผู้ติดต่อ': carIndex === 0 && memberIndex === 0 ? company.contactPhone : '',
+              'หมายเลขรถ': memberIndex === 0 ? formatCarNumber(car.carNumber) : '',
+              'ทะเบียนรถ': memberIndex === 0 ? car.licensePlate : '',
+              'ชื่อผู้ร่วมรถคันนี้': memberName,
+            });
+          });
+        });
+        runningNo++;
+      });
+
+      const ws3 = XLSX.utils.json_to_sheet(companyCarExportData);
+
+      // Apply styling and merging for 3rd worksheet
+      const totalColumns3 = 9;
+      const merges3: any[] = [];
+      let currentDataRow = 1; // Start after header
+
+      sortedCompanyData.forEach(company => {
+        const totalMembersInCompany = company.cars.reduce((sum, car) => sum + car.memberNames.length, 0);
+        const startRow = currentDataRow;
+        const endRow = currentDataRow + totalMembersInCompany - 1;
+
+        // Merge columns 0-5 (รัน No., รหัสการจอง, ชื่อบริษัท, จำนวนผู้เข้าร่วม, ชื่อผู้ติดต่อ, เบอร์ผู้ติดต่อ)
+        for (let col = 0; col <= 5; col++) {
+          if (totalMembersInCompany > 1) {
+            merges3.push({
+              s: { r: startRow, c: col },
+              e: { r: endRow, c: col },
+            });
+          }
+        }
+
+        // Merge car-specific columns (หมายเลขรถ, ทะเบียนรถ) for each car
+        let carStartRow = currentDataRow;
+        company.cars.forEach(car => {
+          const carMemberCount = car.memberNames.length;
+          const carEndRow = carStartRow + carMemberCount - 1;
+
+          if (carMemberCount > 1) {
+            // Merge หมายเลขรถ (col 6)
+            merges3.push({
+              s: { r: carStartRow, c: 6 },
+              e: { r: carEndRow, c: 6 },
+            });
+            // Merge ทะเบียนรถ (col 7)
+            merges3.push({
+              s: { r: carStartRow, c: 7 },
+              e: { r: carEndRow, c: 7 },
+            });
+          }
+
+          carStartRow += carMemberCount;
+        });
+
+        currentDataRow += totalMembersInCompany;
+      });
+
+      ws3['!merges'] = merges3;
+
+      // Apply cell styling for 3rd worksheet
+      currentDataRow = 1;
+      sortedCompanyData.forEach((company, companyIndex) => {
+        const totalMembersInCompany = company.cars.reduce((sum, car) => sum + car.memberNames.length, 0);
+        const isEvenCompany = companyIndex % 2 === 0;
+        const bgColor = isEvenCompany ? 'E3F2FD' : 'F3E5F5'; // Light blue for even, light purple for odd
+
+        for (let row = 0; row < totalMembersInCompany; row++) {
+          const absoluteRow = currentDataRow + row;
+
+          for (let col = 0; col < totalColumns3; col++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: absoluteRow, c: col });
+            if (!ws3[cellAddress]) ws3[cellAddress] = { t: 's', v: '' };
+
+            ws3[cellAddress].s = {
+              fill: { fgColor: { rgb: bgColor } },
+              border: {
+                top: { style: 'thin', color: { rgb: '757575' } },
+                bottom: { style: 'thin', color: { rgb: '757575' } },
+                left: { style: 'thin', color: { rgb: '757575' } },
+                right: { style: 'thin', color: { rgb: '757575' } },
+              },
+              alignment: {
+                vertical: 'center',
+                horizontal: col === 0 || col === 3 || col === 6 ? 'center' : 'left',
+                wrapText: true,
+              },
+              font: {
+                sz: col === 2 ? 14 : (col === 6 ? 16 : 10), // Company name: 14, Car number: 16, Others: 10
+                bold: col === 2 || col === 6, // Bold for company name and car number
+              },
+            };
+          }
+        }
+
+        currentDataRow += totalMembersInCompany;
+      });
+
+      // Style header row for 3rd worksheet
+      for (let col = 0; col < totalColumns3; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        if (!ws3[cellAddress]) continue;
+
+        ws3[cellAddress].s = {
+          fill: { fgColor: { rgb: '1976D2' } }, // Blue background
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 12 },
+          border: {
+            top: { style: 'medium', color: { rgb: '0D47A1' } },
+            bottom: { style: 'medium', color: { rgb: '0D47A1' } },
+            left: { style: 'thin', color: { rgb: '1565C0' } },
+            right: { style: 'thin', color: { rgb: '1565C0' } },
+          },
+          alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+        };
+      }
+
+      // Set column widths for 3rd worksheet
+      ws3['!cols'] = [
+        { wch: 8 },  // รัน No.
+        { wch: 15 }, // รหัสการจอง
+        { wch: 35 }, // ชื่อบริษัท
+        { wch: 12 }, // จำนวนผู้เข้าร่วม
+        { wch: 25 }, // ชื่อผู้ติดต่อ
+        { wch: 15 }, // เบอร์ผู้ติดต่อ
+        { wch: 15 }, // หมายเลขรถ
+        { wch: 20 }, // ทะเบียนรถ
+        { wch: 30 }, // ชื่อผู้ร่วมรถคันนี้
+      ];
+
+      // Create workbook with all three worksheets
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Carpool Summary');
       XLSX.utils.book_append_sheet(wb, ws2, 'ยังไม่ได้ลงทะเบียนรถ');
+      XLSX.utils.book_append_sheet(wb, ws3, 'ข้อมูลรถแบ่งตามบริษัท');
 
       const filename = `Carpool_${eventName}_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, filename);
 
-      alert(`ดาวน์โหลดไฟล์สำเร็จ\n- Carpool Summary: ${exportData.length} รายการ\n- ยังไม่ได้ลงทะเบียนรถ: ${notRegisteredData.length} รายการ`);
+      alert(`ดาวน์โหลดไฟล์สำเร็จ\n- Carpool Summary: ${exportData.length} รายการ\n- ยังไม่ได้ลงทะเบียนรถ: ${notRegisteredData.length} รายการ\n- ข้อมูลรถแบ่งตามบริษัท: ${companyCarExportData.length} รายการ`);
     } catch (err) {
       console.error('Error exporting Excel:', err);
       alert('ไม่สามารถ Export ได้');

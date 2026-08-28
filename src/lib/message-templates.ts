@@ -861,7 +861,7 @@ export function generateRegistrationInfoFlexMessage(
         .map(n => n.trim())
         .filter(n => n);
     } else if (Array.isArray(registration.attendeeNames)) {
-      attendeeNames = registration.attendeeNames.filter(n => n);
+      attendeeNames = registration.attendeeNames.filter((n: any) => n) as string[];
     }
   }
 

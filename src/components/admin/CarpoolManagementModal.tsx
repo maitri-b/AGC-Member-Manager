@@ -1571,17 +1571,12 @@ export default function CarpoolManagementModal({
                       <button
                         type="button"
                         onClick={() => {
-                          let allNames: string[] = [];
-                          const rawNames = ownerRegistrationData.attendeeNames;
-
-                          // Try to parse as JSON first
-                          try {
-                            const parsed = JSON.parse(rawNames);
-                            allNames = Array.isArray(parsed) ? parsed : [rawNames];
-                          } catch {
-                            // If not JSON, split by comma
-                            allNames = rawNames?.split(',').map((n: string) => n.trim()).filter((n: string) => n) || [];
-                          }
+                          // API already normalizes attendeeNames to comma-separated string
+                          // Just split by comma (no need to parse JSON)
+                          const allNames = ownerRegistrationData.attendeeNames
+                            ?.split(',')
+                            .map((n: string) => n.trim())
+                            .filter((n: string) => n) || [];
 
                           // Filter to only include members NOT already in a carpool
                           const availableNames = allNames.filter((name) => {
@@ -1616,17 +1611,12 @@ export default function CarpoolManagementModal({
 
                   <div className="space-y-2">
                     {(() => {
-                      let names: string[] = [];
-                      const rawNames = ownerRegistrationData.attendeeNames;
-
-                      // Try to parse as JSON first (handles ["name1", "name2"] format)
-                      try {
-                        const parsed = JSON.parse(rawNames);
-                        names = Array.isArray(parsed) ? parsed : [rawNames];
-                      } catch {
-                        // If not JSON, split by comma
-                        names = rawNames?.split(',').map((n: string) => n.trim()).filter((n: string) => n) || [];
-                      }
+                      // API already normalizes attendeeNames to comma-separated string
+                      // Just split by comma (no need to parse JSON)
+                      const names = ownerRegistrationData.attendeeNames
+                        ?.split(',')
+                        .map((n: string) => n.trim())
+                        .filter((n: string) => n) || [];
 
                       return names.map((name: string, index: number) => {
                         // Check if this member is already in a carpool
@@ -1685,13 +1675,10 @@ export default function CarpoolManagementModal({
                   <p className="text-xs text-gray-600 mt-3">
                     เลือก {selectedOwnerMembers.length} จาก{' '}
                     {(() => {
-                      const rawNames = ownerRegistrationData.attendeeNames;
-                      try {
-                        const parsed = JSON.parse(rawNames);
-                        return Array.isArray(parsed) ? parsed.length : 1;
-                      } catch {
-                        return rawNames?.split(',').filter((n: string) => n.trim()).length || 0;
-                      }
+                      // API already normalizes attendeeNames to comma-separated string
+                      return ownerRegistrationData.attendeeNames
+                        ?.split(',')
+                        .filter((n: string) => n.trim()).length || 0;
                     })()} คน
                   </p>
                 </div>
@@ -1887,17 +1874,12 @@ export default function CarpoolManagementModal({
                     <h4 className="font-semibold text-gray-900 mb-2">เลือกสมาชิกที่ต้องการเพิ่ม</h4>
                     <div className="space-y-2">
                       {searchedRegistration.attendeeNames ? (() => {
-                        let names: string[] = [];
-                        const rawNames = searchedRegistration.attendeeNames;
-
-                        // Try to parse as JSON first
-                        try {
-                          const parsed = JSON.parse(rawNames);
-                          names = Array.isArray(parsed) ? parsed : [rawNames];
-                        } catch {
-                          // If not JSON, split by comma
-                          names = rawNames.split(',').map((n: string) => n.trim()).filter((n: string) => n);
-                        }
+                        // API already normalizes attendeeNames to comma-separated string
+                        // Just split by comma (no need to parse JSON)
+                        const names = searchedRegistration.attendeeNames
+                          .split(',')
+                          .map((n: string) => n.trim())
+                          .filter((n: string) => n);
 
                         return names.map((trimmedName: string, index: number) => {
                           const isSelected = selectedMembersToAdd.includes(index.toString());

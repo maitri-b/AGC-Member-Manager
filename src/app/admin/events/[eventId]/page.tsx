@@ -777,7 +777,7 @@ export default function EventDetailPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
   const [recalculateLoading, setRecalculateLoading] = useState(false);
-  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error' | 'warning'; text: string } | null>(null);
   const [expandedRegistrations, setExpandedRegistrations] = useState<Set<string>>(new Set());
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showRoomManagementModal, setShowRoomManagementModal] = useState(false);
@@ -1067,40 +1067,69 @@ export default function EventDetailPage() {
 
         // Build a map of registrationId to array of carpool data (support multiple cars per registration)
         const carpoolsMap: Record<string, any[]> = {};
+        const skippedRegistrations: string[] = []; // Track registrations with unassigned cars
+
         carpools.forEach((carpool: any) => {
+          // Skip deleted/cancelled carpools
+          if (carpool.status === 'deleted' || carpool.status === 'cancelled') {
+            return;
+          }
+
+          const ownerReg = filteredAttendees.find(a => a.registration.registrationId === carpool.ownerRegistrationId);
+          if (!ownerReg) return;
+
           if (carpool.assignedCarNumber) {
-            // Parse attendee names from owner registration
-            const ownerReg = filteredAttendees.find(a => a.registration.registrationId === carpool.ownerRegistrationId);
-            if (ownerReg) {
-              // Extract all member names from the carpool
-              const memberNames: Array<{name: string; registrationId: string}> = [];
+            // Car has assigned number - include in carpoolsMap
+            const memberNames: Array<{name: string; registrationId: string}> = [];
 
-              // Add all members from the carpool
-              if (carpool.members && Array.isArray(carpool.members)) {
-                carpool.members.forEach((member: any) => {
-                  memberNames.push({
-                    name: member.name || 'ไม่ระบุชื่อ',
-                    registrationId: member.registrationId,
-                  });
+            // Add all members from the carpool
+            if (carpool.members && Array.isArray(carpool.members)) {
+              carpool.members.forEach((member: any) => {
+                memberNames.push({
+                  name: member.name || 'ไม่ระบุชื่อ',
+                  registrationId: member.registrationId,
                 });
-              }
+              });
+            }
 
-              const carpoolData = {
-                licensePlate: carpool.licensePlate,
-                assignedCarNumber: carpool.assignedCarNumber,
-                members: memberNames,
-              };
+            const carpoolData = {
+              licensePlate: carpool.licensePlate,
+              assignedCarNumber: carpool.assignedCarNumber,
+              members: memberNames,
+            };
 
-              // Initialize array if not exists, then push this carpool
-              if (!carpoolsMap[carpool.ownerRegistrationId]) {
-                carpoolsMap[carpool.ownerRegistrationId] = [];
-              }
-              carpoolsMap[carpool.ownerRegistrationId].push(carpoolData);
+            // Initialize array if not exists, then push this carpool
+            if (!carpoolsMap[carpool.ownerRegistrationId]) {
+              carpoolsMap[carpool.ownerRegistrationId] = [];
+            }
+            carpoolsMap[carpool.ownerRegistrationId].push(carpoolData);
+          } else {
+            // Car doesn't have assigned number - track for warning
+            if (!skippedRegistrations.includes(carpool.ownerRegistrationId)) {
+              skippedRegistrations.push(carpool.ownerRegistrationId);
             }
           }
         });
 
         setCarpoolsDataForMessages(carpoolsMap);
+
+        // Show warning if some registrations have unassigned cars
+        if (skippedRegistrations.length > 0) {
+          const skippedNames = skippedRegistrations
+            .map(regId => {
+              const attendee = filteredAttendees.find(a => a.registration.registrationId === regId);
+              return attendee?.registration.contactName || regId;
+            })
+            .join(', ');
+
+          setActionMessage({
+            type: 'warning',
+            text: `⚠️ มีรถที่ยังไม่ได้จัดเลขรถ (${skippedRegistrations.length} คน): ${skippedNames}\n\nระบบจะข้ามและส่งเฉพาะรถที่มีเลขรถแล้วเท่านั้น`
+          });
+
+          // Auto-clear warning after 8 seconds
+          setTimeout(() => setActionMessage(null), 8000);
+        }
       }
     } catch (error) {
       console.error('Error fetching carpools:', error);
@@ -6674,11 +6703,17 @@ export default function EventDetailPage() {
           <div className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg ${
             actionMessage.type === 'success'
               ? 'bg-green-600 text-white'
+              : actionMessage.type === 'warning'
+              ? 'bg-yellow-600 text-white'
               : 'bg-red-600 text-white'
           }`}>
             {actionMessage.type === 'success' ? (
               <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : actionMessage.type === 'warning' ? (
+              <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             ) : (
               <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

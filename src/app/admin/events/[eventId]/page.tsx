@@ -22,6 +22,7 @@ import AdminCancellationModal from '@/components/admin/AdminCancellationModal';
 import CarpoolDetailModal from '@/components/admin/CarpoolDetailModal';
 import EventSummaryQRModal from '@/components/admin/EventSummaryQRModal';
 import { Event as EventType, EventRegistration, CancellationPolicy } from '@/types/event';
+import { parseAttendeeNames } from '@/lib/message-templates';
 
 interface Event {
   eventId: string;
@@ -1356,16 +1357,7 @@ export default function EventDetailPage() {
 
       filteredAttendees.forEach((attendee) => {
         // Parse attendee names
-        let attendeeNamesList: string[] = [];
-        try {
-          const names = JSON.parse(attendee.registration.attendeeNames || '[]');
-          attendeeNamesList = Array.isArray(names) ? names : [];
-        } catch {
-          // If parse fails, try to use as plain string
-          if (attendee.registration.attendeeNames) {
-            attendeeNamesList = [attendee.registration.attendeeNames];
-          }
-        }
+        let attendeeNamesList = parseAttendeeNames(attendee.registration.attendeeNames);
 
         // If no names, create empty slots based on attendeeCount
         const attendeeCount = attendee.registration.attendeeCount || 1;
@@ -1561,15 +1553,7 @@ export default function EventDetailPage() {
       const totalColumns = totalMergeColumns + 2; // +2 for ลำดับ and ชื่อ
 
       filteredAttendees.forEach((attendee) => {
-        let attendeeNamesList: string[] = [];
-        try {
-          const names = JSON.parse(attendee.registration.attendeeNames || '[]');
-          attendeeNamesList = Array.isArray(names) ? names : [];
-        } catch {
-          if (attendee.registration.attendeeNames) {
-            attendeeNamesList = [attendee.registration.attendeeNames];
-          }
-        }
+        let attendeeNamesList = parseAttendeeNames(attendee.registration.attendeeNames);
 
         const attendeeCount = attendee.registration.attendeeCount || 1;
         const rowCount = attendeeNamesList.length || attendeeCount;
@@ -1925,12 +1909,9 @@ export default function EventDetailPage() {
     }
 
     // Parse attendee names
-    let names: string[] = [''];
-    try {
-      const parsed = JSON.parse(attendee.registration.attendeeNames || '[]');
-      names = Array.isArray(parsed) ? parsed : [attendee.registration.attendeeNames || ''];
-    } catch {
-      names = [attendee.registration.attendeeNames || ''];
+    const names = parseAttendeeNames(attendee.registration.attendeeNames);
+    if (names.length === 0) {
+      names.push(''); // Ensure at least one empty string for the form
     }
 
     // Parse attendee type selections
@@ -4583,24 +4564,7 @@ export default function EventDetailPage() {
 
                       {/* Attendee names if multiple */}
                       {attendee.registration.attendeeNames && attendee.registration.attendeeCount > 1 && (() => {
-                        let names: string[] = [];
-                        const attendeeNamesData = attendee.registration.attendeeNames as any;
-                        try {
-                          if (typeof attendeeNamesData === 'string') {
-                            const parsed = JSON.parse(attendeeNamesData);
-                            if (Array.isArray(parsed)) {
-                              names = parsed.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
-                            } else {
-                              names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
-                            }
-                          } else if (Array.isArray(attendeeNamesData)) {
-                            names = attendeeNamesData.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
-                          }
-                        } catch {
-                          if (attendeeNamesData && typeof attendeeNamesData === 'string') {
-                            names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
-                          }
-                        }
+                        const names = parseAttendeeNames(attendee.registration.attendeeNames);
                         return names.length > 0 ? (
                           <p className="text-xs text-gray-500 mt-1 truncate">
                             ผู้ร่วม: {names.join(', ')}
@@ -4874,24 +4838,7 @@ export default function EventDetailPage() {
 
                           if (roomAssignments.length > 0) {
                             // Get attendee names - parse JSON properly
-                            let names: string[] = [];
-                            const attendeeNamesData = attendee.registration.attendeeNames as any;
-                            try {
-                              if (typeof attendeeNamesData === 'string') {
-                                const parsed = JSON.parse(attendeeNamesData);
-                                if (Array.isArray(parsed)) {
-                                  names = parsed.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
-                                } else {
-                                  names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
-                                }
-                              } else if (Array.isArray(attendeeNamesData)) {
-                                names = attendeeNamesData.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
-                              }
-                            } catch {
-                              if (attendeeNamesData && typeof attendeeNamesData === 'string') {
-                                names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
-                              }
-                            }
+                            const names = parseAttendeeNames(attendee.registration.attendeeNames);
                             const attendeeCount = attendee.registration.attendeeCount || 1;
 
                             return (
@@ -7173,24 +7120,7 @@ function RoomNumberWithTooltip({
         }
 
         // Parse attendee names properly
-        let names: string[] = [];
-        const attendeeNamesData = attendee.registration.attendeeNames as any;
-        try {
-          if (typeof attendeeNamesData === 'string') {
-            const parsed = JSON.parse(attendeeNamesData);
-            if (Array.isArray(parsed)) {
-              names = parsed.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
-            } else {
-              names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
-            }
-          } else if (Array.isArray(attendeeNamesData)) {
-            names = attendeeNamesData.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
-          }
-        } catch {
-          if (attendeeNamesData && typeof attendeeNamesData === 'string') {
-            names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
-          }
-        }
+        const names = parseAttendeeNames(attendee.registration.attendeeNames);
 
         roomAssignments.forEach(assignment => {
           if (assignment.roomId === roomId) {

@@ -843,7 +843,13 @@ export function generateCarAssignmentFlexMessage(
 /**
  * Helper function to normalize member names from JSON array format
  */
-function normalizeMemberName(name: any): string {
+/**
+ * Normalize member name from various formats (string, array, JSON-encoded)
+ * Handles multiple levels of JSON encoding
+ * @param name - Member name in any format
+ * @returns Normalized comma-separated string
+ */
+export function normalizeMemberName(name: any): string {
   if (!name) return '';
   let current = name;
 
@@ -868,6 +874,37 @@ function normalizeMemberName(name: any): string {
     return current.join(', ').trim();
   }
   return String(current).trim();
+}
+
+/**
+ * Parse attendeeNames field and return array of names
+ * Handles multiple formats: string, array, JSON-encoded string
+ * @param attendeeNames - Raw attendeeNames data
+ * @returns Array of attendee names
+ */
+export function parseAttendeeNames(attendeeNames: any): string[] {
+  if (!attendeeNames) return [];
+
+  // If already an array, normalize each element
+  if (Array.isArray(attendeeNames)) {
+    return attendeeNames.map(name => normalizeMemberName(name)).filter(n => n.length > 0);
+  }
+
+  // If string, try to parse as JSON first
+  if (typeof attendeeNames === 'string') {
+    // Try JSON parsing (handles multiple levels)
+    const normalized = normalizeMemberName(attendeeNames);
+
+    // If result contains comma, split it
+    if (normalized.includes(',')) {
+      return normalized.split(',').map(n => n.trim()).filter(n => n.length > 0);
+    }
+
+    // Single name
+    return normalized.length > 0 ? [normalized] : [];
+  }
+
+  return [];
 }
 
 /**

@@ -551,6 +551,17 @@ export function generateCarAssignmentFlexMessage(
 
   // Add owner's members first
   if (ownerMembers.length > 0) {
+    // Add company header for owner's members
+    const ownerCompanyName = ownerMembers[0]?.companyName || 'ไม่ระบุบริษัท';
+    membersList.push({
+      type: 'text',
+      text: `--- ${ownerCompanyName} ---`,
+      size: 'xs',
+      color: '#8b7e9e',
+      weight: 'bold',
+      margin: 'md',
+    });
+
     ownerMembers.forEach(member => {
       membersList.push({
         type: 'box',

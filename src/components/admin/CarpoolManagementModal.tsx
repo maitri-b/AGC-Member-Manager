@@ -48,6 +48,9 @@ export default function CarpoolManagementModal({
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Filter state
+  const [filterUnassigned, setFilterUnassigned] = useState(false);
+
   // Car number assignment state - initialized from carpoolSettings
   const totalCars = carpoolSettings?.totalCarNumbers || 10;
   const [carSlots, setCarSlots] = useState<CarSlot[]>([]);
@@ -942,9 +945,9 @@ export default function CarpoolManagementModal({
           {/* Tab: Carpools List */}
           {activeTab === 'carpools' && (
             <>
-              {/* Dashboard Statistics - 5 cards in one row */}
+              {/* Dashboard Statistics - 6 cards in one row */}
               {!loading && !error && carpools.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 mb-4 sm:mb-6">
                   {/* Total Carpools */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
                     <div className="flex items-center gap-2 mb-1">
@@ -1058,6 +1061,19 @@ export default function CarpoolManagementModal({
                       })()}
                     </p>
                   </div>
+
+                  {/* Unassigned Cars Summary */}
+                  <div className="bg-white border-2 border-purple-200 rounded-lg p-3 sm:p-4 text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      <p className="text-xs sm:text-sm font-medium text-purple-900">ยังไม่ระบุเลขรถ</p>
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-bold text-purple-600">
+                      {carpools.filter(cp => !cp.assignedCarNumber).length}/{carpools.length}
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -1086,6 +1102,30 @@ export default function CarpoolManagementModal({
 
           {!loading && !error && carpools.length > 0 && (
             <>
+              {/* Filter Buttons */}
+              <div className="mb-4 flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setFilterUnassigned(false)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    !filterUnassigned
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  รถทั้งหมด ({carpools.length})
+                </button>
+                <button
+                  onClick={() => setFilterUnassigned(true)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    filterUnassigned
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  ยังไม่ระบุเลขรถ ({carpools.filter(cp => !cp.assignedCarNumber).length})
+                </button>
+              </div>
+
               {/* Search Box */}
               <div className="mb-4">
                 <div className="relative">
@@ -1110,8 +1150,15 @@ export default function CarpoolManagementModal({
                     </button>
                   )}
                 </div>
-                {searchQuery && (() => {
+                {(searchQuery || filterUnassigned) && (() => {
                   const filteredCount = carpools.filter((carpool) => {
+                    // Apply unassigned filter first
+                    if (filterUnassigned && carpool.assignedCarNumber) {
+                      return false;
+                    }
+
+                    // Then apply search query
+                    if (!searchQuery.trim()) return true;
                     const query = searchQuery.toLowerCase();
                     // Search in owner fields
                     if (carpool.ownerCompanyName?.toLowerCase().includes(query)) return true;
@@ -1138,6 +1185,12 @@ export default function CarpoolManagementModal({
               <div className="grid gap-3 sm:gap-4">
                 {carpools
                   .filter((carpool) => {
+                    // Apply unassigned filter first
+                    if (filterUnassigned && carpool.assignedCarNumber) {
+                      return false; // Skip assigned cars when filter is on
+                    }
+
+                    // Then apply search query
                     if (!searchQuery.trim()) return true;
                     const query = searchQuery.toLowerCase();
                     // Search in owner fields

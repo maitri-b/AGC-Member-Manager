@@ -3739,29 +3739,6 @@ export default function EventDetailPage() {
               </>
             );
           })()}
-
-          {/* Carpool Summary Card - Show only if carpool feature is enabled */}
-          {eventData?.event?.hasCarpoolFeature && (() => {
-            // Count total carpools and unassigned carpools
-            const totalCarpools = allCarpools.filter((cp: any) =>
-              cp.status !== 'deleted' && cp.status !== 'cancelled'
-            ).length;
-
-            const unassignedCarpools = allCarpools.filter((cp: any) =>
-              (cp.status !== 'deleted' && cp.status !== 'cancelled') && !cp.assignedCarNumber
-            ).length;
-
-            if (totalCarpools === 0) return null;
-
-            return (
-              <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-purple-200">
-                <p className="text-xl sm:text-3xl font-bold text-purple-600">
-                  {unassignedCarpools}/{totalCarpools}
-                </p>
-                <p className="text-[10px] sm:text-sm text-gray-500">ยังไม่ระบุเลขรถ/รถทั้งหมด</p>
-              </div>
-            );
-          })()}
         </div>
 
         {/* Filters */}

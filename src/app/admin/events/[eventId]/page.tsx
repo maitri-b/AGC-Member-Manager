@@ -4303,20 +4303,21 @@ export default function EventDetailPage() {
                       {/* Attendee names if multiple */}
                       {attendee.registration.attendeeNames && attendee.registration.attendeeCount > 1 && (() => {
                         let names: string[] = [];
+                        const attendeeNamesData = attendee.registration.attendeeNames as any;
                         try {
-                          if (typeof attendee.registration.attendeeNames === 'string') {
-                            const parsed = JSON.parse(attendee.registration.attendeeNames);
+                          if (typeof attendeeNamesData === 'string') {
+                            const parsed = JSON.parse(attendeeNamesData);
                             if (Array.isArray(parsed)) {
                               names = parsed.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
                             } else {
-                              names = attendee.registration.attendeeNames.split(',').map(n => n.trim()).filter(n => n.length > 0);
+                              names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
                             }
-                          } else if (Array.isArray(attendee.registration.attendeeNames)) {
-                            names = attendee.registration.attendeeNames.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
+                          } else if (Array.isArray(attendeeNamesData)) {
+                            names = attendeeNamesData.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
                           }
                         } catch {
-                          if (attendee.registration.attendeeNames) {
-                            names = attendee.registration.attendeeNames.split(',').map(n => n.trim()).filter(n => n.length > 0);
+                          if (attendeeNamesData && typeof attendeeNamesData === 'string') {
+                            names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
                           }
                         }
                         return names.length > 0 ? (
@@ -4593,20 +4594,21 @@ export default function EventDetailPage() {
                           if (roomAssignments.length > 0) {
                             // Get attendee names - parse JSON properly
                             let names: string[] = [];
+                            const attendeeNamesData = attendee.registration.attendeeNames as any;
                             try {
-                              if (typeof attendee.registration.attendeeNames === 'string') {
-                                const parsed = JSON.parse(attendee.registration.attendeeNames);
+                              if (typeof attendeeNamesData === 'string') {
+                                const parsed = JSON.parse(attendeeNamesData);
                                 if (Array.isArray(parsed)) {
                                   names = parsed.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
                                 } else {
-                                  names = attendee.registration.attendeeNames.split(',').map(n => n.trim()).filter(n => n.length > 0);
+                                  names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
                                 }
-                              } else if (Array.isArray(attendee.registration.attendeeNames)) {
-                                names = attendee.registration.attendeeNames.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
+                              } else if (Array.isArray(attendeeNamesData)) {
+                                names = attendeeNamesData.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
                               }
                             } catch {
-                              if (attendee.registration.attendeeNames) {
-                                names = attendee.registration.attendeeNames.split(',').map(n => n.trim()).filter(n => n.length > 0);
+                              if (attendeeNamesData && typeof attendeeNamesData === 'string') {
+                                names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
                               }
                             }
                             const attendeeCount = attendee.registration.attendeeCount || 1;
@@ -6883,20 +6885,21 @@ function RoomNumberWithTooltip({
 
         // Parse attendee names properly
         let names: string[] = [];
+        const attendeeNamesData = attendee.registration.attendeeNames as any;
         try {
-          if (typeof attendee.registration.attendeeNames === 'string') {
-            const parsed = JSON.parse(attendee.registration.attendeeNames);
+          if (typeof attendeeNamesData === 'string') {
+            const parsed = JSON.parse(attendeeNamesData);
             if (Array.isArray(parsed)) {
               names = parsed.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
             } else {
-              names = attendee.registration.attendeeNames.split(',').map(n => n.trim()).filter(n => n.length > 0);
+              names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
             }
-          } else if (Array.isArray(attendee.registration.attendeeNames)) {
-            names = attendee.registration.attendeeNames.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
+          } else if (Array.isArray(attendeeNamesData)) {
+            names = attendeeNamesData.map((name: any) => String(name).trim()).filter((name: string) => name.length > 0);
           }
         } catch {
-          if (attendee.registration.attendeeNames) {
-            names = attendee.registration.attendeeNames.split(',').map(n => n.trim()).filter(n => n.length > 0);
+          if (attendeeNamesData && typeof attendeeNamesData === 'string') {
+            names = attendeeNamesData.split(',').map((n: string) => n.trim()).filter((n: string) => n.length > 0);
           }
         }
 

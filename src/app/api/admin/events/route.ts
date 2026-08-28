@@ -107,6 +107,8 @@ export async function GET() {
           attendeeTypes: data.attendeeTypes || [],
           // Room allocation
           roomTypes: data.roomTypes || [],
+          // Room settings
+          roomSettings: data.roomSettings || undefined,
           // Carpool feature
           hasCarpoolFeature: data.hasCarpoolFeature ?? false,
           carpoolSettings: data.carpoolSettings || undefined,
@@ -250,6 +252,14 @@ export async function POST(request: NextRequest) {
 
     if (body.partyTableSettings) {
       newEvent.partyTableSettings = body.partyTableSettings;
+    }
+
+    if (body.roomSettings) {
+      newEvent.roomSettings = body.roomSettings;
+    }
+
+    if (body.cancellationPolicy) {
+      newEvent.cancellationPolicy = body.cancellationPolicy;
     }
 
     await db.collection('events').doc(eventId).set(newEvent);

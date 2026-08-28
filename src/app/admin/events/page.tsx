@@ -496,6 +496,11 @@ export default function AdminEventsPage() {
 
   const handleOpenModal = (event?: Event) => {
     if (event) {
+      // Debug: Log roomSettings from event
+      console.log('[DEBUG handleOpenModal] Raw event.roomSettings:', (event as any).roomSettings);
+      console.log('[DEBUG handleOpenModal] showRoomNumbersToMembers value:', (event as any).roomSettings?.showRoomNumbersToMembers);
+      console.log('[DEBUG handleOpenModal] Type of showRoomNumbersToMembers:', typeof (event as any).roomSettings?.showRoomNumbersToMembers);
+
       setEditingEvent(event);
       setFormData({
         eventName: event.eventName,
@@ -568,6 +573,12 @@ export default function AdminEventsPage() {
         // Cancellation policy (New)
         cancellationPolicy: event.cancellationPolicy ?? undefined,
       });
+
+      // Debug: Check what will be set in formData after a short delay
+      setTimeout(() => {
+        console.log('[DEBUG handleOpenModal AFTER] formData.roomSettings:', formData.roomSettings);
+        console.log('[DEBUG handleOpenModal AFTER] formData.roomSettings?.showRoomNumbersToMembers:', formData.roomSettings?.showRoomNumbersToMembers);
+      }, 100);
 
       // Load price tiers if available, otherwise initialize defaults
       if (event.priceTiers && event.priceTiers.length > 0) {

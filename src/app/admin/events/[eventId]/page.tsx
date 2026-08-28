@@ -1075,9 +1075,6 @@ export default function EventDetailPage() {
             return;
           }
 
-          const ownerReg = filteredAttendees.find(a => a.registration.registrationId === carpool.ownerRegistrationId);
-          if (!ownerReg) return;
-
           if (carpool.assignedCarNumber) {
             // Car has assigned number - include in carpoolsMap
             const memberNames: Array<{name: string; registrationId: string}> = [];
@@ -1096,17 +1093,55 @@ export default function EventDetailPage() {
               licensePlate: carpool.licensePlate,
               assignedCarNumber: carpool.assignedCarNumber,
               members: memberNames,
+              ownerRegistrationId: carpool.ownerRegistrationId, // Include owner info
             };
 
-            // Initialize array if not exists, then push this carpool
+            // Add carpool data to OWNER's registration
             if (!carpoolsMap[carpool.ownerRegistrationId]) {
               carpoolsMap[carpool.ownerRegistrationId] = [];
             }
             carpoolsMap[carpool.ownerRegistrationId].push(carpoolData);
+
+            // ALSO add carpool data to ALL MEMBERS who joined this car
+            // This ensures that people who joined carpools can also receive car assignment messages
+            if (carpool.members && Array.isArray(carpool.members)) {
+              carpool.members.forEach((member: any) => {
+                // Skip if this member is the owner (already added above)
+                if (member.registrationId === carpool.ownerRegistrationId) {
+                  return;
+                }
+
+                // Add this carpool to the member's registration
+                if (!carpoolsMap[member.registrationId]) {
+                  carpoolsMap[member.registrationId] = [];
+                }
+
+                // Check if this carpool is already in the member's list (avoid duplicates)
+                const alreadyAdded = carpoolsMap[member.registrationId].some(
+                  (cp: any) => cp.assignedCarNumber === carpool.assignedCarNumber &&
+                               cp.licensePlate === carpool.licensePlate
+                );
+
+                if (!alreadyAdded) {
+                  carpoolsMap[member.registrationId].push(carpoolData);
+                }
+              });
+            }
           } else {
             // Car doesn't have assigned number - track for warning
+            // Track both owner and members
             if (!skippedRegistrations.includes(carpool.ownerRegistrationId)) {
               skippedRegistrations.push(carpool.ownerRegistrationId);
+            }
+
+            // Also track members who joined this unassigned car
+            if (carpool.members && Array.isArray(carpool.members)) {
+              carpool.members.forEach((member: any) => {
+                if (member.registrationId !== carpool.ownerRegistrationId &&
+                    !skippedRegistrations.includes(member.registrationId)) {
+                  skippedRegistrations.push(member.registrationId);
+                }
+              });
             }
           }
         });

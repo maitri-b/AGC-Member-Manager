@@ -896,13 +896,13 @@ export default function CarpoolManagementModal({
               contactName: regData.contactName || '-',
               contactPhone: regData.contactPhone || '-',
               cars: [],
-              minCarNumber: carpool.assignedCarNumber,
+              minCarNumber: carpool.assignedCarNumber!,
             });
           }
 
           const companyData = companyCarMap.get(member.registrationId)!;
           companyData.cars.push({
-            carNumber: carpool.assignedCarNumber,
+            carNumber: carpool.assignedCarNumber!,
             licensePlate: carpool.licensePlate || '-',
             memberNames: membersInThisCar,
           });

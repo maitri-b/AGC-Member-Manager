@@ -1630,6 +1630,120 @@ export default function EventDetailPage() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Attendees');
 
+      // === Carpool Worksheet ===
+      try {
+        const carpoolResponse = await fetch(`/api/events/${encodeURIComponent(eventId)}/carpools`);
+        if (carpoolResponse.ok) {
+          const carpoolData = await carpoolResponse.json();
+          const allCarpools = carpoolData.carpools || [];
+
+          // Filter out deleted/cancelled carpools
+          const activeCarpools = allCarpools.filter((cp: any) =>
+            cp.status !== 'deleted' && cp.status !== 'cancelled'
+          );
+
+          // Separate assigned and unassigned carpools
+          const assignedCarpools = activeCarpools
+            .filter((cp: any) => cp.assignedCarNumber)
+            .sort((a: any, b: any) => (a.assignedCarNumber || 0) - (b.assignedCarNumber || 0));
+
+          const unassignedCarpools = activeCarpools.filter((cp: any) => !cp.assignedCarNumber);
+
+          // Combine: assigned first, then unassigned
+          const sortedCarpools = [...assignedCarpools, ...unassignedCarpools];
+
+          // Prepare carpool export data
+          const carpoolExportData: Record<string, any>[] = [];
+
+          sortedCarpools.forEach((carpool: any) => {
+            // Get member names
+            const memberNames = carpool.members && Array.isArray(carpool.members)
+              ? carpool.members.map((m: any) => m.name || 'ไม่ระบุชื่อ').join(', ')
+              : '';
+
+            const memberCount = carpool.members ? carpool.members.length : 0;
+
+            carpoolExportData.push({
+              'เลขรถ': carpool.assignedCarNumber || '', // Empty for unassigned
+              'ทะเบียนรถ': carpool.licensePlate || '',
+              'จำนวนสมาชิก': memberCount,
+              'รายชื่อสมาชิก': memberNames,
+              'รหัสเจ้าของรถ': carpool.ownerRegistrationId || '',
+              'สถานะ': carpool.assignedCarNumber ? 'จัดเลขแล้ว' : 'ยังไม่จัดเลข',
+            });
+          });
+
+          // Create carpool worksheet
+          if (carpoolExportData.length > 0) {
+            const carpoolWs = XLSX.utils.json_to_sheet(carpoolExportData);
+
+            // Set column widths for carpool worksheet
+            carpoolWs['!cols'] = [
+              { wch: 10 }, // เลขรถ
+              { wch: 15 }, // ทะเบียนรถ
+              { wch: 15 }, // จำนวนสมาชิก
+              { wch: 60 }, // รายชื่อสมาชิก
+              { wch: 20 }, // รหัสเจ้าของรถ
+              { wch: 15 }, // สถานะ
+            ];
+
+            // Style header row for carpool worksheet
+            const carpoolHeaderRow = 0;
+            const carpoolColumns = 6; // Number of columns
+            for (let col = 0; col < carpoolColumns; col++) {
+              const cellAddress = XLSX.utils.encode_cell({ r: carpoolHeaderRow, c: col });
+              if (!carpoolWs[cellAddress]) continue;
+
+              carpoolWs[cellAddress].s = {
+                fill: { fgColor: { rgb: '10B981' } }, // Green background
+                font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+                border: {
+                  top: { style: 'medium', color: { rgb: '059669' } },
+                  bottom: { style: 'medium', color: { rgb: '059669' } },
+                  left: { style: 'thin', color: { rgb: '10B981' } },
+                  right: { style: 'thin', color: { rgb: '10B981' } },
+                },
+                alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+              };
+            }
+
+            // Style data rows
+            carpoolExportData.forEach((_, rowIdx) => {
+              const dataRow = rowIdx + 1; // +1 because row 0 is header
+              const carpool = sortedCarpools[rowIdx];
+
+              // Different background for assigned vs unassigned
+              const bgColor = carpool.assignedCarNumber ? 'E8F5E9' : 'FFF9C4'; // Light green for assigned, light yellow for unassigned
+
+              for (let col = 0; col < carpoolColumns; col++) {
+                const cellAddress = XLSX.utils.encode_cell({ r: dataRow, c: col });
+                if (!carpoolWs[cellAddress]) carpoolWs[cellAddress] = { t: 's', v: '' };
+
+                carpoolWs[cellAddress].s = {
+                  fill: { fgColor: { rgb: bgColor } },
+                  border: {
+                    top: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                    bottom: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                    left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                    right: { style: 'thin', color: { rgb: 'D1D5DB' } },
+                  },
+                  alignment: {
+                    vertical: 'center',
+                    horizontal: col === 2 ? 'center' : 'left', // Center align member count
+                    wrapText: true,
+                  },
+                };
+              }
+            });
+
+            XLSX.utils.book_append_sheet(wb, carpoolWs, 'Carpools');
+          }
+        }
+      } catch (err) {
+        console.error('Error adding carpool worksheet:', err);
+        // Continue with export even if carpool worksheet fails
+      }
+
       // Generate filename with Thai date format
       const filename = `${eventData.event.eventName}_${formatThaiDateTime(new Date())}.xlsx`;
 

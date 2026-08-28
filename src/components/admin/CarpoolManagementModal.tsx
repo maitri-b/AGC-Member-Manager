@@ -855,17 +855,19 @@ export default function CarpoolManagementModal({
         attendeeCount: number;
         contactName: string;
         contactPhone: string;
+        attendeeNames: string[];
         cars: Array<{
-          carNumber: number;
+          carNumber?: number;
           licensePlate: string;
           memberNames: string[];
         }>;
-        minCarNumber: number; // For sorting
+        minCarNumber: number; // For sorting (999999 for no cars)
       }
 
       // Group carpools by registration/company
       const companyCarMap = new Map<string, CompanyCarData>();
 
+      // First, process all carpools with assigned numbers
       sortedCarpools.forEach(carpool => {
         if (!carpool.assignedCarNumber) return; // Skip cars without assigned numbers
 
@@ -883,6 +885,16 @@ export default function CarpoolManagementModal({
           const regData = attendee?.registration || {};
           const companyName = regData.companyName || 'ไม่ระบุบริษัท';
 
+          // Parse attendee names
+          let attendeeNames: string[] = [];
+          if (regData.attendeeNames) {
+            if (typeof regData.attendeeNames === 'string') {
+              attendeeNames = regData.attendeeNames.split(',').map((n: string) => n.trim()).filter((n: string) => n);
+            } else if (Array.isArray(regData.attendeeNames)) {
+              attendeeNames = regData.attendeeNames.filter((n: any) => n);
+            }
+          }
+
           // Get all members from this registration in this car
           const membersInThisCar = carpool.members
             .filter(m => m.registrationId === member.registrationId)
@@ -895,6 +907,7 @@ export default function CarpoolManagementModal({
               attendeeCount: regData.attendeeCount || 0,
               contactName: regData.contactName || '-',
               contactPhone: regData.contactPhone || '-',
+              attendeeNames: attendeeNames,
               cars: [],
               minCarNumber: carpool.assignedCarNumber!,
             });
@@ -914,7 +927,40 @@ export default function CarpoolManagementModal({
         });
       });
 
-      // Sort by minimum car number
+      // Second, add all registrations that don't have cars yet
+      allRegistrations.forEach((attendee: any) => {
+        const regData = attendee.registration;
+        const registrationId = regData.registrationId;
+
+        // Skip if already in map (has cars)
+        if (companyCarMap.has(registrationId)) return;
+
+        const companyName = regData.companyName || 'ไม่ระบุบริษัท';
+
+        // Parse attendee names
+        let attendeeNames: string[] = [];
+        if (regData.attendeeNames) {
+          if (typeof regData.attendeeNames === 'string') {
+            attendeeNames = regData.attendeeNames.split(',').map((n: string) => n.trim()).filter((n: string) => n);
+          } else if (Array.isArray(regData.attendeeNames)) {
+            attendeeNames = regData.attendeeNames.filter((n: any) => n);
+          }
+        }
+
+        // Add registration without cars
+        companyCarMap.set(registrationId, {
+          registrationId: registrationId,
+          companyName: companyName,
+          attendeeCount: regData.attendeeCount || 0,
+          contactName: regData.contactName || '-',
+          contactPhone: regData.contactPhone || '-',
+          attendeeNames: attendeeNames,
+          cars: [],
+          minCarNumber: 999999, // High number to sort at the end
+        });
+      });
+
+      // Sort by minimum car number (registrations without cars will be at the end)
       const sortedCompanyData = Array.from(companyCarMap.values()).sort(
         (a, b) => a.minCarNumber - b.minCarNumber
       );
@@ -924,21 +970,54 @@ export default function CarpoolManagementModal({
       let runningNo = 1;
 
       sortedCompanyData.forEach(company => {
-        company.cars.forEach((car, carIndex) => {
-          car.memberNames.forEach((memberName, memberIndex) => {
-            companyCarExportData.push({
-              'รัน No.': carIndex === 0 && memberIndex === 0 ? runningNo : '', // Only first row
-              'รหัสการจอง': carIndex === 0 && memberIndex === 0 ? company.registrationId : '',
-              'ชื่อบริษัท': carIndex === 0 && memberIndex === 0 ? company.companyName : '',
-              'จำนวนผู้เข้าร่วม': carIndex === 0 && memberIndex === 0 ? company.attendeeCount : '',
-              'ชื่อผู้ติดต่อ': carIndex === 0 && memberIndex === 0 ? company.contactName : '',
-              'เบอร์ผู้ติดต่อ': carIndex === 0 && memberIndex === 0 ? company.contactPhone : '',
-              'หมายเลขรถ': memberIndex === 0 ? formatCarNumber(car.carNumber) : '',
-              'ทะเบียนรถ': memberIndex === 0 ? car.licensePlate : '',
-              'ชื่อผู้ร่วมรถคันนี้': memberName,
+        if (company.cars.length > 0) {
+          // Company has cars
+          company.cars.forEach((car, carIndex) => {
+            car.memberNames.forEach((memberName, memberIndex) => {
+              companyCarExportData.push({
+                'รัน No.': carIndex === 0 && memberIndex === 0 ? runningNo : '', // Only first row
+                'รหัสการจอง': carIndex === 0 && memberIndex === 0 ? company.registrationId : '',
+                'ชื่อบริษัท': carIndex === 0 && memberIndex === 0 ? company.companyName : '',
+                'จำนวนผู้เข้าร่วม': carIndex === 0 && memberIndex === 0 ? company.attendeeCount : '',
+                'ชื่อผู้ติดต่อ': carIndex === 0 && memberIndex === 0 ? company.contactName : '',
+                'เบอร์ผู้ติดต่อ': carIndex === 0 && memberIndex === 0 ? company.contactPhone : '',
+                'หมายเลขรถ': memberIndex === 0 ? formatCarNumber(car.carNumber) : '',
+                'ทะเบียนรถ': memberIndex === 0 ? car.licensePlate : '',
+                'ชื่อผู้ร่วมรถคันนี้': memberName,
+              });
             });
           });
-        });
+        } else {
+          // Company has no cars - show attendee names instead
+          if (company.attendeeNames.length > 0) {
+            company.attendeeNames.forEach((attendeeName, nameIndex) => {
+              companyCarExportData.push({
+                'รัน No.': nameIndex === 0 ? runningNo : '',
+                'รหัสการจอง': nameIndex === 0 ? company.registrationId : '',
+                'ชื่อบริษัท': nameIndex === 0 ? company.companyName : '',
+                'จำนวนผู้เข้าร่วม': nameIndex === 0 ? company.attendeeCount : '',
+                'ชื่อผู้ติดต่อ': nameIndex === 0 ? company.contactName : '',
+                'เบอร์ผู้ติดต่อ': nameIndex === 0 ? company.contactPhone : '',
+                'หมายเลขรถ': '', // No car number
+                'ทะเบียนรถ': '', // No license plate
+                'ชื่อผู้ร่วมรถคันนี้': attendeeName,
+              });
+            });
+          } else {
+            // No attendee names - show at least one row with company info
+            companyCarExportData.push({
+              'รัน No.': runningNo,
+              'รหัสการจอง': company.registrationId,
+              'ชื่อบริษัท': company.companyName,
+              'จำนวนผู้เข้าร่วม': company.attendeeCount,
+              'ชื่อผู้ติดต่อ': company.contactName,
+              'เบอร์ผู้ติดต่อ': company.contactPhone,
+              'หมายเลขรถ': '',
+              'ทะเบียนรถ': '',
+              'ชื่อผู้ร่วมรถคันนี้': '-',
+            });
+          }
+        }
         runningNo++;
       });
 
@@ -950,7 +1029,14 @@ export default function CarpoolManagementModal({
       let currentDataRow = 1; // Start after header
 
       sortedCompanyData.forEach(company => {
-        const totalMembersInCompany = company.cars.reduce((sum, car) => sum + car.memberNames.length, 0);
+        // Calculate total members based on whether company has cars or not
+        let totalMembersInCompany: number;
+        if (company.cars.length > 0) {
+          totalMembersInCompany = company.cars.reduce((sum, car) => sum + car.memberNames.length, 0);
+        } else {
+          totalMembersInCompany = Math.max(company.attendeeNames.length, 1);
+        }
+
         const startRow = currentDataRow;
         const endRow = currentDataRow + totalMembersInCompany - 1;
 
@@ -964,27 +1050,41 @@ export default function CarpoolManagementModal({
           }
         }
 
-        // Merge car-specific columns (หมายเลขรถ, ทะเบียนรถ) for each car
-        let carStartRow = currentDataRow;
-        company.cars.forEach(car => {
-          const carMemberCount = car.memberNames.length;
-          const carEndRow = carStartRow + carMemberCount - 1;
+        if (company.cars.length > 0) {
+          // Company has cars - merge car-specific columns for each car
+          let carStartRow = currentDataRow;
+          company.cars.forEach(car => {
+            const carMemberCount = car.memberNames.length;
+            const carEndRow = carStartRow + carMemberCount - 1;
 
-          if (carMemberCount > 1) {
-            // Merge หมายเลขรถ (col 6)
+            if (carMemberCount > 1) {
+              // Merge หมายเลขรถ (col 6)
+              merges3.push({
+                s: { r: carStartRow, c: 6 },
+                e: { r: carEndRow, c: 6 },
+              });
+              // Merge ทะเบียนรถ (col 7)
+              merges3.push({
+                s: { r: carStartRow, c: 7 },
+                e: { r: carEndRow, c: 7 },
+              });
+            }
+
+            carStartRow += carMemberCount;
+          });
+        } else {
+          // Company has no cars - merge empty car columns for all rows
+          if (totalMembersInCompany > 1) {
             merges3.push({
-              s: { r: carStartRow, c: 6 },
-              e: { r: carEndRow, c: 6 },
+              s: { r: startRow, c: 6 },
+              e: { r: endRow, c: 6 },
             });
-            // Merge ทะเบียนรถ (col 7)
             merges3.push({
-              s: { r: carStartRow, c: 7 },
-              e: { r: carEndRow, c: 7 },
+              s: { r: startRow, c: 7 },
+              e: { r: endRow, c: 7 },
             });
           }
-
-          carStartRow += carMemberCount;
-        });
+        }
 
         currentDataRow += totalMembersInCompany;
       });
@@ -994,7 +1094,14 @@ export default function CarpoolManagementModal({
       // Apply cell styling for 3rd worksheet
       currentDataRow = 1;
       sortedCompanyData.forEach((company, companyIndex) => {
-        const totalMembersInCompany = company.cars.reduce((sum, car) => sum + car.memberNames.length, 0);
+        // Calculate total members based on whether company has cars or not
+        let totalMembersInCompany: number;
+        if (company.cars.length > 0) {
+          totalMembersInCompany = company.cars.reduce((sum, car) => sum + car.memberNames.length, 0);
+        } else {
+          totalMembersInCompany = Math.max(company.attendeeNames.length, 1);
+        }
+
         const isEvenCompany = companyIndex % 2 === 0;
         const bgColor = isEvenCompany ? 'E3F2FD' : 'F3E5F5'; // Light blue for even, light purple for odd
 

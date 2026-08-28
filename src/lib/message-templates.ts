@@ -626,7 +626,7 @@ export function generateCarAssignmentFlexMessage(
 
   return {
     type: 'flex',
-    altText: isJoinedCar ? `แจ้งเลขรถที่คุณขอ Join - ${carNumber}` : `แจ้งเลขรถแรลลี่ของคุณ - ${carNumber}`,
+    altText: isJoinedCar ? `แจ้งเลขรถที่ขอ Join - ${carNumber}` : `แจ้งเลขรถแรลลี่ของคุณ - ${carNumber}`,
     contents: {
       type: 'bubble',
       header: {
@@ -635,7 +635,7 @@ export function generateCarAssignmentFlexMessage(
         contents: [
           {
             type: 'text',
-            text: isJoinedCar ? '🚗 แจ้งเลขรถแรลลี่ที่คุณขอ Join' : '🚗 แจ้งเลขรถแรลลี่ของคุณ',
+            text: isJoinedCar ? '🚗 แจ้งเลขรถที่ขอ Join' : '🚗 แจ้งเลขรถแรลลี่ของคุณ',
             weight: 'bold',
             size: 'lg',
             color: '#ffffff',

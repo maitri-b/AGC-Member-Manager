@@ -590,12 +590,25 @@ export default function CarpoolManagementModal({
   const handleExportExcel = () => {
     setExportLoading(true);
     try {
+      // Helper function to format car number as 3-digit string
+      const formatCarNumber = (carNumber: number | undefined): string => {
+        if (!carNumber || carNumber <= 0) return '-';
+        return String(carNumber).padStart(3, '0');
+      };
+
+      // Sort carpools by assignedCarNumber (cars with numbers first, then cars without)
+      const sortedCarpools = [...carpools].sort((a, b) => {
+        const numA = a.assignedCarNumber || 999999;
+        const numB = b.assignedCarNumber || 999999;
+        return numA - numB;
+      });
+
       // Prepare export data - only members (including owner in members list)
       const exportData: Record<string, any>[] = [];
 
-      carpools.forEach((carpool, carpoolIndex) => {
+      sortedCarpools.forEach((carpool) => {
         // Add all members in this carpool (owner is already in members list)
-        carpool.members.forEach((member, memberIndex) => {
+        carpool.members.forEach((member) => {
           // Find registration data for this member
           const attendee = allRegistrations.find(
             (reg: any) => reg.registration.registrationId === member.registrationId
@@ -605,8 +618,7 @@ export default function CarpoolManagementModal({
           const lineProfile = attendee?.lineProfile || null;
 
           exportData.push({
-            'ลำดับ': carpoolIndex + 1,
-            'เลขรถ': carpool.assignedCarNumber || '-',
+            'เลขรถ': formatCarNumber(carpool.assignedCarNumber),
             'ทะเบียนรถ': carpool.licensePlate || 'ไม่ระบุ',
             'ชื่อบริษัท': regData.companyName || '-',
             'ผู้ติดต่อ': regData.contactName || '-',
@@ -621,14 +633,25 @@ export default function CarpoolManagementModal({
       // Create worksheet
       const ws = XLSX.utils.json_to_sheet(exportData);
 
-      // Apply styling
+      // Apply styling and merge cells
       let currentRow = 1; // Start after header
-      const totalColumns = 9; // Updated from 8 (added LINE name column)
+      const totalColumns = 8; // Removed ลำดับ column (was 9)
 
-      carpools.forEach((carpool, carpoolIndex) => {
+      // Track merge ranges for car numbers
+      const merges: any[] = [];
+
+      sortedCarpools.forEach((carpool, carpoolIndex) => {
         const isEvenCarpool = carpoolIndex % 2 === 0;
         const bgColor = isEvenCarpool ? 'E8F5E9' : 'FFFFFF'; // Light green for even, white for odd
         const rowCount = carpool.members.length; // No +1 since owner is in members list
+
+        // Add merge range for car number column (column 0) if more than 1 member
+        if (rowCount > 1) {
+          merges.push({
+            s: { r: currentRow, c: 0 }, // Start: current row, column 0 (เลขรถ)
+            e: { r: currentRow + rowCount - 1, c: 0 }, // End: last row of this carpool, column 0
+          });
+        }
 
         // Style all rows in this carpool
         for (let i = 0; i < rowCount; i++) {
@@ -637,6 +660,9 @@ export default function CarpoolManagementModal({
           for (let col = 0; col < totalColumns; col++) {
             const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
             if (!ws[cellAddress]) ws[cellAddress] = { t: 's', v: '' };
+
+            // Special styling for car number column (column 0)
+            const isCarNumberCol = col === 0;
 
             ws[cellAddress].s = {
               fill: { fgColor: { rgb: bgColor } },
@@ -648,11 +674,12 @@ export default function CarpoolManagementModal({
               },
               alignment: {
                 vertical: 'center',
-                horizontal: 'left',
+                horizontal: isCarNumberCol ? 'center' : 'left',
                 wrapText: true,
               },
               font: {
-                sz: 10,
+                sz: isCarNumberCol ? 14 : 10, // Larger font for car number
+                bold: isCarNumberCol,
               },
             };
           }
@@ -660,6 +687,9 @@ export default function CarpoolManagementModal({
 
         currentRow += rowCount;
       });
+
+      // Apply merges
+      ws['!merges'] = merges;
 
       // Style header row
       const headerRow = 0;
@@ -680,10 +710,9 @@ export default function CarpoolManagementModal({
         };
       }
 
-      // Set column widths (9 columns now)
+      // Set column widths (8 columns - removed ลำดับ)
       ws['!cols'] = [
-        { wch: 8 },  // ลำดับ
-        { wch: 10 }, // เลขรถ
+        { wch: 10 }, // เลขรถ (wider for 3-digit format)
         { wch: 15 }, // ทะเบียนรถ
         { wch: 30 }, // ชื่อบริษัท
         { wch: 25 }, // ผู้ติดต่อ

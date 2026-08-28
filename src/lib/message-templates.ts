@@ -13,9 +13,9 @@ export type MessageTemplateType =
   | 'full_payment'         // แจ้งชำระเต็มจำนวน
   | 'deadline_warning'     // แจ้งเตือนใกล้ครบกำหนด
   | 'overdue_notice'       // แจ้งเตือนพ้นกำหนด
-  | 'application_approved' // แจ้งใบสมัครได้รับการอนุมัติ
-  | 'application_rejected' // แจ้งใบสมัครไม่ได้รับการอนุมัติ
   | 'verification_reminder'// แจ้งเตือนให้ยืนยันตัวตน
+  // Event Management Templates
+  | 'car_assignment'       // แจ้งเลขรถที่ได้รับ
   // Member Contact Templates
   | 'license_renewal'      // แจ้งเตือนต่ออายุใบอนุญาต
   | 'license_expired'      // แจ้งใบอนุญาตหมดอายุ
@@ -141,55 +141,12 @@ export const DEFAULT_TEMPLATES: Record<MessageTemplateType, MessageTemplate> = {
     variables: ['memberName', 'eventName', 'amountText', 'deadlineText', 'daysOverdue', 'eventLink', 'registrationId'],
   },
 
-  application_approved: {
-    id: 'application_approved',
-    name: 'แจ้งใบสมัครได้รับการอนุมัติ',
-    description: 'ส่งแจ้งเมื่อใบสมัครสมาชิกได้รับการอนุมัติ',
-    template: `🎉 ยินดีต้อนรับสู่ Agents Club!
-
-สวัสดีครับคุณ {{memberName}} 🙏
-
-ขอแสดงความยินดี! ใบสมัครสมาชิกของคุณได้รับการอนุมัติแล้ว
-
-👤 ข้อมูลสมาชิก
-• รหัสสมาชิก: {{memberId}}
-• ชื่อ: {{fullName}}
-• บริษัท: {{companyName}}
-
-✅ สถานะ: {{memberStatus}}
-
-📱 ขั้นตอนถัดไป
-1. ตรวจสอบข้อมูลสมาชิกของคุณ
-2. เข้ากลุ่ม LINE Agents Club (รอคำเชิญ)
-3. เริ่มเข้าร่วมกิจกรรมได้ทันที!
-
-🔗 ดูข้อมูลสมาชิกของคุณ: {{profileLink}}
-
-ขอบคุณที่เป็นส่วนหนึ่งของครอบครัว Agents Club
-Helping & Sharing 💚`,
-    variables: ['memberName', 'memberId', 'fullName', 'companyName', 'memberStatus', 'profileLink'],
-  },
-
-  application_rejected: {
-    id: 'application_rejected',
-    name: 'แจ้งใบสมัครไม่ได้รับการอนุมัติ',
-    description: 'ส่งแจ้งเมื่อใบสมัครสมาชิกไม่ได้รับการอนุมัติ',
-    template: `📋 แจ้งผลการพิจารณาใบสมัครสมาชิก
-
-สวัสดีครับคุณ {{memberName}} 🙏
-
-ขออภัยค่ะ ใบสมัครสมาชิกของคุณยังไม่ได้รับการอนุมัติในครั้งนี้
-
-⚠️ เหตุผล:
-{{rejectionReason}}
-
-📞 ติดต่อสอบถาม
-หากมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม
-กรุณาติดต่อทีมงาน Agents Club
-LINE: {{lineOfficialAccount}}
-
-ขอบคุณที่สนใจเข้าร่วม Agents Club ค่ะ 🙏`,
-    variables: ['memberName', 'rejectionReason', 'lineOfficialAccount'],
+  car_assignment: {
+    id: 'car_assignment',
+    name: 'แจ้งเลขรถที่ได้รับ',
+    description: 'ส่งแจ้งเลขรถที่ได้รับมอบหมายให้กับผู้ลงทะเบียนรถ',
+    template: `FLEX_MESSAGE`, // Special marker for Flex message
+    variables: ['companyName', 'registrationId', 'licensePlate', 'carNumber', 'memberNames'],
   },
 
   verification_reminder: {
@@ -543,4 +500,255 @@ export function suggestTemplate(
   } else {
     return 'full_payment';
   }
+}
+
+/**
+ * Helper function to format car number as 3-digit string
+ */
+function formatCarNumber(carNumber: number | undefined | null): string {
+  if (!carNumber || carNumber <= 0) return '-';
+  return String(carNumber).padStart(3, '0');
+}
+
+/**
+ * Generate LINE Flex Message for car assignment notification
+ * @param carpoolData Carpool data including license plate, car number, and members
+ * @param registration Registration data for the carpool owner
+ * @param eventName Name of the event
+ */
+export function generateCarAssignmentFlexMessage(
+  carpoolData: {
+    licensePlate: string;
+    assignedCarNumber?: number;
+    members: Array<{ name: string; registrationId: string }>;
+  },
+  registration: EventRegistration,
+  eventName: string
+): any {
+  const carNumber = formatCarNumber(carpoolData.assignedCarNumber);
+  const membersList = carpoolData.members
+    .map((m, index) => ({
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        {
+          type: 'text',
+          text: `${index + 1}.`,
+          size: 'sm',
+          color: '#666666',
+          flex: 0,
+          margin: 'none',
+        },
+        {
+          type: 'text',
+          text: m.name,
+          size: 'sm',
+          color: '#333333',
+          flex: 1,
+          margin: 'sm',
+          wrap: true,
+        },
+      ],
+      margin: 'sm',
+    }));
+
+  return {
+    type: 'flex',
+    altText: `แจ้งเลขรถที่ได้รับมอบหมาย - ${carNumber}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🚗 แจ้งเลขรถที่ได้รับมอบหมาย',
+            weight: 'bold',
+            size: 'lg',
+            color: '#ffffff',
+          },
+        ],
+        backgroundColor: '#2563eb',
+        paddingAll: '15px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: carNumber,
+                size: '3xl',
+                weight: 'bold',
+                color: '#2563eb',
+                align: 'center',
+              },
+              {
+                type: 'text',
+                text: 'เลขรถที่ได้รับ',
+                size: 'sm',
+                color: '#666666',
+                align: 'center',
+                margin: 'sm',
+              },
+            ],
+            backgroundColor: '#eff6ff',
+            paddingAll: '15px',
+            cornerRadius: '8px',
+            margin: 'md',
+          },
+          {
+            type: 'separator',
+            margin: 'lg',
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'กิจกรรม:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                    margin: 'none',
+                  },
+                  {
+                    type: 'text',
+                    text: eventName,
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                    wrap: true,
+                    weight: 'bold',
+                  },
+                ],
+                margin: 'md',
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'บริษัท:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                  },
+                  {
+                    type: 'text',
+                    text: registration.companyName || '-',
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                    wrap: true,
+                  },
+                ],
+                margin: 'sm',
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'รหัสจอง:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                  },
+                  {
+                    type: 'text',
+                    text: registration.registrationId,
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                  },
+                ],
+                margin: 'sm',
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'ทะเบียนรถ:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                  },
+                  {
+                    type: 'text',
+                    text: carpoolData.licensePlate || 'ไม่ระบุ',
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                    weight: 'bold',
+                  },
+                ],
+                margin: 'sm',
+              },
+            ],
+          },
+          {
+            type: 'separator',
+            margin: 'lg',
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: '👥 รายชื่อผู้ร่วมรถ',
+                size: 'sm',
+                weight: 'bold',
+                color: '#333333',
+                margin: 'md',
+              },
+              ...membersList,
+              {
+                type: 'text',
+                text: `รวม ${carpoolData.members.length} คน`,
+                size: 'xs',
+                color: '#999999',
+                margin: 'md',
+                align: 'end',
+              },
+            ],
+          },
+        ],
+        paddingAll: '15px',
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '💡 กรุณาตรวจสอบข้อมูลให้ถูกต้อง',
+            size: 'xs',
+            color: '#999999',
+            align: 'center',
+          },
+        ],
+        paddingAll: '10px',
+      },
+    },
+  };
 }

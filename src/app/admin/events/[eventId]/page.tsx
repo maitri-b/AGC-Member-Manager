@@ -998,6 +998,7 @@ export default function EventDetailPage() {
   // Message template modal state
   const [messageTemplateModalOpen, setMessageTemplateModalOpen] = useState(false);
   const [selectedRegistrationsForMessage, setSelectedRegistrationsForMessage] = useState<Set<string>>(new Set());
+  const [carpoolsDataForMessages, setCarpoolsDataForMessages] = useState<Record<string, any>>({});
   const [cancellationFormData, setCancellationFormData] = useState<{
     registrationId: string;
     reason: string;
@@ -1051,11 +1052,55 @@ export default function EventDetailPage() {
   };
 
   // Open message template modal with selected registrations
-  const handleOpenMessageModal = () => {
+  const handleOpenMessageModal = async () => {
     if (selectedRegistrationsForMessage.size === 0) {
       setActionMessage({ type: 'error', text: 'กรุณาเลือกผู้รับอย่างน้อย 1 คน' });
       return;
     }
+
+    // Fetch carpools data for selected registrations
+    try {
+      const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/carpools`);
+      if (response.ok) {
+        const data = await response.json();
+        const carpools = data.carpools || [];
+
+        // Build a map of registrationId to carpool data
+        const carpoolsMap: Record<string, any> = {};
+        carpools.forEach((carpool: any) => {
+          if (carpool.assignedCarNumber) {
+            // Parse attendee names from owner registration
+            const ownerReg = filteredAttendees.find(a => a.registration.registrationId === carpool.ownerRegistrationId);
+            if (ownerReg) {
+              // Extract all member names from the carpool
+              const memberNames: Array<{name: string; registrationId: string}> = [];
+
+              // Add all members from the carpool
+              if (carpool.members && Array.isArray(carpool.members)) {
+                carpool.members.forEach((member: any) => {
+                  memberNames.push({
+                    name: member.name || 'ไม่ระบุชื่อ',
+                    registrationId: member.registrationId,
+                  });
+                });
+              }
+
+              carpoolsMap[carpool.ownerRegistrationId] = {
+                licensePlate: carpool.licensePlate,
+                assignedCarNumber: carpool.assignedCarNumber,
+                members: memberNames,
+              };
+            }
+          }
+        });
+
+        setCarpoolsDataForMessages(carpoolsMap);
+      }
+    } catch (error) {
+      console.error('Error fetching carpools:', error);
+      // Continue opening modal even if carpool fetch fails
+    }
+
     setMessageTemplateModalOpen(true);
   };
 
@@ -6510,6 +6555,7 @@ export default function EventDetailPage() {
           onClose={() => {
             setMessageTemplateModalOpen(false);
             setSelectedRegistrationsForMessage(new Set()); // Clear selection after sending
+            setCarpoolsDataForMessages({}); // Clear carpool data
           }}
           selectedRegistrations={
             filteredAttendees
@@ -6520,6 +6566,7 @@ export default function EventDetailPage() {
               }))
           }
           event={eventData.event as any} // Cast to Event type
+          carpoolsData={carpoolsDataForMessages}
         />
       )}
 

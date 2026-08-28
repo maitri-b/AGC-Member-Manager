@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       lineUserIds,
       message: customMessage,
       imageUrl,
+      flexMessage,
       subject,
       eventId,
       eventName,
@@ -72,9 +73,9 @@ export async function POST(request: NextRequest) {
 
     // Custom message mode (new)
     if (lineUserIds) {
-      // Allow sending image only (without text message)
-      if (!customMessage?.trim() && !imageUrl?.trim()) {
-        return NextResponse.json({ error: 'Message or image is required' }, { status: 400 });
+      // Allow sending image only (without text message) or Flex message
+      if (!customMessage?.trim() && !imageUrl?.trim() && !flexMessage) {
+        return NextResponse.json({ error: 'Message, image, or Flex message is required' }, { status: 400 });
       }
 
       // Send custom message to multiple users
@@ -126,8 +127,13 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Build messages array (text first if provided, then image if provided)
+          // Build messages array (Flex first if provided, then text if provided, then image if provided)
           const messages: any[] = [];
+
+          // Add Flex message if provided (takes priority)
+          if (flexMessage) {
+            messages.push(flexMessage);
+          }
 
           // Add text message if provided
           if (personalizedMessage && personalizedMessage.trim()) {

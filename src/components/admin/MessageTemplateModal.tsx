@@ -7,8 +7,15 @@ import {
   DEFAULT_TEMPLATES,
   personalizeMessage,
   suggestTemplate,
+  generateCarAssignmentFlexMessage,
 } from '@/lib/message-templates';
 import { toast } from 'react-hot-toast';
+
+interface CarpoolData {
+  licensePlate: string;
+  assignedCarNumber?: number;
+  members: Array<{ name: string; registrationId: string }>;
+}
 
 interface MessageTemplateModalProps {
   isOpen: boolean;
@@ -18,6 +25,7 @@ interface MessageTemplateModalProps {
     lineUserId: string;
   }>;
   event: Event;
+  carpoolsData?: Record<string, CarpoolData>; // Map registrationId to carpool data
 }
 
 interface SavedTemplate {
@@ -48,6 +56,7 @@ export default function MessageTemplateModal({
   onClose,
   selectedRegistrations,
   event,
+  carpoolsData,
 }: MessageTemplateModalProps) {
   const [activeTab, setActiveTab] = useState<'templates' | 'custom' | 'history'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplateType | null>(null);
@@ -78,6 +87,15 @@ export default function MessageTemplateModal({
   // Textarea ref for cursor position
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter available templates based on context
+  const availableTemplates = Object.values(DEFAULT_TEMPLATES).filter(template => {
+    // Show car_assignment template only if carpool data is provided
+    if (template.id === 'car_assignment') {
+      return !!carpoolsData && Object.keys(carpoolsData).length > 0;
+    }
+    return true;
+  });
 
   // Fetch base URL and custom templates from settings on mount
   useEffect(() => {
@@ -403,10 +421,26 @@ export default function MessageTemplateModal({
 
       const results = await Promise.allSettled(
         selectedRegistrations.map(async ({ registration, lineUserId }) => {
-          let personalizedMsg = '';
+          let personalizedMsg: string | undefined = '';
+          let flexMessage: any = undefined;
 
-          if (activeTab === 'templates' && selectedTemplate && editableTemplate) {
-            personalizedMsg = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
+          if (activeTab === 'templates' && selectedTemplate) {
+            // Handle car_assignment template with Flex message
+            if (selectedTemplate === 'car_assignment' && carpoolsData) {
+              const carpoolData = carpoolsData[registration.registrationId];
+              if (carpoolData) {
+                flexMessage = generateCarAssignmentFlexMessage(
+                  carpoolData,
+                  registration,
+                  event.eventName
+                );
+                personalizedMsg = undefined; // Don't send text message when sending Flex
+              } else {
+                throw new Error(`No carpool data found for ${registration.contactName}`);
+              }
+            } else if (editableTemplate) {
+              personalizedMsg = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
+            }
           } else if (activeTab === 'custom') {
             personalizedMsg = personalizeCustomMessage(messageToSend, registration);
           }
@@ -416,8 +450,9 @@ export default function MessageTemplateModal({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               lineUserIds: [lineUserId],
-              message: personalizedMsg || undefined, // Allow empty message if only sending image
+              message: personalizedMsg || undefined, // Allow empty message if only sending image or Flex
               imageUrl: uploadedImageUrl || undefined,
+              flexMessage: flexMessage || undefined,
             }),
           });
 
@@ -543,7 +578,7 @@ export default function MessageTemplateModal({
                   เลือก Template ข้อความ:
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  {Object.values(DEFAULT_TEMPLATES).map((template) => (
+                  {availableTemplates.map((template) => (
                     <button
                       key={template.id}
                       onClick={() => handleTemplateChange(template.id)}
@@ -581,36 +616,88 @@ export default function MessageTemplateModal({
               )}
 
               {/* Message Editor */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Template ข้อความ: (สามารถแก้ไขได้)
-                  </label>
-                  <span className="text-xs text-gray-500">
-                    {editableTemplate.length} / 1,000 ตัวอักษร
-                  </span>
+              {selectedTemplate !== 'car_assignment' && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Template ข้อความ: (สามารถแก้ไขได้)
+                    </label>
+                    <span className="text-xs text-gray-500">
+                      {editableTemplate.length} / 1,000 ตัวอักษร
+                    </span>
+                  </div>
+                  <textarea
+                    value={editableTemplate}
+                    onChange={(e) => setEditableTemplate(e.target.value.slice(0, 1000))}
+                    rows={12}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                    placeholder="พิมพ์ข้อความที่ต้องการส่ง..."
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 ใช้ {'{{'} และ {'}}'}  เพื่อใส่ตัวแปร เช่น {'{{memberName}}'}, {'{{amountText}}'} - ระบบจะแทนค่าสำหรับแต่ละคนอัตโนมัติ
+                  </p>
                 </div>
-                <textarea
-                  value={editableTemplate}
-                  onChange={(e) => setEditableTemplate(e.target.value.slice(0, 1000))}
-                  rows={12}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                  placeholder="พิมพ์ข้อความที่ต้องการส่ง..."
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  💡 ใช้ {'{{'} และ {'}}'}  เพื่อใส่ตัวแปร เช่น {'{{memberName}}'}, {'{{amountText}}'} - ระบบจะแทนค่าสำหรับแต่ละคนอัตโนมัติ
-                </p>
-              </div>
+              )}
+              {selectedTemplate === 'car_assignment' && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-3xl">📋</div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-2">Flex Message - รูปแบบ Rich Card</h4>
+                      <p className="text-sm text-gray-700 mb-3">
+                        Template นี้จะส่งข้อความในรูปแบบ Flex Message ที่มีการออกแบบพิเศษ ไม่สามารถแก้ไขเนื้อหาได้
+                      </p>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>✅ ข้อมูลที่จะแสดง:</p>
+                        <ul className="list-disc list-inside ml-3 space-y-1">
+                          <li>เลขรถที่ได้รับมอบหมาย (รูปแบบ 3 หลัก)</li>
+                          <li>ชื่อกิจกรรม</li>
+                          <li>ชื่อบริษัท และรหัสการลงทะเบียน</li>
+                          <li>เลขทะเบียนรถ</li>
+                          <li>รายชื่อผู้ร่วมรถทั้งหมด</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Preview Box */}
-              {currentRecipient && customMessage && (
+              {currentRecipient && (selectedTemplate === 'car_assignment' ? true : customMessage) && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <div className="text-xs font-medium text-gray-600 mb-2">
                     ✨ ตัวอย่างข้อความที่จะส่งถึง: {currentRecipient.registration.contactName}
                   </div>
-                  <div className="bg-white border border-gray-300 rounded-lg p-3 text-sm whitespace-pre-wrap font-sans">
-                    {customMessage}
-                  </div>
+                  {selectedTemplate === 'car_assignment' ? (
+                    <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">🚗</div>
+                        <div className="flex-1">
+                          <div className="font-bold text-blue-900 mb-2">Flex Message - แจ้งเลขรถที่ได้รับ</div>
+                          <div className="text-sm text-blue-800 space-y-1">
+                            {carpoolsData && carpoolsData[currentRecipient.registration.registrationId] ? (
+                              <>
+                                <p>• <strong>เลขรถ:</strong> {String(carpoolsData[currentRecipient.registration.registrationId].assignedCarNumber || 0).padStart(3, '0')}</p>
+                                <p>• <strong>ทะเบียนรถ:</strong> {carpoolsData[currentRecipient.registration.registrationId].licensePlate}</p>
+                                <p>• <strong>บริษัท:</strong> {currentRecipient.registration.companyName}</p>
+                                <p>• <strong>รหัสจอง:</strong> {currentRecipient.registration.registrationId}</p>
+                                <p>• <strong>ผู้ร่วมรถ:</strong> {carpoolsData[currentRecipient.registration.registrationId].members.length} คน</p>
+                                <div className="mt-2 text-xs text-blue-700">
+                                  💡 ข้อความจะถูกส่งเป็น Flex Message แบบ Rich Card พร้อมรายละเอียดครบถ้วน
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-red-700">⚠️ ไม่พบข้อมูลรถสำหรับการลงทะเบียนนี้</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-gray-300 rounded-lg p-3 text-sm whitespace-pre-wrap font-sans">
+                      {customMessage}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -741,7 +741,7 @@ export function generateCarAssignmentFlexMessage(
         contents: [
           {
             type: 'text',
-            text: '💡 โปรดแจ้งหมายเลขรถนี้ให้เจ้าหน้าที่ทราบ ณ จุดลงทะเบียน',
+            text: '💡 โปรดแสดงเลขรถนี้ ณ จุดลงทะเบียน',
             size: 'xs',
             color: '#999999',
             align: 'center',

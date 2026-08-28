@@ -233,7 +233,7 @@ export default function AdminCancellationModal({
                 <p className="font-medium mb-1">คำเตือน - การดำเนินการนี้ไม่สามารถยกเลิกได้</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>สถานะการจองจะเปลี่ยนเป็น &quot;ยกเลิก&quot; ทันที</li>
-                  {registration.carpoolId && (
+                  {registration.carpoolIds && registration.carpoolIds.length > 0 && (
                     <li>จะถูกลบออกจากรถร่วมเดินทางอัตโนมัติ</li>
                   )}
                   {registration.roomAssignments && (

@@ -9,7 +9,7 @@ type CancellationRegistration = Pick<EventRegistration, 'registrationId'> & {
   paidAmount?: number;
   totalAmount?: number;
   attendeeCount?: number;
-  carpoolId?: string;
+  carpoolIds?: string[];
   roomAssignments?: string;
 };
 
@@ -266,7 +266,7 @@ export default function CancellationModal({
                 <p className="font-medium mb-1">คำเตือน</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>การยกเลิกจะมีผลทันที และไม่สามารถยกเลิกการดำเนินการได้</li>
-                  {registration.carpoolId && (
+                  {registration.carpoolIds && registration.carpoolIds.length > 0 && (
                     <li>คุณจะถูกลบออกจากรถร่วมเดินทางโดยอัตโนมัติ</li>
                   )}
                   {registration.roomAssignments && (

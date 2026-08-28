@@ -1,5 +1,6 @@
 // Carpool Management Library Functions
 import { adminDb } from './firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { Carpool, CreateCarpoolData, UpdateCarpoolData, CarpoolMember } from '@/types/carpool';
 
 /**
@@ -209,7 +210,7 @@ export async function removeMembersFromCarpool(
   });
 
   if (lineUserIdsToRemove.length > 0) {
-    await clearMembersCarpoolId(lineUserIdsToRemove);
+    await clearMembersCarpoolId(lineUserIdsToRemove, carpoolId);
   }
 }
 
@@ -226,7 +227,7 @@ export async function deleteCarpool(carpoolId: string): Promise<void> {
 
   // Clear carpoolId in eventRegistrations for all members
   const lineUserIds = carpool.members.map(m => m.lineUserId);
-  await clearMembersCarpoolId(lineUserIds);
+  await clearMembersCarpoolId(lineUserIds, carpoolId);
 
   // Soft delete: mark as deleted instead of removing document
   await db.collection('carpools').doc(carpoolId).update({
@@ -248,7 +249,7 @@ export async function hardDeleteCarpool(carpoolId: string): Promise<void> {
 
   // Clear carpoolId in eventRegistrations for all members
   const lineUserIds = carpool.members.map(m => m.lineUserId);
-  await clearMembersCarpoolId(lineUserIds);
+  await clearMembersCarpoolId(lineUserIds, carpoolId);
 
   // Permanently delete the carpool document
   await db.collection('carpools').doc(carpoolId).delete();
@@ -309,7 +310,8 @@ export async function getCarpoolByCarNumber(
 }
 
 /**
- * Helper: Update carpoolId in eventRegistrations for members
+ * Helper: Update carpoolIds array in eventRegistrations for members
+ * Uses arrayUnion to add carpoolId to the array without overwriting
  */
 async function updateMembersCarpoolId(
   members: CarpoolMember[],
@@ -327,7 +329,10 @@ async function updateMembersCarpoolId(
 
     if (!snapshot.empty) {
       const docRef = snapshot.docs[0].ref;
-      batch.update(docRef, { carpoolId });
+      // Use arrayUnion to add carpoolId to the array
+      batch.update(docRef, {
+        carpoolIds: FieldValue.arrayUnion(carpoolId)
+      });
     }
   }
 
@@ -335,9 +340,10 @@ async function updateMembersCarpoolId(
 }
 
 /**
- * Helper: Clear carpoolId in eventRegistrations for members
+ * Helper: Remove carpoolId from carpoolIds array in eventRegistrations for members
+ * Note: This function needs to be called with a specific carpoolId to remove
  */
-async function clearMembersCarpoolId(lineUserIds: string[]): Promise<void> {
+async function clearMembersCarpoolId(lineUserIds: string[], carpoolIdToRemove?: string): Promise<void> {
   const db = adminDb();
   const batch = db.batch();
 
@@ -350,7 +356,16 @@ async function clearMembersCarpoolId(lineUserIds: string[]): Promise<void> {
 
     if (!snapshot.empty) {
       const docRef = snapshot.docs[0].ref;
-      batch.update(docRef, { carpoolId: null });
+
+      if (carpoolIdToRemove) {
+        // Remove specific carpoolId from the array
+        batch.update(docRef, {
+          carpoolIds: FieldValue.arrayRemove(carpoolIdToRemove)
+        });
+      } else {
+        // Legacy behavior: clear all carpoolIds (for backward compatibility)
+        batch.update(docRef, { carpoolIds: [] });
+      }
     }
   }
 
@@ -382,12 +397,14 @@ export async function getCarpoolByRegistrationId(registrationId: string, eventId
 }
 
 /**
- * Get Carpool for a specific member (from registration's carpoolId)
+ * Get Carpool for a specific member (from registration's carpoolIds)
+ * Returns the first carpool if member is in multiple carpools
+ * @deprecated Use getAllMemberCarpools() instead for complete carpool information
  */
 export async function getMemberCarpool(lineUserId: string, eventId: string): Promise<Carpool | null> {
   const db = adminDb();
 
-  // Get registration to find carpoolId
+  // Get registration to find carpoolIds
   const regSnapshot = await db
     .collection('eventRegistrations')
     .where('lineUserId', '==', lineUserId)
@@ -401,11 +418,13 @@ export async function getMemberCarpool(lineUserId: string, eventId: string): Pro
 
   const registration = regSnapshot.docs[0].data();
 
-  if (!registration.carpoolId) {
+  // Check if carpoolIds array exists and has at least one item
+  if (!registration.carpoolIds || registration.carpoolIds.length === 0) {
     return null;
   }
 
-  return await getCarpoolById(registration.carpoolId);
+  // Return the first carpool
+  return await getCarpoolById(registration.carpoolIds[0]);
 }
 
 /**

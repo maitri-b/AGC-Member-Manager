@@ -133,11 +133,10 @@ export interface EventRegistration {
   totalRefunded?: number;           // total_refunded - Total amount refunded to member
 
   // Carpool (New - for events with shared transportation)
-  // NOTE: This field is DEPRECATED and not fully reliable because:
+  // Array of carpool IDs that members of this registration are participating in
   // - A single registration can have members in MULTIPLE carpools (each person can join different cars)
-  // - The actual source of truth is the Carpool.members array (using attendeeIndex + registrationId)
-  // - This field is kept for legacy compatibility but should NOT be used for carpool membership checks
-  carpoolId?: string;               // carpool_id - DEPRECATED: ID of Carpool (unreliable for multi-carpool registrations)
+  // - This field tracks all carpools where any member from this registration participates
+  carpoolIds?: string[];            // carpool_ids - Array of Carpool IDs where registration members participate
 }
 
 // Event metadata (for managing multiple events)
@@ -574,7 +573,7 @@ export const EVENT_REGISTRATION_COLUMN_MAP: Record<keyof EventRegistration, stri
   // Room Assignments (New - specific room assignments for each attendee)
   roomAssignments: 'room_assignments',
   // Carpool (New - for events with shared transportation)
-  carpoolId: 'carpool_id',
+  carpoolIds: 'carpool_ids',
 };
 
 // Reverse mapping for sheet to registration conversion

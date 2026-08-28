@@ -1077,7 +1077,7 @@ export default function EventDetailPage() {
 
           if (carpool.assignedCarNumber) {
             // Car has assigned number - include in carpoolsMap
-            const memberNames: Array<{name: string; registrationId: string}> = [];
+            const memberNames: Array<{name: string; registrationId: string; companyName?: string}> = [];
 
             // Add all members from the carpool
             if (carpool.members && Array.isArray(carpool.members)) {
@@ -1085,6 +1085,7 @@ export default function EventDetailPage() {
                 memberNames.push({
                   name: member.name || 'ไม่ระบุชื่อ',
                   registrationId: member.registrationId,
+                  companyName: member.companyName || '',
                 });
               });
             }

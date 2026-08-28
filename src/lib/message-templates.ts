@@ -520,41 +520,113 @@ export function generateCarAssignmentFlexMessage(
   carpoolData: {
     licensePlate: string;
     assignedCarNumber?: number;
-    members: Array<{ name: string; registrationId: string }>;
+    members: Array<{ name: string; registrationId: string; companyName?: string }>;
+    ownerRegistrationId?: string;
   },
   registration: EventRegistration,
   eventName: string
 ): any {
+  // Determine if this is a joined car (not owned by the registration)
+  const isJoinedCar = carpoolData.ownerRegistrationId &&
+                      carpoolData.ownerRegistrationId !== registration.registrationId;
   const carNumber = formatCarNumber(carpoolData.assignedCarNumber);
-  const membersList = carpoolData.members
-    .map((m, index) => ({
-      type: 'box',
-      layout: 'horizontal',
-      contents: [
-        {
-          type: 'text',
-          text: `${index + 1}.`,
-          size: 'sm',
-          color: '#666666',
-          flex: 0,
-          margin: 'none',
-        },
-        {
-          type: 'text',
-          text: m.name,
-          size: 'sm',
-          color: '#333333',
-          flex: 1,
-          margin: 'sm',
-          wrap: true,
-        },
-      ],
-      margin: 'sm',
-    }));
+
+  // Group members: Owner's members first, then joiners grouped by company
+  const ownerMembers = carpoolData.members.filter(m => m.registrationId === carpoolData.ownerRegistrationId);
+  const joinerMembers = carpoolData.members.filter(m => m.registrationId !== carpoolData.ownerRegistrationId);
+
+  // Group joiners by company
+  const joinersByCompany: Record<string, Array<{ name: string; registrationId: string; companyName?: string }>> = {};
+  joinerMembers.forEach(member => {
+    const company = member.companyName || 'ไม่ระบุบริษัท';
+    if (!joinersByCompany[company]) {
+      joinersByCompany[company] = [];
+    }
+    joinersByCompany[company].push(member);
+  });
+
+  // Build member list with grouping
+  const membersList: any[] = [];
+  let memberIndex = 1;
+
+  // Add owner's members first
+  if (ownerMembers.length > 0) {
+    ownerMembers.forEach(member => {
+      membersList.push({
+        type: 'box',
+        layout: 'horizontal',
+        contents: [
+          {
+            type: 'text',
+            text: `${memberIndex}.`,
+            size: 'sm',
+            color: '#666666',
+            flex: 0,
+            margin: 'none',
+          },
+          {
+            type: 'text',
+            text: member.name,
+            size: 'sm',
+            color: '#333333',
+            flex: 1,
+            margin: 'sm',
+            wrap: true,
+          },
+        ],
+        margin: 'sm',
+      });
+      memberIndex++;
+    });
+  }
+
+  // Add joiners grouped by company
+  Object.keys(joinersByCompany).sort().forEach(company => {
+    // Add company header
+    if (joinerMembers.length > 0) {
+      membersList.push({
+        type: 'text',
+        text: `--- ${company} ---`,
+        size: 'xs',
+        color: '#8b7e9e',
+        weight: 'bold',
+        margin: 'md',
+      });
+    }
+
+    // Add members from this company
+    joinersByCompany[company].forEach(member => {
+      membersList.push({
+        type: 'box',
+        layout: 'horizontal',
+        contents: [
+          {
+            type: 'text',
+            text: `${memberIndex}.`,
+            size: 'sm',
+            color: '#666666',
+            flex: 0,
+            margin: 'none',
+          },
+          {
+            type: 'text',
+            text: member.name,
+            size: 'sm',
+            color: '#333333',
+            flex: 1,
+            margin: 'sm',
+            wrap: true,
+          },
+        ],
+        margin: 'sm',
+      });
+      memberIndex++;
+    });
+  });
 
   return {
     type: 'flex',
-    altText: `แจ้งเลขรถแรลลี่ของคุณ - ${carNumber}`,
+    altText: isJoinedCar ? `แจ้งเลขรถที่คุณขอ Join - ${carNumber}` : `แจ้งเลขรถแรลลี่ของคุณ - ${carNumber}`,
     contents: {
       type: 'bubble',
       header: {
@@ -563,13 +635,13 @@ export function generateCarAssignmentFlexMessage(
         contents: [
           {
             type: 'text',
-            text: '🚗 แจ้งเลขรถแรลลี่ของคุณ',
+            text: isJoinedCar ? '🚗 แจ้งเลขรถแรลลี่ที่คุณขอ Join' : '🚗 แจ้งเลขรถแรลลี่ของคุณ',
             weight: 'bold',
             size: 'lg',
             color: '#ffffff',
           },
         ],
-        backgroundColor: '#2563eb',
+        backgroundColor: isJoinedCar ? '#8b7e9e' : '#2563eb', // Purple-gray for joined, blue for owned
         paddingAll: '15px',
       },
       body: {
@@ -585,12 +657,12 @@ export function generateCarAssignmentFlexMessage(
                 text: carNumber,
                 size: '3xl',
                 weight: 'bold',
-                color: '#2563eb',
+                color: isJoinedCar ? '#8b7e9e' : '#2563eb',
                 align: 'center',
               },
               {
                 type: 'text',
-                text: 'เลขรถที่ได้รับ',
+                text: 'โปรดแสดงเลขรถนี้ ณ จุดลงทะเบียน',
                 size: 'sm',
                 color: '#666666',
                 align: 'center',
@@ -654,6 +726,7 @@ export function generateCarAssignmentFlexMessage(
                     flex: 1,
                     margin: 'sm',
                     wrap: true,
+                    weight: 'bold', // Make company name bold
                   },
                 ],
                 margin: 'sm',
@@ -734,20 +807,6 @@ export function generateCarAssignmentFlexMessage(
           },
         ],
         paddingAll: '15px',
-      },
-      footer: {
-        type: 'box',
-        layout: 'vertical',
-        contents: [
-          {
-            type: 'text',
-            text: '💡 โปรดแสดงเลขรถนี้ ณ จุดลงทะเบียน',
-            size: 'xs',
-            color: '#999999',
-            align: 'center',
-          },
-        ],
-        paddingAll: '10px',
       },
     },
   };

@@ -9,6 +9,7 @@ import {
   suggestTemplate,
   generateCarAssignmentFlexMessage,
   generateRegistrationInfoFlexMessage,
+  generateFelixRegistrationInfoFlexMessage,
 } from '@/lib/message-templates';
 import { toast } from 'react-hot-toast';
 
@@ -93,8 +94,8 @@ export default function MessageTemplateModal({
 
   // Filter available templates based on context
   const availableTemplates = Object.values(DEFAULT_TEMPLATES).filter(template => {
-    // Show car_assignment and registration_info templates only if carpool data is provided
-    if (template.id === 'car_assignment' || template.id === 'registration_info') {
+    // Show car_assignment, registration_info, and felix_registration_info templates only if carpool data is provided
+    if (template.id === 'car_assignment' || template.id === 'registration_info' || template.id === 'felix_registration_info') {
       return !!carpoolsData && Object.keys(carpoolsData).length > 0;
     }
     return true;
@@ -495,6 +496,40 @@ export default function MessageTemplateModal({
               return { success: true, name: registration.contactName };
             })()
           );
+        } else if (activeTab === 'templates' && selectedTemplate === 'felix_registration_info' && carpoolsData) {
+          // Felix registration info: send one message with all carpool data + parking info
+          const carpools = carpoolsData[registration.registrationId] || [];
+
+          // Separate owned and joined carpools
+          const ownedCarpools = carpools.filter(c => c.ownerRegistrationId === registration.registrationId);
+          const joinedCarpools = carpools.filter(c => c.ownerRegistrationId !== registration.registrationId);
+
+          sendTasks.push(
+            (async () => {
+              const flexMessage = generateFelixRegistrationInfoFlexMessage(
+                registration,
+                event.eventName,
+                ownedCarpools,
+                joinedCarpools
+              );
+
+              const response = await fetch('/api/line/send-notification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lineUserIds: [lineUserId],
+                  message: undefined, // No text message for Flex
+                  flexMessage: flexMessage,
+                }),
+              });
+
+              if (!response.ok) {
+                throw new Error(`Failed to send Felix registration info to ${registration.contactName}`);
+              }
+
+              return { success: true, name: registration.contactName };
+            })()
+          );
         } else {
           // Other templates: send one message per registration
           sendTasks.push(
@@ -727,6 +762,42 @@ export default function MessageTemplateModal({
         toast.success(
           `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
         );
+      } else if (activeTab === 'templates' && selectedTemplate === 'felix_registration_info' && carpoolsData) {
+        // For felix_registration_info: send test message for each registration
+        for (const { registration } of selectedRegistrations) {
+          const carpools = carpoolsData[registration.registrationId] || [];
+
+          // Separate owned and joined carpools
+          const ownedCarpools = carpools.filter(c => c.ownerRegistrationId === registration.registrationId);
+          const joinedCarpools = carpools.filter(c => c.ownerRegistrationId !== registration.registrationId);
+
+          const flexMessage = generateFelixRegistrationInfoFlexMessage(
+            registration,
+            event.eventName,
+            ownedCarpools,
+            joinedCarpools
+          );
+
+          const response = await fetch('/api/line/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lineUserIds: [adminLineUserId],
+              message: undefined,
+              flexMessage: flexMessage,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName})`);
+          }
+
+          totalMessagesSent++;
+        }
+
+        toast.success(
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+        );
       } else {
         // Other templates: send test message for each registration
         for (const { registration } of selectedRegistrations) {
@@ -877,7 +948,7 @@ export default function MessageTemplateModal({
               )}
 
               {/* Message Editor */}
-              {selectedTemplate !== 'car_assignment' && selectedTemplate !== 'registration_info' && (
+              {selectedTemplate !== 'car_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-gray-700">
@@ -946,9 +1017,32 @@ export default function MessageTemplateModal({
                   </div>
                 </div>
               )}
+              {selectedTemplate === 'felix_registration_info' && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-3xl">🏨</div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-2">Flex Message - ข้อมูลลงทะเบียน รร. Felix</h4>
+                      <p className="text-sm text-gray-700 mb-3">
+                        Template พิเศษสำหรับ Felix Hotel พร้อมข้อมูลจุดจอดรถที่แนะนำตามอาคารที่พัก
+                      </p>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>✅ ข้อมูลที่จะแสดง:</p>
+                        <ul className="list-disc list-inside ml-3 space-y-1">
+                          <li>ชื่อกิจกรรม บริษัท และรหัสการลงทะเบียน</li>
+                          <li>รายชื่อผู้เข้าร่วมกิจกรรมทั้งหมด</li>
+                          <li>จำนวนผู้ร่วมเดินทางรวม</li>
+                          <li>🅿️ จุดจอดรถที่แนะนำ (P2-P5) ตามอาคารที่พัก</li>
+                          <li>🚗 ข้อมูลรถของตัวเอง และรถที่ Join</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Preview Box */}
-              {currentRecipient && (selectedTemplate === 'car_assignment' || selectedTemplate === 'registration_info' ? true : customMessage) && (
+              {currentRecipient && (selectedTemplate === 'car_assignment' || selectedTemplate === 'registration_info' || selectedTemplate === 'felix_registration_info' ? true : customMessage) && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <div className="text-xs font-medium text-gray-600 mb-2">
                     ✨ ตัวอย่างข้อความที่จะส่งถึง: {currentRecipient.registration.contactName}
@@ -1010,6 +1104,35 @@ export default function MessageTemplateModal({
                             })()}
                             <div className="mt-2 text-xs text-green-700">
                               💡 ข้อความจะถูกส่งเป็น Flex Message แบบ Rich Card พร้อมข้อมูลครบถ้วน
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : selectedTemplate === 'felix_registration_info' ? (
+                    <div className="bg-purple-50 border border-purple-300 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">🏨</div>
+                        <div className="flex-1">
+                          <div className="font-bold text-purple-900 mb-2">Flex Message - ข้อมูลลงทะเบียน Felix</div>
+                          <div className="text-sm text-purple-800 space-y-1">
+                            <p>• <strong>กิจกรรม:</strong> {event.eventName}</p>
+                            <p>• <strong>บริษัท:</strong> {currentRecipient.registration.companyName}</p>
+                            <p>• <strong>รหัสจอง:</strong> {currentRecipient.registration.registrationId}</p>
+                            {(() => {
+                              const carpools = carpoolsData?.[currentRecipient.registration.registrationId] || [];
+                              const ownedCount = carpools.filter(c => c.ownerRegistrationId === currentRecipient.registration.registrationId).length;
+                              const joinedCount = carpools.filter(c => c.ownerRegistrationId !== currentRecipient.registration.registrationId).length;
+                              return (
+                                <>
+                                  <p>• <strong>🅿️ จุดจอดรถ:</strong> แสดงตามอาคารที่พัก (P2-P5)</p>
+                                  {ownedCount > 0 && <p>• <strong>🚗 รถของตัวเอง:</strong> {ownedCount} คัน</p>}
+                                  {joinedCount > 0 && <p>• <strong>🚗 รถที่ Join:</strong> {joinedCount} คัน</p>}
+                                </>
+                              );
+                            })()}
+                            <div className="mt-2 text-xs text-purple-700">
+                              💡 ข้อความจะถูกส่งเป็น Flex Message พร้อมข้อมูลจุดจอดรถที่แนะนำ
                             </div>
                           </div>
                         </div>
@@ -1469,7 +1592,7 @@ export default function MessageTemplateModal({
               </button>
               <button
                 onClick={handleTestSend}
-                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
+                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
                 className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 title="ส่งข้อความทดสอบไปยัง LINE ของคุณ โดยใช้ข้อมูลจากผู้รับที่เลือกในตัวอย่าง"
               >
@@ -1489,7 +1612,7 @@ export default function MessageTemplateModal({
               </button>
               <button
                 onClick={handleSendMessages}
-                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
+                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSending ? (

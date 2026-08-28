@@ -17,6 +17,7 @@ export type MessageTemplateType =
   // Event Management Templates
   | 'car_assignment'       // แจ้งเลขรถที่ได้รับ
   | 'registration_info'    // แจ้งข้อมูลการลงทะเบียน
+  | 'felix_registration_info' // แจ้งข้อมูลการลงทะเบียน + จุดจอดรถ Felix
   // Member Contact Templates
   | 'license_renewal'      // แจ้งเตือนต่ออายุใบอนุญาต
   | 'license_expired'      // แจ้งใบอนุญาตหมดอายุ
@@ -327,6 +328,13 @@ export const DEFAULT_TEMPLATES: Record<MessageTemplateType, MessageTemplate> = {
     name: 'แจ้งข้อมูลการลงทะเบียน',
     description: 'ส่งข้อมูลการลงทะเบียนแรลลี่ รวมรายชื่อผู้เข้าร่วมและข้อมูลรถ (Flex Message)',
     template: `[ข้อความนี้จะถูกส่งเป็น Flex Message Card แสดงข้อมูลการลงทะเบียน รายชื่อผู้เข้าร่วม และข้อมูลรถ]`,
+    variables: [],
+  },
+  felix_registration_info: {
+    id: 'felix_registration_info',
+    name: 'ข้อมูลลงทะเบียน รร. Felix',
+    description: 'ข้อมูลการลงทะเบียน + จุดจอดรถที่แนะนำตามอาคารที่พัก (สำหรับ Felix Hotel)',
+    template: `[ข้อความนี้จะถูกส่งเป็น Flex Message Card แสดงข้อมูลการลงทะเบียน รายชื่อผู้เข้าร่วม ข้อมูลรถ และจุดจอดรถที่แนะนำ]`,
     variables: [],
   },
 };
@@ -833,6 +841,36 @@ export function generateCarAssignmentFlexMessage(
 }
 
 /**
+ * Helper function to normalize member names from JSON array format
+ */
+function normalizeMemberName(name: any): string {
+  if (!name) return '';
+  let current = name;
+
+  // Handle multiple levels of JSON encoding
+  while (typeof current === 'string' && (current.startsWith('[') || current.startsWith('{'))) {
+    try {
+      const parsed = JSON.parse(current);
+      if (Array.isArray(parsed)) {
+        if (parsed.length === 1) {
+          current = parsed[0];
+          continue;
+        }
+        return parsed.join(', ').trim();
+      }
+      current = parsed;
+    } catch {
+      break;
+    }
+  }
+
+  if (Array.isArray(current)) {
+    return current.join(', ').trim();
+  }
+  return String(current).trim();
+}
+
+/**
  * Generate LINE Flex Message for registration information
  * Shows registration details with attendee list and carpool information
  * @param registration Registration data
@@ -852,16 +890,18 @@ export function generateRegistrationInfoFlexMessage(
     assignedCarNumber?: number;
   }> = []
 ): any {
-  // Parse attendee names
+  // Parse attendee names with normalization
   let attendeeNames: string[] = [];
   if (registration.attendeeNames) {
     if (typeof registration.attendeeNames === 'string') {
       attendeeNames = registration.attendeeNames
         .split(',')
-        .map(n => n.trim())
+        .map(n => normalizeMemberName(n.trim()))
         .filter(n => n);
     } else if (Array.isArray(registration.attendeeNames)) {
-      attendeeNames = (registration.attendeeNames as any[]).filter((n: any) => n) as string[];
+      attendeeNames = (registration.attendeeNames as any[])
+        .map((n: any) => normalizeMemberName(n))
+        .filter((n: string) => n);
     }
   }
 
@@ -1149,6 +1189,519 @@ export function generateRegistrationInfoFlexMessage(
           },
         ],
         backgroundColor: '#059669',
+        paddingAll: '15px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: bodyContents,
+        paddingAll: '15px',
+      },
+    },
+  };
+}
+
+/**
+ * Get recommended parking zones for Felix Hotel based on building name
+ * @param buildingName Name of the building (A-T)
+ * @returns Array of recommended parking zone names
+ */
+function getFelixParkingZones(buildingName: string): string[] {
+  const building = buildingName.toUpperCase().trim();
+
+  // Mapping based on hotel building locations
+  if (['A', 'B', 'C'].includes(building)) {
+    return ['P2'];
+  } else if (['D', 'E', 'F'].includes(building)) {
+    return ['P2', 'P3'];
+  } else if (['O', 'P', 'Q'].includes(building)) {
+    return ['P3'];
+  } else if (['M', 'N', 'R'].includes(building)) {
+    return ['P3', 'P4'];
+  } else if (['I', 'K', 'J', 'L', 'H', 'G', 'S', 'T'].includes(building)) {
+    return ['P4', 'P5'];
+  }
+
+  return []; // Unknown building
+}
+
+/**
+ * Extract building name from room assignment string
+ * Expected format: "Building-RoomNumber" or "BUILDING RoomNumber"
+ * @param roomAssignment Room assignment string
+ * @returns Building name or empty string
+ */
+function extractBuildingName(roomAssignment: string): string {
+  if (!roomAssignment) return '';
+
+  const room = roomAssignment.trim();
+
+  // Try to match "Building-Room" pattern (e.g., "A-101", "O-202")
+  const dashMatch = room.match(/^([A-Z]+)-/);
+  if (dashMatch) {
+    return dashMatch[1];
+  }
+
+  // Try to match "Building Room" pattern (e.g., "A 101", "O 202")
+  const spaceMatch = room.match(/^([A-Z]+)\s+/);
+  if (spaceMatch) {
+    return spaceMatch[1];
+  }
+
+  // Try to get first letter(s) if all uppercase at start
+  const letterMatch = room.match(/^([A-Z]+)/);
+  if (letterMatch) {
+    return letterMatch[1];
+  }
+
+  return '';
+}
+
+/**
+ * Generate LINE Flex Message for registration information with Felix Hotel parking info
+ * Shows registration details, attendee list, carpool information, and recommended parking zones
+ * @param registration Registration data
+ * @param eventName Name of the event
+ * @param ownedCarpools Array of carpools where this registration is the owner
+ * @param joinedCarpools Array of carpools where this registration joined others
+ */
+export function generateFelixRegistrationInfoFlexMessage(
+  registration: EventRegistration,
+  eventName: string,
+  ownedCarpools: Array<{
+    licensePlate: string;
+    assignedCarNumber?: number;
+  }> = [],
+  joinedCarpools: Array<{
+    licensePlate: string;
+    assignedCarNumber?: number;
+  }> = []
+): any {
+  // Parse attendee names with normalization
+  let attendeeNames: string[] = [];
+  if (registration.attendeeNames) {
+    if (typeof registration.attendeeNames === 'string') {
+      attendeeNames = registration.attendeeNames
+        .split(',')
+        .map(n => normalizeMemberName(n.trim()))
+        .filter(n => n);
+    } else if (Array.isArray(registration.attendeeNames)) {
+      attendeeNames = (registration.attendeeNames as any[])
+        .map((n: any) => normalizeMemberName(n))
+        .filter((n: string) => n);
+    }
+  }
+
+  const totalAttendees = attendeeNames.length || 1;
+
+  // Build attendee list
+  const attendeeList: any[] = attendeeNames.map((name, index) => ({
+    type: 'box',
+    layout: 'horizontal',
+    contents: [
+      {
+        type: 'text',
+        text: `${index + 1}.`,
+        size: 'sm',
+        color: '#666666',
+        flex: 0,
+      },
+      {
+        type: 'text',
+        text: name,
+        size: 'sm',
+        color: '#333333',
+        flex: 1,
+        margin: 'sm',
+        wrap: true,
+      },
+    ],
+    margin: 'xs',
+  }));
+
+  // Build body contents
+  const bodyContents: any[] = [
+    // Event name
+    {
+      type: 'text',
+      text: eventName,
+      size: 'md',
+      weight: 'bold',
+      color: '#2563eb',
+      wrap: true,
+    },
+    {
+      type: 'separator',
+      margin: 'md',
+    },
+    // Company name
+    {
+      type: 'box',
+      layout: 'baseline',
+      contents: [
+        {
+          type: 'text',
+          text: 'บริษัท:',
+          size: 'sm',
+          color: '#666666',
+          flex: 0,
+        },
+        {
+          type: 'text',
+          text: registration.companyName || 'ไม่ระบุ',
+          size: 'sm',
+          color: '#333333',
+          flex: 1,
+          margin: 'sm',
+          weight: 'bold',
+          wrap: true,
+        },
+      ],
+      margin: 'md',
+    },
+    // Registration ID
+    {
+      type: 'box',
+      layout: 'baseline',
+      contents: [
+        {
+          type: 'text',
+          text: 'รหัสจอง:',
+          size: 'sm',
+          color: '#666666',
+          flex: 0,
+        },
+        {
+          type: 'text',
+          text: registration.registrationId,
+          size: 'sm',
+          color: '#333333',
+          flex: 1,
+          margin: 'sm',
+        },
+      ],
+      margin: 'sm',
+    },
+    {
+      type: 'separator',
+      margin: 'md',
+    },
+    // Attendee list header
+    {
+      type: 'text',
+      text: '👥 รายชื่อผู้เข้าร่วมกิจกรรม',
+      size: 'sm',
+      weight: 'bold',
+      color: '#333333',
+      margin: 'md',
+    },
+  ];
+
+  // Add attendee list
+  bodyContents.push(...attendeeList);
+
+  // Add total count with large text
+  bodyContents.push({
+    type: 'box',
+    layout: 'vertical',
+    contents: [
+      {
+        type: 'text',
+        text: `${totalAttendees}`,
+        size: '3xl',
+        weight: 'bold',
+        color: '#2563eb',
+        align: 'center',
+      },
+      {
+        type: 'text',
+        text: 'รวมจำนวนผู้ร่วมเดินทาง (คน)',
+        size: 'xs',
+        color: '#666666',
+        align: 'center',
+      },
+    ],
+    margin: 'lg',
+    paddingAll: '10px',
+    backgroundColor: '#f3f4f6',
+    cornerRadius: 'md',
+  });
+
+  // Add parking recommendation based on room assignments
+  let parkingZones: string[] = [];
+  let buildings: string[] = [];
+
+  if (registration.roomAssignments) {
+    let roomData: any[] = [];
+
+    // Parse room assignments
+    if (typeof registration.roomAssignments === 'string') {
+      try {
+        roomData = JSON.parse(registration.roomAssignments);
+      } catch {
+        // If not JSON, treat as single room string
+        const building = extractBuildingName(registration.roomAssignments);
+        if (building) {
+          buildings.push(building);
+        }
+      }
+    } else if (Array.isArray(registration.roomAssignments)) {
+      roomData = registration.roomAssignments;
+    }
+
+    // Extract all unique buildings from room assignments
+    if (Array.isArray(roomData)) {
+      roomData.forEach((room: any) => {
+        const roomStr = typeof room === 'string' ? room : (room?.room || room?.roomNumber || '');
+        const building = extractBuildingName(roomStr);
+        if (building && !buildings.includes(building)) {
+          buildings.push(building);
+        }
+      });
+    }
+
+    // Get parking zones for all buildings
+    const allZones = new Set<string>();
+    buildings.forEach(building => {
+      const zones = getFelixParkingZones(building);
+      zones.forEach(zone => allZones.add(zone));
+    });
+    parkingZones = Array.from(allZones).sort();
+  }
+
+  // Add parking recommendation section if zones found
+  if (parkingZones.length > 0) {
+    bodyContents.push({
+      type: 'separator',
+      margin: 'lg',
+    });
+
+    bodyContents.push({
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'text',
+          text: '🅿️ จุดจอดรถที่แนะนำ',
+          size: 'sm',
+          weight: 'bold',
+          color: '#7c3aed',
+        },
+        {
+          type: 'box',
+          layout: 'baseline',
+          contents: [
+            {
+              type: 'text',
+              text: 'อาคาร:',
+              size: 'xs',
+              color: '#666666',
+              flex: 0,
+            },
+            {
+              type: 'text',
+              text: buildings.join(', '),
+              size: 'xs',
+              color: '#333333',
+              flex: 1,
+              margin: 'sm',
+              weight: 'bold',
+            },
+          ],
+          margin: 'sm',
+        },
+        {
+          type: 'text',
+          text: parkingZones.join(', '),
+          size: 'xl',
+          weight: 'bold',
+          color: '#7c3aed',
+          align: 'center',
+          margin: 'md',
+        },
+        {
+          type: 'separator',
+          margin: 'md',
+        },
+        {
+          type: 'text',
+          text: '📌 หมายเหตุ:',
+          size: 'xs',
+          color: '#666666',
+          weight: 'bold',
+          margin: 'sm',
+        },
+        {
+          type: 'text',
+          text: '• คำแนะนำจุดจอดที่ใกล้ห้องพัก',
+          size: 'xs',
+          color: '#666666',
+          wrap: true,
+        },
+        {
+          type: 'text',
+          text: '• รร.มีรถกอล์ฟบริการรับ-ส่ง',
+          size: 'xs',
+          color: '#666666',
+          wrap: true,
+        },
+      ],
+      margin: 'md',
+      paddingAll: '12px',
+      backgroundColor: '#f5f3ff',
+      cornerRadius: 'md',
+    });
+  }
+
+  // Add owned carpools if any
+  if (ownedCarpools.length > 0) {
+    bodyContents.push({
+      type: 'separator',
+      margin: 'lg',
+    });
+
+    ownedCarpools.forEach((carpool, index) => {
+      const carNumber = formatCarNumber(carpool.assignedCarNumber);
+
+      bodyContents.push({
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🚗 รถของคุณ',
+            size: 'sm',
+            weight: 'bold',
+            color: '#1e40af',
+          },
+          {
+            type: 'box',
+            layout: 'baseline',
+            contents: [
+              {
+                type: 'text',
+                text: 'ทะเบียน:',
+                size: 'xs',
+                color: '#666666',
+                flex: 0,
+              },
+              {
+                type: 'text',
+                text: carpool.licensePlate || 'ไม่ระบุ',
+                size: 'xs',
+                color: '#333333',
+                flex: 1,
+                margin: 'sm',
+              },
+            ],
+            margin: 'sm',
+          },
+          {
+            type: 'text',
+            text: carNumber,
+            size: '3xl',
+            weight: 'bold',
+            color: '#2563eb',
+            align: 'center',
+            margin: 'md',
+          },
+          {
+            type: 'text',
+            text: 'โปรดแสดงเลขรถนี้ ณ จุดลงทะเบียน',
+            size: 'xs',
+            color: '#666666',
+            align: 'center',
+          },
+        ],
+        margin: 'md',
+        paddingAll: '12px',
+        backgroundColor: '#dbeafe',
+        cornerRadius: 'md',
+      });
+    });
+  }
+
+  // Add joined carpools if any
+  if (joinedCarpools.length > 0) {
+    if (ownedCarpools.length === 0) {
+      bodyContents.push({
+        type: 'separator',
+        margin: 'lg',
+      });
+    }
+
+    joinedCarpools.forEach((carpool, index) => {
+      const carNumber = formatCarNumber(carpool.assignedCarNumber);
+
+      bodyContents.push({
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🚗 รถที่คุณร่วม Join',
+            size: 'sm',
+            weight: 'bold',
+            color: '#c2410c',
+          },
+          {
+            type: 'box',
+            layout: 'baseline',
+            contents: [
+              {
+                type: 'text',
+                text: 'ทะเบียน:',
+                size: 'xs',
+                color: '#666666',
+                flex: 0,
+              },
+              {
+                type: 'text',
+                text: carpool.licensePlate || 'ไม่ระบุ',
+                size: 'xs',
+                color: '#333333',
+                flex: 1,
+                margin: 'sm',
+              },
+            ],
+            margin: 'sm',
+          },
+          {
+            type: 'text',
+            text: carNumber,
+            size: '3xl',
+            weight: 'bold',
+            color: '#ea580c',
+            align: 'center',
+            margin: 'md',
+          },
+        ],
+        margin: 'md',
+        paddingAll: '12px',
+        backgroundColor: '#fed7aa',
+        cornerRadius: 'md',
+      });
+    });
+  }
+
+  return {
+    type: 'flex',
+    altText: `ข้อมูลการลงทะเบียน (Felix) - ${registration.companyName || registration.registrationId}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '📋 ข้อมูลลงทะเบียน รร. Felix',
+            weight: 'bold',
+            size: 'lg',
+            color: '#ffffff',
+          },
+        ],
+        backgroundColor: '#7c3aed',
         paddingAll: '15px',
       },
       body: {

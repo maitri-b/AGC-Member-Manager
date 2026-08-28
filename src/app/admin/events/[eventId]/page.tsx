@@ -3704,6 +3704,29 @@ export default function EventDetailPage() {
               </>
             );
           })()}
+
+          {/* Carpool Summary Card - Show only if carpool feature is enabled */}
+          {eventData?.event?.hasCarpoolFeature && (() => {
+            // Count total carpools and unassigned carpools
+            const totalCarpools = allCarpools.filter((cp: any) =>
+              cp.status !== 'deleted' && cp.status !== 'cancelled'
+            ).length;
+
+            const unassignedCarpools = allCarpools.filter((cp: any) =>
+              (cp.status !== 'deleted' && cp.status !== 'cancelled') && !cp.assignedCarNumber
+            ).length;
+
+            if (totalCarpools === 0) return null;
+
+            return (
+              <div className="bg-white rounded-lg shadow p-2 sm:p-4 text-center border-2 border-purple-200">
+                <p className="text-xl sm:text-3xl font-bold text-purple-600">
+                  {unassignedCarpools}/{totalCarpools}
+                </p>
+                <p className="text-[10px] sm:text-sm text-gray-500">ยังไม่ระบุเลขรถ/รถทั้งหมด</p>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Filters */}
@@ -4430,7 +4453,11 @@ export default function EventDetailPage() {
                           const tooltipLines = ownedCarpools.map((carpool: any, index: number) => {
                             const carNum = carpool.assignedCarNumber ? `รถ #${String(carpool.assignedCarNumber).padStart(3, '0')}` : 'ยังไม่จัดเลข';
                             const plate = carpool.licensePlate || 'ไม่ระบุ';
-                            return `${index + 1}. ${carNum} - ${plate}`;
+
+                            // Get all members in this carpool
+                            const memberNames = carpool.members?.map((m: any) => m.name).join(', ') || 'ไม่มีผู้ร่วมรถ';
+
+                            return `${index + 1}. ${carNum} - ${plate}\n   ผู้ร่วมรถ: ${memberNames}`;
                           }).join('\n');
 
                           return (
@@ -4475,8 +4502,12 @@ export default function EventDetailPage() {
                           const tooltipLines = joinedCarpools.map((carpool: any, index: number) => {
                             const carNum = carpool.assignedCarNumber ? `รถ #${String(carpool.assignedCarNumber).padStart(3, '0')}` : 'ยังไม่จัดเลข';
                             const plate = carpool.licensePlate || 'ไม่ระบุ';
-                            const memberCount = carpool.members?.filter((m: any) => m.registrationId === attendee.registration.registrationId).length || 0;
-                            return `${index + 1}. ${carNum} - ${plate} (${memberCount} คน)`;
+
+                            // Get members from this registration who joined this carpool
+                            const members = carpool.members?.filter((m: any) => m.registrationId === attendee.registration.registrationId) || [];
+                            const memberNames = members.map((m: any) => m.name).join(', ');
+
+                            return `${index + 1}. ${carNum} - ${plate}\n   ผู้ร่วมรถ: ${memberNames || 'ไม่ระบุ'}`;
                           }).join('\n');
 
                           return (

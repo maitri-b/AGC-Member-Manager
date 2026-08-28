@@ -345,6 +345,10 @@ export default function AdminEventsPage() {
     remainingDeadlineHours: number;
   } | null>(null);
 
+  // Feature disable confirmation modal state
+  const [showFeatureDisableModal, setShowFeatureDisableModal] = useState(false);
+  const [featureToDisable, setFeatureToDisable] = useState<'carpool' | 'partyTable' | null>(null);
+
   // Lightbox state for viewing full-size images
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
@@ -492,6 +496,25 @@ export default function AdminEventsPage() {
     } catch (err) {
       console.error('Error updating existing deadlines:', err);
     }
+  };
+
+  // Handle feature disable confirmation
+  const handleConfirmFeatureDisable = () => {
+    if (featureToDisable === 'carpool') {
+      setFormData({
+        ...formData,
+        hasCarpoolFeature: false,
+        // Keep carpoolSettings to preserve configuration
+      });
+    } else if (featureToDisable === 'partyTable') {
+      setFormData({
+        ...formData,
+        hasPartyTableFeature: false,
+        // Keep partyTableSettings to preserve configuration
+      });
+    }
+    setShowFeatureDisableModal(false);
+    setFeatureToDisable(null);
   };
 
   const handleOpenModal = (event?: Event) => {
@@ -2214,15 +2237,24 @@ export default function AdminEventsPage() {
                       type="checkbox"
                       id="hasCarpoolFeature"
                       checked={formData.hasCarpoolFeature || false}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        hasCarpoolFeature: e.target.checked,
-                        carpoolSettings: e.target.checked ? {
-                          totalCarNumbers: 0,
-                          showCarNumbersToMembers: false,
-                          maxSeatsPerCar: undefined
-                        } : undefined
-                      })}
+                      onChange={(e) => {
+                        if (!e.target.checked && formData.hasCarpoolFeature) {
+                          // Show confirmation modal when unchecking
+                          setFeatureToDisable('carpool');
+                          setShowFeatureDisableModal(true);
+                        } else if (e.target.checked) {
+                          // Enable feature
+                          setFormData({
+                            ...formData,
+                            hasCarpoolFeature: true,
+                            carpoolSettings: formData.carpoolSettings || {
+                              totalCarNumbers: 0,
+                              showCarNumbersToMembers: false,
+                              maxSeatsPerCar: undefined
+                            }
+                          });
+                        }
+                      }}
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                     <label htmlFor="hasCarpoolFeature" className="text-sm font-semibold text-blue-900 cursor-pointer">
@@ -2357,17 +2389,26 @@ export default function AdminEventsPage() {
                       type="checkbox"
                       id="hasPartyTableFeature"
                       checked={formData.hasPartyTableFeature || false}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        hasPartyTableFeature: e.target.checked,
-                        partyTableSettings: e.target.checked ? {
-                          totalTables: 0,
-                          defaultSeatsPerTable: 10,
-                          maxSeatsPerTable: 12,
-                          showTableNumbersToMembers: false,
-                          tableActive: true
-                        } : undefined
-                      })}
+                      onChange={(e) => {
+                        if (!e.target.checked && formData.hasPartyTableFeature) {
+                          // Show confirmation modal when unchecking
+                          setFeatureToDisable('partyTable');
+                          setShowFeatureDisableModal(true);
+                        } else if (e.target.checked) {
+                          // Enable feature
+                          setFormData({
+                            ...formData,
+                            hasPartyTableFeature: true,
+                            partyTableSettings: formData.partyTableSettings || {
+                              totalTables: 0,
+                              defaultSeatsPerTable: 10,
+                              maxSeatsPerTable: 12,
+                              showTableNumbersToMembers: false,
+                              tableActive: true
+                            }
+                          });
+                        }
+                      }}
                       className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                     />
                     <label htmlFor="hasPartyTableFeature" className="text-sm font-semibold text-purple-900 cursor-pointer">
@@ -3292,6 +3333,77 @@ export default function AdminEventsPage() {
           eventName={promotingEvent.eventName}
           eventDescription={promotingEvent.description}
         />
+      )}
+
+      {/* Feature Disable Confirmation Modal */}
+      {showFeatureDisableModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`p-2 rounded-full ${featureToDisable === 'carpool' ? 'bg-blue-100' : 'bg-purple-100'}`}>
+                  <svg className={`w-6 h-6 ${featureToDisable === 'carpool' ? 'text-blue-600' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">ยืนยันการปิดฟีเจอร์</h3>
+                  <p className="text-sm text-gray-500">
+                    {featureToDisable === 'carpool' ? 'Carpool (รถร่วมเดินทาง)' : 'Party Table (โต๊ะนั่ง)'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Warning Message */}
+              <div className={`mb-6 p-4 rounded-lg ${featureToDisable === 'carpool' ? 'bg-blue-50 border border-blue-200' : 'bg-purple-50 border border-purple-200'}`}>
+                <p className="text-sm text-gray-700 mb-3">
+                  <strong>การปิดฟีเจอร์นี้จะมีผลดังนี้:</strong>
+                </p>
+                <ul className="text-sm text-gray-700 space-y-2 ml-4 list-disc">
+                  <li>
+                    <strong>ฟีเจอร์จะถูกซ่อน</strong> - สมาชิกจะไม่เห็นส่วนของ {featureToDisable === 'carpool' ? 'Carpool' : 'Party Table'} ในหน้า Event Detail
+                  </li>
+                  <li>
+                    <strong>ข้อมูลที่สร้างไว้จะยังอยู่</strong> - {featureToDisable === 'carpool' ? 'กลุ่มรถ' : 'กลุ่มโต๊ะ'}ที่สมาชิกสร้างไว้จะไม่ถูกลบ
+                  </li>
+                  <li>
+                    <strong>การตั้งค่าจะถูกเก็บไว้</strong> - เมื่อเปิดใช้งานใหม่ การตั้งค่าเดิมจะกลับมา
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+                <p className="text-xs text-amber-800">
+                  <strong>หมายเหตุ:</strong> หากต้องการเปิดใช้งานใหม่ในภายหลัง เพียงแค่ check ช่องนี้อีกครั้ง
+                </p>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 px-6 pb-6">
+              <button
+                onClick={() => {
+                  setShowFeatureDisableModal(false);
+                  setFeatureToDisable(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleConfirmFeatureDisable}
+                className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium ${
+                  featureToDisable === 'carpool'
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-purple-600 hover:bg-purple-700'
+                }`}
+              >
+                ยืนยันการปิดฟีเจอร์
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

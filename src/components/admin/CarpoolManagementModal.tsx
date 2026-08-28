@@ -626,6 +626,8 @@ export default function CarpoolManagementModal({
             'เบอร์โทร': regData.contactPhone || '-',
             'รหัสลงทะเบียน': member.registrationId || '-',
             'ชื่อสมาชิก': member.name || '-',
+            'หมายเหตุ': '',
+            'ลายเซ็นลงทะเบียน': '',
           });
         });
       });
@@ -635,7 +637,7 @@ export default function CarpoolManagementModal({
 
       // Apply styling and merge cells
       let currentRow = 1; // Start after header
-      const totalColumns = 8; // Removed ลำดับ column (was 9)
+      const totalColumns = 10; // Added หมายเหตุ and ลายเซ็นลงทะเบียน columns
 
       // Track merge ranges for car numbers
       const merges: any[] = [];
@@ -645,11 +647,22 @@ export default function CarpoolManagementModal({
         const bgColor = isEvenCarpool ? 'E8F5E9' : 'FFFFFF'; // Light green for even, white for odd
         const rowCount = carpool.members.length; // No +1 since owner is in members list
 
-        // Add merge range for car number column (column 0) if more than 1 member
+        // Add merge ranges for columns that should be merged per carpool
         if (rowCount > 1) {
+          // Merge เลขรถ (column 0)
           merges.push({
-            s: { r: currentRow, c: 0 }, // Start: current row, column 0 (เลขรถ)
-            e: { r: currentRow + rowCount - 1, c: 0 }, // End: last row of this carpool, column 0
+            s: { r: currentRow, c: 0 },
+            e: { r: currentRow + rowCount - 1, c: 0 },
+          });
+          // Merge หมายเหตุ (column 8)
+          merges.push({
+            s: { r: currentRow, c: 8 },
+            e: { r: currentRow + rowCount - 1, c: 8 },
+          });
+          // Merge ลายเซ็นลงทะเบียน (column 9)
+          merges.push({
+            s: { r: currentRow, c: 9 },
+            e: { r: currentRow + rowCount - 1, c: 9 },
           });
         }
 
@@ -710,7 +723,7 @@ export default function CarpoolManagementModal({
         };
       }
 
-      // Set column widths (8 columns - removed ลำดับ)
+      // Set column widths (10 columns)
       ws['!cols'] = [
         { wch: 10 }, // เลขรถ (wider for 3-digit format)
         { wch: 15 }, // ทะเบียนรถ
@@ -720,6 +733,8 @@ export default function CarpoolManagementModal({
         { wch: 15 }, // เบอร์โทร
         { wch: 18 }, // รหัสลงทะเบียน
         { wch: 25 }, // ชื่อสมาชิก
+        { wch: 30 }, // หมายเหตุ
+        { wch: 25 }, // ลายเซ็นลงทะเบียน
       ];
 
       // ============================================

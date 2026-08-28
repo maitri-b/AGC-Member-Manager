@@ -1579,7 +1579,7 @@ export default function CarpoolManagementModal({
                             .filter((n: string) => n) || [];
 
                           // Filter to only include members NOT already in a carpool
-                          const availableNames = allNames.filter((name) => {
+                          const availableNames = allNames.filter((name: string) => {
                             let isInCarpool = false;
                             carpools.forEach(cp => {
                               const member = cp.members?.find((m: any) => {

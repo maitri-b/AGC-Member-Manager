@@ -16,6 +16,7 @@ export type MessageTemplateType =
   | 'verification_reminder'// แจ้งเตือนให้ยืนยันตัวตน
   // Event Management Templates
   | 'car_assignment'       // แจ้งเลขรถที่ได้รับ
+  | 'registration_info'    // แจ้งข้อมูลการลงทะเบียน
   // Member Contact Templates
   | 'license_renewal'      // แจ้งเตือนต่ออายุใบอนุญาต
   | 'license_expired'      // แจ้งใบอนุญาตหมดอายุ
@@ -319,6 +320,14 @@ export const DEFAULT_TEMPLATES: Record<MessageTemplateType, MessageTemplate> = {
 ด้วยความนับถือ
 นายทะเบียน ชมรม Agents Club`,
     variables: ['contactName', 'companyName'],
+  },
+
+  registration_info: {
+    id: 'registration_info',
+    name: 'แจ้งข้อมูลการลงทะเบียน',
+    description: 'ส่งข้อมูลการลงทะเบียนแรลลี่ รวมรายชื่อผู้เข้าร่วมและข้อมูลรถ (Flex Message)',
+    template: `[ข้อความนี้จะถูกส่งเป็น Flex Message Card แสดงข้อมูลการลงทะเบียน รายชื่อผู้เข้าร่วม และข้อมูลรถ]`,
+    variables: [],
   },
 };
 
@@ -817,6 +826,335 @@ export function generateCarAssignmentFlexMessage(
             ],
           },
         ],
+        paddingAll: '15px',
+      },
+    },
+  };
+}
+
+/**
+ * Generate LINE Flex Message for registration information
+ * Shows registration details with attendee list and carpool information
+ * @param registration Registration data
+ * @param eventName Name of the event
+ * @param ownedCarpools Array of carpools where this registration is the owner
+ * @param joinedCarpools Array of carpools where this registration joined others
+ */
+export function generateRegistrationInfoFlexMessage(
+  registration: EventRegistration,
+  eventName: string,
+  ownedCarpools: Array<{
+    licensePlate: string;
+    assignedCarNumber?: number;
+  }> = [],
+  joinedCarpools: Array<{
+    licensePlate: string;
+    assignedCarNumber?: number;
+  }> = []
+): any {
+  // Parse attendee names
+  let attendeeNames: string[] = [];
+  if (registration.attendeeNames) {
+    if (typeof registration.attendeeNames === 'string') {
+      attendeeNames = registration.attendeeNames
+        .split(',')
+        .map(n => n.trim())
+        .filter(n => n);
+    } else if (Array.isArray(registration.attendeeNames)) {
+      attendeeNames = registration.attendeeNames.filter(n => n);
+    }
+  }
+
+  const totalAttendees = attendeeNames.length || 1;
+
+  // Build attendee list
+  const attendeeList: any[] = attendeeNames.map((name, index) => ({
+    type: 'box',
+    layout: 'horizontal',
+    contents: [
+      {
+        type: 'text',
+        text: `${index + 1}.`,
+        size: 'sm',
+        color: '#666666',
+        flex: 0,
+      },
+      {
+        type: 'text',
+        text: name,
+        size: 'sm',
+        color: '#333333',
+        flex: 1,
+        margin: 'sm',
+        wrap: true,
+      },
+    ],
+    margin: 'xs',
+  }));
+
+  // Build body contents
+  const bodyContents: any[] = [
+    // Event name
+    {
+      type: 'text',
+      text: eventName,
+      size: 'md',
+      weight: 'bold',
+      color: '#2563eb',
+      wrap: true,
+    },
+    {
+      type: 'separator',
+      margin: 'md',
+    },
+    // Company name
+    {
+      type: 'box',
+      layout: 'baseline',
+      contents: [
+        {
+          type: 'text',
+          text: 'บริษัท:',
+          size: 'sm',
+          color: '#666666',
+          flex: 0,
+        },
+        {
+          type: 'text',
+          text: registration.companyName || 'ไม่ระบุ',
+          size: 'sm',
+          color: '#333333',
+          flex: 1,
+          margin: 'sm',
+          weight: 'bold',
+          wrap: true,
+        },
+      ],
+      margin: 'md',
+    },
+    // Registration ID
+    {
+      type: 'box',
+      layout: 'baseline',
+      contents: [
+        {
+          type: 'text',
+          text: 'รหัสจอง:',
+          size: 'sm',
+          color: '#666666',
+          flex: 0,
+        },
+        {
+          type: 'text',
+          text: registration.registrationId,
+          size: 'sm',
+          color: '#333333',
+          flex: 1,
+          margin: 'sm',
+        },
+      ],
+      margin: 'sm',
+    },
+    {
+      type: 'separator',
+      margin: 'md',
+    },
+    // Attendee list header
+    {
+      type: 'text',
+      text: '👥 รายชื่อผู้เข้าร่วมกิจกรรม',
+      size: 'sm',
+      weight: 'bold',
+      color: '#333333',
+      margin: 'md',
+    },
+  ];
+
+  // Add attendee list
+  bodyContents.push(...attendeeList);
+
+  // Add total count with large text
+  bodyContents.push({
+    type: 'box',
+    layout: 'vertical',
+    contents: [
+      {
+        type: 'text',
+        text: `${totalAttendees}`,
+        size: '3xl',
+        weight: 'bold',
+        color: '#2563eb',
+        align: 'center',
+      },
+      {
+        type: 'text',
+        text: 'รวมจำนวนผู้ร่วมเดินทาง (คน)',
+        size: 'xs',
+        color: '#666666',
+        align: 'center',
+      },
+    ],
+    margin: 'lg',
+    paddingAll: '10px',
+    backgroundColor: '#f3f4f6',
+    cornerRadius: 'md',
+  });
+
+  // Add owned carpools if any
+  if (ownedCarpools.length > 0) {
+    bodyContents.push({
+      type: 'separator',
+      margin: 'lg',
+    });
+
+    ownedCarpools.forEach((carpool, index) => {
+      const carNumber = formatCarNumber(carpool.assignedCarNumber);
+
+      bodyContents.push({
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🚗 รถของคุณ',
+            size: 'sm',
+            weight: 'bold',
+            color: '#1e40af',
+          },
+          {
+            type: 'box',
+            layout: 'baseline',
+            contents: [
+              {
+                type: 'text',
+                text: 'ทะเบียน:',
+                size: 'xs',
+                color: '#666666',
+                flex: 0,
+              },
+              {
+                type: 'text',
+                text: carpool.licensePlate || 'ไม่ระบุ',
+                size: 'xs',
+                color: '#333333',
+                flex: 1,
+                margin: 'sm',
+              },
+            ],
+            margin: 'sm',
+          },
+          {
+            type: 'text',
+            text: carNumber,
+            size: '3xl',
+            weight: 'bold',
+            color: '#2563eb',
+            align: 'center',
+            margin: 'md',
+          },
+          {
+            type: 'text',
+            text: 'โปรดแสดงเลขรถนี้ ณ จุดลงทะเบียน',
+            size: 'xs',
+            color: '#666666',
+            align: 'center',
+          },
+        ],
+        margin: 'md',
+        paddingAll: '12px',
+        backgroundColor: '#dbeafe',
+        cornerRadius: 'md',
+      });
+    });
+  }
+
+  // Add joined carpools if any
+  if (joinedCarpools.length > 0) {
+    if (ownedCarpools.length === 0) {
+      bodyContents.push({
+        type: 'separator',
+        margin: 'lg',
+      });
+    }
+
+    joinedCarpools.forEach((carpool, index) => {
+      const carNumber = formatCarNumber(carpool.assignedCarNumber);
+
+      bodyContents.push({
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🚗 รถที่คุณร่วม Join',
+            size: 'sm',
+            weight: 'bold',
+            color: '#c2410c',
+          },
+          {
+            type: 'box',
+            layout: 'baseline',
+            contents: [
+              {
+                type: 'text',
+                text: 'ทะเบียน:',
+                size: 'xs',
+                color: '#666666',
+                flex: 0,
+              },
+              {
+                type: 'text',
+                text: carpool.licensePlate || 'ไม่ระบุ',
+                size: 'xs',
+                color: '#333333',
+                flex: 1,
+                margin: 'sm',
+              },
+            ],
+            margin: 'sm',
+          },
+          {
+            type: 'text',
+            text: carNumber,
+            size: '3xl',
+            weight: 'bold',
+            color: '#ea580c',
+            align: 'center',
+            margin: 'md',
+          },
+        ],
+        margin: 'md',
+        paddingAll: '12px',
+        backgroundColor: '#fed7aa',
+        cornerRadius: 'md',
+      });
+    });
+  }
+
+  return {
+    type: 'flex',
+    altText: `ข้อมูลการลงทะเบียน - ${registration.companyName || registration.registrationId}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '📋 ข้อมูลการลงทะเบียนแรลลี่',
+            weight: 'bold',
+            size: 'lg',
+            color: '#ffffff',
+          },
+        ],
+        backgroundColor: '#059669',
+        paddingAll: '15px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: bodyContents,
         paddingAll: '15px',
       },
     },

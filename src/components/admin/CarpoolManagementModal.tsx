@@ -908,8 +908,8 @@ export default function CarpoolManagementModal({
           });
 
           // Update minCarNumber
-          if (carpool.assignedCarNumber < companyData.minCarNumber) {
-            companyData.minCarNumber = carpool.assignedCarNumber;
+          if (carpool.assignedCarNumber! < companyData.minCarNumber) {
+            companyData.minCarNumber = carpool.assignedCarNumber!;
           }
         });
       });

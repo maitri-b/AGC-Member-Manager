@@ -1123,17 +1123,17 @@ export default function EventDetailPage() {
     }
   }, [eventId]);
 
-  // Fetch carpools and party tables when management filter is used
+  // Fetch carpools and party tables on mount if features are enabled
   useEffect(() => {
-    if (eventId && (managementFilter === 'no-carpool' || managementFilter === 'no-table')) {
-      if (managementFilter === 'no-carpool') {
+    if (eventId && eventData) {
+      if (eventData.event?.hasCarpoolFeature) {
         fetchCarpools();
       }
-      if (managementFilter === 'no-table') {
+      if (eventData.event?.hasPartyTableFeature) {
         fetchPartyTables();
       }
     }
-  }, [eventId, managementFilter]);
+  }, [eventId, eventData?.event?.hasCarpoolFeature, eventData?.event?.hasPartyTableFeature]);
 
   const fetchCarpools = async () => {
     try {
@@ -4386,48 +4386,91 @@ export default function EventDetailPage() {
                         })()}
 
                         {/* Carpool Registration Badge */}
-                        {eventData?.event?.hasCarpoolFeature && !isCancelled && attendee.hasRegisteredCarpool && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCarpoolRegistration({
-                                registrationId: attendee.registration.registrationId,
-                                contactName: attendee.registration.contactName,
-                              });
-                              setShowCarpoolDetailModal(true);
-                            }}
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors cursor-pointer sm:gap-1"
-                            title="คลิกเพื่อดูรายละเอียดรถที่ลงทะเบียน"
-                          >
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                              <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-                            </svg>
-                            <span className="hidden sm:inline">ลงทะเบียนรถ</span>
-                          </button>
-                        )}
+                        {(() => {
+                          if (!eventData?.event?.hasCarpoolFeature || isCancelled) return null;
+
+                          // Find all carpools where this registration is the owner
+                          const ownedCarpools = allCarpools.filter((carpool: any) =>
+                            carpool.ownerRegistrationId === attendee.registration.registrationId &&
+                            carpool.status !== 'deleted' && carpool.status !== 'cancelled'
+                          );
+
+                          if (ownedCarpools.length === 0) return null;
+
+                          // Build tooltip text with all cars
+                          const tooltipLines = ownedCarpools.map((carpool: any, index: number) => {
+                            const carNum = carpool.assignedCarNumber ? `รถ #${String(carpool.assignedCarNumber).padStart(3, '0')}` : 'ยังไม่จัดเลข';
+                            const plate = carpool.licensePlate || 'ไม่ระบุ';
+                            return `${index + 1}. ${carNum} - ${plate}`;
+                          }).join('\n');
+
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCarpoolRegistration({
+                                  registrationId: attendee.registration.registrationId,
+                                  contactName: attendee.registration.contactName,
+                                });
+                                setShowCarpoolDetailModal(true);
+                              }}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors cursor-pointer sm:gap-1"
+                              title={`ลงทะเบียนรถ ${ownedCarpools.length} คัน:\n${tooltipLines}\n\nคลิกเพื่อดูรายละเอียด`}
+                            >
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+                              </svg>
+                              <span className="hidden sm:inline">ลงทะเบียนรถ {ownedCarpools.length > 1 ? `(${ownedCarpools.length})` : ''}</span>
+                            </button>
+                          );
+                        })()}
 
                         {/* Carpool Join Badge */}
-                        {eventData?.event?.hasCarpoolFeature && !isCancelled && attendee.hasJoinedCarpool && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCarpoolRegistration({
-                                registrationId: attendee.registration.registrationId,
-                                contactName: attendee.registration.contactName,
-                              });
-                              setShowCarpoolDetailModal(true);
-                            }}
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800 hover:bg-pink-200 transition-colors cursor-pointer sm:gap-1"
-                            title="คลิกเพื่อดูรายละเอียดรถที่เข้าร่วม"
-                          >
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                              <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-                            </svg>
-                            <span className="hidden sm:inline">Join รถ</span>
-                          </button>
-                        )}
+                        {(() => {
+                          if (!eventData?.event?.hasCarpoolFeature || isCancelled) return null;
+
+                          // Find all carpools where this registration has members (but is not the owner)
+                          const joinedCarpools = allCarpools.filter((carpool: any) => {
+                            if (carpool.ownerRegistrationId === attendee.registration.registrationId) return false;
+                            if (carpool.status === 'deleted' || carpool.status === 'cancelled') return false;
+
+                            return carpool.members?.some((member: any) =>
+                              member.registrationId === attendee.registration.registrationId
+                            );
+                          });
+
+                          if (joinedCarpools.length === 0) return null;
+
+                          // Build tooltip text with all cars
+                          const tooltipLines = joinedCarpools.map((carpool: any, index: number) => {
+                            const carNum = carpool.assignedCarNumber ? `รถ #${String(carpool.assignedCarNumber).padStart(3, '0')}` : 'ยังไม่จัดเลข';
+                            const plate = carpool.licensePlate || 'ไม่ระบุ';
+                            const memberCount = carpool.members?.filter((m: any) => m.registrationId === attendee.registration.registrationId).length || 0;
+                            return `${index + 1}. ${carNum} - ${plate} (${memberCount} คน)`;
+                          }).join('\n');
+
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCarpoolRegistration({
+                                  registrationId: attendee.registration.registrationId,
+                                  contactName: attendee.registration.contactName,
+                                });
+                                setShowCarpoolDetailModal(true);
+                              }}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800 hover:bg-pink-200 transition-colors cursor-pointer sm:gap-1"
+                              title={`Join รถ ${joinedCarpools.length} คัน:\n${tooltipLines}\n\nคลิกเพื่อดูรายละเอียด`}
+                            >
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+                              </svg>
+                              <span className="hidden sm:inline">Join รถ {joinedCarpools.length > 1 ? `(${joinedCarpools.length})` : ''}</span>
+                            </button>
+                          );
+                        })()}
                       </div>
 
                       {/* Company info */}

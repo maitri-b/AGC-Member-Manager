@@ -63,6 +63,7 @@ export default function MessageTemplateModal({
   const [customMessage, setCustomMessage] = useState('');
   const [editableTemplate, setEditableTemplate] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const [previewRecipient, setPreviewRecipient] = useState(0);
   const [baseUrl, setBaseUrl] = useState('https://agc-member-manager.vercel.app');
   const [customTemplates, setCustomTemplates] = useState<Record<string, string>>({});
@@ -503,6 +504,140 @@ export default function MessageTemplateModal({
       });
     } catch (error) {
       console.error('Failed to save message history:', error);
+    }
+  };
+
+  const handleTestSend = async () => {
+    let messageToSend = '';
+    let subject = '';
+
+    if (activeTab === 'templates') {
+      if (!editableTemplate.trim() && !customMessage.trim()) {
+        toast.error('กรุณาระบุข้อความ');
+        return;
+      }
+      messageToSend = editableTemplate;
+      subject = DEFAULT_TEMPLATES[selectedTemplate!]?.name || 'แจ้งชำระเงิน';
+    } else if (activeTab === 'custom') {
+      if (!customContent.trim() && !imageFile && !imageUrl) {
+        toast.error('กรุณาระบุข้อความหรือแนบรูปภาพอย่างน้อย 1 อย่าง');
+        return;
+      }
+      messageToSend = customContent;
+      subject = customSubject || 'ข้อความกำหนดเอง';
+    }
+
+    if (selectedRegistrations.length === 0) {
+      toast.error('กรุณาเลือกผู้รับอย่างน้อย 1 คน');
+      return;
+    }
+
+    setIsSendingTest(true);
+
+    try {
+      // Get admin's LINE user ID from session
+      const sessionResponse = await fetch('/api/auth/session');
+      if (!sessionResponse.ok) {
+        throw new Error('ไม่สามารถดึงข้อมูล session ได้');
+      }
+
+      const sessionData = await sessionResponse.json();
+      const adminLineUserId = sessionData?.user?.lineUserId;
+
+      if (!adminLineUserId) {
+        toast.error('ไม่พบ LINE User ID ของ Admin');
+        setIsSendingTest(false);
+        return;
+      }
+
+      // Upload image if file is selected
+      let uploadedImageUrl = imageUrl;
+      if (imageFile) {
+        const uploadingToast = toast.loading('กำลังอัปโหลดรูปภาพ...');
+
+        try {
+          const formData = new FormData();
+          formData.append('image', imageFile);
+
+          const uploadResponse = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            console.error('Upload error:', errorData);
+            toast.dismiss(uploadingToast);
+            toast.error('ไม่สามารถอัปโหลดรูปภาพได้ กรุณาลองใหม่อีกครั้ง');
+            setIsSendingTest(false);
+            return;
+          }
+
+          const uploadResult = await uploadResponse.json();
+          uploadedImageUrl = uploadResult.url;
+          toast.dismiss(uploadingToast);
+        } catch (uploadError) {
+          toast.dismiss(uploadingToast);
+          console.error('Upload error:', uploadError);
+          toast.error('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
+          setIsSendingTest(false);
+          return;
+        }
+      }
+
+      // Use preview recipient's data for personalization
+      const registration = selectedRegistrations[previewRecipient].registration;
+
+      let personalizedMsg: string | undefined = '';
+      let flexMessage: any = undefined;
+
+      if (activeTab === 'templates' && selectedTemplate) {
+        // Handle car_assignment template with Flex message
+        if (selectedTemplate === 'car_assignment' && carpoolsData) {
+          const carpoolData = carpoolsData[registration.registrationId];
+          if (carpoolData) {
+            flexMessage = generateCarAssignmentFlexMessage(
+              carpoolData,
+              registration,
+              event.eventName
+            );
+            personalizedMsg = undefined;
+          } else {
+            toast.error(`ไม่พบข้อมูล carpool สำหรับ ${registration.contactName}`);
+            setIsSendingTest(false);
+            return;
+          }
+        } else if (editableTemplate) {
+          personalizedMsg = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
+        }
+      } else if (activeTab === 'custom') {
+        personalizedMsg = personalizeCustomMessage(messageToSend, registration);
+      }
+
+      // Send test message to admin's LINE
+      const response = await fetch('/api/line/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lineUserIds: [adminLineUserId],
+          message: personalizedMsg || undefined,
+          imageUrl: uploadedImageUrl || undefined,
+          flexMessage: flexMessage || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('ไม่สามารถส่งข้อความทดสอบได้');
+      }
+
+      toast.success(
+        `✅ ส่งข้อความทดสอบสำเร็จ!\n\nข้อมูลที่ใช้ทดสอบ: ${registration.contactName}\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+      );
+    } catch (error) {
+      console.error('Error sending test message:', error);
+      toast.error('เกิดข้อผิดพลาดในการส่งข้อความทดสอบ');
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -1140,14 +1275,34 @@ export default function MessageTemplateModal({
             <div className="flex items-center gap-3">
               <button
                 onClick={onClose}
-                disabled={isSending}
+                disabled={isSending || isSendingTest}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>
               <button
+                onClick={handleTestSend}
+                disabled={isSending || isSendingTest || (activeTab === 'templates' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                title="ส่งข้อความทดสอบไปยัง LINE ของคุณ โดยใช้ข้อมูลจากผู้รับที่เลือกในตัวอย่าง"
+              >
+                {isSendingTest ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <span>กำลังส่ง...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>ทดสอบส่ง</span>
+                  </>
+                )}
+              </button>
+              <button
                 onClick={handleSendMessages}
-                disabled={isSending || (activeTab === 'templates' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
+                disabled={isSending || isSendingTest || (activeTab === 'templates' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSending ? (

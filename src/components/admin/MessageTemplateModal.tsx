@@ -613,71 +613,78 @@ export default function MessageTemplateModal({
         }
       }
 
-      // Use preview recipient's data for personalization
-      const registration = selectedRegistrations[previewRecipient].registration;
+      // Send test messages for ALL selected registrations (to admin's LINE)
+      // This simulates what will be sent to actual recipients
+      let totalMessagesSent = 0;
 
-      // For car_assignment: send test message for each car
+      // For car_assignment: send test message for each car of each registration
       if (activeTab === 'templates' && selectedTemplate === 'car_assignment' && carpoolsData) {
-        const carpools = carpoolsData[registration.registrationId];
-        if (!carpools || carpools.length === 0) {
-          toast.error(`ไม่พบข้อมูล carpool สำหรับ ${registration.contactName}`);
-          setIsSendingTest(false);
-          return;
+        for (const { registration } of selectedRegistrations) {
+          const carpools = carpoolsData[registration.registrationId];
+          if (!carpools || carpools.length === 0) {
+            continue; // Skip registrations without carpool data
+          }
+
+          // Send test message for each car
+          for (let i = 0; i < carpools.length; i++) {
+            const carpoolData = carpools[i];
+            const flexMessage = generateCarAssignmentFlexMessage(
+              carpoolData,
+              registration,
+              event.eventName
+            );
+
+            const response = await fetch('/api/line/send-notification', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                lineUserIds: [adminLineUserId],
+                message: undefined,
+                flexMessage: flexMessage,
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName} - รถคันที่ ${i + 1})`);
+            }
+
+            totalMessagesSent++;
+          }
         }
 
-        // Send test message for each car
-        for (let i = 0; i < carpools.length; i++) {
-          const carpoolData = carpools[i];
-          const flexMessage = generateCarAssignmentFlexMessage(
-            carpoolData,
-            registration,
-            event.eventName
-          );
+        toast.success(
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+        );
+      } else {
+        // Other templates: send test message for each registration
+        for (const { registration } of selectedRegistrations) {
+          let personalizedMsg: string | undefined = '';
+
+          if (activeTab === 'templates' && selectedTemplate && editableTemplate) {
+            personalizedMsg = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
+          } else if (activeTab === 'custom') {
+            personalizedMsg = personalizeCustomMessage(messageToSend, registration);
+          }
 
           const response = await fetch('/api/line/send-notification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               lineUserIds: [adminLineUserId],
-              message: undefined,
-              flexMessage: flexMessage,
+              message: personalizedMsg || undefined,
+              imageUrl: uploadedImageUrl || undefined,
             }),
           });
 
           if (!response.ok) {
-            throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (รถคันที่ ${i + 1})`);
+            throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName})`);
           }
+
+          totalMessagesSent++;
         }
 
         toast.success(
-          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nข้อมูลที่ใช้ทดสอบ: ${registration.contactName}\nส่งข้อความ ${carpools.length} ข้อความ (${carpools.length} คัน)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
-        );
-      } else {
-        // Other templates: send single test message
-        let personalizedMsg: string | undefined = '';
-
-        if (activeTab === 'templates' && selectedTemplate && editableTemplate) {
-          personalizedMsg = personalizeMessage(selectedTemplate, registration, event, editableTemplate, baseUrl);
-        } else if (activeTab === 'custom') {
-          personalizedMsg = personalizeCustomMessage(messageToSend, registration);
-        }
-
-        const response = await fetch('/api/line/send-notification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lineUserIds: [adminLineUserId],
-            message: personalizedMsg || undefined,
-            imageUrl: uploadedImageUrl || undefined,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('ไม่สามารถส่งข้อความทดสอบได้');
-        }
-
-        toast.success(
-          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nข้อมูลที่ใช้ทดสอบ: ${registration.contactName}\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
         );
       }
     } catch (error) {

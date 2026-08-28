@@ -20,6 +20,12 @@ import { getStatusBadgeClass, isFullyPaid, parseAdditionalPayments } from '@/lib
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
 import { formatEventDateRange } from '@/lib/date-utils';
 
+// Helper function to format car number as 3-digit string (e.g., 1 -> "001", 10 -> "010")
+const formatCarNumber = (carNumber: number | undefined | null): string => {
+  if (!carNumber || carNumber <= 0) return '';
+  return String(carNumber).padStart(3, '0');
+};
+
 interface Event {
   eventId: string;
   eventName: string;
@@ -2474,7 +2480,7 @@ export default function EventDetailPage() {
                                         <div className="text-right">
                                           <p className="text-xs text-blue-600">เลขรถ</p>
                                           <p className="text-lg font-bold text-blue-900">
-                                            {ownedCarpool.assignedCarNumber}
+                                            {formatCarNumber(ownedCarpool.assignedCarNumber)}
                                           </p>
                                         </div>
                                       )}
@@ -2577,7 +2583,7 @@ export default function EventDetailPage() {
                                             <div className="text-right">
                                               <p className="text-xs text-green-600">เลขรถ</p>
                                               <p className="text-lg font-bold text-green-900">
-                                                {carpool.assignedCarNumber}
+                                                {formatCarNumber(carpool.assignedCarNumber)}
                                               </p>
                                             </div>
                                           )}

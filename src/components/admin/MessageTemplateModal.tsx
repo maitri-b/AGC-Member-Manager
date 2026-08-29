@@ -592,12 +592,25 @@ export default function MessageTemplateModal({
               }));
 
             // Find roommates from OTHER registrations
+            console.log('[Regular Send - Room] Looking for roommates. Total registrations:', selectedRegistrations.length);
+            console.log('[Regular Send - Room] Current registration:', registration.registrationId);
+
             for (const { registration: otherReg } of selectedRegistrations) {
+              console.log('[Regular Send - Room] Checking otherReg:', otherReg.registrationId);
+
               // Skip the current registration
-              if (otherReg.registrationId === registration.registrationId) continue;
+              if (otherReg.registrationId === registration.registrationId) {
+                console.log('[Regular Send - Room] Skipping self');
+                continue;
+              }
 
               const otherRoomAssignments = otherReg.roomAssignments;
-              if (!otherRoomAssignments) continue;
+              console.log('[Regular Send - Room] otherReg roomAssignments:', otherRoomAssignments);
+
+              if (!otherRoomAssignments) {
+                console.log('[Regular Send - Room] No roomAssignments for:', otherReg.registrationId);
+                continue;
+              }
 
               // Parse other registration's room assignments
               let otherParsed: Record<string, string> = {};
@@ -630,17 +643,24 @@ export default function MessageTemplateModal({
 
               // Check if any attendees from this registration are in the same room
               const otherAttendeeNames = parseAttendeeNames(otherReg.attendeeNames);
-              Object.entries(otherParsed)
-                .filter(([_, rId]) => rId === roomId)
-                .forEach(([attendeeIndex, _]) => {
-                  membersInRoom.push({
-                    name: otherAttendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
-                    registrationId: otherReg.registrationId,
-                    companyName: otherReg.companyName || '',
-                  });
+              console.log('[Regular Send - Room] otherReg parsed assignments:', otherParsed);
+              console.log('[Regular Send - Room] Looking for roomId:', roomId);
+
+              const matchingEntries = Object.entries(otherParsed).filter(([_, rId]) => rId === roomId);
+              console.log('[Regular Send - Room] Matching entries:', matchingEntries);
+
+              matchingEntries.forEach(([attendeeIndex, _]) => {
+                const memberName = otherAttendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`;
+                console.log('[Regular Send - Room] Adding roommate:', memberName, 'from', otherReg.companyName);
+                membersInRoom.push({
+                  name: memberName,
+                  registrationId: otherReg.registrationId,
+                  companyName: otherReg.companyName || '',
                 });
+              });
             }
 
+            console.log('[Regular Send - Room] Final membersInRoom for', registration.registrationId, ':', membersInRoom);
             if (membersInRoom.length === 0) continue;
 
             sendTasks.push(
@@ -1040,12 +1060,25 @@ export default function MessageTemplateModal({
               }));
 
             // Find roommates from OTHER registrations in test send
+            console.log('[Test Send - Room] Looking for roommates. Total registrations:', selectedRegistrations.length);
+            console.log('[Test Send - Room] Current registration:', registration.registrationId);
+
             for (const { registration: otherReg } of selectedRegistrations) {
+              console.log('[Test Send - Room] Checking otherReg:', otherReg.registrationId);
+
               // Skip the current registration
-              if (otherReg.registrationId === registration.registrationId) continue;
+              if (otherReg.registrationId === registration.registrationId) {
+                console.log('[Test Send - Room] Skipping self');
+                continue;
+              }
 
               const otherRoomAssignments = otherReg.roomAssignments;
-              if (!otherRoomAssignments) continue;
+              console.log('[Test Send - Room] otherReg roomAssignments:', otherRoomAssignments);
+
+              if (!otherRoomAssignments) {
+                console.log('[Test Send - Room] No roomAssignments for:', otherReg.registrationId);
+                continue;
+              }
 
               // Parse other registration's room assignments
               let otherParsed: Record<string, string> = {};
@@ -1078,16 +1111,24 @@ export default function MessageTemplateModal({
 
               // Check if any attendees from this registration are in the same room
               const otherAttendeeNames = parseAttendeeNames(otherReg.attendeeNames);
-              Object.entries(otherParsed)
-                .filter(([_, rId]) => rId === roomId)
-                .forEach(([attendeeIndex, _]) => {
-                  membersInRoom.push({
-                    name: otherAttendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
-                    registrationId: otherReg.registrationId,
-                    companyName: otherReg.companyName || '',
-                  });
+              console.log('[Test Send - Room] otherReg parsed assignments:', otherParsed);
+              console.log('[Test Send - Room] Looking for roomId:', roomId);
+
+              const matchingEntries = Object.entries(otherParsed).filter(([_, rId]) => rId === roomId);
+              console.log('[Test Send - Room] Matching entries:', matchingEntries);
+
+              matchingEntries.forEach(([attendeeIndex, _]) => {
+                const memberName = otherAttendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`;
+                console.log('[Test Send - Room] Adding roommate:', memberName, 'from', otherReg.companyName);
+                membersInRoom.push({
+                  name: memberName,
+                  registrationId: otherReg.registrationId,
+                  companyName: otherReg.companyName || '',
                 });
+              });
             }
+
+            console.log('[Test Send - Room] Final membersInRoom for', registration.registrationId, ':', membersInRoom);
 
             if (membersInRoom.length === 0) continue;
 

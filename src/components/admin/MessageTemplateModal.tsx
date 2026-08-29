@@ -8,6 +8,7 @@ import {
   personalizeMessage,
   suggestTemplate,
   generateCarAssignmentFlexMessage,
+  generateRoomAssignmentFlexMessage,
   generateRegistrationInfoFlexMessage,
   generateFelixRegistrationInfoFlexMessage,
 } from '@/lib/message-templates';
@@ -472,6 +473,80 @@ export default function MessageTemplateModal({
           } else {
             throw new Error(`No carpool data found for ${registration.contactName}`);
           }
+        } else if (activeTab === 'templates' && selectedTemplate === 'room_assignment') {
+          // Room assignment: Parse roomAssignments and send notification
+          const roomAssignments = registration.roomAssignments;
+
+          if (!roomAssignments || !rooms || rooms.length === 0) {
+            throw new Error(`No room assignment found for ${registration.contactName}`);
+          }
+
+          // Parse roomAssignments (could be string or object)
+          let parsedRoomAssignments: Record<string, string> = {};
+          if (typeof roomAssignments === 'string') {
+            try {
+              parsedRoomAssignments = JSON.parse(roomAssignments);
+            } catch (e) {
+              throw new Error(`Invalid room assignments format for ${registration.contactName}`);
+            }
+          } else if (typeof roomAssignments === 'object') {
+            parsedRoomAssignments = roomAssignments as Record<string, string>;
+          }
+
+          // Get all unique room IDs
+          const roomIds = new Set(Object.values(parsedRoomAssignments));
+
+          // Send one message per room
+          for (const roomId of roomIds) {
+            const room = rooms.find(r => r.roomId === roomId);
+            if (!room) continue;
+
+            // Get attendee names for this room
+            const { parseAttendeeNames } = await import('@/lib/message-templates');
+            const attendeeNames = parseAttendeeNames(registration.attendeeNames);
+
+            // Find which attendees are in this room
+            const membersInRoom = Object.entries(parsedRoomAssignments)
+              .filter(([_, rId]) => rId === roomId)
+              .map(([attendeeIndex, _]) => ({
+                name: attendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
+                registrationId: registration.registrationId,
+              }));
+
+            if (membersInRoom.length === 0) continue;
+
+            sendTasks.push(
+              (async () => {
+                const roomData = {
+                  buildingName: room.buildingName,
+                  roomNumber: room.roomNumber,
+                  members: membersInRoom,
+                };
+
+                const flexMessage = generateRoomAssignmentFlexMessage(
+                  roomData,
+                  registration,
+                  event.eventName
+                );
+
+                const response = await fetch('/api/line/send-notification', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    lineUserIds: [lineUserId],
+                    message: undefined, // No text message for Flex
+                    flexMessage: flexMessage,
+                  }),
+                });
+
+                if (!response.ok) {
+                  throw new Error(`Failed to send room ${room.buildingName}-${room.roomNumber} to ${registration.contactName}`);
+                }
+
+                return { success: true, name: `${registration.contactName} (ห้อง ${room.buildingName}-${room.roomNumber})` };
+              })()
+            );
+          }
         } else if (activeTab === 'templates' && selectedTemplate === 'registration_info' && carpoolsData) {
           // Registration info: send one message with all carpool data
           const carpools = carpoolsData[registration.registrationId] || [];
@@ -728,6 +803,82 @@ export default function MessageTemplateModal({
 
             if (!response.ok) {
               throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName} - รถคันที่ ${i + 1})`);
+            }
+
+            totalMessagesSent++;
+          }
+        }
+
+        toast.success(
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+        );
+      } else if (activeTab === 'templates' && selectedTemplate === 'room_assignment') {
+        // For room_assignment: send test message for each room of each registration
+        for (const { registration } of selectedRegistrations) {
+          const roomAssignments = registration.roomAssignments;
+
+          if (!roomAssignments || !rooms || rooms.length === 0) {
+            continue; // Skip registrations without room assignment
+          }
+
+          // Parse roomAssignments
+          let parsedRoomAssignments: Record<string, string> = {};
+          if (typeof roomAssignments === 'string') {
+            try {
+              parsedRoomAssignments = JSON.parse(roomAssignments);
+            } catch (e) {
+              continue;
+            }
+          } else if (typeof roomAssignments === 'object') {
+            parsedRoomAssignments = roomAssignments as Record<string, string>;
+          }
+
+          // Get all unique room IDs
+          const roomIds = new Set(Object.values(parsedRoomAssignments));
+
+          // Send test message for each room
+          for (const roomId of roomIds) {
+            const room = rooms.find(r => r.roomId === roomId);
+            if (!room) continue;
+
+            // Get attendee names for this room
+            const { parseAttendeeNames } = await import('@/lib/message-templates');
+            const attendeeNames = parseAttendeeNames(registration.attendeeNames);
+
+            // Find which attendees are in this room
+            const membersInRoom = Object.entries(parsedRoomAssignments)
+              .filter(([_, rId]) => rId === roomId)
+              .map(([attendeeIndex, _]) => ({
+                name: attendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
+                registrationId: registration.registrationId,
+              }));
+
+            if (membersInRoom.length === 0) continue;
+
+            const roomData = {
+              buildingName: room.buildingName,
+              roomNumber: room.roomNumber,
+              members: membersInRoom,
+            };
+
+            const flexMessage = generateRoomAssignmentFlexMessage(
+              roomData,
+              registration,
+              event.eventName
+            );
+
+            const response = await fetch('/api/line/send-notification', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                lineUserIds: [adminLineUserId],
+                message: undefined,
+                flexMessage: flexMessage,
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName} - ห้อง ${room.buildingName}-${room.roomNumber})`);
             }
 
             totalMessagesSent++;
@@ -1604,7 +1755,7 @@ export default function MessageTemplateModal({
               </button>
               <button
                 onClick={handleTestSend}
-                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
+                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'room_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
                 className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 title="ส่งข้อความทดสอบไปยัง LINE ของคุณ โดยใช้ข้อมูลจากผู้รับที่เลือกในตัวอย่าง"
               >
@@ -1624,7 +1775,7 @@ export default function MessageTemplateModal({
               </button>
               <button
                 onClick={handleSendMessages}
-                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
+                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'room_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSending ? (

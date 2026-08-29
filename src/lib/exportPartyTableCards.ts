@@ -29,11 +29,11 @@ interface CompanyGroup {
   count: number;
 }
 
-// A5 Landscape dimensions in Excel columns (approximate)
-// A5 = 210mm x 148mm landscape = 148mm wide
-// Each half (for A6 portrait) = 74mm wide ≈ 28 Excel columns
-const CARD_WIDTH = 28; // columns per card
-const CARD_SPACING = 2; // columns between cards
+// A4 Portrait layout - 2 tables per page (top and bottom)
+// Each table card uses left half of the page
+// A4 = 210mm wide, half = 105mm ≈ 40 Excel columns
+const CARD_WIDTH = 40; // columns per card (left half of A4)
+const ROWS_PER_PAGE = 2; // 2 tables per A4 page (top and bottom)
 
 export function exportPartyTableCards(tableSlots: TableSlot[], eventName: string) {
   // Sort table slots by table number
@@ -138,97 +138,85 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
     const cardData = createCardData(slot);
     const cardHeight = cardData.length;
 
-    // Add card twice (left and right) for A5 landscape
-    for (let side = 0; side < 2; side++) {
-      const startCol = side * (CARD_WIDTH + CARD_SPACING);
+    // Single card on left half of page
+    cardData.forEach((row, rowIdx) => {
+      const actualRow = currentRow + rowIdx;
 
-      cardData.forEach((row, rowIdx) => {
-        const actualRow = currentRow + rowIdx;
+      row.forEach((cellValue, colIdx) => {
+        const actualCol = colIdx;
+        const cellRef = XLSX.utils.encode_cell({ r: actualRow, c: actualCol });
 
-        row.forEach((cellValue, colIdx) => {
-          const actualCol = startCol + colIdx;
-          const cellRef = XLSX.utils.encode_cell({ r: actualRow, c: actualCol });
+        // Determine cell style based on content
+        let cellStyle: any = {};
 
-          // Determine cell style based on content
-          let cellStyle: any = {};
+        // Header row (table number) - ONLY colored element
+        if (rowIdx === 0) {
+          cellStyle = {
+            font: { bold: true, sz: 18, color: { rgb: 'FFFFFF' } },
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+            fill: { fgColor: { rgb: '7C3AED' } }, // Purple header
+            border: {
+              top: { style: 'medium', color: { rgb: '7C3AED' } },
+              bottom: { style: 'medium', color: { rgb: '7C3AED' } },
+              left: { style: 'medium', color: { rgb: '7C3AED' } },
+              right: { style: 'medium', color: { rgb: '7C3AED' } },
+            },
+          };
 
-          // Header row (table number)
-          if (rowIdx === 0) {
-            cellStyle = {
-              font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
-              alignment: { horizontal: colIdx === 0 ? 'center' : (colIdx === 2 ? 'center' : 'center'), vertical: 'center', wrapText: true },
-              fill: { fgColor: { rgb: '7C3AED' } },
-              border: {
-                top: { style: 'thin', color: { rgb: '000000' } },
-                bottom: { style: 'thin', color: { rgb: '000000' } },
-                left: { style: 'thin', color: { rgb: '000000' } },
-                right: { style: 'thin', color: { rgb: '000000' } },
-              },
-            };
-
-            // Merge header cells (for both left and right cards)
-            if (colIdx === 0) {
-              merges.push({ s: { r: actualRow, c: actualCol }, e: { r: actualRow, c: actualCol + 1 } });
-            }
+          // Merge header cells
+          if (colIdx === 0) {
+            merges.push({ s: { r: actualRow, c: actualCol }, e: { r: actualRow, c: actualCol + 1 } });
           }
-          // Company header rows
-          else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน') && colIdx === 2) {
+        }
+        // Count column (right-aligned)
+        else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน') && colIdx === 2) {
+          cellStyle = {
+            font: { bold: true, sz: 12, color: { rgb: '374151' } },
+            alignment: { horizontal: 'right', vertical: 'center' },
+          };
+        }
+        // Company name (bold, no background)
+        else if (cellValue && colIdx === 1 && !cellValue.startsWith('  •') && !cellValue.includes('─')) {
+          const nextCellHasCount = row[2] && String(row[2]).includes('คน');
+          if (nextCellHasCount) {
             cellStyle = {
-              font: { bold: true, sz: 11, color: { rgb: '7C3AED' } },
-              alignment: { horizontal: 'right', vertical: 'center' },
-              fill: { fgColor: { rgb: 'E5E7EB' } },
-            };
-          }
-          else if (cellValue && colIdx === 1 && !cellValue.startsWith('  •') && !cellValue.includes('─')) {
-            // Check if this is a company name (next column has "คน")
-            const nextCellHasCount = row[2] && String(row[2]).includes('คน');
-            if (nextCellHasCount) {
-              cellStyle = {
-                font: { bold: true, sz: 12, color: { rgb: '1F2937' } },
-                alignment: { horizontal: 'left', vertical: 'center' },
-                fill: { fgColor: { rgb: 'E5E7EB' } },
-              };
-            }
-          }
-          // Member rows
-          else if (cellValue && typeof cellValue === 'string' && cellValue.includes('•')) {
-            cellStyle = {
-              font: { sz: 11, color: { rgb: '4B5563' } },
-              alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
+              font: { bold: true, sz: 13, color: { rgb: '111827' } },
+              alignment: { horizontal: 'left', vertical: 'center' },
             };
           }
-          // Separator lines
-          else if (cellValue && typeof cellValue === 'string' && cellValue.includes('─')) {
-            cellStyle = {
-              font: { color: { rgb: 'D1D5DB' }, sz: 10 },
-              alignment: { horizontal: 'center', vertical: 'center' },
-            };
-          }
+        }
+        // Member rows (regular text with bullet)
+        else if (cellValue && typeof cellValue === 'string' && cellValue.includes('•')) {
+          cellStyle = {
+            font: { sz: 12, color: { rgb: '6B7280' } },
+            alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
+          };
+        }
+        // Separator lines (horizontal divider between companies)
+        else if (cellValue && typeof cellValue === 'string' && cellValue.includes('─')) {
+          cellStyle = {
+            font: { color: { rgb: 'D1D5DB' }, sz: 10 },
+            alignment: { horizontal: 'center', vertical: 'center' },
+          };
+        }
 
-          ws[cellRef] = { v: cellValue, t: 's', s: cellStyle };
-        });
+        ws[cellRef] = { v: cellValue, t: 's', s: cellStyle };
       });
-    }
+    });
 
-    // Move to next table (add spacing)
-    currentRow += cardHeight + 3;
+    // Move to next table with spacing
+    currentRow += cardHeight + 4;
   });
 
-  // Set column widths
+  // Set column widths - left half of A4 only
   const cols: XLSX.ColInfo[] = [];
-  for (let i = 0; i < (CARD_WIDTH + CARD_SPACING) * 2; i++) {
-    const inCard = i % (CARD_WIDTH + CARD_SPACING) < CARD_WIDTH;
-    if (inCard) {
-      const colInCard = i % (CARD_WIDTH + CARD_SPACING);
-      if (colInCard === 0) {
-        cols.push({ wch: 2 }); // Narrow first column
-      } else if (colInCard < CARD_WIDTH - 5) {
-        cols.push({ wch: 3 }); // Main content
-      } else {
-        cols.push({ wch: 3 }); // Count column
-      }
+  for (let i = 0; i < CARD_WIDTH; i++) {
+    if (i === 0) {
+      cols.push({ wch: 3 }); // Narrow first column for spacing
+    } else if (i < CARD_WIDTH - 8) {
+      cols.push({ wch: 4 }); // Main content area (company/member names)
     } else {
-      cols.push({ wch: 2 }); // Spacing between cards
+      cols.push({ wch: 3 }); // Count column area
     }
   }
   ws['!cols'] = cols;
@@ -238,14 +226,16 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
   for (let i = 0; i < currentRow; i++) {
     // Check if this is a header row
     const cellA = ws[XLSX.utils.encode_cell({ r: i, c: 0 })];
+    const cellB = ws[XLSX.utils.encode_cell({ r: i, c: 1 })];
+
     if (cellA && cellA.v && String(cellA.v).startsWith('โต๊ะที่')) {
-      rows[i] = { hpt: 30 };
-    } else if (cellA && cellA.v && String(cellA.v).includes('─')) {
-      rows[i] = { hpt: 8 };
-    } else if (cellA && cellA.v) {
-      rows[i] = { hpt: 20 };
+      rows[i] = { hpt: 35 }; // Header row - taller
+    } else if (cellB && cellB.v && String(cellB.v).includes('─')) {
+      rows[i] = { hpt: 10 }; // Separator line
+    } else if (cellB && cellB.v) {
+      rows[i] = { hpt: 22 }; // Content rows
     } else {
-      rows[i] = { hpt: 18 };
+      rows[i] = { hpt: 20 }; // Empty rows
     }
   }
   ws['!rows'] = rows;
@@ -253,10 +243,10 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
   // Apply merges
   ws['!merges'] = merges;
 
-  // Set range
+  // Set range - left half of A4 only
   ws['!ref'] = XLSX.utils.encode_range({
     s: { r: 0, c: 0 },
-    e: { r: currentRow - 1, c: (CARD_WIDTH + CARD_SPACING) * 2 - 1 }
+    e: { r: currentRow - 1, c: CARD_WIDTH - 1 }
   });
 
   return ws;
@@ -286,83 +276,75 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
 
     const cardHeight = cardData.length;
 
-    // Add card twice (left and right)
-    for (let side = 0; side < 2; side++) {
-      const startCol = side * (CARD_WIDTH + CARD_SPACING);
+    // Single card on left half
+    cardData.forEach((row, rowIdx) => {
+      const actualRow = currentRow + rowIdx;
 
-      cardData.forEach((row, rowIdx) => {
-        const actualRow = currentRow + rowIdx;
+      row.forEach((cellValue, colIdx) => {
+        const actualCol = colIdx;
+        const cellRef = XLSX.utils.encode_cell({ r: actualRow, c: actualCol });
 
-        row.forEach((cellValue, colIdx) => {
-          const actualCol = startCol + colIdx;
-          const cellRef = XLSX.utils.encode_cell({ r: actualRow, c: actualCol });
+        let cellStyle: any = {};
 
-          let cellStyle: any = {};
+        // Header row - ONLY colored element
+        if (rowIdx === 0) {
+          cellStyle = {
+            font: { bold: true, sz: 18, color: { rgb: 'FFFFFF' } },
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+            fill: { fgColor: { rgb: '7C3AED' } },
+            border: {
+              top: { style: 'medium', color: { rgb: '7C3AED' } },
+              bottom: { style: 'medium', color: { rgb: '7C3AED' } },
+              left: { style: 'medium', color: { rgb: '7C3AED' } },
+              right: { style: 'medium', color: { rgb: '7C3AED' } },
+            },
+          };
 
-          if (rowIdx === 0) {
-            cellStyle = {
-              font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
-              alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-              fill: { fgColor: { rgb: '7C3AED' } },
-              border: {
-                top: { style: 'thin', color: { rgb: '000000' } },
-                bottom: { style: 'thin', color: { rgb: '000000' } },
-                left: { style: 'thin', color: { rgb: '000000' } },
-                right: { style: 'thin', color: { rgb: '000000' } },
-              },
-            };
-
-            if (colIdx === 0) {
-              merges.push({ s: { r: actualRow, c: actualCol }, e: { r: actualRow, c: actualCol + 1 } });
-            }
+          if (colIdx === 0) {
+            merges.push({ s: { r: actualRow, c: actualCol }, e: { r: actualRow, c: actualCol + 1 } });
           }
-          else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน') && colIdx === 2) {
+        }
+        // Count column
+        else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน') && colIdx === 2) {
+          cellStyle = {
+            font: { bold: true, sz: 13, color: { rgb: '374151' } },
+            alignment: { horizontal: 'right', vertical: 'center' },
+          };
+        }
+        // Company name
+        else if (cellValue && colIdx === 1 && !cellValue.includes('─')) {
+          const nextCellHasCount = row[2] && String(row[2]).includes('คน');
+          if (nextCellHasCount) {
             cellStyle = {
-              font: { bold: true, sz: 12, color: { rgb: '7C3AED' } },
-              alignment: { horizontal: 'right', vertical: 'center' },
-              fill: { fgColor: { rgb: 'E5E7EB' } },
-            };
-          }
-          else if (cellValue && colIdx === 1 && !cellValue.includes('─')) {
-            const nextCellHasCount = row[2] && String(row[2]).includes('คน');
-            if (nextCellHasCount) {
-              cellStyle = {
-                font: { bold: true, sz: 13, color: { rgb: '1F2937' } },
-                alignment: { horizontal: 'left', vertical: 'center' },
-                fill: { fgColor: { rgb: 'E5E7EB' } },
-              };
-            }
-          }
-          else if (cellValue && typeof cellValue === 'string' && cellValue.includes('─')) {
-            cellStyle = {
-              font: { color: { rgb: 'D1D5DB' }, sz: 10 },
-              alignment: { horizontal: 'center', vertical: 'center' },
+              font: { bold: true, sz: 14, color: { rgb: '111827' } },
+              alignment: { horizontal: 'left', vertical: 'center' },
             };
           }
+        }
+        // Separator lines
+        else if (cellValue && typeof cellValue === 'string' && cellValue.includes('─')) {
+          cellStyle = {
+            font: { color: { rgb: 'D1D5DB' }, sz: 10 },
+            alignment: { horizontal: 'center', vertical: 'center' },
+          };
+        }
 
-          ws[cellRef] = { v: cellValue, t: 's', s: cellStyle };
-        });
+        ws[cellRef] = { v: cellValue, t: 's', s: cellStyle };
       });
-    }
+    });
 
-    currentRow += cardHeight + 3;
+    currentRow += cardHeight + 4;
   });
 
-  // Set column widths (same as detailed sheet)
+  // Set column widths - left half of A4 only
   const cols: XLSX.ColInfo[] = [];
-  for (let i = 0; i < (CARD_WIDTH + CARD_SPACING) * 2; i++) {
-    const inCard = i % (CARD_WIDTH + CARD_SPACING) < CARD_WIDTH;
-    if (inCard) {
-      const colInCard = i % (CARD_WIDTH + CARD_SPACING);
-      if (colInCard === 0) {
-        cols.push({ wch: 2 });
-      } else if (colInCard < CARD_WIDTH - 5) {
-        cols.push({ wch: 3 });
-      } else {
-        cols.push({ wch: 3 });
-      }
+  for (let i = 0; i < CARD_WIDTH; i++) {
+    if (i === 0) {
+      cols.push({ wch: 3 });
+    } else if (i < CARD_WIDTH - 8) {
+      cols.push({ wch: 4 });
     } else {
-      cols.push({ wch: 2 });
+      cols.push({ wch: 3 });
     }
   }
   ws['!cols'] = cols;
@@ -371,14 +353,16 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
   const rows: XLSX.RowInfo[] = [];
   for (let i = 0; i < currentRow; i++) {
     const cellA = ws[XLSX.utils.encode_cell({ r: i, c: 0 })];
+    const cellB = ws[XLSX.utils.encode_cell({ r: i, c: 1 })];
+
     if (cellA && cellA.v && String(cellA.v).startsWith('โต๊ะที่')) {
-      rows[i] = { hpt: 30 };
-    } else if (cellA && cellA.v && String(cellA.v).includes('─')) {
-      rows[i] = { hpt: 8 };
-    } else if (cellA && cellA.v) {
-      rows[i] = { hpt: 22 };
+      rows[i] = { hpt: 35 }; // Header row
+    } else if (cellB && cellB.v && String(cellB.v).includes('─')) {
+      rows[i] = { hpt: 10 }; // Separator line
+    } else if (cellB && cellB.v) {
+      rows[i] = { hpt: 24 }; // Company rows (slightly taller for summary)
     } else {
-      rows[i] = { hpt: 18 };
+      rows[i] = { hpt: 20 }; // Empty rows
     }
   }
   ws['!rows'] = rows;
@@ -386,7 +370,7 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
   ws['!merges'] = merges;
   ws['!ref'] = XLSX.utils.encode_range({
     s: { r: 0, c: 0 },
-    e: { r: currentRow - 1, c: (CARD_WIDTH + CARD_SPACING) * 2 - 1 }
+    e: { r: currentRow - 1, c: CARD_WIDTH - 1 }
   });
 
   return ws;

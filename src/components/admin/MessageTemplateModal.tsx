@@ -483,11 +483,13 @@ export default function MessageTemplateModal({
           console.log('[Room Assignment] Available rooms:', rooms?.length || 0);
 
           if (!roomAssignments) {
-            throw new Error(`No room assignment found for ${registration.contactName}`);
+            console.warn('[Room Assignment] No room assignment for:', registration.contactName);
+            continue;
           }
 
           if (!rooms || rooms.length === 0) {
-            throw new Error(`No rooms data available`);
+            console.warn('[Room Assignment] No rooms data available');
+            continue;
           }
 
           // Parse roomAssignments - support both formats:
@@ -580,12 +582,13 @@ export default function MessageTemplateModal({
             const attendeeNames = parseAttendeeNames(registration.attendeeNames);
 
             // Find which attendees from THIS registration are in this room
+            // Don't show company name for the owner's registration (the recipient)
             const membersInRoom = Object.entries(parsedRoomAssignments)
               .filter(([_, rId]) => rId === roomId)
               .map(([attendeeIndex, _]) => ({
                 name: attendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
                 registrationId: registration.registrationId,
-                companyName: registration.companyName || '',
+                companyName: '', // Don't show company for owner
               }));
 
             // Find roommates from OTHER registrations
@@ -1027,12 +1030,13 @@ export default function MessageTemplateModal({
             const attendeeNames = parseAttendeeNames(registration.attendeeNames);
 
             // Find which attendees from THIS registration are in this room
+            // Don't show company name for the owner's registration (the recipient)
             const membersInRoom = Object.entries(parsedRoomAssignments)
               .filter(([_, rId]) => rId === roomId)
               .map(([attendeeIndex, _]) => ({
                 name: attendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
                 registrationId: registration.registrationId,
-                companyName: registration.companyName || '',
+                companyName: '', // Don't show company for owner
               }));
 
             // Find roommates from OTHER registrations in test send

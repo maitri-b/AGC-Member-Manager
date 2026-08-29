@@ -1093,7 +1093,7 @@ export function generateRegistrationInfoFlexMessage(
         contents: [
           {
             type: 'text',
-            text: '🚗 รถของคุณ',
+            text: '🚗 หมายเลขรถแรลลี่ของคุณ',
             size: 'sm',
             weight: 'bold',
             color: '#1e40af',
@@ -1131,10 +1131,11 @@ export function generateRegistrationInfoFlexMessage(
           },
           {
             type: 'text',
-            text: 'โปรดแสดงเลขรถนี้ ณ จุดลงทะเบียน',
-            size: 'xs',
-            color: '#666666',
+            text: '⚠️ โปรดแสดงเลขรถนี้ ณ จุดลงทะเบียน',
+            size: 'sm',
+            color: '#dc2626',
             align: 'center',
+            weight: 'bold',
           },
         ],
         margin: 'md',
@@ -1163,7 +1164,7 @@ export function generateRegistrationInfoFlexMessage(
         contents: [
           {
             type: 'text',
-            text: '🚗 รถที่คุณร่วม Join',
+            text: '🚗 หมายเลขรถแรลลี่ที่คุณ Join',
             size: 'sm',
             weight: 'bold',
             color: '#c2410c',
@@ -1553,7 +1554,7 @@ export function generateFelixRegistrationInfoFlexMessage(
     contents: [
       {
         type: 'text',
-        text: '🅿️ จุดจอดรถโรงแรมที่แนะนำสำหรับคุณ',
+        text: '🅿️ จุดจอดรถที่โรงแรมแนะนำสำหรับคุณ',
         size: 'sm',
         weight: 'bold',
         color: '#7c3aed',
@@ -1650,7 +1651,7 @@ export function generateFelixRegistrationInfoFlexMessage(
         contents: [
           {
             type: 'text',
-            text: '🚗 รถของคุณ',
+            text: '🚗 หมายเลขรถแรลลี่ของคุณ',
             size: 'sm',
             weight: 'bold',
             color: '#1e40af',
@@ -1688,10 +1689,11 @@ export function generateFelixRegistrationInfoFlexMessage(
           },
           {
             type: 'text',
-            text: 'โปรดแสดงเลขรถนี้ ณ จุดลงทะเบียน',
-            size: 'xs',
-            color: '#666666',
+            text: '⚠️ โปรดแสดงเลขรถนี้ ณ จุดลงทะเบียน',
+            size: 'sm',
+            color: '#dc2626',
             align: 'center',
+            weight: 'bold',
           },
         ],
         margin: 'md',
@@ -1720,7 +1722,7 @@ export function generateFelixRegistrationInfoFlexMessage(
         contents: [
           {
             type: 'text',
-            text: '🚗 รถที่คุณร่วม Join',
+            text: '🚗 หมายเลขรถแรลลี่ที่คุณ Join',
             size: 'sm',
             weight: 'bold',
             color: '#c2410c',

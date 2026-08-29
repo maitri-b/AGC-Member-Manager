@@ -2247,11 +2247,13 @@ function TabTableNumbers({
     // Apply "not full" filter
     if (filterNotFull) {
       slots = slots.filter(slot => {
-        // Only show slots that have groups with members less than defaultSeats
-        return slot.groups.some(group => {
-          const memberCount = group.isReservation ? (group.reservedSeats || 0) : group.members.length;
-          return memberCount < defaultSeats;
-        });
+        // Calculate total members from ALL groups in this table
+        const totalMembers = slot.groups.reduce((sum, g) => {
+          const memberCount = g.isReservation ? (g.reservedSeats || 0) : g.members.length;
+          return sum + memberCount;
+        }, 0);
+        // Show only tables where total is less than defaultSeats
+        return totalMembers < defaultSeats;
       });
     }
 

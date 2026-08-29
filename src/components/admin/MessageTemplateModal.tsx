@@ -701,6 +701,8 @@ export default function MessageTemplateModal({
                   event.eventName
                 );
 
+                console.log('[Room Assignment] Generated flexMessage for:', registration.contactName);
+                console.log('[Room Assignment] Flex message structure:', JSON.stringify(flexMessage, null, 2));
                 console.log('[Room Assignment] Sending to:', registration.contactName, 'LINE ID:', lineUserId);
 
                 const response = await fetch('/api/line/send-notification', {
@@ -713,11 +715,15 @@ export default function MessageTemplateModal({
                   }),
                 });
 
+                console.log('[Room Assignment] Response status:', response.status);
+
                 if (!response.ok) {
                   const errorData = await response.json().catch(() => ({}));
                   console.error('[Room Assignment] Failed to send:', registration.contactName, 'Error:', errorData);
                   throw new Error(`Failed to send room ${room.buildingName}-${room.roomNumber} to ${registration.contactName}: ${JSON.stringify(errorData)}`);
                 }
+
+                console.log('[Room Assignment] Successfully sent to:', registration.contactName);
 
                 return { success: true, name: `${registration.contactName} (ห้อง ${room.buildingName}-${room.roomNumber})` };
               })()
@@ -1195,6 +1201,9 @@ export default function MessageTemplateModal({
               event.eventName
             );
 
+            console.log('[Test Send - Room] Generated flexMessage:', JSON.stringify(flexMessage, null, 2));
+            console.log('[Test Send - Room] Sending to admin LINE:', adminLineUserId);
+
             const response = await fetch('/api/line/send-notification', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1205,11 +1214,17 @@ export default function MessageTemplateModal({
               }),
             });
 
+            console.log('[Test Send - Room] Response status:', response.status);
+
             if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
               console.error(`[Test Send - Room] Failed to send to ${registration.contactName} - ห้อง ${room.buildingName}-${room.roomNumber}`);
+              console.error('[Test Send - Room] Error response:', errorData);
               // Continue to next room instead of throwing error
               continue;
             }
+
+            console.log('[Test Send - Room] Successfully sent!');
 
             totalMessagesSent++;
           }

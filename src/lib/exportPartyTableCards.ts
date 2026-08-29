@@ -205,7 +205,7 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
       // Count cells (X คน)
       else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน')) {
         style = {
-          font: { bold: true, sz: 11 },
+          font: { sz: 11 },
           alignment: { horizontal: 'right', vertical: 'center' },
         };
       }
@@ -214,7 +214,7 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
         const nextCell = ws[XLSX.utils.encode_cell({ r: R, c: C + 1 })];
         if (nextCell && nextCell.v && String(nextCell.v).includes('คน')) {
           style = {
-            font: { bold: true, sz: 12 },
+            font: { sz: 12 },
             alignment: { horizontal: 'left', vertical: 'center' },
           };
         }
@@ -340,7 +340,7 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
       // Count cells (X คน)
       else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน')) {
         style = {
-          font: { bold: true, sz: 12 },
+          font: { sz: 12 },
           alignment: { horizontal: 'right', vertical: 'center' },
         };
       }
@@ -349,7 +349,7 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
         const nextCell = ws[XLSX.utils.encode_cell({ r: R, c: C + 1 })];
         if (nextCell && nextCell.v && String(nextCell.v).includes('คน')) {
           style = {
-            font: { bold: true, sz: 13 },
+            font: { sz: 13 },
             alignment: { horizontal: 'left', vertical: 'center' },
           };
         }

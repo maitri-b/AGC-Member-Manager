@@ -887,6 +887,12 @@ export default function CarpoolManagementModal({
           );
 
           const regData = attendee?.registration || {};
+
+          // Skip if registration is cancelled
+          const status = String(regData.status || '').toLowerCase();
+          const isCancelled = status === 'cancelled' || regData.status?.includes('ยกเลิก');
+          if (isCancelled) return;
+
           const companyName = regData.companyName || 'ไม่ระบุบริษัท';
 
           // Parse attendee names using normalization helper
@@ -931,6 +937,11 @@ export default function CarpoolManagementModal({
 
         // Skip if already in map (has cars)
         if (companyCarMap.has(registrationId)) return;
+
+        // Skip if registration is cancelled
+        const status = String(regData.status || '').toLowerCase();
+        const isCancelled = status === 'cancelled' || regData.status?.includes('ยกเลิก');
+        if (isCancelled) return;
 
         const companyName = regData.companyName || 'ไม่ระบุบริษัท';
 

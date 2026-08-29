@@ -439,7 +439,8 @@ export default function MessageTemplateModal({
       if (activeTab === 'templates' && selectedTemplate === 'room_assignment') {
         try {
           console.log('[Room Assignment] Fetching all event registrations...');
-          const response = await fetch(`/api/admin/events/${event.eventId}/registrations`);
+          const encodedEventId = encodeURIComponent(event.eventId);
+          const response = await fetch(`/api/admin/events/${encodedEventId}/registrations`);
           if (response.ok) {
             const data = await response.json();
             allEventRegistrations = data.registrations || [];
@@ -950,7 +951,8 @@ export default function MessageTemplateModal({
       if (activeTab === 'templates' && selectedTemplate === 'room_assignment') {
         try {
           console.log('[Test Send - Room] Fetching all event registrations...');
-          const response = await fetch(`/api/admin/events/${event.eventId}/registrations`);
+          const encodedEventId = encodeURIComponent(event.eventId);
+          const response = await fetch(`/api/admin/events/${encodedEventId}/registrations`);
           if (response.ok) {
             const data = await response.json();
             allEventRegistrationsForTest = data.registrations || [];

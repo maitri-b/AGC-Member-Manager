@@ -29,11 +29,11 @@ interface CompanyGroup {
   count: number;
 }
 
-// A4 Portrait layout - 2 tables per page (top and bottom)
-// Each table has fixed number of rows to fit exactly half page
+// A4 Portrait layout - 1 table per page (using half-page height)
+// Each table has fixed number of rows to fit half A4 portrait height
 // Simple 3-column layout: [spacing] [content] [count]
 const CONTENT_COLS = 3; // Just 3 columns: empty, content, count
-const ROWS_PER_TABLE = 35; // Fixed rows per table (including header, content, empty rows)
+const ROWS_PER_TABLE = 28; // Fixed rows per table (including header, total, content, empty rows) - half A4 portrait
 
 export function exportPartyTableCards(tableSlots: TableSlot[], eventName: string) {
   // Sort table slots by table number
@@ -139,8 +139,11 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
     // Start tracking rows for this table
     const tableStartRow = data.length;
 
-    // Header row with purple background
-    data.push([`โต๊ะที่ ${slot.tableNumber}`, '', `รวม ${totalMembers} คน`]);
+    // Header row with purple background (merge all 3 columns)
+    data.push([`โต๊ะที่ ${slot.tableNumber}`, '', '']);
+
+    // Total count row (centered)
+    data.push(['', `รวม ${totalMembers} คน`, '']);
 
     // Empty row after header
     data.push(['', '', '']);
@@ -191,10 +194,10 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
       const cellValue = cell.v;
       let style: any = {};
 
-      // Header rows (โต๊ะที่ X) - ONLY colored element
+      // Header rows (โต๊ะที่ X) - ONLY colored element, merge all 3 columns
       if (cellValue && typeof cellValue === 'string' && cellValue.startsWith('โต๊ะที่')) {
         style = {
-          font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+          font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
           alignment: { horizontal: 'center', vertical: 'center' },
           fill: { fgColor: { rgb: '7C3AED' } },
           border: {
@@ -205,12 +208,19 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
           },
         };
 
-        // Add merge for columns A and B for this header row
+        // Add merge for all 3 columns (A, B, C) for this header row
         if (C === 0) {
-          merges.push({ s: { r: R, c: 0 }, e: { r: R, c: 1 } });
+          merges.push({ s: { r: R, c: 0 }, e: { r: R, c: 2 } });
         }
       }
-      // Count cells (X คน)
+      // Total count row (รวม X คน) - centered
+      else if (cellValue && typeof cellValue === 'string' && cellValue.startsWith('รวม') && cellValue.includes('คน')) {
+        style = {
+          font: { sz: 12, bold: true },
+          alignment: { horizontal: 'center', vertical: 'center' },
+        };
+      }
+      // Count cells (X คน) - right aligned
       else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน')) {
         style = {
           font: { sz: 11 },
@@ -256,25 +266,42 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
     { wch: 12 },  // Column C: count
   ];
 
-  // Set row heights
+  // Set row heights and page breaks
   const rows: XLSX.RowInfo[] = [];
+  let currentRow = 0;
+
   for (let i = 0; i <= range.e.r; i++) {
     const cellA = ws[XLSX.utils.encode_cell({ r: i, c: 0 })];
+    const cellB = ws[XLSX.utils.encode_cell({ r: i, c: 1 })];
 
     if (cellA && cellA.v && String(cellA.v).startsWith('โต๊ะที่')) {
-      rows[i] = { hpt: 40 }; // Header row - taller to fit font
-    } else {
-      const cellB = ws[XLSX.utils.encode_cell({ r: i, c: 1 })];
-      if (cellB && cellB.v && String(cellB.v).includes('─')) {
-        rows[i] = { hpt: 8 }; // Separator
-      } else if (cellB && cellB.v) {
-        rows[i] = { hpt: 18 }; // Content rows
+      // Add page break before each new table (except first table)
+      if (i > 0) {
+        rows[i] = { hpt: 30, hpx: 30 };
       } else {
-        rows[i] = { hpt: 15 }; // Empty rows
+        rows[i] = { hpt: 30 }; // Header row - smaller height
       }
+      currentRow = i;
+    } else if (cellB && cellB.v && String(cellB.v).startsWith('รวม') && String(cellB.v).includes('คน')) {
+      rows[i] = { hpt: 25 }; // Total count row
+    } else if (cellB && cellB.v && String(cellB.v).includes('─')) {
+      rows[i] = { hpt: 8 }; // Separator
+    } else if (cellB && cellB.v) {
+      rows[i] = { hpt: 18 }; // Content rows
+    } else {
+      rows[i] = { hpt: 15 }; // Empty rows
     }
   }
   ws['!rows'] = rows;
+
+  // Add page breaks - one page per table
+  const pageBreaks: number[] = [];
+  for (let i = ROWS_PER_TABLE; i < data.length; i += ROWS_PER_TABLE) {
+    pageBreaks.push(i);
+  }
+  if (pageBreaks.length > 0) {
+    ws['!pageBreaks'] = { rows: pageBreaks };
+  }
 
   return ws;
 }
@@ -289,8 +316,11 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
     // Start tracking rows for this table
     const tableStartRow = data.length;
 
-    // Header row with purple background
-    data.push([`โต๊ะที่ ${slot.tableNumber}`, '', `รวม ${totalMembers} คน`]);
+    // Header row with purple background (merge all 3 columns)
+    data.push([`โต๊ะที่ ${slot.tableNumber}`, '', '']);
+
+    // Total count row (centered)
+    data.push(['', `รวม ${totalMembers} คน`, '']);
 
     // Empty row after header
     data.push(['', '', '']);
@@ -333,10 +363,10 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
       const cellValue = cell.v;
       let style: any = {};
 
-      // Header rows (โต๊ะที่ X) - ONLY colored element
+      // Header rows (โต๊ะที่ X) - ONLY colored element, merge all 3 columns
       if (cellValue && typeof cellValue === 'string' && cellValue.startsWith('โต๊ะที่')) {
         style = {
-          font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+          font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
           alignment: { horizontal: 'center', vertical: 'center' },
           fill: { fgColor: { rgb: '7C3AED' } },
           border: {
@@ -347,12 +377,19 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
           },
         };
 
-        // Add merge for columns A and B for this header row
+        // Add merge for all 3 columns (A, B, C) for this header row
         if (C === 0) {
-          merges.push({ s: { r: R, c: 0 }, e: { r: R, c: 1 } });
+          merges.push({ s: { r: R, c: 0 }, e: { r: R, c: 2 } });
         }
       }
-      // Count cells (X คน)
+      // Total count row (รวม X คน) - centered
+      else if (cellValue && typeof cellValue === 'string' && cellValue.startsWith('รวม') && cellValue.includes('คน')) {
+        style = {
+          font: { sz: 12, bold: true },
+          alignment: { horizontal: 'center', vertical: 'center' },
+        };
+      }
+      // Count cells (X คน) - right aligned
       else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน')) {
         style = {
           font: { sz: 12 },
@@ -391,25 +428,42 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
     { wch: 12 },  // Column C: count
   ];
 
-  // Set row heights
+  // Set row heights and page breaks
   const rows: XLSX.RowInfo[] = [];
+  let currentRow = 0;
+
   for (let i = 0; i <= range.e.r; i++) {
     const cellA = ws[XLSX.utils.encode_cell({ r: i, c: 0 })];
+    const cellB = ws[XLSX.utils.encode_cell({ r: i, c: 1 })];
 
     if (cellA && cellA.v && String(cellA.v).startsWith('โต๊ะที่')) {
-      rows[i] = { hpt: 40 }; // Header row - taller to fit font
-    } else {
-      const cellB = ws[XLSX.utils.encode_cell({ r: i, c: 1 })];
-      if (cellB && cellB.v && String(cellB.v).includes('─')) {
-        rows[i] = { hpt: 8 }; // Separator
-      } else if (cellB && cellB.v) {
-        rows[i] = { hpt: 20 }; // Company rows (slightly taller for summary)
+      // Add page break before each new table (except first table)
+      if (i > 0) {
+        rows[i] = { hpt: 30, hpx: 30 };
       } else {
-        rows[i] = { hpt: 15 }; // Empty rows
+        rows[i] = { hpt: 30 }; // Header row - smaller height
       }
+      currentRow = i;
+    } else if (cellB && cellB.v && String(cellB.v).startsWith('รวม') && String(cellB.v).includes('คน')) {
+      rows[i] = { hpt: 25 }; // Total count row
+    } else if (cellB && cellB.v && String(cellB.v).includes('─')) {
+      rows[i] = { hpt: 8 }; // Separator
+    } else if (cellB && cellB.v) {
+      rows[i] = { hpt: 20 }; // Company rows (slightly taller for summary)
+    } else {
+      rows[i] = { hpt: 15 }; // Empty rows
     }
   }
   ws['!rows'] = rows;
+
+  // Add page breaks - one page per table
+  const pageBreaks: number[] = [];
+  for (let i = ROWS_PER_TABLE; i < data.length; i += ROWS_PER_TABLE) {
+    pageBreaks.push(i);
+  }
+  if (pageBreaks.length > 0) {
+    ws['!pageBreaks'] = { rows: pageBreaks };
+  }
 
   return ws;
 }

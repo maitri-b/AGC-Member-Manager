@@ -6756,6 +6756,7 @@ export default function EventDetailPage() {
           }
           event={eventData.event as any} // Cast to Event type
           carpoolsData={carpoolsDataForMessages}
+          rooms={allRooms} // Pass rooms data for Felix parking lookup
         />
       )}
 

@@ -29,6 +29,12 @@ interface MessageTemplateModalProps {
   }>;
   event: Event;
   carpoolsData?: Record<string, CarpoolData[]>; // Map registrationId to array of carpool data (support multiple cars)
+  rooms?: Array<{
+    roomId: string;
+    buildingName: string;
+    roomNumber: string;
+    [key: string]: any;
+  }>; // Rooms data for Felix parking lookup
 }
 
 interface SavedTemplate {
@@ -60,6 +66,7 @@ export default function MessageTemplateModal({
   selectedRegistrations,
   event,
   carpoolsData,
+  rooms,
 }: MessageTemplateModalProps) {
   const [activeTab, setActiveTab] = useState<'templates' | 'custom' | 'history'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplateType | null>(null);
@@ -510,7 +517,8 @@ export default function MessageTemplateModal({
                 registration,
                 event.eventName,
                 ownedCarpools,
-                joinedCarpools
+                joinedCarpools,
+                rooms || [] // Pass rooms data for parking lookup
               );
 
               const response = await fetch('/api/line/send-notification', {

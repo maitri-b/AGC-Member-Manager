@@ -1301,6 +1301,7 @@ function extractBuildingName(roomAssignment: string): string {
  * @param eventName Name of the event
  * @param ownedCarpools Array of carpools where this registration is the owner
  * @param joinedCarpools Array of carpools where this registration joined others
+ * @param rooms Array of room data for looking up room names from roomIds
  */
 export function generateFelixRegistrationInfoFlexMessage(
   registration: EventRegistration,
@@ -1312,6 +1313,12 @@ export function generateFelixRegistrationInfoFlexMessage(
   joinedCarpools: Array<{
     licensePlate: string;
     assignedCarNumber?: number;
+  }> = [],
+  rooms: Array<{
+    roomId: string;
+    buildingName: string;
+    roomNumber: string;
+    [key: string]: any;
   }> = []
 ): any {
   // Parse attendee names with normalization
@@ -1499,9 +1506,35 @@ export function generateFelixRegistrationInfoFlexMessage(
     // Extract all unique buildings from room assignments
     if (Array.isArray(roomData)) {
       console.log('[Felix Parking] Processing roomData array, length:', roomData.length);
+      console.log('[Felix Parking] Available rooms for lookup:', rooms.length);
+
       roomData.forEach((room: any, index: number) => {
-        const roomStr = typeof room === 'string' ? room : (room?.room || room?.roomNumber || '');
-        console.log(`[Felix Parking] Room ${index}:`, roomStr);
+        // First try to get roomId and lookup in rooms array
+        const roomId = room?.roomId;
+        console.log(`[Felix Parking] Room ${index} roomId:`, roomId);
+
+        let roomStr = '';
+
+        if (roomId && rooms.length > 0) {
+          // Lookup room data from rooms array using roomId
+          const roomInfo = rooms.find(r => r.roomId === roomId);
+          console.log(`[Felix Parking] Looked up room info for ${roomId}:`, roomInfo);
+
+          if (roomInfo) {
+            // Use buildingName-roomNumber format from room data
+            roomStr = roomInfo.buildingName && roomInfo.roomNumber
+              ? `${roomInfo.buildingName}-${roomInfo.roomNumber}`
+              : roomInfo.buildingName || '';
+            console.log(`[Felix Parking] Constructed room string from lookup:`, roomStr);
+          }
+        }
+
+        // Fallback: if no roomId or lookup failed, try to get from room object directly
+        if (!roomStr) {
+          roomStr = typeof room === 'string' ? room : (room?.room || room?.roomNumber || '');
+          console.log(`[Felix Parking] Using fallback room string:`, roomStr);
+        }
+
         const building = extractBuildingName(roomStr);
         console.log(`[Felix Parking] Extracted building from room ${index}:`, building);
         if (building && !buildings.includes(building)) {

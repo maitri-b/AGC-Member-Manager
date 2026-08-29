@@ -67,6 +67,7 @@ export interface PartyTableSettings {
   maxSeatsPerTable?: number;          // Hard limit (optional, can exceed with warning)
   showTableNumbersToMembers: boolean; // Whether members can see assigned table numbers
   tableActive: boolean;               // Feature visibility toggle for members
+  seatingChartUrl?: string;           // URL to seating chart image in Google Cloud Storage
 }
 
 /**

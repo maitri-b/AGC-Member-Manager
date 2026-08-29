@@ -2545,6 +2545,105 @@ export default function AdminEventsPage() {
                         )}
                       </div>
 
+                      {/* Seating Chart Upload */}
+                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <label className="block text-xs font-semibold text-blue-900 mb-2">
+                          ผังที่นั่งโต๊ะปาร์ตี้ (Seating Chart)
+                        </label>
+                        <p className="text-xs text-blue-700 mb-3">
+                          อัพโหลดรูปผังที่นั่งเพื่อแชร์ให้สมาชิกผ่าน LINE (รองรับไฟล์รูปภาพ สูงสุด 10MB)
+                        </p>
+
+                        {formData.partyTableSettings?.seatingChartUrl ? (
+                          <div className="space-y-2">
+                            <div className="bg-white p-3 rounded border border-blue-300">
+                              <img
+                                src={formData.partyTableSettings.seatingChartUrl}
+                                alt="Seating Chart"
+                                className="max-w-full h-auto max-h-64 mx-auto rounded"
+                              />
+                              <p className="text-xs text-gray-600 mt-2 text-center">ผังที่นั่งปัจจุบัน</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => window.open(formData.partyTableSettings?.seatingChartUrl, '_blank')}
+                                className="flex-1 px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                              >
+                                เปิดดูรูปเต็ม
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm('ต้องการลบผังที่นั่งนี้หรือไม่?')) {
+                                    setFormData({
+                                      ...formData,
+                                      partyTableSettings: {
+                                        ...formData.partyTableSettings!,
+                                        seatingChartUrl: undefined
+                                      }
+                                    });
+                                  }
+                                }}
+                                className="flex-1 px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                              >
+                                ลบรูป
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+
+                                // Validate file size
+                                if (file.size > 10 * 1024 * 1024) {
+                                  alert('ไฟล์ใหญ่เกินไป กรุณาเลือกไฟล์ที่มีขนาดไม่เกิน 10MB');
+                                  return;
+                                }
+
+                                try {
+                                  const uploadFormData = new FormData();
+                                  uploadFormData.append('file', file);
+                                  uploadFormData.append('eventId', editingEvent?.eventId || 'temp');
+
+                                  const response = await fetch('/api/admin/events/seating-chart', {
+                                    method: 'POST',
+                                    body: uploadFormData,
+                                  });
+
+                                  const result = await response.json();
+
+                                  if (response.ok && result.url) {
+                                    setFormData({
+                                      ...formData,
+                                      partyTableSettings: {
+                                        ...formData.partyTableSettings!,
+                                        seatingChartUrl: result.url
+                                      }
+                                    });
+                                  } else {
+                                    alert('เกิดข้อผิดพลาดในการอัพโหลดรูป: ' + (result.error || 'Unknown error'));
+                                  }
+                                } catch (error) {
+                                  console.error('Upload error:', error);
+                                  alert('เกิดข้อผิดพลาดในการอัพโหลดรูป');
+                                }
+
+                                // Reset input
+                                e.target.value = '';
+                              }}
+                              className="w-full text-xs text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">รองรับ JPG, PNG, GIF (สูงสุด 10MB)</p>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex items-center gap-2 p-2 bg-gray-50 rounded mt-3">
                         <svg className="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

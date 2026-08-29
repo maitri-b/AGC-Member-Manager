@@ -39,29 +39,32 @@ export function exportPartyTableCards(tableSlots: TableSlot[], eventName: string
   // Sort table slots by table number
   const sortedSlots = [...tableSlots].sort((a, b) => a.tableNumber - b.tableNumber);
 
-  // Create workbook
-  const wb = XLSX.utils.book_new();
+  const timestamp = new Date().toISOString().split('T')[0];
+  const baseFilename = eventName.replace(/[^a-zA-Z0-9ก-๙]/g, '_');
 
-  // Create separate sheet for each table (detailed version)
+  // Create workbook 1: Detailed version (with member names)
+  const wbDetailed = XLSX.utils.book_new();
   sortedSlots.forEach((slot) => {
     const sheet = createSingleTableSheet(slot, true); // true = detailed with member names
-    XLSX.utils.book_append_sheet(wb, sheet, `โต๊ะ ${slot.tableNumber} (รายละเอียด)`);
+    XLSX.utils.book_append_sheet(wbDetailed, sheet, `โต๊ะ ${slot.tableNumber}`);
   });
 
-  // Create separate sheet for each table (summary version)
+  // Create workbook 2: Summary version (without member names)
+  const wbSummary = XLSX.utils.book_new();
   sortedSlots.forEach((slot) => {
     const sheet = createSingleTableSheet(slot, false); // false = summary without member names
-    XLSX.utils.book_append_sheet(wb, sheet, `โต๊ะ ${slot.tableNumber} (สรุป)`);
+    XLSX.utils.book_append_sheet(wbSummary, sheet, `โต๊ะ ${slot.tableNumber}`);
   });
 
-  // Generate filename
-  const timestamp = new Date().toISOString().split('T')[0];
-  const filename = `Party_Table_Cards_${eventName.replace(/[^a-zA-Z0-9ก-๙]/g, '_')}_${timestamp}.xlsx`;
+  // Download detailed file
+  const filenameDetailed = `Party_Table_Cards_${baseFilename}_รายละเอียด_${timestamp}.xlsx`;
+  XLSX.writeFile(wbDetailed, filenameDetailed);
 
-  // Download file
-  XLSX.writeFile(wb, filename);
+  // Download summary file
+  const filenameSummary = `Party_Table_Cards_${baseFilename}_สรุป_${timestamp}.xlsx`;
+  XLSX.writeFile(wbSummary, filenameSummary);
 
-  return filename;
+  return `${filenameDetailed}, ${filenameSummary}`;
 }
 
 function groupMembersByCompany(slot: TableSlot): CompanyGroup[] {

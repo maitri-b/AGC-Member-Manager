@@ -166,8 +166,8 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
               },
             };
 
-            // Merge header cells
-            if (colIdx === 0 && side === 0) {
+            // Merge header cells (for both left and right cards)
+            if (colIdx === 0) {
               merges.push({ s: { r: actualRow, c: actualCol }, e: { r: actualRow, c: actualCol + 1 } });
             }
           }
@@ -312,7 +312,7 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
               },
             };
 
-            if (colIdx === 0 && side === 0) {
+            if (colIdx === 0) {
               merges.push({ s: { r: actualRow, c: actualCol }, e: { r: actualRow, c: actualCol + 1 } });
             }
           }

@@ -1076,6 +1076,7 @@ export default function PartyTableManagementModal({
               }}
               onEditTableName={handleEditTableName}
               defaultSeats={defaultSeats}
+              maxSeats={maxSeats}
             />
           )}
         </div>
@@ -2190,6 +2191,7 @@ function TabTableNumbers({
   onRemoveMember,
   onEditTableName,
   defaultSeats,
+  maxSeats,
 }: {
   tableSlots: TableSlot[];
   unassignedTables: EnrichedPartyTable[];
@@ -2203,6 +2205,7 @@ function TabTableNumbers({
   onRemoveMember: (tableId: string, registrationId: string, attendeeIndex: number, name: string) => void;
   onEditTableName: (table: EnrichedPartyTable) => void;
   defaultSeats: number;
+  maxSeats?: number;
 }) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [filterNotFull, setFilterNotFull] = React.useState(false);

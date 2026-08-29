@@ -477,7 +477,10 @@ export default function MessageTemplateModal({
           // Room assignment: Parse roomAssignments and send notification
           const roomAssignments = registration.roomAssignments;
 
-          console.log('[Room Assignment] Processing:', registration.registrationId, 'roomAssignments:', roomAssignments);
+          console.log('[Room Assignment] Processing:', registration.registrationId, registration.contactName);
+          console.log('[Room Assignment] roomAssignments type:', typeof roomAssignments);
+          console.log('[Room Assignment] roomAssignments value:', roomAssignments);
+          console.log('[Room Assignment] Available rooms:', rooms?.length || 0);
 
           if (!roomAssignments) {
             throw new Error(`No room assignment found for ${registration.contactName}`);
@@ -487,23 +490,32 @@ export default function MessageTemplateModal({
             throw new Error(`No rooms data available`);
           }
 
-          // Parse roomAssignments (could be string or object)
+          // Parse roomAssignments (following Felix template pattern)
           let parsedRoomAssignments: Record<string, string> = {};
+
           if (typeof roomAssignments === 'string') {
+            console.log('[Room Assignment] Parsing string roomAssignments');
             try {
               parsedRoomAssignments = JSON.parse(roomAssignments);
+              console.log('[Room Assignment] Successfully parsed JSON');
             } catch (e) {
               console.error('[Room Assignment] Parse error:', e);
               throw new Error(`Invalid room assignments format for ${registration.contactName}`);
             }
-          } else if (typeof roomAssignments === 'object') {
+          } else if (typeof roomAssignments === 'object' && roomAssignments !== null) {
+            console.log('[Room Assignment] roomAssignments is already an object');
             parsedRoomAssignments = roomAssignments as Record<string, string>;
+          } else {
+            console.error('[Room Assignment] Unexpected roomAssignments type:', typeof roomAssignments);
+            throw new Error(`Invalid room assignments type for ${registration.contactName}`);
           }
 
           console.log('[Room Assignment] Parsed assignments:', parsedRoomAssignments);
+          console.log('[Room Assignment] Assignment keys:', Object.keys(parsedRoomAssignments));
+          console.log('[Room Assignment] Assignment values:', Object.values(parsedRoomAssignments));
 
           // Get all unique room IDs
-          const roomIds = new Set(Object.values(parsedRoomAssignments));
+          const roomIds = new Set(Object.values(parsedRoomAssignments).filter(id => id)); // Filter out empty values
 
           console.log('[Room Assignment] Unique room IDs:', Array.from(roomIds));
 
@@ -513,11 +525,22 @@ export default function MessageTemplateModal({
 
           // Send one message per room
           for (const roomId of roomIds) {
-            const room = rooms.find(r => r.roomId === roomId);
-            console.log('[Room Assignment] Looking for room:', roomId, 'found:', room);
+            console.log('[Room Assignment] Processing roomId:', roomId);
+            console.log('[Room Assignment] Searching in', rooms.length, 'rooms');
+
+            const room = rooms.find(r => {
+              const match = r.roomId === roomId;
+              if (match) {
+                console.log('[Room Assignment] Match found:', r.roomId, r.buildingName, r.roomNumber);
+              }
+              return match;
+            });
+
+            console.log('[Room Assignment] Room lookup result:', room ? `${room.buildingName}-${room.roomNumber}` : 'NOT FOUND');
 
             if (!room) {
-              console.warn('[Room Assignment] Room not found:', roomId);
+              console.warn('[Room Assignment] Room not found for roomId:', roomId);
+              console.warn('[Room Assignment] Sample room IDs from database:', rooms.slice(0, 5).map(r => r.roomId));
               continue;
             }
 

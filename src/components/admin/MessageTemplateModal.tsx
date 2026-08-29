@@ -490,18 +490,41 @@ export default function MessageTemplateModal({
             throw new Error(`No rooms data available`);
           }
 
-          // Parse roomAssignments (following Felix template pattern)
+          // Parse roomAssignments - support both formats:
+          // 1. Array format: [{roomId: "xxx", attendeeIndex: 0}, ...]
+          // 2. Object format: {"0": "roomId", "1": "roomId", ...}
           let parsedRoomAssignments: Record<string, string> = {};
 
           if (typeof roomAssignments === 'string') {
             console.log('[Room Assignment] Parsing string roomAssignments');
             try {
-              parsedRoomAssignments = JSON.parse(roomAssignments);
+              const parsed = JSON.parse(roomAssignments);
+              if (Array.isArray(parsed)) {
+                console.log('[Room Assignment] Converting array format to object format');
+                // Convert array format to object format
+                parsedRoomAssignments = parsed.reduce((acc, item) => {
+                  if (item.roomId && item.attendeeIndex !== undefined) {
+                    acc[item.attendeeIndex.toString()] = item.roomId;
+                  }
+                  return acc;
+                }, {} as Record<string, string>);
+              } else {
+                parsedRoomAssignments = parsed;
+              }
               console.log('[Room Assignment] Successfully parsed JSON');
             } catch (e) {
               console.error('[Room Assignment] Parse error:', e);
               throw new Error(`Invalid room assignments format for ${registration.contactName}`);
             }
+          } else if (Array.isArray(roomAssignments)) {
+            console.log('[Room Assignment] Converting array format to object format');
+            // Array format directly
+            parsedRoomAssignments = roomAssignments.reduce((acc, item) => {
+              if (item.roomId && item.attendeeIndex !== undefined) {
+                acc[item.attendeeIndex.toString()] = item.roomId;
+              }
+              return acc;
+            }, {} as Record<string, string>);
           } else if (typeof roomAssignments === 'object' && roomAssignments !== null) {
             console.log('[Room Assignment] roomAssignments is already an object');
             parsedRoomAssignments = roomAssignments as Record<string, string>;
@@ -515,7 +538,7 @@ export default function MessageTemplateModal({
           console.log('[Room Assignment] Assignment values:', Object.values(parsedRoomAssignments));
 
           // Get all unique room IDs
-          const roomIds = new Set(Object.values(parsedRoomAssignments).filter(id => id)); // Filter out empty values
+          const roomIds = new Set(Object.values(parsedRoomAssignments).filter(id => id && typeof id === 'string')); // Filter out empty values
 
           console.log('[Room Assignment] Unique room IDs:', Array.from(roomIds));
 
@@ -874,15 +897,37 @@ export default function MessageTemplateModal({
             continue;
           }
 
-          // Parse roomAssignments
+          // Parse roomAssignments - support both formats:
+          // 1. Array format: [{roomId: "xxx", attendeeIndex: 0}, ...]
+          // 2. Object format: {"0": "roomId", "1": "roomId", ...}
           let parsedRoomAssignments: Record<string, string> = {};
+
           if (typeof roomAssignments === 'string') {
             try {
-              parsedRoomAssignments = JSON.parse(roomAssignments);
+              const parsed = JSON.parse(roomAssignments);
+              if (Array.isArray(parsed)) {
+                // Convert array format to object format
+                parsedRoomAssignments = parsed.reduce((acc, item) => {
+                  if (item.roomId && item.attendeeIndex !== undefined) {
+                    acc[item.attendeeIndex.toString()] = item.roomId;
+                  }
+                  return acc;
+                }, {} as Record<string, string>);
+              } else {
+                parsedRoomAssignments = parsed;
+              }
             } catch (e) {
               console.error('[Test Send - Room] Parse error for:', registration.contactName, e);
               continue;
             }
+          } else if (Array.isArray(roomAssignments)) {
+            // Array format directly
+            parsedRoomAssignments = roomAssignments.reduce((acc, item) => {
+              if (item.roomId && item.attendeeIndex !== undefined) {
+                acc[item.attendeeIndex.toString()] = item.roomId;
+              }
+              return acc;
+            }, {} as Record<string, string>);
           } else if (typeof roomAssignments === 'object') {
             parsedRoomAssignments = roomAssignments as Record<string, string>;
           }
@@ -890,7 +935,7 @@ export default function MessageTemplateModal({
           console.log('[Test Send - Room] Parsed assignments:', parsedRoomAssignments);
 
           // Get all unique room IDs
-          const roomIds = new Set(Object.values(parsedRoomAssignments));
+          const roomIds = new Set(Object.values(parsedRoomAssignments).filter(id => id && typeof id === 'string'));
 
           console.log('[Test Send - Room] Room IDs:', Array.from(roomIds));
 

@@ -434,6 +434,26 @@ export default function MessageTemplateModal({
         }
       }
 
+      // For room_assignment, fetch all registrations in event to find roommates
+      let allEventRegistrations: Array<{ registration: EventRegistration; lineUserId: string }> = [];
+      if (activeTab === 'templates' && selectedTemplate === 'room_assignment') {
+        try {
+          console.log('[Room Assignment] Fetching all event registrations...');
+          const response = await fetch(`/api/admin/events/${event.eventId}/registrations`);
+          if (response.ok) {
+            const data = await response.json();
+            allEventRegistrations = data.registrations || [];
+            console.log('[Room Assignment] Fetched', allEventRegistrations.length, 'total registrations');
+          } else {
+            console.warn('[Room Assignment] Failed to fetch all registrations, will use selected only');
+            allEventRegistrations = selectedRegistrations;
+          }
+        } catch (error) {
+          console.error('[Room Assignment] Error fetching all registrations:', error);
+          allEventRegistrations = selectedRegistrations;
+        }
+      }
+
       // Build send tasks - for car_assignment, send one message per car
       const sendTasks: Promise<{ success: true; name: string }>[] = [];
 
@@ -592,10 +612,10 @@ export default function MessageTemplateModal({
               }));
 
             // Find roommates from OTHER registrations
-            console.log('[Regular Send - Room] Looking for roommates. Total registrations:', selectedRegistrations.length);
+            console.log('[Regular Send - Room] Looking for roommates. Total registrations:', allEventRegistrations.length);
             console.log('[Regular Send - Room] Current registration:', registration.registrationId);
 
-            for (const { registration: otherReg } of selectedRegistrations) {
+            for (const { registration: otherReg } of allEventRegistrations) {
               console.log('[Regular Send - Room] Checking otherReg:', otherReg.registrationId);
 
               // Skip the current registration
@@ -918,6 +938,26 @@ export default function MessageTemplateModal({
         }
       }
 
+      // For room_assignment, fetch all registrations in event to find roommates
+      let allEventRegistrationsForTest: Array<{ registration: EventRegistration; lineUserId: string }> = [];
+      if (activeTab === 'templates' && selectedTemplate === 'room_assignment') {
+        try {
+          console.log('[Test Send - Room] Fetching all event registrations...');
+          const response = await fetch(`/api/admin/events/${event.eventId}/registrations`);
+          if (response.ok) {
+            const data = await response.json();
+            allEventRegistrationsForTest = data.registrations || [];
+            console.log('[Test Send - Room] Fetched', allEventRegistrationsForTest.length, 'total registrations');
+          } else {
+            console.warn('[Test Send - Room] Failed to fetch all registrations, will use selected only');
+            allEventRegistrationsForTest = selectedRegistrations;
+          }
+        } catch (error) {
+          console.error('[Test Send - Room] Error fetching all registrations:', error);
+          allEventRegistrationsForTest = selectedRegistrations;
+        }
+      }
+
       // Send test messages for ALL selected registrations (to admin's LINE)
       // This simulates what will be sent to actual recipients
       let totalMessagesSent = 0;
@@ -950,7 +990,9 @@ export default function MessageTemplateModal({
             });
 
             if (!response.ok) {
-              throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName} - รถคันที่ ${i + 1})`);
+              console.error(`[Test Send - Car] Failed to send to ${registration.contactName} - รถคันที่ ${i + 1}`);
+              // Continue to next car instead of throwing error
+              continue;
             }
 
             totalMessagesSent++;
@@ -958,7 +1000,7 @@ export default function MessageTemplateModal({
         }
 
         toast.success(
-          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\n${totalMessagesSent < selectedRegistrations.length ? '⚠️ บางรายการส่งไม่สำเร็จ กรุณาตรวจสอบ Console\n\n' : ''}กรุณาตรวจสอบ LINE เพื่อดูข้อความ`
         );
       } else if (activeTab === 'templates' && selectedTemplate === 'room_assignment') {
         // For room_assignment: send test message for each room of each registration
@@ -1060,10 +1102,10 @@ export default function MessageTemplateModal({
               }));
 
             // Find roommates from OTHER registrations in test send
-            console.log('[Test Send - Room] Looking for roommates. Total registrations:', selectedRegistrations.length);
+            console.log('[Test Send - Room] Looking for roommates. Total registrations:', allEventRegistrationsForTest.length);
             console.log('[Test Send - Room] Current registration:', registration.registrationId);
 
-            for (const { registration: otherReg } of selectedRegistrations) {
+            for (const { registration: otherReg } of allEventRegistrationsForTest) {
               console.log('[Test Send - Room] Checking otherReg:', otherReg.registrationId);
 
               // Skip the current registration
@@ -1155,7 +1197,9 @@ export default function MessageTemplateModal({
             });
 
             if (!response.ok) {
-              throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName} - ห้อง ${room.buildingName}-${room.roomNumber})`);
+              console.error(`[Test Send - Room] Failed to send to ${registration.contactName} - ห้อง ${room.buildingName}-${room.roomNumber}`);
+              // Continue to next room instead of throwing error
+              continue;
             }
 
             totalMessagesSent++;
@@ -1163,7 +1207,7 @@ export default function MessageTemplateModal({
         }
 
         toast.success(
-          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\n${totalMessagesSent < selectedRegistrations.length ? '⚠️ บางรายการส่งไม่สำเร็จ กรุณาตรวจสอบ Console\n\n' : ''}กรุณาตรวจสอบ LINE เพื่อดูข้อความ`
         );
       } else if (activeTab === 'templates' && selectedTemplate === 'registration_info' && carpoolsData) {
         // For registration_info: send test message for each registration
@@ -1192,14 +1236,16 @@ export default function MessageTemplateModal({
           });
 
           if (!response.ok) {
-            throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName})`);
+            console.error(`[Test Send - RegInfo] Failed to send to ${registration.contactName}`);
+            // Continue to next registration instead of throwing error
+            continue;
           }
 
           totalMessagesSent++;
         }
 
         toast.success(
-          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\n${totalMessagesSent < selectedRegistrations.length ? '⚠️ บางรายการส่งไม่สำเร็จ กรุณาตรวจสอบ Console\n\n' : ''}กรุณาตรวจสอบ LINE เพื่อดูข้อความ`
         );
       } else if (activeTab === 'templates' && selectedTemplate === 'felix_registration_info' && carpoolsData) {
         // For felix_registration_info: send test message for each registration
@@ -1229,14 +1275,16 @@ export default function MessageTemplateModal({
           });
 
           if (!response.ok) {
-            throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName})`);
+            console.error(`[Test Send - FelixRegInfo] Failed to send to ${registration.contactName}`);
+            // Continue to next registration instead of throwing error
+            continue;
           }
 
           totalMessagesSent++;
         }
 
         toast.success(
-          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\n${totalMessagesSent < selectedRegistrations.length ? '⚠️ บางรายการส่งไม่สำเร็จ กรุณาตรวจสอบ Console\n\n' : ''}กรุณาตรวจสอบ LINE เพื่อดูข้อความ`
         );
       } else {
         // Other templates: send test message for each registration
@@ -1260,14 +1308,16 @@ export default function MessageTemplateModal({
           });
 
           if (!response.ok) {
-            throw new Error(`ไม่สามารถส่งข้อความทดสอบได้ (${registration.contactName})`);
+            console.error(`[Test Send - Other] Failed to send to ${registration.contactName}`);
+            // Continue to next registration instead of throwing error
+            continue;
           }
 
           totalMessagesSent++;
         }
 
         toast.success(
-          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\nกรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\n${totalMessagesSent < selectedRegistrations.length ? '⚠️ บางรายการส่งไม่สำเร็จ กรุณาตรวจสอบ Console\n\n' : ''}กรุณาตรวจสอบ LINE เพื่อดูข้อความ`
         );
       }
     } catch (error) {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Carpool, CarpoolMember } from '@/types/carpool';
 import * as XLSX from 'xlsx-js-style';
+import { parseAttendeeNames } from '@/lib/message-templates';
 
 interface CarpoolManagementModalProps {
   isOpen: boolean;
@@ -888,15 +889,8 @@ export default function CarpoolManagementModal({
           const regData = attendee?.registration || {};
           const companyName = regData.companyName || 'ไม่ระบุบริษัท';
 
-          // Parse attendee names
-          let attendeeNames: string[] = [];
-          if (regData.attendeeNames) {
-            if (typeof regData.attendeeNames === 'string') {
-              attendeeNames = regData.attendeeNames.split(',').map((n: string) => n.trim()).filter((n: string) => n);
-            } else if (Array.isArray(regData.attendeeNames)) {
-              attendeeNames = regData.attendeeNames.filter((n: any) => n);
-            }
-          }
+          // Parse attendee names using normalization helper
+          const attendeeNames = parseAttendeeNames(regData.attendeeNames);
 
           // Get all members from this registration in this car
           const membersInThisCar = carpool.members
@@ -940,15 +934,8 @@ export default function CarpoolManagementModal({
 
         const companyName = regData.companyName || 'ไม่ระบุบริษัท';
 
-        // Parse attendee names
-        let attendeeNames: string[] = [];
-        if (regData.attendeeNames) {
-          if (typeof regData.attendeeNames === 'string') {
-            attendeeNames = regData.attendeeNames.split(',').map((n: string) => n.trim()).filter((n: string) => n);
-          } else if (Array.isArray(regData.attendeeNames)) {
-            attendeeNames = regData.attendeeNames.filter((n: any) => n);
-          }
-        }
+        // Parse attendee names using normalization helper
+        const attendeeNames = parseAttendeeNames(regData.attendeeNames);
 
         // Add registration without cars
         companyCarMap.set(registrationId, {

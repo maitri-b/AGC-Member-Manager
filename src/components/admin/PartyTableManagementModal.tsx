@@ -2604,6 +2604,30 @@ function AssignModalRegistrationsTab({
     return selectedMembers.some((m) => m.registrationId === registrationId && m.attendeeIndex === attendeeIndex);
   };
 
+  // Calculate summary statistics
+  const unassignedStats = React.useMemo(() => {
+    let totalUnassignedMembers = 0;
+    let totalUnassignedGroups = 0;
+
+    // Count unassigned members from all registrations
+    registrations.forEach((item) => {
+      if (!item?.registration) return;
+      const attendeeNames = parseAttendeeNames(item.registration.attendeeNames);
+      attendeeNames.forEach((_name: string, idx: number) => {
+        if (!isMemberAssigned(item.registration.registrationId, idx)) {
+          totalUnassignedMembers++;
+        }
+      });
+    });
+
+    // Count unassigned table groups (groups without assignedTableNumber)
+    totalUnassignedGroups = tables.filter(
+      (table) => table.status === 'active' && !table.assignedTableNumber
+    ).length;
+
+    return { totalUnassignedMembers, totalUnassignedGroups };
+  }, [registrations, tables]);
+
   // Filter registrations based on search
   const filteredRegistrations = registrations.filter((item) => {
     if (!item?.registration) return false;
@@ -2634,6 +2658,30 @@ function AssignModalRegistrationsTab({
 
   return (
     <div className="space-y-4">
+      {/* Summary Statistics */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <div>
+              <p className="text-sm text-blue-600 font-medium">ผู้เข้าร่วมที่ยังไม่ได้จัดโต๊ะ</p>
+              <p className="text-2xl font-bold text-blue-900">{unassignedStats.totalUnassignedMembers}</p>
+            </div>
+          </div>
+          <div className="h-12 w-px bg-blue-300"></div>
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <div>
+              <p className="text-sm text-blue-600 font-medium">กลุ่มโต๊ะที่ยังไม่ได้ระบุเลขโต๊ะ</p>
+              <p className="text-2xl font-bold text-blue-900">{unassignedStats.totalUnassignedGroups}</p>
+            </div>
+          </div>
+        </div>
+      </div>
       {filteredRegistrations.map((item) => {
         const registration = item.registration;
         const attendeeNames = parseAttendeeNames(registration.attendeeNames);

@@ -16,6 +16,7 @@ export type MessageTemplateType =
   | 'verification_reminder'// แจ้งเตือนให้ยืนยันตัวตน
   // Event Management Templates
   | 'car_assignment'       // แจ้งเลขรถที่ได้รับ
+  | 'room_assignment'      // แจ้งหมายเลขห้องพัก
   | 'registration_info'    // แจ้งข้อมูลการลงทะเบียน
   | 'felix_registration_info' // แจ้งข้อมูลการลงทะเบียน + จุดจอดรถ Felix
   // Member Contact Templates
@@ -149,6 +150,14 @@ export const DEFAULT_TEMPLATES: Record<MessageTemplateType, MessageTemplate> = {
     description: 'ส่งแจ้งเลขรถที่ได้รับมอบหมายให้กับผู้ลงทะเบียนรถ',
     template: `FLEX_MESSAGE`, // Special marker for Flex message
     variables: ['companyName', 'registrationId', 'licensePlate', 'carNumber', 'memberNames'],
+  },
+
+  room_assignment: {
+    id: 'room_assignment',
+    name: 'แจ้งหมายเลขห้องพัก',
+    description: 'ส่งแจ้งหมายเลขห้องพักที่ได้รับมอบหมายให้กับผู้ลงทะเบียน',
+    template: `FLEX_MESSAGE`, // Special marker for Flex message
+    variables: ['eventName', 'companyName', 'registrationId', 'roomNumber', 'buildingName', 'memberNames'],
   },
 
   verification_reminder: {
@@ -826,6 +835,213 @@ export function generateCarAssignmentFlexMessage(
               {
                 type: 'text',
                 text: `รวม ${carpoolData.members.length} คน`,
+                size: 'xs',
+                color: '#999999',
+                margin: 'md',
+                align: 'end',
+              },
+            ],
+          },
+        ],
+        paddingAll: '15px',
+      },
+    },
+  };
+}
+
+/**
+ * Generate Flex Message for Room Assignment Notification
+ */
+export function generateRoomAssignmentFlexMessage(
+  roomData: {
+    buildingName: string;
+    roomNumber: string;
+    members: Array<{ name: string; registrationId: string }>;
+  },
+  registration: EventRegistration,
+  eventName: string
+): any {
+  const roomNumber = `${roomData.buildingName}-${roomData.roomNumber}`;
+
+  // Build member list
+  const membersList: any[] = [];
+  roomData.members.forEach((member, index) => {
+    membersList.push({
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        {
+          type: 'text',
+          text: `${index + 1}.`,
+          size: 'sm',
+          color: '#666666',
+          flex: 0,
+          margin: 'none',
+        },
+        {
+          type: 'text',
+          text: member.name,
+          size: 'sm',
+          color: '#333333',
+          flex: 1,
+          margin: 'sm',
+          wrap: true,
+        },
+      ],
+      margin: 'sm',
+    });
+  });
+
+  return {
+    type: 'flex',
+    altText: `แจ้งหมายเลขห้องพัก - ${roomNumber}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🏨 แจ้งหมายเลขห้องพัก',
+            weight: 'bold',
+            size: 'lg',
+            color: '#ffffff',
+          },
+        ],
+        backgroundColor: '#7c3aed', // Purple color
+        paddingAll: '15px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: roomNumber,
+                size: '3xl',
+                weight: 'bold',
+                color: '#7c3aed',
+                align: 'center',
+              },
+              {
+                type: 'text',
+                text: 'หมายเลขห้องพักของคุณ',
+                size: 'sm',
+                color: '#666666',
+                align: 'center',
+                margin: 'sm',
+              },
+            ],
+            backgroundColor: '#f5f3ff',
+            paddingAll: '15px',
+            cornerRadius: '8px',
+            margin: 'md',
+          },
+          {
+            type: 'separator',
+            margin: 'lg',
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'กิจกรรม:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                    margin: 'none',
+                  },
+                  {
+                    type: 'text',
+                    text: eventName,
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                    wrap: true,
+                    weight: 'bold',
+                  },
+                ],
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'บริษัท:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                  },
+                  {
+                    type: 'text',
+                    text: registration.companyName || '-',
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                    wrap: true,
+                    weight: 'bold',
+                  },
+                ],
+                margin: 'sm',
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'รหัสจอง:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                  },
+                  {
+                    type: 'text',
+                    text: registration.registrationId,
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                  },
+                ],
+                margin: 'sm',
+              },
+            ],
+          },
+          {
+            type: 'separator',
+            margin: 'lg',
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: '👥 รายชื่อสมาชิกในห้อง',
+                size: 'sm',
+                weight: 'bold',
+                color: '#333333',
+                margin: 'md',
+              },
+              ...membersList,
+              {
+                type: 'text',
+                text: `รวม ${roomData.members.length} คน`,
                 size: 'xs',
                 color: '#999999',
                 margin: 'md',

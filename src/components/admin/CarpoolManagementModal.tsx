@@ -1352,40 +1352,31 @@ export default function CarpoolManagementModal({
                       <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                       </svg>
-                      <p className="text-xs sm:text-sm font-medium text-gray-900">เอเจ้นท์ที่ยังไม่แจ้งการเดินทาง</p>
+                      <p className="text-xs sm:text-sm font-medium text-gray-900">ผู้เข้าร่วมที่ยังไม่ join รถ</p>
                       <svg className="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
                     <p className="text-2xl sm:text-3xl font-bold text-gray-600">
                       {(() => {
-                        // Filter out cancelled registrations (same as admin event detail page)
+                        // Filter out cancelled registrations
                         const activeRegistrations = allRegistrations.filter((reg: any) => {
                           const status = String(reg.registration?.status || '').toLowerCase();
                           const isCancelled = status === 'cancelled' || reg.registration?.status?.includes('ยกเลิก');
                           return !isCancelled;
                         });
 
-                        const totalRegistrations = activeRegistrations.length;
+                        // Count total individual attendees from all active registrations
+                        const totalAttendees = activeRegistrations.reduce((sum, reg: any) => {
+                          const attendeeNames = parseAttendeeNames(reg.registration?.attendeeNames);
+                          return sum + (attendeeNames.length || 1);
+                        }, 0);
 
-                        // Get all car owner registration IDs
-                        const carOwners = new Set(carpools.map(c => c.ownerRegistrationId));
+                        // Count members in carpools (individual people)
+                        const totalMembersInCarpools = carpools.reduce((sum, c) => sum + c.members.length, 0);
 
-                        // Get all member registration IDs (who joined carpools)
-                        const memberRegIds = new Set<string>();
-                        carpools.forEach(carpool => {
-                          carpool.members.forEach(member => {
-                            if (member.registrationId) {
-                              memberRegIds.add(member.registrationId);
-                            }
-                          });
-                        });
-
-                        // Combine both sets (car owners + members)
-                        const agentsWithTransportation = new Set([...carOwners, ...memberRegIds]);
-
-                        // Agents who haven't declared = Total active registrations - (car owners + members)
-                        return totalRegistrations - agentsWithTransportation.size;
+                        // People who haven't joined = Total attendees - Members in carpools
+                        return totalAttendees - totalMembersInCarpools;
                       })()}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">คลิกเพื่อดูรายละเอียด</p>
@@ -2711,10 +2702,10 @@ export default function CarpoolManagementModal({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">
-                    เอเจ้นท์ที่ยังไม่แจ้งการเดินทาง
+                    ผู้เข้าร่วมที่ยังไม่ join รถ
                   </h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    รายชื่อผู้ลงทะเบียนที่ยังไม่ได้เป็นเจ้าของรถหรือ join carpool
+                    รายชื่อผู้เข้าร่วมแต่ละคนที่ยังไม่ได้อยู่ใน carpool
                   </p>
                 </div>
                 <button
@@ -2738,26 +2729,43 @@ export default function CarpoolManagementModal({
                   return !isCancelled;
                 });
 
-                // Get all car owner registration IDs
-                const carOwners = new Set(carpools.map(c => c.ownerRegistrationId));
-
-                // Get all member registration IDs (who joined carpools)
-                const memberRegIds = new Set<string>();
+                // Build a Set of joined members (registrationId + attendeeIndex)
+                const joinedMembersSet = new Set<string>();
                 carpools.forEach(carpool => {
                   carpool.members.forEach(member => {
-                    if (member.registrationId) {
-                      memberRegIds.add(member.registrationId);
+                    if (member.registrationId !== undefined && member.attendeeIndex !== undefined) {
+                      joinedMembersSet.add(`${member.registrationId}-${member.attendeeIndex}`);
                     }
                   });
                 });
 
-                // Combine both sets (car owners + members)
-                const agentsWithTransportation = new Set([...carOwners, ...memberRegIds]);
+                // Build list of individual unjoined members
+                interface UnjoinedMember {
+                  registrationId: string;
+                  attendeeIndex: number;
+                  name: string;
+                  companyName: string;
+                }
 
-                // Filter for agents who haven't declared transportation
-                const unjoinedMembers = activeRegistrations.filter((reg: any) => {
-                  const regId = reg.registration?.registrationId;
-                  return regId && !agentsWithTransportation.has(regId);
+                const unjoinedMembers: UnjoinedMember[] = [];
+
+                activeRegistrations.forEach((reg: any) => {
+                  const registrationId = reg.registration?.registrationId;
+                  const companyName = reg.registration?.companyName || '-';
+                  const attendeeNames = parseAttendeeNames(reg.registration?.attendeeNames);
+
+                  // Check each attendee
+                  attendeeNames.forEach((name: string, index: number) => {
+                    const memberKey = `${registrationId}-${index}`;
+                    if (!joinedMembersSet.has(memberKey)) {
+                      unjoinedMembers.push({
+                        registrationId,
+                        attendeeIndex: index,
+                        name,
+                        companyName,
+                      });
+                    }
+                  });
                 });
 
                 if (unjoinedMembers.length === 0) {
@@ -2766,8 +2774,8 @@ export default function CarpoolManagementModal({
                       <svg className="w-16 h-16 mx-auto text-green-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <p className="text-gray-600 text-lg font-medium">ทุกคนได้แจ้งการเดินทางแล้ว</p>
-                      <p className="text-gray-500 text-sm mt-1">ไม่มีเอเจ้นท์ที่ยังไม่ได้แจ้งการเดินทาง</p>
+                      <p className="text-gray-600 text-lg font-medium">ทุกคน join รถครบแล้ว!</p>
+                      <p className="text-gray-500 text-sm mt-1">ไม่มีผู้เข้าร่วมที่ยังไม่ได้อยู่ใน carpool</p>
                     </div>
                   );
                 }
@@ -2780,8 +2788,8 @@ export default function CarpoolManagementModal({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <div className="text-sm text-blue-800">
-                          <p className="font-medium">พบ {unjoinedMembers.length} คนที่ยังไม่ได้แจ้งการเดินทาง</p>
-                          <p className="mt-1">รายชื่อเหล่านี้ยังไม่ได้เป็นเจ้าของรถหรือ join carpool ใดๆ</p>
+                          <p className="font-medium">พบ {unjoinedMembers.length} คนที่ยังไม่ได้ join รถ</p>
+                          <p className="mt-1">รายชื่อแต่ละคนที่ยังไม่ได้อยู่ใน carpool ใดๆ</p>
                         </div>
                       </div>
                     </div>
@@ -2797,52 +2805,36 @@ export default function CarpoolManagementModal({
                               รหัสลงทะเบียน
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                              ชื่อผู้เข้าร่วม
+                              คนที่
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                              ชื่อ
                             </th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                               บริษัท
                             </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                              จำนวนคน
-                            </th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {unjoinedMembers.map((reg: any, index: number) => {
-                            const attendeeNames = parseAttendeeNames(reg.registration?.attendeeNames);
-                            const companyName = reg.registration?.companyName || '-';
-                            const registrationId = reg.registration?.registrationId || '-';
-                            const attendeeCount = attendeeNames.length || 1;
-
-                            return (
-                              <tr key={registrationId} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-sm text-gray-900">
-                                  {index + 1}
-                                </td>
-                                <td className="px-4 py-3 text-sm font-medium text-purple-600">
-                                  {registrationId}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-900">
-                                  <div className="space-y-1">
-                                    {attendeeNames.map((name: string, idx: number) => (
-                                      <div key={idx} className="flex items-center gap-2">
-                                        <span className="text-xs text-gray-500">#{idx + 1}</span>
-                                        <span>{name}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-700">
-                                  {companyName}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                    {attendeeCount} คน
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                          {unjoinedMembers.map((member, index) => (
+                            <tr key={`${member.registrationId}-${member.attendeeIndex}`} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                {index + 1}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-medium text-purple-600">
+                                {member.registrationId}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500">
+                                #{member.attendeeIndex + 1}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                                {member.name}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-700">
+                                {member.companyName}
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>

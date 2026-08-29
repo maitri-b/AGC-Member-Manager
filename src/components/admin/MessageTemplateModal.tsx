@@ -786,7 +786,8 @@ export default function MessageTemplateModal({
             registration,
             event.eventName,
             ownedCarpools,
-            joinedCarpools
+            joinedCarpools,
+            rooms || [] // Pass rooms data for parking lookup
           );
 
           const response = await fetch('/api/line/send-notification', {

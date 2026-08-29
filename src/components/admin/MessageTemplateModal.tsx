@@ -68,6 +68,9 @@ export default function MessageTemplateModal({
   carpoolsData,
   rooms,
 }: MessageTemplateModalProps) {
+  // Debug: Log rooms data
+  console.log('[MessageTemplateModal] rooms prop:', rooms?.length || 0, 'rooms');
+
   const [activeTab, setActiveTab] = useState<'templates' | 'custom' | 'history'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplateType | null>(null);
   const [customMessage, setCustomMessage] = useState('');

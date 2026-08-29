@@ -409,10 +409,8 @@ export default function CarpoolManagementModal({
     }
 
     try {
-      // Parse attendee names
-      const attendeeNames = searchedRegistration.attendeeNames
-        ? searchedRegistration.attendeeNames.split(',').map((n: string) => n.trim())
-        : [];
+      // Parse and normalize attendee names
+      const attendeeNames = parseAttendeeNames(searchedRegistration.attendeeNames);
 
       // Build members array from selected indices
       const membersToAdd: CarpoolMember[] = selectedMembersToAdd.map((indexStr) => {

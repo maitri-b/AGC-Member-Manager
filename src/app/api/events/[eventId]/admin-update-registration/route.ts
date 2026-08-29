@@ -383,12 +383,13 @@ export async function PUT(
     // ✅ NEW: Update carpool member names if attendeeNames changed
     if (updateData.attendee_names !== undefined) {
       try {
-        // Parse new attendee names
-        const newAttendeeNames = typeof updateData.attendee_names === 'string'
-          ? JSON.parse(updateData.attendee_names)
-          : updateData.attendee_names;
+        // Parse and normalize new attendee names
+        const { parseAttendeeNames } = await import('@/lib/message-templates');
+        const newAttendeeNames = parseAttendeeNames(updateData.attendee_names);
 
-        if (Array.isArray(newAttendeeNames)) {
+        console.log('[Admin Update] Parsed attendee names:', newAttendeeNames);
+
+        if (Array.isArray(newAttendeeNames) && newAttendeeNames.length > 0) {
           // Find all carpools where this registration is a member
           const carpoolsSnapshot = await db.collection('carpools')
             .where('eventId', '==', eventId)
@@ -410,6 +411,7 @@ export async function PUT(
 
                 if (newName !== undefined && newName !== member.name) {
                   hasUpdates = true;
+                  console.log(`[Admin Update] Updating member ${member.name} -> ${newName} in carpool ${carpoolDoc.id}`);
                   return {
                     ...member,
                     name: newName,

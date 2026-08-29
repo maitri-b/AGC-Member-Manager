@@ -1468,42 +1468,61 @@ export function generateFelixRegistrationInfoFlexMessage(
   let parkingZones: string[] = [];
   let buildings: string[] = [];
 
+  // Debug logging
+  console.log('[Felix Parking] Processing registration:', registration.registrationId);
+  console.log('[Felix Parking] roomAssignments type:', typeof registration.roomAssignments);
+  console.log('[Felix Parking] roomAssignments value:', registration.roomAssignments);
+
   if (registration.roomAssignments) {
     let roomData: any[] = [];
 
     // Parse room assignments
     if (typeof registration.roomAssignments === 'string') {
+      console.log('[Felix Parking] Parsing string roomAssignments');
       try {
         roomData = JSON.parse(registration.roomAssignments);
-      } catch {
+        console.log('[Felix Parking] Parsed roomData:', roomData);
+      } catch (e) {
+        console.log('[Felix Parking] Failed to parse JSON, treating as single room string');
         // If not JSON, treat as single room string
         const building = extractBuildingName(registration.roomAssignments);
+        console.log('[Felix Parking] Extracted building from string:', building);
         if (building) {
           buildings.push(building);
         }
       }
     } else if (Array.isArray(registration.roomAssignments)) {
+      console.log('[Felix Parking] roomAssignments is already an array');
       roomData = registration.roomAssignments;
     }
 
     // Extract all unique buildings from room assignments
     if (Array.isArray(roomData)) {
-      roomData.forEach((room: any) => {
+      console.log('[Felix Parking] Processing roomData array, length:', roomData.length);
+      roomData.forEach((room: any, index: number) => {
         const roomStr = typeof room === 'string' ? room : (room?.room || room?.roomNumber || '');
+        console.log(`[Felix Parking] Room ${index}:`, roomStr);
         const building = extractBuildingName(roomStr);
+        console.log(`[Felix Parking] Extracted building from room ${index}:`, building);
         if (building && !buildings.includes(building)) {
           buildings.push(building);
         }
       });
     }
 
+    console.log('[Felix Parking] All extracted buildings:', buildings);
+
     // Get parking zones for all buildings
     const allZones = new Set<string>();
     buildings.forEach(building => {
       const zones = getFelixParkingZones(building);
+      console.log(`[Felix Parking] Building ${building} -> Zones:`, zones);
       zones.forEach(zone => allZones.add(zone));
     });
     parkingZones = Array.from(allZones).sort();
+    console.log('[Felix Parking] Final parking zones:', parkingZones);
+  } else {
+    console.log('[Felix Parking] No roomAssignments found');
   }
 
   // Add parking recommendation section if zones found

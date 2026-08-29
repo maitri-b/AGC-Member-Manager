@@ -499,15 +499,20 @@ export default function MessageTemplateModal({
             console.log('[Room Assignment] Parsing string roomAssignments');
             try {
               const parsed = JSON.parse(roomAssignments);
+              console.log('[Room Assignment] Parsed type:', Array.isArray(parsed) ? 'array' : typeof parsed);
+              console.log('[Room Assignment] Parsed value:', parsed);
+
               if (Array.isArray(parsed)) {
                 console.log('[Room Assignment] Converting array format to object format');
                 // Convert array format to object format
                 parsedRoomAssignments = parsed.reduce((acc, item) => {
+                  console.log('[Room Assignment] Processing item:', item, 'roomId:', item.roomId, 'index:', item.attendeeIndex);
                   if (item.roomId && item.attendeeIndex !== undefined) {
                     acc[item.attendeeIndex.toString()] = item.roomId;
                   }
                   return acc;
                 }, {} as Record<string, string>);
+                console.log('[Room Assignment] After conversion:', parsedRoomAssignments);
               } else {
                 parsedRoomAssignments = parsed;
               }
@@ -517,14 +522,17 @@ export default function MessageTemplateModal({
               throw new Error(`Invalid room assignments format for ${registration.contactName}`);
             }
           } else if (Array.isArray(roomAssignments)) {
-            console.log('[Room Assignment] Converting array format to object format');
+            console.log('[Room Assignment] Direct array - Converting to object format');
+            console.log('[Room Assignment] Array value:', roomAssignments);
             // Array format directly
             parsedRoomAssignments = roomAssignments.reduce((acc, item) => {
+              console.log('[Room Assignment] Processing item:', item, 'roomId:', item.roomId, 'index:', item.attendeeIndex);
               if (item.roomId && item.attendeeIndex !== undefined) {
                 acc[item.attendeeIndex.toString()] = item.roomId;
               }
               return acc;
             }, {} as Record<string, string>);
+            console.log('[Room Assignment] After conversion:', parsedRoomAssignments);
           } else if (typeof roomAssignments === 'object' && roomAssignments !== null) {
             console.log('[Room Assignment] roomAssignments is already an object');
             parsedRoomAssignments = roomAssignments as Record<string, string>;
@@ -905,14 +913,20 @@ export default function MessageTemplateModal({
           if (typeof roomAssignments === 'string') {
             try {
               const parsed = JSON.parse(roomAssignments);
+              console.log('[Test Send - Room] Parsed type:', Array.isArray(parsed) ? 'array' : typeof parsed);
+              console.log('[Test Send - Room] Parsed value:', parsed);
+
               if (Array.isArray(parsed)) {
+                console.log('[Test Send - Room] Converting array to object format');
                 // Convert array format to object format
                 parsedRoomAssignments = parsed.reduce((acc, item) => {
+                  console.log('[Test Send - Room] Processing item:', item, 'roomId:', item.roomId, 'index:', item.attendeeIndex);
                   if (item.roomId && item.attendeeIndex !== undefined) {
                     acc[item.attendeeIndex.toString()] = item.roomId;
                   }
                   return acc;
                 }, {} as Record<string, string>);
+                console.log('[Test Send - Room] After conversion:', parsedRoomAssignments);
               } else {
                 parsedRoomAssignments = parsed;
               }
@@ -921,13 +935,16 @@ export default function MessageTemplateModal({
               continue;
             }
           } else if (Array.isArray(roomAssignments)) {
+            console.log('[Test Send - Room] Direct array - Converting to object format');
             // Array format directly
             parsedRoomAssignments = roomAssignments.reduce((acc, item) => {
+              console.log('[Test Send - Room] Processing item:', item, 'roomId:', item.roomId, 'index:', item.attendeeIndex);
               if (item.roomId && item.attendeeIndex !== undefined) {
                 acc[item.attendeeIndex.toString()] = item.roomId;
               }
               return acc;
             }, {} as Record<string, string>);
+            console.log('[Test Send - Room] After conversion:', parsedRoomAssignments);
           } else if (typeof roomAssignments === 'object') {
             parsedRoomAssignments = roomAssignments as Record<string, string>;
           }

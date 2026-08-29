@@ -525,7 +525,7 @@ export default function MessageTemplateModal({
             console.log('[Room Assignment] Direct array - Converting to object format');
             console.log('[Room Assignment] Array value:', roomAssignments);
             // Array format directly
-            parsedRoomAssignments = roomAssignments.reduce((acc, item) => {
+            parsedRoomAssignments = (roomAssignments as any[]).reduce((acc, item) => {
               console.log('[Room Assignment] Processing item:', item, 'roomId:', item.roomId, 'index:', item.attendeeIndex);
               if (item.roomId && item.attendeeIndex !== undefined) {
                 acc[item.attendeeIndex.toString()] = item.roomId;
@@ -937,7 +937,7 @@ export default function MessageTemplateModal({
           } else if (Array.isArray(roomAssignments)) {
             console.log('[Test Send - Room] Direct array - Converting to object format');
             // Array format directly
-            parsedRoomAssignments = roomAssignments.reduce((acc, item) => {
+            parsedRoomAssignments = (roomAssignments as any[]).reduce((acc, item) => {
               console.log('[Test Send - Room] Processing item:', item, 'roomId:', item.roomId, 'index:', item.attendeeIndex);
               if (item.roomId && item.attendeeIndex !== undefined) {
                 acc[item.attendeeIndex.toString()] = item.roomId;

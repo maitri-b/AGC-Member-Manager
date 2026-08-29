@@ -92,7 +92,8 @@
       "Bash(timeout 180 tail:*)",
       "Bash(cd:*)",
       "Bash(Get-Content \"C:\\\\Users\\\\maitr\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--OneDrive-95-Agent-Club-Agentsclub-Member-Manager\\\\tasks\\\\b8d5554.output\")",
-      "Bash(Select-Object -Last 30)"
+      "Bash(Select-Object -Last 30)",
+      "Bash(Get-Content \"C:\\\\Users\\\\maitr\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--OneDrive-95-Agent-Club-Agentsclub-Member-Manager\\\\tasks\\\\b1f97a0.output\")"
     ]
   }
 }

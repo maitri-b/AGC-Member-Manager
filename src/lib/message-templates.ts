@@ -1321,20 +1321,8 @@ export function generateFelixRegistrationInfoFlexMessage(
     [key: string]: any;
   }> = []
 ): any {
-  // Parse attendee names with normalization
-  let attendeeNames: string[] = [];
-  if (registration.attendeeNames) {
-    if (typeof registration.attendeeNames === 'string') {
-      attendeeNames = registration.attendeeNames
-        .split(',')
-        .map(n => normalizeMemberName(n.trim()))
-        .filter(n => n);
-    } else if (Array.isArray(registration.attendeeNames)) {
-      attendeeNames = (registration.attendeeNames as any[])
-        .map((n: any) => normalizeMemberName(n))
-        .filter((n: string) => n);
-    }
-  }
+  // Parse attendee names with normalization using helper function
+  const attendeeNames = parseAttendeeNames(registration.attendeeNames);
 
   const totalAttendees = attendeeNames.length || 1;
 
@@ -1558,89 +1546,82 @@ export function generateFelixRegistrationInfoFlexMessage(
     console.log('[Felix Parking] No roomAssignments found');
   }
 
-  // Add parking recommendation section if zones found
-  if (parkingZones.length > 0) {
-    bodyContents.push({
-      type: 'separator',
-      margin: 'lg',
-    });
-
-    bodyContents.push({
-      type: 'box',
-      layout: 'vertical',
-      contents: [
-        {
-          type: 'text',
-          text: '🅿️ จุดจอดรถที่แนะนำ',
-          size: 'sm',
-          weight: 'bold',
-          color: '#7c3aed',
-        },
-        {
-          type: 'box',
-          layout: 'baseline',
-          contents: [
-            {
-              type: 'text',
-              text: 'อาคาร:',
-              size: 'xs',
-              color: '#666666',
-              flex: 0,
-            },
-            {
-              type: 'text',
-              text: buildings.join(', '),
-              size: 'xs',
-              color: '#333333',
-              flex: 1,
-              margin: 'sm',
-              weight: 'bold',
-            },
-          ],
-          margin: 'sm',
-        },
-        {
-          type: 'text',
-          text: parkingZones.join(', '),
-          size: 'xl',
-          weight: 'bold',
-          color: '#7c3aed',
-          align: 'center',
-          margin: 'md',
-        },
-        {
-          type: 'separator',
-          margin: 'md',
-        },
-        {
-          type: 'text',
-          text: '📌 หมายเหตุ:',
-          size: 'xs',
-          color: '#666666',
-          weight: 'bold',
-          margin: 'sm',
-        },
-        {
-          type: 'text',
-          text: '• คำแนะนำจุดจอดที่ใกล้ห้องพัก',
-          size: 'xs',
-          color: '#666666',
-          wrap: true,
-        },
-        {
-          type: 'text',
-          text: '• รร.มีรถกอล์ฟบริการรับ-ส่ง',
-          size: 'xs',
-          color: '#666666',
-          wrap: true,
-        },
-      ],
-      margin: 'md',
-      paddingAll: '12px',
-      backgroundColor: '#f5f3ff',
-      cornerRadius: 'md',
-    });
-  }
+  // Store parking recommendation for later (will add at the end)
+  const parkingCard = parkingZones.length > 0 ? {
+    type: 'box',
+    layout: 'vertical',
+    contents: [
+      {
+        type: 'text',
+        text: '🅿️ จุดจอดรถโรงแรมที่แนะนำสำหรับคุณ',
+        size: 'sm',
+        weight: 'bold',
+        color: '#7c3aed',
+      },
+      {
+        type: 'box',
+        layout: 'baseline',
+        contents: [
+          {
+            type: 'text',
+            text: 'อาคาร:',
+            size: 'xs',
+            color: '#666666',
+            flex: 0,
+          },
+          {
+            type: 'text',
+            text: buildings.join(', '),
+            size: 'xs',
+            color: '#333333',
+            flex: 1,
+            margin: 'sm',
+            weight: 'bold',
+          },
+        ],
+        margin: 'sm',
+      },
+      {
+        type: 'text',
+        text: parkingZones.join(', '),
+        size: 'xl',
+        weight: 'bold',
+        color: '#7c3aed',
+        align: 'center',
+        margin: 'md',
+      },
+      {
+        type: 'separator',
+        margin: 'md',
+      },
+      {
+        type: 'text',
+        text: '📌 หมายเหตุ:',
+        size: 'xs',
+        color: '#666666',
+        weight: 'bold',
+        margin: 'sm',
+      },
+      {
+        type: 'text',
+        text: '• แนะนำจุดจอดรถที่ใกล้ห้องพักของคุณ',
+        size: 'xs',
+        color: '#666666',
+        wrap: true,
+      },
+      {
+        type: 'text',
+        text: '• โรงแรมมีรถบริการรับ-ส่ง ถึงหน้าอาคาร',
+        size: 'xs',
+        color: '#666666',
+        wrap: true,
+      },
+    ],
+    margin: 'md',
+    paddingAll: '12px',
+    backgroundColor: '#f5f3ff',
+    cornerRadius: 'md',
+  } : null;
 
   // Add owned carpools if any
   if (ownedCarpools.length > 0) {
@@ -1773,6 +1754,15 @@ export function generateFelixRegistrationInfoFlexMessage(
     });
   }
 
+  // Add parking recommendation at the end if available
+  if (parkingCard) {
+    bodyContents.push({
+      type: 'separator',
+      margin: 'lg',
+    });
+    bodyContents.push(parkingCard);
+  }
+
   return {
     type: 'flex',
     altText: `ข้อมูลการลงทะเบียน (Felix) - ${registration.companyName || registration.registrationId}`,
@@ -1784,7 +1774,7 @@ export function generateFelixRegistrationInfoFlexMessage(
         contents: [
           {
             type: 'text',
-            text: '📋 ข้อมูลลงทะเบียน รร. Felix',
+            text: '📋 ข้อมูลลงทะเบียนของคุณ',
             weight: 'bold',
             size: 'lg',
             color: '#ffffff',

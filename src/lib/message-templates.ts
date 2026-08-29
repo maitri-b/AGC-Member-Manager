@@ -1616,6 +1616,17 @@ export function generateFelixRegistrationInfoFlexMessage(
         color: '#666666',
         wrap: true,
       },
+      {
+        type: 'button',
+        action: {
+          type: 'uri',
+          label: '🗺️ ดูแผนผังโรงแรม',
+          uri: 'https://storage.googleapis.com/agents-club-event-slips/images/download/Gemini_Generated_Image_faurxqfaurxqfaur.jfif',
+        },
+        style: 'primary',
+        color: '#7c3aed',
+        margin: 'md',
+      },
     ],
     margin: 'md',
     paddingAll: '12px',

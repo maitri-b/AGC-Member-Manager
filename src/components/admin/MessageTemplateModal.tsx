@@ -541,7 +541,8 @@ export default function MessageTemplateModal({
               console.log('[Room Assignment] Successfully parsed JSON');
             } catch (e) {
               console.error('[Room Assignment] Parse error:', e);
-              throw new Error(`Invalid room assignments format for ${registration.contactName}`);
+              console.warn('[Room Assignment] Skipping due to parse error:', registration.contactName);
+              continue;
             }
           } else if (Array.isArray(roomAssignments)) {
             console.log('[Room Assignment] Direct array - Converting to object format');
@@ -560,7 +561,8 @@ export default function MessageTemplateModal({
             parsedRoomAssignments = roomAssignments as Record<string, string>;
           } else {
             console.error('[Room Assignment] Unexpected roomAssignments type:', typeof roomAssignments);
-            throw new Error(`Invalid room assignments type for ${registration.contactName}`);
+            console.warn('[Room Assignment] Skipping due to invalid type:', registration.contactName);
+            continue;
           }
 
           console.log('[Room Assignment] Parsed assignments:', parsedRoomAssignments);
@@ -573,7 +575,8 @@ export default function MessageTemplateModal({
           console.log('[Room Assignment] Unique room IDs:', Array.from(roomIds));
 
           if (roomIds.size === 0) {
-            throw new Error(`No room assignments found for ${registration.contactName}`);
+            console.warn('[Room Assignment] No room IDs found, skipping:', registration.contactName);
+            continue;
           }
 
           // Send one message per room
@@ -697,6 +700,8 @@ export default function MessageTemplateModal({
                   event.eventName
                 );
 
+                console.log('[Room Assignment] Sending to:', registration.contactName, 'LINE ID:', lineUserId);
+
                 const response = await fetch('/api/line/send-notification', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -708,7 +713,9 @@ export default function MessageTemplateModal({
                 });
 
                 if (!response.ok) {
-                  throw new Error(`Failed to send room ${room.buildingName}-${room.roomNumber} to ${registration.contactName}`);
+                  const errorData = await response.json().catch(() => ({}));
+                  console.error('[Room Assignment] Failed to send:', registration.contactName, 'Error:', errorData);
+                  throw new Error(`Failed to send room ${room.buildingName}-${room.roomNumber} to ${registration.contactName}: ${JSON.stringify(errorData)}`);
                 }
 
                 return { success: true, name: `${registration.contactName} (ห้อง ${room.buildingName}-${room.roomNumber})` };

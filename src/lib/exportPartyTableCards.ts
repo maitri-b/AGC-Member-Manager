@@ -29,10 +29,11 @@ interface CompanyGroup {
   count: number;
 }
 
-// A5 Landscape dimensions - simple table layout
-// A5 = 210mm x 148mm landscape = 148mm wide
+// A4 Portrait layout - 2 tables per page (top and bottom)
+// Each table has fixed number of rows to fit exactly half page
 // Simple 3-column layout: [spacing] [content] [count]
 const CONTENT_COLS = 3; // Just 3 columns: empty, content, count
+const ROWS_PER_TABLE = 35; // Fixed rows per table (including header, content, empty rows)
 
 export function exportPartyTableCards(tableSlots: TableSlot[], eventName: string) {
   // Sort table slots by table number
@@ -135,6 +136,9 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
     const companies = groupMembersByCompany(slot);
     const totalMembers = companies.reduce((sum, c) => sum + c.count, 0);
 
+    // Start tracking rows for this table
+    const tableStartRow = data.length;
+
     // Header row with purple background
     data.push([`โต๊ะที่ ${slot.tableNumber}`, '', `รวม ${totalMembers} คน`]);
 
@@ -159,10 +163,14 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
       }
     });
 
-    // Spacing between tables
-    data.push(['', '', '']);
-    data.push(['', '', '']);
-    data.push(['', '', '']);
+    // Calculate current row count for this table
+    const currentRowCount = data.length - tableStartRow;
+
+    // Pad with empty rows to reach ROWS_PER_TABLE
+    const rowsToAdd = ROWS_PER_TABLE - currentRowCount;
+    for (let i = 0; i < rowsToAdd; i++) {
+      data.push(['', '', '']);
+    }
   });
 
   // Create worksheet from data
@@ -278,6 +286,9 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
     const companies = groupMembersByCompany(slot);
     const totalMembers = companies.reduce((sum, c) => sum + c.count, 0);
 
+    // Start tracking rows for this table
+    const tableStartRow = data.length;
+
     // Header row with purple background
     data.push([`โต๊ะที่ ${slot.tableNumber}`, '', `รวม ${totalMembers} คน`]);
 
@@ -294,10 +305,14 @@ function createSummarySheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
       }
     });
 
-    // Spacing between tables
-    data.push(['', '', '']);
-    data.push(['', '', '']);
-    data.push(['', '', '']);
+    // Calculate current row count for this table
+    const currentRowCount = data.length - tableStartRow;
+
+    // Pad with empty rows to reach ROWS_PER_TABLE
+    const rowsToAdd = ROWS_PER_TABLE - currentRowCount;
+    for (let i = 0; i < rowsToAdd; i++) {
+      data.push(['', '', '']);
+    }
   });
 
   // Create worksheet from data

@@ -579,13 +579,64 @@ export default function MessageTemplateModal({
             const { parseAttendeeNames } = await import('@/lib/message-templates');
             const attendeeNames = parseAttendeeNames(registration.attendeeNames);
 
-            // Find which attendees are in this room
+            // Find which attendees from THIS registration are in this room
             const membersInRoom = Object.entries(parsedRoomAssignments)
               .filter(([_, rId]) => rId === roomId)
               .map(([attendeeIndex, _]) => ({
                 name: attendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
                 registrationId: registration.registrationId,
+                companyName: registration.companyName || '',
               }));
+
+            // Find roommates from OTHER registrations
+            for (const { registration: otherReg } of selectedRegistrations) {
+              // Skip the current registration
+              if (otherReg.registrationId === registration.registrationId) continue;
+
+              const otherRoomAssignments = otherReg.roomAssignments;
+              if (!otherRoomAssignments) continue;
+
+              // Parse other registration's room assignments
+              let otherParsed: Record<string, string> = {};
+              if (typeof otherRoomAssignments === 'string') {
+                try {
+                  const parsed = JSON.parse(otherRoomAssignments);
+                  if (Array.isArray(parsed)) {
+                    otherParsed = parsed.reduce((acc, item) => {
+                      if (item.roomId && item.attendeeIndex !== undefined) {
+                        acc[item.attendeeIndex.toString()] = item.roomId;
+                      }
+                      return acc;
+                    }, {} as Record<string, string>);
+                  } else {
+                    otherParsed = parsed;
+                  }
+                } catch (e) {
+                  continue;
+                }
+              } else if (Array.isArray(otherRoomAssignments)) {
+                otherParsed = (otherRoomAssignments as any[]).reduce((acc, item) => {
+                  if (item.roomId && item.attendeeIndex !== undefined) {
+                    acc[item.attendeeIndex.toString()] = item.roomId;
+                  }
+                  return acc;
+                }, {} as Record<string, string>);
+              } else if (typeof otherRoomAssignments === 'object') {
+                otherParsed = otherRoomAssignments as Record<string, string>;
+              }
+
+              // Check if any attendees from this registration are in the same room
+              const otherAttendeeNames = parseAttendeeNames(otherReg.attendeeNames);
+              Object.entries(otherParsed)
+                .filter(([_, rId]) => rId === roomId)
+                .forEach(([attendeeIndex, _]) => {
+                  membersInRoom.push({
+                    name: otherAttendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
+                    registrationId: otherReg.registrationId,
+                    companyName: otherReg.companyName || '',
+                  });
+                });
+            }
 
             if (membersInRoom.length === 0) continue;
 
@@ -975,13 +1026,64 @@ export default function MessageTemplateModal({
             const { parseAttendeeNames } = await import('@/lib/message-templates');
             const attendeeNames = parseAttendeeNames(registration.attendeeNames);
 
-            // Find which attendees are in this room
+            // Find which attendees from THIS registration are in this room
             const membersInRoom = Object.entries(parsedRoomAssignments)
               .filter(([_, rId]) => rId === roomId)
               .map(([attendeeIndex, _]) => ({
                 name: attendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
                 registrationId: registration.registrationId,
+                companyName: registration.companyName || '',
               }));
+
+            // Find roommates from OTHER registrations in test send
+            for (const { registration: otherReg } of selectedRegistrations) {
+              // Skip the current registration
+              if (otherReg.registrationId === registration.registrationId) continue;
+
+              const otherRoomAssignments = otherReg.roomAssignments;
+              if (!otherRoomAssignments) continue;
+
+              // Parse other registration's room assignments
+              let otherParsed: Record<string, string> = {};
+              if (typeof otherRoomAssignments === 'string') {
+                try {
+                  const parsed = JSON.parse(otherRoomAssignments);
+                  if (Array.isArray(parsed)) {
+                    otherParsed = parsed.reduce((acc, item) => {
+                      if (item.roomId && item.attendeeIndex !== undefined) {
+                        acc[item.attendeeIndex.toString()] = item.roomId;
+                      }
+                      return acc;
+                    }, {} as Record<string, string>);
+                  } else {
+                    otherParsed = parsed;
+                  }
+                } catch (e) {
+                  continue;
+                }
+              } else if (Array.isArray(otherRoomAssignments)) {
+                otherParsed = (otherRoomAssignments as any[]).reduce((acc, item) => {
+                  if (item.roomId && item.attendeeIndex !== undefined) {
+                    acc[item.attendeeIndex.toString()] = item.roomId;
+                  }
+                  return acc;
+                }, {} as Record<string, string>);
+              } else if (typeof otherRoomAssignments === 'object') {
+                otherParsed = otherRoomAssignments as Record<string, string>;
+              }
+
+              // Check if any attendees from this registration are in the same room
+              const otherAttendeeNames = parseAttendeeNames(otherReg.attendeeNames);
+              Object.entries(otherParsed)
+                .filter(([_, rId]) => rId === roomId)
+                .forEach(([attendeeIndex, _]) => {
+                  membersInRoom.push({
+                    name: otherAttendeeNames[parseInt(attendeeIndex)] || `คนที่ ${parseInt(attendeeIndex) + 1}`,
+                    registrationId: otherReg.registrationId,
+                    companyName: otherReg.companyName || '',
+                  });
+                });
+            }
 
             if (membersInRoom.length === 0) continue;
 

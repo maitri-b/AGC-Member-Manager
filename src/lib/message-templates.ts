@@ -856,16 +856,21 @@ export function generateRoomAssignmentFlexMessage(
   roomData: {
     buildingName: string;
     roomNumber: string;
-    members: Array<{ name: string; registrationId: string }>;
+    members: Array<{ name: string; registrationId: string; companyName?: string }>;
   },
   registration: EventRegistration,
   eventName: string
 ): any {
   const roomNumber = `${roomData.buildingName}-${roomData.roomNumber}`;
 
-  // Build member list
+  // Build member list with company names
   const membersList: any[] = [];
   roomData.members.forEach((member, index) => {
+    // Show "name (company)" format
+    const displayName = member.companyName
+      ? `${member.name} (${member.companyName})`
+      : member.name;
+
     membersList.push({
       type: 'box',
       layout: 'horizontal',
@@ -880,7 +885,7 @@ export function generateRoomAssignmentFlexMessage(
         },
         {
           type: 'text',
-          text: member.name,
+          text: displayName,
           size: 'sm',
           color: '#333333',
           flex: 1,

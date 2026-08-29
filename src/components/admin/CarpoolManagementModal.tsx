@@ -600,11 +600,14 @@ export default function CarpoolManagementModal({
       };
 
       // Sort carpools by assignedCarNumber (cars with numbers first, then cars without)
-      const sortedCarpools = [...carpools].sort((a, b) => {
-        const numA = a.assignedCarNumber || 999999;
-        const numB = b.assignedCarNumber || 999999;
-        return numA - numB;
-      });
+      // Filter out deleted carpools - we don't want deleted data in reports
+      const sortedCarpools = [...carpools]
+        .filter(carpool => carpool.status !== 'deleted')
+        .sort((a, b) => {
+          const numA = a.assignedCarNumber || 999999;
+          const numB = b.assignedCarNumber || 999999;
+          return numA - numB;
+        });
 
       // Prepare export data - only members (including owner in members list)
       const exportData: Record<string, any>[] = [];

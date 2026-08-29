@@ -477,8 +477,14 @@ export default function MessageTemplateModal({
           // Room assignment: Parse roomAssignments and send notification
           const roomAssignments = registration.roomAssignments;
 
-          if (!roomAssignments || !rooms || rooms.length === 0) {
+          console.log('[Room Assignment] Processing:', registration.registrationId, 'roomAssignments:', roomAssignments);
+
+          if (!roomAssignments) {
             throw new Error(`No room assignment found for ${registration.contactName}`);
+          }
+
+          if (!rooms || rooms.length === 0) {
+            throw new Error(`No rooms data available`);
           }
 
           // Parse roomAssignments (could be string or object)
@@ -487,19 +493,33 @@ export default function MessageTemplateModal({
             try {
               parsedRoomAssignments = JSON.parse(roomAssignments);
             } catch (e) {
+              console.error('[Room Assignment] Parse error:', e);
               throw new Error(`Invalid room assignments format for ${registration.contactName}`);
             }
           } else if (typeof roomAssignments === 'object') {
             parsedRoomAssignments = roomAssignments as Record<string, string>;
           }
 
+          console.log('[Room Assignment] Parsed assignments:', parsedRoomAssignments);
+
           // Get all unique room IDs
           const roomIds = new Set(Object.values(parsedRoomAssignments));
+
+          console.log('[Room Assignment] Unique room IDs:', Array.from(roomIds));
+
+          if (roomIds.size === 0) {
+            throw new Error(`No room assignments found for ${registration.contactName}`);
+          }
 
           // Send one message per room
           for (const roomId of roomIds) {
             const room = rooms.find(r => r.roomId === roomId);
-            if (!room) continue;
+            console.log('[Room Assignment] Looking for room:', roomId, 'found:', room);
+
+            if (!room) {
+              console.warn('[Room Assignment] Room not found:', roomId);
+              continue;
+            }
 
             // Get attendee names for this room
             const { parseAttendeeNames } = await import('@/lib/message-templates');
@@ -817,8 +837,18 @@ export default function MessageTemplateModal({
         for (const { registration } of selectedRegistrations) {
           const roomAssignments = registration.roomAssignments;
 
-          if (!roomAssignments || !rooms || rooms.length === 0) {
-            continue; // Skip registrations without room assignment
+          console.log('[Test Send - Room] Processing:', registration.registrationId, registration.contactName);
+          console.log('[Test Send - Room] roomAssignments:', roomAssignments);
+          console.log('[Test Send - Room] rooms available:', rooms?.length || 0);
+
+          if (!roomAssignments) {
+            console.warn('[Test Send - Room] No roomAssignments for:', registration.contactName);
+            continue;
+          }
+
+          if (!rooms || rooms.length === 0) {
+            console.warn('[Test Send - Room] No rooms data available');
+            continue;
           }
 
           // Parse roomAssignments
@@ -827,19 +857,34 @@ export default function MessageTemplateModal({
             try {
               parsedRoomAssignments = JSON.parse(roomAssignments);
             } catch (e) {
+              console.error('[Test Send - Room] Parse error for:', registration.contactName, e);
               continue;
             }
           } else if (typeof roomAssignments === 'object') {
             parsedRoomAssignments = roomAssignments as Record<string, string>;
           }
 
+          console.log('[Test Send - Room] Parsed assignments:', parsedRoomAssignments);
+
           // Get all unique room IDs
           const roomIds = new Set(Object.values(parsedRoomAssignments));
+
+          console.log('[Test Send - Room] Room IDs:', Array.from(roomIds));
+
+          if (roomIds.size === 0) {
+            console.warn('[Test Send - Room] No room IDs found for:', registration.contactName);
+            continue;
+          }
 
           // Send test message for each room
           for (const roomId of roomIds) {
             const room = rooms.find(r => r.roomId === roomId);
-            if (!room) continue;
+            console.log('[Test Send - Room] Looking for room:', roomId, 'found:', room?.buildingName, room?.roomNumber);
+
+            if (!room) {
+              console.warn('[Test Send - Room] Room not found:', roomId);
+              continue;
+            }
 
             // Get attendee names for this room
             const { parseAttendeeNames } = await import('@/lib/message-templates');

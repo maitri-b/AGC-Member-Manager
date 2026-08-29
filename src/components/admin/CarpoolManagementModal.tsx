@@ -600,9 +600,9 @@ export default function CarpoolManagementModal({
       };
 
       // Sort carpools by assignedCarNumber (cars with numbers first, then cars without)
-      // Filter out deleted carpools - we don't want deleted data in reports
+      // Filter out deleted and cancelled carpools - we don't want inactive data in reports
       const sortedCarpools = [...carpools]
-        .filter(carpool => carpool.status !== 'deleted')
+        .filter(carpool => carpool.status !== 'deleted' && carpool.status !== 'cancelled')
         .sort((a, b) => {
           const numA = a.assignedCarNumber || 999999;
           const numB = b.assignedCarNumber || 999999;

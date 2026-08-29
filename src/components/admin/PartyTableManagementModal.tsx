@@ -1838,83 +1838,137 @@ function TabTableGroups({
     });
   }, [tables, searchQuery]);
 
-  if (activeTables.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <svg
-          className="w-16 h-16 text-gray-400 mx-auto mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-          />
-        </svg>
-        <p className="text-gray-600">ยังไม่มีโต๊ะในกิจกรรมนี้</p>
-        <p className="text-sm text-gray-500 mt-2">
-          สมาชิกสามารถสร้างโต๊ะเองได้จากหน้า Event Detail หรือคุณสามารถสร้างกลุ่มโต๊ะให้สมาชิกได้
-        </p>
-        <div className="mt-4 flex gap-2 justify-center">
-          <button
-            onClick={onCreateNewGroup}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 inline-flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            สร้างกลุ่มโต๊ะใหม่
-          </button>
-          <button
-            onClick={onCreateReservation}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            สร้างกลุ่มจองโต๊ะ
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Check if there are NO tables at all (not just filtered results)
+  const hasNoTables = tables.filter((t) => t.status === 'active').length === 0;
+
+  // Filter state
+  const [filterUnassigned, setFilterUnassigned] = React.useState(false);
+
+  // Apply unassigned filter
+  const filteredTables = React.useMemo(() => {
+    if (!filterUnassigned) return activeTables;
+    return activeTables.filter(t => !t.assignedTableNumber);
+  }, [activeTables, filterUnassigned]);
 
   return (
     <div className="space-y-4">
-      {/* Search Box */}
-      <div className="relative">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="ค้นหา: ชื่อบริษัท, ชื่อ LINE, ชื่อผู้เข้าร่วม, รหัสการจอง, ชื่อโต๊ะ..."
-          className="w-full px-4 py-2.5 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-          >
-            ล้าง
-          </button>
-        )}
-      </div>
+      {/* Search Box - Always show if there are any tables */}
+      {!hasNoTables && (
+        <>
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ค้นหา: ชื่อบริษัท, ชื่อ LINE, ชื่อผู้เข้าร่วม, รหัสการจอง, ชื่อโต๊ะ..."
+              className="w-full px-4 py-2.5 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+              >
+                ล้าง
+              </button>
+            )}
+          </div>
 
-      {/* Search Results Info */}
-      {searchQuery && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-sm text-blue-800">
-            <span className="font-medium">พบ {activeTables.length} กลุ่มโต๊ะ</span>
-            {activeTables.length === 0 && ' ที่ตรงกับคำค้นหา'}
+          {/* Filter: Unassigned Tables */}
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={filterUnassigned}
+                onChange={(e) => setFilterUnassigned(e.target.checked)}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <span className="text-sm text-gray-700">แสดงเฉพาะโต๊ะที่ยังไม่ระบุเลขโต๊ะ</span>
+            </label>
+            {filterUnassigned && (
+              <span className="text-xs text-purple-600 font-medium">
+                ({filteredTables.length} โต๊ะ)
+              </span>
+            )}
+          </div>
+
+          {/* Search Results Info */}
+          {searchQuery && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                <span className="font-medium">พบ {filteredTables.length} กลุ่มโต๊ะ</span>
+                {filteredTables.length === 0 && ' ที่ตรงกับคำค้นหา'}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* No Tables Message */}
+      {hasNoTables && (
+        <div className="text-center py-12">
+          <svg
+            className="w-16 h-16 text-gray-400 mx-auto mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+            />
+          </svg>
+          <p className="text-gray-600">ยังไม่มีโต๊ะในกิจกรรมนี้</p>
+          <p className="text-sm text-gray-500 mt-2">
+            สมาชิกสามารถสร้างโต๊ะเองได้จากหน้า Event Detail หรือคุณสามารถสร้างกลุ่มโต๊ะให้สมาชิกได้
           </p>
+          <div className="mt-4 flex gap-2 justify-center">
+            <button
+              onClick={onCreateNewGroup}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 inline-flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              สร้างกลุ่มโต๊ะใหม่
+            </button>
+            <button
+              onClick={onCreateReservation}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              สร้างกลุ่มจองโต๊ะ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* No Search Results Message */}
+      {!hasNoTables && filteredTables.length === 0 && (
+        <div className="text-center py-8">
+          <svg
+            className="w-12 h-12 text-gray-400 mx-auto mb-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <p className="text-gray-600">ไม่พบกลุ่มโต๊ะที่ตรงกับเงื่อนไข</p>
+          <p className="text-sm text-gray-500 mt-1">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
         </div>
       )}
 
       {/* Table Groups List */}
-      {activeTables.map((table) => {
+      {filteredTables.map((table) => {
         const isExpanded = expandedTableId === table.tableId;
         const isReservation = table.isReservation === true;
         const memberCount = isReservation ? (table.reservedSeats || 0) : table.members.length;
@@ -2151,41 +2205,58 @@ function TabTableNumbers({
   defaultSeats: number;
 }) {
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [filterNotFull, setFilterNotFull] = React.useState(false);
 
   // Filter table slots based on search query
   const filteredTableSlots = React.useMemo(() => {
-    if (!searchQuery.trim()) return tableSlots;
+    let slots = tableSlots;
 
-    const query = searchQuery.toLowerCase();
-    return tableSlots.filter(slot => {
-      // Check if any group in this slot matches the search
-      return slot.groups.some(group => {
-        // Search in table group name
-        if (group.tableGroupName?.toLowerCase().includes(query)) return true;
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      slots = slots.filter(slot => {
+        // Check if any group in this slot matches the search
+        return slot.groups.some(group => {
+          // Search in table group name
+          if (group.tableGroupName?.toLowerCase().includes(query)) return true;
 
-        // Search in host company name
-        if (group.hostCompanyName?.toLowerCase().includes(query)) return true;
+          // Search in host company name
+          if (group.hostCompanyName?.toLowerCase().includes(query)) return true;
 
-        // Search in host contact name
-        if (group.hostContactName?.toLowerCase().includes(query)) return true;
+          // Search in host contact name
+          if (group.hostContactName?.toLowerCase().includes(query)) return true;
 
-        // Search in members
-        if (group.members?.some(member => {
-          // Search in member name
-          if (member.name?.toLowerCase().includes(query)) return true;
-          // Search in member company name
-          if ((member as any).companyName?.toLowerCase().includes(query)) return true;
-          // Search in member LINE display name
-          if ((member as any).lineDisplayName?.toLowerCase().includes(query)) return true;
-          // Search in registration ID
-          if (member.registrationId?.toLowerCase().includes(query)) return true;
+          // Search in members
+          if (group.members?.some(member => {
+            // Search in member name
+            if (member.name?.toLowerCase().includes(query)) return true;
+            // Search in member company name
+            if ((member as any).companyName?.toLowerCase().includes(query)) return true;
+            // Search in member LINE display name
+            if ((member as any).lineDisplayName?.toLowerCase().includes(query)) return true;
+            // Search in registration ID
+            if (member.registrationId?.toLowerCase().includes(query)) return true;
+            return false;
+          })) return true;
+
           return false;
-        })) return true;
-
-        return false;
+        });
       });
-    });
-  }, [tableSlots, searchQuery]);
+    }
+
+    // Apply "not full" filter
+    if (filterNotFull) {
+      slots = slots.filter(slot => {
+        // Only show slots that have groups with members less than defaultSeats
+        return slot.groups.some(group => {
+          const memberCount = group.isReservation ? (group.reservedSeats || 0) : group.members.length;
+          return memberCount < defaultSeats;
+        });
+      });
+    }
+
+    return slots;
+  }, [tableSlots, searchQuery, filterNotFull, defaultSeats]);
 
   return (
     <div className="space-y-6">
@@ -2205,6 +2276,24 @@ function TabTableNumbers({
           >
             ล้าง
           </button>
+        )}
+      </div>
+
+      {/* Filter: Not Full Tables */}
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={filterNotFull}
+            onChange={(e) => setFilterNotFull(e.target.checked)}
+            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+          />
+          <span className="text-sm text-gray-700">แสดงเฉพาะโต๊ะที่จำนวนสมาชิกยังไม่ถึงจำนวนที่นั่งมาตรฐาน ({defaultSeats} คน)</span>
+        </label>
+        {filterNotFull && (
+          <span className="text-xs text-purple-600 font-medium">
+            ({filteredTableSlots.length} โต๊ะ)
+          </span>
         )}
       </div>
 
@@ -2273,7 +2362,11 @@ function TabTableNumbers({
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">โต๊ะ {slot.tableNumber}</span>
                       {isOccupied && (
-                        <span className="text-xs bg-purple-800 text-white px-1.5 py-0.5 rounded">
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          totalMembers >= defaultSeats
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-purple-800 text-white'
+                        }`}>
                           {totalMembers} คน
                         </span>
                       )}
@@ -2327,7 +2420,9 @@ function TabTableNumbers({
                                       </svg>
                                     </button>
                                   </div>
-                                  <p className="text-xs text-gray-500 mt-0.5">
+                                  <p className={`text-xs mt-0.5 ${
+                                    memberCount >= defaultSeats ? 'text-green-700 font-medium' : 'text-gray-500'
+                                  }`}>
                                     {isReservation ? `${memberCount} ที่จอง` : `${memberCount} คน`}
                                   </p>
                                 </div>

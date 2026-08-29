@@ -102,6 +102,9 @@ export default function CarpoolManagementModal({
   const [assigning, setAssigning] = useState(false);
   const [assignmentSearchQuery, setAssignmentSearchQuery] = useState('');
 
+  // Unjoined members modal state
+  const [showUnjoinedMembersModal, setShowUnjoinedMembersModal] = useState(false);
+
   // Batch assignment modal state
   const [showBatchAssignmentModal, setShowBatchAssignmentModal] = useState(false);
   const [batchAssignments, setBatchAssignments] = useState<Record<string, number>>({});
@@ -1341,12 +1344,18 @@ export default function CarpoolManagementModal({
                   </div>
 
                   {/* Agents who haven't declared transportation */}
-                  <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4">
+                  <div
+                    className="bg-gray-50 border border-gray-300 rounded-lg p-3 sm:p-4 cursor-pointer hover:bg-gray-100 hover:border-gray-400 transition-colors"
+                    onClick={() => setShowUnjoinedMembersModal(true)}
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                       </svg>
                       <p className="text-xs sm:text-sm font-medium text-gray-900">เอเจ้นท์ที่ยังไม่แจ้งการเดินทาง</p>
+                      <svg className="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                     <p className="text-2xl sm:text-3xl font-bold text-gray-600">
                       {(() => {
@@ -1379,6 +1388,7 @@ export default function CarpoolManagementModal({
                         return totalRegistrations - agentsWithTransportation.size;
                       })()}
                     </p>
+                    <p className="text-xs text-gray-500 mt-1">คลิกเพื่อดูรายละเอียด</p>
                   </div>
 
                   {/* Unassigned Cars Summary */}
@@ -2687,6 +2697,168 @@ export default function CarpoolManagementModal({
                   {savingBatchAssignments ? 'กำลังบันทึก...' : 'บันทึกการจัดเลขรถ'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unjoined Members Modal */}
+      {showUnjoinedMembersModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    เอเจ้นท์ที่ยังไม่แจ้งการเดินทาง
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    รายชื่อผู้ลงทะเบียนที่ยังไม่ได้เป็นเจ้าของรถหรือ join carpool
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowUnjoinedMembersModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {(() => {
+                // Filter out cancelled registrations
+                const activeRegistrations = allRegistrations.filter((reg: any) => {
+                  const status = String(reg.registration?.status || '').toLowerCase();
+                  const isCancelled = status === 'cancelled' || reg.registration?.status?.includes('ยกเลิก');
+                  return !isCancelled;
+                });
+
+                // Get all car owner registration IDs
+                const carOwners = new Set(carpools.map(c => c.ownerRegistrationId));
+
+                // Get all member registration IDs (who joined carpools)
+                const memberRegIds = new Set<string>();
+                carpools.forEach(carpool => {
+                  carpool.members.forEach(member => {
+                    if (member.registrationId) {
+                      memberRegIds.add(member.registrationId);
+                    }
+                  });
+                });
+
+                // Combine both sets (car owners + members)
+                const agentsWithTransportation = new Set([...carOwners, ...memberRegIds]);
+
+                // Filter for agents who haven't declared transportation
+                const unjoinedMembers = activeRegistrations.filter((reg: any) => {
+                  const regId = reg.registration?.registrationId;
+                  return regId && !agentsWithTransportation.has(regId);
+                });
+
+                if (unjoinedMembers.length === 0) {
+                  return (
+                    <div className="text-center py-12">
+                      <svg className="w-16 h-16 mx-auto text-green-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-gray-600 text-lg font-medium">ทุกคนได้แจ้งการเดินทางแล้ว</p>
+                      <p className="text-gray-500 text-sm mt-1">ไม่มีเอเจ้นท์ที่ยังไม่ได้แจ้งการเดินทาง</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div className="text-sm text-blue-800">
+                          <p className="font-medium">พบ {unjoinedMembers.length} คนที่ยังไม่ได้แจ้งการเดินทาง</p>
+                          <p className="mt-1">รายชื่อเหล่านี้ยังไม่ได้เป็นเจ้าของรถหรือ join carpool ใดๆ</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                              ลำดับ
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                              รหัสลงทะเบียน
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                              ชื่อผู้เข้าร่วม
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                              บริษัท
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                              จำนวนคน
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {unjoinedMembers.map((reg: any, index: number) => {
+                            const attendeeNames = parseAttendeeNames(reg.registration?.attendeeNames);
+                            const companyName = reg.registration?.companyName || '-';
+                            const registrationId = reg.registration?.registrationId || '-';
+                            const attendeeCount = attendeeNames.length || 1;
+
+                            return (
+                              <tr key={registrationId} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {index + 1}
+                                </td>
+                                <td className="px-4 py-3 text-sm font-medium text-purple-600">
+                                  {registrationId}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  <div className="space-y-1">
+                                    {attendeeNames.map((name: string, idx: number) => (
+                                      <div key={idx} className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-500">#{idx + 1}</span>
+                                        <span>{name}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-700">
+                                  {companyName}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    {attendeeCount} คน
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 flex-shrink-0">
+              <button
+                onClick={() => setShowUnjoinedMembersModal(false)}
+                className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                ปิด
+              </button>
             </div>
           </div>
         </div>

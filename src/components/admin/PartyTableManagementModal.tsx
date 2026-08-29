@@ -2206,6 +2206,7 @@ function TabTableNumbers({
 }) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [filterNotFull, setFilterNotFull] = React.useState(false);
+  const [filterCapacityType, setFilterCapacityType] = React.useState<'default' | 'max'>('default');
 
   // Filter table slots based on search query
   const filteredTableSlots = React.useMemo(() => {
@@ -2246,19 +2247,22 @@ function TabTableNumbers({
 
     // Apply "not full" filter
     if (filterNotFull) {
+      // Choose capacity threshold based on filter type
+      const capacityThreshold = filterCapacityType === 'max' ? (maxSeats || defaultSeats) : defaultSeats;
+
       slots = slots.filter(slot => {
         // Calculate total members from ALL groups in this table
         const totalMembers = slot.groups.reduce((sum, g) => {
           const memberCount = g.isReservation ? (g.reservedSeats || 0) : g.members.length;
           return sum + memberCount;
         }, 0);
-        // Show only tables where total is less than defaultSeats
-        return totalMembers < defaultSeats;
+        // Show only tables where total is less than capacity threshold
+        return totalMembers < capacityThreshold;
       });
     }
 
     return slots;
-  }, [tableSlots, searchQuery, filterNotFull, defaultSeats]);
+  }, [tableSlots, searchQuery, filterNotFull, filterCapacityType, defaultSeats, maxSeats]);
 
   return (
     <div className="space-y-6">
@@ -2282,7 +2286,7 @@ function TabTableNumbers({
       </div>
 
       {/* Filter: Not Full Tables */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
@@ -2290,12 +2294,22 @@ function TabTableNumbers({
             onChange={(e) => setFilterNotFull(e.target.checked)}
             className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
           />
-          <span className="text-sm text-gray-700">แสดงเฉพาะโต๊ะที่จำนวนสมาชิกยังไม่ถึงจำนวนที่นั่งมาตรฐาน ({defaultSeats} คน)</span>
+          <span className="text-sm text-gray-700">แสดงเฉพาะโต๊ะที่จำนวนสมาชิกยังไม่ถึง</span>
         </label>
         {filterNotFull && (
-          <span className="text-xs text-purple-600 font-medium">
-            ({filteredTableSlots.length} โต๊ะ)
-          </span>
+          <>
+            <select
+              value={filterCapacityType}
+              onChange={(e) => setFilterCapacityType(e.target.value as 'default' | 'max')}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="default">จำนวนที่นั่งมาตรฐาน ({defaultSeats} คน)</option>
+              <option value="max">จำนวนที่นั่งสูงสุด ({maxSeats || defaultSeats} คน)</option>
+            </select>
+            <span className="text-xs text-purple-600 font-medium">
+              ({filteredTableSlots.length} โต๊ะ)
+            </span>
+          </>
         )}
       </div>
 

@@ -12,6 +12,7 @@ import {
   generateRegistrationInfoFlexMessage,
   generateFelixRegistrationInfoFlexMessage,
 } from '@/lib/message-templates';
+import { generatePartyTableAssignmentFlexMessage } from '@/lib/party-table-message';
 import { toast } from 'react-hot-toast';
 
 interface CarpoolData {
@@ -19,6 +20,11 @@ interface CarpoolData {
   assignedCarNumber?: number;
   members: Array<{ name: string; registrationId: string; companyName?: string }>;
   ownerRegistrationId?: string;
+}
+
+interface PartyTableData {
+  tableNumber: number;
+  members: Array<{ name: string; registrationId: string; companyName?: string }>;
 }
 
 interface MessageTemplateModalProps {
@@ -36,6 +42,7 @@ interface MessageTemplateModalProps {
     roomNumber: string;
     [key: string]: any;
   }>; // Rooms data for Felix parking lookup
+  partyTablesData?: Record<string, PartyTableData[]>; // Map registrationId to array of party table data (support multiple tables)
 }
 
 interface SavedTemplate {
@@ -68,9 +75,11 @@ export default function MessageTemplateModal({
   event,
   carpoolsData,
   rooms,
+  partyTablesData,
 }: MessageTemplateModalProps) {
   // Debug: Log rooms data
   console.log('[MessageTemplateModal] rooms prop:', rooms?.length || 0, 'rooms');
+  console.log('[MessageTemplateModal] partyTablesData prop:', partyTablesData ? Object.keys(partyTablesData).length : 0, 'registrations with tables');
 
   const [activeTab, setActiveTab] = useState<'templates' | 'custom' | 'history'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplateType | null>(null);
@@ -108,6 +117,10 @@ export default function MessageTemplateModal({
     // Show car_assignment, registration_info, and felix_registration_info templates only if carpool data is provided
     if (template.id === 'car_assignment' || template.id === 'registration_info' || template.id === 'felix_registration_info') {
       return !!carpoolsData && Object.keys(carpoolsData).length > 0;
+    }
+    // Show party_table_assignment template only if party table data is provided
+    if (template.id === 'party_table_assignment') {
+      return !!partyTablesData && Object.keys(partyTablesData).length > 0;
     }
     return true;
   });
@@ -729,6 +742,54 @@ export default function MessageTemplateModal({
               })()
             );
           }
+        } else if (activeTab === 'templates' && selectedTemplate === 'party_table_assignment') {
+          // Party table assignment: Send message for each table with this registration's members
+          const partyTables = partyTablesData?.[registration.registrationId] || [];
+
+          console.log('[Party Table Assignment] Processing:', registration.registrationId, registration.contactName);
+          console.log('[Party Table Assignment] Party tables:', partyTables.length);
+
+          if (partyTables.length === 0) {
+            console.warn('[Party Table Assignment] No party table assignments for:', registration.contactName);
+            continue;
+          }
+
+          // Send one message with all tables this registration has members in
+          sendTasks.push(
+            (async () => {
+              const flexMessage = generatePartyTableAssignmentFlexMessage(
+                partyTables,
+                registration,
+                event.eventName
+              );
+
+              console.log('[Party Table Assignment] Generated flexMessage for:', registration.contactName);
+              console.log('[Party Table Assignment] Tables:', partyTables.map(t => t.tableNumber).join(', '));
+              console.log('[Party Table Assignment] Sending to:', registration.contactName, 'LINE ID:', lineUserId);
+
+              const response = await fetch('/api/line/send-notification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lineUserIds: [lineUserId],
+                  message: undefined, // No text message for Flex
+                  flexMessage: flexMessage,
+                }),
+              });
+
+              console.log('[Party Table Assignment] Response status:', response.status);
+
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('[Party Table Assignment] Failed to send:', registration.contactName, 'Error:', errorData);
+                throw new Error(`Failed to send party table assignment to ${registration.contactName}: ${JSON.stringify(errorData)}`);
+              }
+
+              console.log('[Party Table Assignment] Successfully sent to:', registration.contactName);
+
+              return { success: true, name: `${registration.contactName} (โต๊ะ ${partyTables.map(t => t.tableNumber).join(', ')})` };
+            })()
+          );
         } else if (activeTab === 'templates' && selectedTemplate === 'registration_info' && carpoolsData) {
           // Registration info: send one message with all carpool data
           const carpools = carpoolsData[registration.registrationId] || [];
@@ -1233,6 +1294,55 @@ export default function MessageTemplateModal({
         toast.success(
           `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\n${totalMessagesSent < selectedRegistrations.length ? '⚠️ บางรายการส่งไม่สำเร็จ กรุณาตรวจสอบ Console\n\n' : ''}กรุณาตรวจสอบ LINE เพื่อดูข้อความ`
         );
+      } else if (activeTab === 'templates' && selectedTemplate === 'party_table_assignment') {
+        // For party_table_assignment: send test message with all tables for each registration
+        for (const { registration } of selectedRegistrations) {
+          const partyTables = partyTablesData?.[registration.registrationId] || [];
+
+          console.log('[Test Send - Party Table] Processing:', registration.registrationId, registration.contactName);
+          console.log('[Test Send - Party Table] Party tables:', partyTables.length);
+
+          if (partyTables.length === 0) {
+            console.warn('[Test Send - Party Table] No party table assignments for:', registration.contactName);
+            continue;
+          }
+
+          const flexMessage = generatePartyTableAssignmentFlexMessage(
+            partyTables,
+            registration,
+            event.eventName
+          );
+
+          console.log('[Test Send - Party Table] Generated flexMessage for:', registration.contactName);
+          console.log('[Test Send - Party Table] Tables:', partyTables.map(t => t.tableNumber).join(', '));
+          console.log('[Test Send - Party Table] Sending to admin LINE:', adminLineUserId);
+
+          const response = await fetch('/api/line/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lineUserIds: [adminLineUserId],
+              message: undefined,
+              flexMessage: flexMessage,
+            }),
+          });
+
+          console.log('[Test Send - Party Table] Response status:', response.status);
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error(`[Test Send - Party Table] Failed to send for ${registration.contactName}`);
+            console.error('[Test Send - Party Table] Error response:', errorData);
+            continue;
+          }
+
+          console.log('[Test Send - Party Table] Successfully sent!');
+          totalMessagesSent++;
+        }
+
+        toast.success(
+          `✅ ส่งข้อความทดสอบสำเร็จ!\n\nส่งข้อความ ${totalMessagesSent} ข้อความ (จาก ${selectedRegistrations.length} รายการที่เลือก)\nส่งไปยัง: LINE ของคุณ\n\n${totalMessagesSent < selectedRegistrations.length ? '⚠️ บางรายการส่งไม่สำเร็จ กรุณาตรวจสอบ Console\n\n' : ''}กรุณาตรวจสอบ LINE เพื่อดูข้อความ`
+        );
       } else if (activeTab === 'templates' && selectedTemplate === 'registration_info' && carpoolsData) {
         // For registration_info: send test message for each registration
         for (const { registration } of selectedRegistrations) {
@@ -1556,7 +1666,7 @@ export default function MessageTemplateModal({
               )}
 
               {/* Preview Box */}
-              {currentRecipient && (selectedTemplate === 'car_assignment' || selectedTemplate === 'registration_info' || selectedTemplate === 'felix_registration_info' ? true : customMessage) && (
+              {currentRecipient && (selectedTemplate === 'car_assignment' || selectedTemplate === 'party_table_assignment' || selectedTemplate === 'registration_info' || selectedTemplate === 'felix_registration_info' ? true : customMessage) && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <div className="text-xs font-medium text-gray-600 mb-2">
                     ✨ ตัวอย่างข้อความที่จะส่งถึง: {currentRecipient.registration.contactName}
@@ -1618,6 +1728,39 @@ export default function MessageTemplateModal({
                             })()}
                             <div className="mt-2 text-xs text-green-700">
                               💡 ข้อความจะถูกส่งเป็น Flex Message แบบ Rich Card พร้อมข้อมูลครบถ้วน
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : selectedTemplate === 'party_table_assignment' ? (
+                    <div className="bg-violet-50 border border-violet-300 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">🍽️</div>
+                        <div className="flex-1">
+                          <div className="font-bold text-violet-900 mb-2">Flex Message - แจ้งเลขโต๊ะปาร์ตี้</div>
+                          <div className="text-sm text-violet-800 space-y-1">
+                            <p>• <strong>กิจกรรม:</strong> {event.eventName}</p>
+                            <p>• <strong>บริษัท:</strong> {currentRecipient.registration.companyName}</p>
+                            <p>• <strong>รหัสจอง:</strong> {currentRecipient.registration.registrationId}</p>
+                            {(() => {
+                              const tables = partyTablesData?.[currentRecipient.registration.registrationId] || [];
+                              if (tables.length > 0) {
+                                return (
+                                  <>
+                                    <p>• <strong>🍽️ โต๊ะปาร์ตี้:</strong> {tables.map(t => `#${t.tableNumber}`).join(', ')}</p>
+                                    <p>• <strong>👥 สมาชิกทั้งหมด:</strong> {tables.reduce((sum, t) => sum + t.members.length, 0)} คน</p>
+                                    {tables.map((table, idx) => (
+                                      <p key={idx}>• <strong>โต๊ะที่ {table.tableNumber}:</strong> {table.members.length} คน</p>
+                                    ))}
+                                  </>
+                                );
+                              } else {
+                                return <p className="text-red-700">⚠️ ไม่พบข้อมูลโต๊ะปาร์ตี้</p>;
+                              }
+                            })()}
+                            <div className="mt-2 text-xs text-violet-700">
+                              💡 ข้อความจะถูกส่งเป็น Flex Message พร้อมรายชื่อสมาชิกในโต๊ะ
                             </div>
                           </div>
                         </div>
@@ -2106,7 +2249,7 @@ export default function MessageTemplateModal({
               </button>
               <button
                 onClick={handleTestSend}
-                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'room_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
+                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'room_assignment' && selectedTemplate !== 'party_table_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
                 className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 title="ส่งข้อความทดสอบไปยัง LINE ของคุณ โดยใช้ข้อมูลจากผู้รับที่เลือกในตัวอย่าง"
               >
@@ -2126,7 +2269,7 @@ export default function MessageTemplateModal({
               </button>
               <button
                 onClick={handleSendMessages}
-                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'room_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
+                disabled={isSending || isSendingTest || (activeTab === 'templates' && selectedTemplate !== 'car_assignment' && selectedTemplate !== 'room_assignment' && selectedTemplate !== 'party_table_assignment' && selectedTemplate !== 'registration_info' && selectedTemplate !== 'felix_registration_info' && !customMessage.trim()) || (activeTab === 'custom' && !customContent.trim() && !imageFile && !imageUrl)}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSending ? (

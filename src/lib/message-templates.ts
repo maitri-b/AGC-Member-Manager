@@ -1090,7 +1090,7 @@ export function generateRoomAssignmentFlexMessage(
             action: {
               type: 'uri',
               label: '📤 แชร์ข้อความนี้',
-              uri: `https://line.me/R/share?text=${encodeURIComponent(`🏨 แจ้งหมายเลขห้องพัก ${roomNumber}\nกิจกรรม: ${eventName}`)}`,
+              uri: `https://line.me/R/share?text=${encodeURIComponent(`🏨 แจ้งหมายเลขห้องพัก\n\nห้อง: ${roomNumber}\nกิจกรรม: ${eventName}\n\nรายชื่อสมาชิก:\n${roomData.members.map((m, i) => `${i + 1}. ${m.name}${m.companyName ? ` (${m.companyName})` : ''}`).join('\n')}\n\nรวม ${roomData.members.length} คน`)}`,
             },
             style: 'primary',
             color: '#7c3aed',

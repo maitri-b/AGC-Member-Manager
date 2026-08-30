@@ -1081,6 +1081,25 @@ export function generateRoomAssignmentFlexMessage(
         ],
         paddingAll: '15px',
       },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            action: {
+              type: 'uri',
+              label: '📤 แชร์ข้อความนี้',
+              uri: `https://line.me/R/share?text=${encodeURIComponent(`🏨 แจ้งหมายเลขห้องพัก ${roomNumber}\nกิจกรรม: ${eventName}`)}`,
+            },
+            style: 'primary',
+            color: '#7c3aed',
+            height: 'sm',
+          },
+        ],
+        paddingAll: '12px',
+        backgroundColor: '#f9fafb',
+      },
     },
   };
 

@@ -861,15 +861,39 @@ export function generateRoomAssignmentFlexMessage(
   registration: EventRegistration,
   eventName: string
 ): any {
+  // Validate required data
+  if (!roomData || !roomData.buildingName || !roomData.roomNumber) {
+    console.error('[generateRoomAssignmentFlexMessage] Invalid roomData:', roomData);
+    throw new Error('Invalid room data - missing building or room number');
+  }
+
+  if (!roomData.members || roomData.members.length === 0) {
+    console.error('[generateRoomAssignmentFlexMessage] No members in room');
+    throw new Error('Invalid room data - no members');
+  }
+
   const roomNumber = `${roomData.buildingName}-${roomData.roomNumber}`;
+  console.log('[generateRoomAssignmentFlexMessage] Creating message for room:', roomNumber);
+  console.log('[generateRoomAssignmentFlexMessage] Members count:', roomData.members.length);
+  console.log('[generateRoomAssignmentFlexMessage] Registration ID:', registration.registrationId);
+  console.log('[generateRoomAssignmentFlexMessage] Event name length:', eventName?.length || 0);
 
   // Build member list with company names
   const membersList: any[] = [];
   roomData.members.forEach((member, index) => {
+    console.log(`[generateRoomAssignmentFlexMessage] Member ${index}:`, {
+      name: member.name,
+      nameLength: member.name?.length || 0,
+      company: member.companyName,
+      companyLength: member.companyName?.length || 0,
+    });
+
     // Show "name (company)" format
     const displayName = member.companyName
       ? `${member.name} (${member.companyName})`
       : member.name;
+
+    console.log(`[generateRoomAssignmentFlexMessage] Display name ${index}:`, displayName, 'length:', displayName.length);
 
     membersList.push({
       type: 'box',
@@ -897,7 +921,7 @@ export function generateRoomAssignmentFlexMessage(
     });
   });
 
-  return {
+  const flexMessage = {
     type: 'flex',
     altText: `แจ้งหมายเลขห้องพัก - ${roomNumber}`,
     contents: {
@@ -1059,6 +1083,18 @@ export function generateRoomAssignmentFlexMessage(
       },
     },
   };
+
+  // Log the complete message size for debugging
+  const messageJSON = JSON.stringify(flexMessage);
+  console.log('[generateRoomAssignmentFlexMessage] Message size:', messageJSON.length, 'bytes');
+  console.log('[generateRoomAssignmentFlexMessage] altText:', flexMessage.altText);
+
+  // Check for extremely long messages (LINE has limits)
+  if (messageJSON.length > 50000) {
+    console.warn('[generateRoomAssignmentFlexMessage] WARNING: Message size exceeds 50KB');
+  }
+
+  return flexMessage;
 }
 
 /**

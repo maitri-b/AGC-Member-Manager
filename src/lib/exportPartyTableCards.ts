@@ -222,11 +222,11 @@ function createSingleTableSheet(slot: TableSlot, showMemberNames: boolean): XLSX
           alignment: { horizontal: 'center', vertical: 'center' },
         };
       }
-      // Count cells (X คน) - right aligned
+      // Count cells (X คน) - left aligned
       else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน')) {
         style = {
           font: { sz: 11 },
-          alignment: { horizontal: 'right', vertical: 'center' },
+          alignment: { horizontal: 'left', vertical: 'center' },
         };
       }
       // Company names (check if next column has count)
@@ -313,11 +313,11 @@ function createSingleTableSheet(slot: TableSlot, showMemberNames: boolean): XLSX
     }
   }
 
-  // Set page margins: left 2.5cm, top 2.5cm (1 inch = 2.54cm, so ~0.98 inch)
+  // Set page margins: left 0.25cm, top 0.25cm (1 inch = 2.54cm, so 0.25cm ≈ 0.098 inch)
   ws['!margins'] = {
-    left: 0.98,   // 2.5 cm
+    left: 0.098,  // 0.25 cm
     right: 0.75,  // default
-    top: 0.98,    // 2.5 cm
+    top: 0.098,   // 0.25 cm
     bottom: 0.75, // default
     header: 0.3,
     footer: 0.3,
@@ -417,11 +417,11 @@ function createDetailedSheet(sortedSlots: TableSlot[]): XLSX.WorkSheet {
           alignment: { horizontal: 'center', vertical: 'center' },
         };
       }
-      // Count cells (X คน) - right aligned
+      // Count cells (X คน) - left aligned
       else if (cellValue && typeof cellValue === 'string' && cellValue.includes('คน')) {
         style = {
           font: { sz: 11 },
-          alignment: { horizontal: 'right', vertical: 'center' },
+          alignment: { horizontal: 'left', vertical: 'center' },
         };
       }
       // Company names (check if next column has count)

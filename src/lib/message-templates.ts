@@ -863,9 +863,14 @@ export function generateRoomAssignmentFlexMessage(
 ): any {
   const roomNumber = `${roomData.buildingName}-${roomData.roomNumber}`;
 
-  // Build member list (name only, no company to reduce message size)
+  // Build member list with company names
   const membersList: any[] = [];
   roomData.members.forEach((member, index) => {
+    // Show "name (company)" format
+    const displayName = member.companyName
+      ? `${member.name} (${member.companyName})`
+      : member.name;
+
     membersList.push({
       type: 'box',
       layout: 'horizontal',
@@ -880,7 +885,7 @@ export function generateRoomAssignmentFlexMessage(
         },
         {
           type: 'text',
-          text: member.name,
+          text: displayName,
           size: 'sm',
           color: '#333333',
           flex: 1,

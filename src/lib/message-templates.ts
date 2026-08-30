@@ -17,6 +17,7 @@ export type MessageTemplateType =
   // Event Management Templates
   | 'car_assignment'       // แจ้งเลขรถที่ได้รับ
   | 'room_assignment'      // แจ้งหมายเลขห้องพัก
+  | 'party_table_assignment' // แจ้งเลขโต๊ะปาร์ตี้
   | 'registration_info'    // แจ้งข้อมูลการลงทะเบียน
   | 'felix_registration_info' // แจ้งข้อมูลการลงทะเบียน + จุดจอดรถ Felix
   // Member Contact Templates
@@ -2081,3 +2082,6 @@ export function generateFelixRegistrationInfoFlexMessage(
     },
   };
 }
+
+// Export party table message function
+export { generatePartyTableAssignmentFlexMessage } from './party-table-message';

@@ -1,0 +1,274 @@
+/**
+ * Party Table Message Template
+ * Generate Flex Message for Party Table Assignment Notifications
+ */
+
+import { EventRegistration } from '@/types/event';
+
+/**
+ * Generate Flex Message for Party Table Assignment Notification
+ * Supports displaying multiple tables if member's registration has attendees in multiple tables
+ */
+export function generatePartyTableAssignmentFlexMessage(
+  tablesData: Array<{
+    tableNumber: number;
+    members: Array<{ name: string; registrationId: string; companyName?: string }>;
+  }>,
+  registration: EventRegistration,
+  eventName: string
+): any {
+  // Validate required data
+  if (!tablesData || tablesData.length === 0) {
+    console.error('[generatePartyTableAssignmentFlexMessage] Invalid tablesData:', tablesData);
+    throw new Error('Invalid tables data - no tables provided');
+  }
+
+  console.log('[generatePartyTableAssignmentFlexMessage] Creating message for tables:', tablesData.length);
+  console.log('[generatePartyTableAssignmentFlexMessage] Registration ID:', registration.registrationId);
+  console.log('[generatePartyTableAssignmentFlexMessage] Event name length:', eventName?.length || 0);
+
+  // Build table sections
+  const tableSections: any[] = [];
+
+  tablesData.forEach((table, tableIndex) => {
+    if (!table.members || table.members.length === 0) {
+      console.warn(`[generatePartyTableAssignmentFlexMessage] Table ${table.tableNumber} has no members, skipping`);
+      return;
+    }
+
+    console.log(`[generatePartyTableAssignmentFlexMessage] Table ${table.tableNumber}: ${table.members.length} members`);
+
+    // Add separator between tables (except first)
+    if (tableIndex > 0) {
+      tableSections.push({
+        type: 'separator',
+        margin: 'xl',
+      });
+    }
+
+    // Table number header
+    tableSections.push({
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'text',
+          text: `โต๊ะที่ ${table.tableNumber}`,
+          size: '3xl',
+          weight: 'bold',
+          color: '#7c3aed',
+          align: 'center',
+        },
+        {
+          type: 'text',
+          text: `${table.members.length} คน`,
+          size: 'sm',
+          color: '#666666',
+          align: 'center',
+          margin: 'sm',
+        },
+      ],
+      backgroundColor: '#f5f3ff',
+      paddingAll: '15px',
+      cornerRadius: '8px',
+      margin: 'md',
+    });
+
+    // Build member list for this table
+    const membersList: any[] = [];
+    table.members.forEach((member, index) => {
+      const displayName = member.companyName
+        ? `${member.name} (${member.companyName})`
+        : member.name;
+
+      console.log(`[generatePartyTableAssignmentFlexMessage] Table ${table.tableNumber}, Member ${index}:`, displayName);
+
+      membersList.push({
+        type: 'box',
+        layout: 'horizontal',
+        contents: [
+          {
+            type: 'text',
+            text: `${index + 1}.`,
+            size: 'sm',
+            color: '#666666',
+            flex: 0,
+            margin: 'none',
+          },
+          {
+            type: 'text',
+            text: displayName,
+            size: 'sm',
+            color: '#333333',
+            flex: 1,
+            margin: 'sm',
+            wrap: true,
+          },
+        ],
+        margin: 'sm',
+      });
+    });
+
+    // Add member list section
+    tableSections.push({
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'text',
+          text: '👥 รายชื่อสมาชิกในโต๊ะ',
+          size: 'sm',
+          weight: 'bold',
+          color: '#333333',
+          margin: 'md',
+        },
+        ...membersList,
+      ],
+    });
+  });
+
+  // Build the complete Flex Message
+  const flexMessage = {
+    type: 'flex',
+    altText: `แจ้งเลขโต๊ะปาร์ตี้ - ${tablesData.map(t => `โต๊ะ ${t.tableNumber}`).join(', ')}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🍽️ แจ้งเลขโต๊ะปาร์ตี้',
+            weight: 'bold',
+            size: 'lg',
+            color: '#ffffff',
+          },
+        ],
+        backgroundColor: '#7c3aed',
+        paddingAll: '15px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          // Event info section
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'กิจกรรม:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                    margin: 'none',
+                  },
+                  {
+                    type: 'text',
+                    text: eventName,
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                    wrap: true,
+                    weight: 'bold',
+                  },
+                ],
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'บริษัท:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                  },
+                  {
+                    type: 'text',
+                    text: registration.companyName || '-',
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                    wrap: true,
+                    weight: 'bold',
+                  },
+                ],
+                margin: 'sm',
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'รหัสจอง:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                  },
+                  {
+                    type: 'text',
+                    text: registration.registrationId,
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                  },
+                ],
+                margin: 'sm',
+              },
+            ],
+          },
+          {
+            type: 'separator',
+            margin: 'lg',
+          },
+          // Table sections (one or more tables)
+          ...tableSections,
+        ],
+        paddingAll: '15px',
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            action: {
+              type: 'uri',
+              label: '📤 แชร์ข้อความนี้',
+              uri: `https://line.me/R/share?text=${encodeURIComponent(`🍽️ แจ้งเลขโต๊ะปาร์ตี้\nกิจกรรม: ${eventName}\nโต๊ะ: ${tablesData.map(t => `#${t.tableNumber}`).join(', ')}`)}`,
+            },
+            style: 'primary',
+            color: '#7c3aed',
+            height: 'sm',
+          },
+        ],
+        paddingAll: '12px',
+        backgroundColor: '#f9fafb',
+      },
+    },
+  };
+
+  // Log the complete message size for debugging
+  const messageJSON = JSON.stringify(flexMessage);
+  console.log('[generatePartyTableAssignmentFlexMessage] Message size:', messageJSON.length, 'bytes');
+  console.log('[generatePartyTableAssignmentFlexMessage] altText:', flexMessage.altText);
+
+  // Check for extremely long messages (LINE has limits)
+  if (messageJSON.length > 50000) {
+    console.warn('[generatePartyTableAssignmentFlexMessage] WARNING: Message size exceeds 50KB');
+  }
+
+  return flexMessage;
+}

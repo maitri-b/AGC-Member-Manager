@@ -288,6 +288,41 @@ function createSingleTableSheet(slot: TableSlot, showMemberNames: boolean): XLSX
   }
   ws['!rows'] = rows;
 
+  // Add light border around content area (rows 0 to ROWS_PER_TABLE-1)
+  const lastContentRow = ROWS_PER_TABLE - 1;
+  for (let R = 0; R <= lastContentRow; R++) {
+    for (let C = 0; C <= 2; C++) {
+      const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[cellRef];
+
+      if (cell && cell.s) {
+        // Skip header row which already has borders
+        if (cell.v && typeof cell.v === 'string' && cell.v.startsWith('โต๊ะที่')) {
+          continue;
+        }
+
+        // Add light gray borders
+        const borderStyle = { style: 'thin', color: { rgb: 'E5E7EB' } };
+        cell.s.border = {
+          top: R === 0 ? borderStyle : undefined,
+          bottom: R === lastContentRow ? borderStyle : undefined,
+          left: C === 0 ? borderStyle : undefined,
+          right: C === 2 ? borderStyle : undefined,
+        };
+      }
+    }
+  }
+
+  // Set page margins: left 2.5cm, top 2.5cm (1 inch = 2.54cm, so ~0.98 inch)
+  ws['!margins'] = {
+    left: 0.98,   // 2.5 cm
+    right: 0.75,  // default
+    top: 0.98,    // 2.5 cm
+    bottom: 0.75, // default
+    header: 0.3,
+    footer: 0.3,
+  };
+
   return ws;
 }
 

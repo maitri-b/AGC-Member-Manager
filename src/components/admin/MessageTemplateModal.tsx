@@ -479,7 +479,11 @@ export default function MessageTemplateModal({
       // Build send tasks - for car_assignment, send one message per car
       const sendTasks: Promise<{ success: true; name: string }>[] = [];
 
+      console.log('[Send Messages] Total selected registrations:', selectedRegistrations.length);
+      console.log('[Send Messages] Selected template:', selectedTemplate);
+
       for (const { registration, lineUserId } of selectedRegistrations) {
+        console.log('[Send Messages] Processing registration:', registration.registrationId, registration.contactName);
         if (activeTab === 'templates' && selectedTemplate === 'car_assignment' && carpoolsData) {
           // Car assignment: send separate message for each car
           const carpools = carpoolsData[registration.registrationId];
@@ -758,7 +762,8 @@ export default function MessageTemplateModal({
           console.log('[Party Table Assignment] Party tables:', partyTables.length);
 
           if (partyTables.length === 0) {
-            console.warn('[Party Table Assignment] No party table assignments for:', registration.contactName);
+            console.warn('[Party Table Assignment] SKIPPING - No party table assignments for:', registration.contactName);
+            console.warn('[Party Table Assignment] Available data:', Object.keys(partyTablesData || {}));
             continue;
           }
 
@@ -1304,6 +1309,9 @@ export default function MessageTemplateModal({
         );
       } else if (activeTab === 'templates' && selectedTemplate === 'party_table_assignment') {
         // For party_table_assignment: send test message with all tables for each registration
+        console.log('[Test Send - Party Table] Total selected:', selectedRegistrations.length);
+        console.log('[Test Send - Party Table] partyTablesData keys:', partyTablesData ? Object.keys(partyTablesData) : []);
+
         for (const { registration } of selectedRegistrations) {
           const partyTables = partyTablesData?.[registration.registrationId] || [];
 

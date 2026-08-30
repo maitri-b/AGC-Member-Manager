@@ -1000,6 +1000,7 @@ export default function EventDetailPage() {
   const [messageTemplateModalOpen, setMessageTemplateModalOpen] = useState(false);
   const [selectedRegistrationsForMessage, setSelectedRegistrationsForMessage] = useState<Set<string>>(new Set());
   const [carpoolsDataForMessages, setCarpoolsDataForMessages] = useState<Record<string, any>>({});
+  const [partyTablesDataForMessages, setPartyTablesDataForMessages] = useState<Record<string, any>>({});
   const [cancellationFormData, setCancellationFormData] = useState<{
     registrationId: string;
     reason: string;
@@ -1171,6 +1172,40 @@ export default function EventDetailPage() {
     } catch (error) {
       console.error('Error fetching carpools:', error);
       // Continue opening modal even if carpool fetch fails
+    }
+
+    // Fetch party tables data for selected registrations
+    try {
+      const partyTablesMap: Record<string, any[]> = {};
+
+      // Fetch party tables for each selected registration
+      for (const regId of Array.from(selectedRegistrationsForMessage)) {
+        try {
+          const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/my-party-tables?registrationId=${regId}`);
+          if (response.ok) {
+            const data = await response.json();
+            const tables = data.tables || [];
+
+            // Only add if there are tables with assigned numbers
+            const tablesWithNumbers = tables.filter((table: any) => table.assignedTableNumber);
+
+            if (tablesWithNumbers.length > 0) {
+              partyTablesMap[regId] = tablesWithNumbers.map((table: any) => ({
+                tableNumber: table.assignedTableNumber,
+                members: table.members || []
+              }));
+            }
+          }
+        } catch (err) {
+          console.error(`Error fetching party tables for ${regId}:`, err);
+          // Continue with other registrations even if one fails
+        }
+      }
+
+      setPartyTablesDataForMessages(partyTablesMap);
+    } catch (error) {
+      console.error('Error fetching party tables:', error);
+      // Continue opening modal even if party table fetch fails
     }
 
     setMessageTemplateModalOpen(true);
@@ -6745,6 +6780,7 @@ export default function EventDetailPage() {
             setMessageTemplateModalOpen(false);
             setSelectedRegistrationsForMessage(new Set()); // Clear selection after sending
             setCarpoolsDataForMessages({}); // Clear carpool data
+            setPartyTablesDataForMessages({}); // Clear party tables data
           }}
           selectedRegistrations={
             filteredAttendees
@@ -6756,6 +6792,7 @@ export default function EventDetailPage() {
           }
           event={eventData.event as any} // Cast to Event type
           carpoolsData={carpoolsDataForMessages}
+          partyTablesData={partyTablesDataForMessages}
           rooms={allRooms} // Pass rooms data for Felix parking lookup
         />
       )}

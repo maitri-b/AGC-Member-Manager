@@ -773,8 +773,7 @@ export default function MessageTemplateModal({
               const flexMessage = generatePartyTableAssignmentFlexMessage(
                 partyTables,
                 registration,
-                event.eventName,
-                event.partyTableSettings?.seatingChartUrl
+                event.eventName
               );
 
               console.log('[Party Table Assignment] Generated flexMessage for:', registration.contactName);
@@ -1327,8 +1326,7 @@ export default function MessageTemplateModal({
           const flexMessage = generatePartyTableAssignmentFlexMessage(
             partyTables,
             registration,
-            event.eventName,
-            event.partyTableSettings?.seatingChartUrl
+            event.eventName
           );
 
           console.log('[Test Send - Party Table] Generated flexMessage for:', registration.contactName);

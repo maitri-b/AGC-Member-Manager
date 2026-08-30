@@ -23,8 +23,7 @@ export function generatePartyTableAssignmentFlexMessage(
     }>;
   }>,
   registration: EventRegistration,
-  eventName: string,
-  seatingChartUrl?: string
+  eventName: string
 ): any {
   // Validate required data
   if (!tablesData || tablesData.length === 0) {
@@ -179,142 +178,117 @@ export function generatePartyTableAssignmentFlexMessage(
   });
 
   // Build the complete Flex Message
-  const bubbleContents: any = {
-    type: 'bubble',
-    header: {
-      type: 'box',
-      layout: 'vertical',
-      contents: [
-        {
-          type: 'text',
-          text: '🍽️ แจ้งเลขโต๊ะปาร์ตี้',
-          weight: 'bold',
-          size: 'lg',
-          color: '#ffffff',
-        },
-      ],
-      backgroundColor: '#7c3aed',
-      paddingAll: '15px',
-    },
-    body: {
-      type: 'box',
-      layout: 'vertical',
-      contents: [
-        // Event info section
-        {
-          type: 'box',
-          layout: 'vertical',
-          contents: [
-            {
-              type: 'box',
-              layout: 'baseline',
-              contents: [
-                {
-                  type: 'text',
-                  text: 'กิจกรรม:',
-                  size: 'sm',
-                  color: '#666666',
-                  flex: 0,
-                  margin: 'none',
-                },
-                {
-                  type: 'text',
-                  text: eventName,
-                  size: 'sm',
-                  color: '#333333',
-                  flex: 1,
-                  margin: 'sm',
-                  wrap: true,
-                  weight: 'bold',
-                },
-              ],
-            },
-            {
-              type: 'box',
-              layout: 'baseline',
-              contents: [
-                {
-                  type: 'text',
-                  text: 'บริษัท:',
-                  size: 'sm',
-                  color: '#666666',
-                  flex: 0,
-                },
-                {
-                  type: 'text',
-                  text: registration.companyName || '-',
-                  size: 'sm',
-                  color: '#333333',
-                  flex: 1,
-                  margin: 'sm',
-                  wrap: true,
-                  weight: 'bold',
-                },
-              ],
-              margin: 'sm',
-            },
-            {
-              type: 'box',
-              layout: 'baseline',
-              contents: [
-                {
-                  type: 'text',
-                  text: 'รหัสจอง:',
-                  size: 'sm',
-                  color: '#666666',
-                  flex: 0,
-                },
-                {
-                  type: 'text',
-                  text: registration.registrationId,
-                  size: 'sm',
-                  color: '#333333',
-                  flex: 1,
-                  margin: 'sm',
-                },
-              ],
-              margin: 'sm',
-            },
-          ],
-        },
-        {
-          type: 'separator',
-          margin: 'lg',
-        },
-        // Table sections (one or more tables)
-        ...tableSections,
-      ],
-      paddingAll: '15px',
-    },
-  };
-
-  // Add footer only if seatingChartUrl exists
-  if (seatingChartUrl) {
-    bubbleContents.footer = {
-      type: 'box',
-      layout: 'vertical',
-      contents: [
-        {
-          type: 'button',
-          action: {
-            type: 'uri',
-            label: '🗺️ ดูผังโต๊ะ',
-            uri: seatingChartUrl,
-          },
-          style: 'primary',
-          color: '#7c3aed',
-          height: 'sm',
-        },
-      ],
-      paddingAll: '12px',
-      backgroundColor: '#f9fafb',
-    };
-  }
-
   const flexMessage = {
     type: 'flex',
     altText: `แจ้งเลขโต๊ะปาร์ตี้ - ${tablesData.map(t => `โต๊ะ ${t.tableNumber}`).join(', ')}`,
-    contents: bubbleContents,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '🍽️ แจ้งเลขโต๊ะปาร์ตี้',
+            weight: 'bold',
+            size: 'lg',
+            color: '#ffffff',
+          },
+        ],
+        backgroundColor: '#7c3aed',
+        paddingAll: '15px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          // Event info section
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'กิจกรรม:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                    margin: 'none',
+                  },
+                  {
+                    type: 'text',
+                    text: eventName,
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                    wrap: true,
+                    weight: 'bold',
+                  },
+                ],
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'บริษัท:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                  },
+                  {
+                    type: 'text',
+                    text: registration.companyName || '-',
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                    wrap: true,
+                    weight: 'bold',
+                  },
+                ],
+                margin: 'sm',
+              },
+              {
+                type: 'box',
+                layout: 'baseline',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'รหัสจอง:',
+                    size: 'sm',
+                    color: '#666666',
+                    flex: 0,
+                  },
+                  {
+                    type: 'text',
+                    text: registration.registrationId,
+                    size: 'sm',
+                    color: '#333333',
+                    flex: 1,
+                    margin: 'sm',
+                  },
+                ],
+                margin: 'sm',
+              },
+            ],
+          },
+          {
+            type: 'separator',
+            margin: 'lg',
+          },
+          // Table sections (one or more tables)
+          ...tableSections,
+        ],
+        paddingAll: '15px',
+      },
+    },
   };
 
   // Log the complete message size for debugging

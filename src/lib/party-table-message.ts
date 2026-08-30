@@ -12,7 +12,15 @@ import { EventRegistration } from '@/types/event';
 export function generatePartyTableAssignmentFlexMessage(
   tablesData: Array<{
     tableNumber: number;
-    members: Array<{ name: string; registrationId: string; companyName?: string }>;
+    members: Array<{
+      name: string;
+      registrationId: string;
+      companyName?: string;
+      isFromRecipient: boolean;
+      isReservation?: boolean;
+      reservationName?: string;
+      reservationSeats?: number;
+    }>;
   }>,
   registration: EventRegistration,
   eventName: string
@@ -76,12 +84,53 @@ export function generatePartyTableAssignmentFlexMessage(
 
     // Build member list for this table
     const membersList: any[] = [];
-    table.members.forEach((member, index) => {
-      const displayName = member.companyName
-        ? `${member.name} (${member.companyName})`
-        : member.name;
+    let memberIndex = 1;
 
-      console.log(`[generatePartyTableAssignmentFlexMessage] Table ${table.tableNumber}, Member ${index}:`, displayName);
+    table.members.forEach((member) => {
+      // Handle reservation groups
+      if (member.isReservation) {
+        membersList.push({
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: `${memberIndex}.`,
+              size: 'sm',
+              color: '#666666',
+              flex: 0,
+              margin: 'none',
+            },
+            {
+              type: 'text',
+              text: `${member.reservationName} (${member.reservationSeats} ที่นั่ง)`,
+              size: 'sm',
+              color: '#7c3aed',
+              flex: 1,
+              margin: 'sm',
+              wrap: true,
+              weight: 'bold',
+            },
+          ],
+          margin: 'sm',
+        });
+        memberIndex++;
+        return;
+      }
+
+      // Handle regular members
+      let displayName = member.name;
+
+      // Show company name only if member is NOT from recipient's registration
+      if (!member.isFromRecipient && member.companyName) {
+        displayName = `${member.name} (${member.companyName})`;
+      }
+
+      console.log(`[generatePartyTableAssignmentFlexMessage] Table ${table.tableNumber}, Member ${memberIndex}:`, {
+        name: member.name,
+        isFromRecipient: member.isFromRecipient,
+        displayName,
+      });
 
       membersList.push({
         type: 'box',
@@ -89,7 +138,7 @@ export function generatePartyTableAssignmentFlexMessage(
         contents: [
           {
             type: 'text',
-            text: `${index + 1}.`,
+            text: `${memberIndex}.`,
             size: 'sm',
             color: '#666666',
             flex: 0,
@@ -107,6 +156,7 @@ export function generatePartyTableAssignmentFlexMessage(
         ],
         margin: 'sm',
       });
+      memberIndex++;
     });
 
     // Add member list section

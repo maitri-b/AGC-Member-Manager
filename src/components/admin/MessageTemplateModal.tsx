@@ -24,7 +24,15 @@ interface CarpoolData {
 
 interface PartyTableData {
   tableNumber: number;
-  members: Array<{ name: string; registrationId: string; companyName?: string }>;
+  members: Array<{
+    name: string;
+    registrationId: string;
+    companyName?: string;
+    isFromRecipient: boolean;
+    isReservation?: boolean;
+    reservationName?: string;
+    reservationSeats?: number;
+  }>;
 }
 
 interface MessageTemplateModalProps {
@@ -1734,37 +1742,49 @@ export default function MessageTemplateModal({
                       </div>
                     </div>
                   ) : selectedTemplate === 'party_table_assignment' ? (
-                    <div className="bg-violet-50 border border-violet-300 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="text-2xl">🍽️</div>
-                        <div className="flex-1">
-                          <div className="font-bold text-violet-900 mb-2">Flex Message - แจ้งเลขโต๊ะปาร์ตี้</div>
-                          <div className="text-sm text-violet-800 space-y-1">
-                            <p>• <strong>กิจกรรม:</strong> {event.eventName}</p>
-                            <p>• <strong>บริษัท:</strong> {currentRecipient.registration.companyName}</p>
-                            <p>• <strong>รหัสจอง:</strong> {currentRecipient.registration.registrationId}</p>
-                            {(() => {
-                              const tables = partyTablesData?.[currentRecipient.registration.registrationId] || [];
-                              if (tables.length > 0) {
-                                return (
-                                  <>
-                                    <p>• <strong>🍽️ โต๊ะปาร์ตี้:</strong> {tables.map(t => `#${t.tableNumber}`).join(', ')}</p>
-                                    <p>• <strong>👥 สมาชิกทั้งหมด:</strong> {tables.reduce((sum, t) => sum + t.members.length, 0)} คน</p>
-                                    {tables.map((table, idx) => (
-                                      <p key={idx}>• <strong>โต๊ะที่ {table.tableNumber}:</strong> {table.members.length} คน</p>
-                                    ))}
-                                  </>
-                                );
-                              } else {
-                                return <p className="text-red-700">⚠️ ไม่พบข้อมูลโต๊ะปาร์ตี้</p>;
-                              }
-                            })()}
-                            <div className="mt-2 text-xs text-violet-700">
-                              💡 ข้อความจะถูกส่งเป็น Flex Message พร้อมรายชื่อสมาชิกในโต๊ะ
+                    <div className="space-y-3">
+                      {partyTablesData && partyTablesData[currentRecipient.registration.registrationId] && partyTablesData[currentRecipient.registration.registrationId].length > 0 ? (
+                        partyTablesData[currentRecipient.registration.registrationId].map((table, tableIdx) => (
+                          <div key={tableIdx} className="bg-violet-50 border border-violet-300 rounded-lg p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="text-2xl">🍽️</div>
+                              <div className="flex-1">
+                                <div className="font-bold text-violet-900 mb-2">โต๊ะที่ {table.tableNumber}</div>
+                                <div className="text-sm text-violet-800 space-y-1">
+                                  <p>• <strong>จำนวนสมาชิก:</strong> {table.members.length} คน</p>
+                                  {table.members.map((member: any, memberIdx: number) => {
+                                    if (member.isReservation) {
+                                      return (
+                                        <p key={memberIdx} className="text-purple-700">
+                                          • <strong>{member.reservationName}</strong> ({member.reservationSeats} ที่นั่ง)
+                                        </p>
+                                      );
+                                    }
+                                    const displayName = member.isFromRecipient
+                                      ? member.name
+                                      : `${member.name} (${member.companyName || 'ไม่ระบุ'})`;
+                                    return (
+                                      <p key={memberIdx} className={member.isFromRecipient ? '' : 'text-blue-700'}>
+                                        • {displayName}
+                                      </p>
+                                    );
+                                  })}
+                                  {tableIdx === 0 && (
+                                    <div className="mt-2 pt-2 border-t border-violet-300 text-xs text-violet-700">
+                                      💡 สมาชิกจากบริษัทอื่นจะแสดงชื่อบริษัทต่อท้าย<br />
+                                      💡 โต๊ะจองจะแสดงชื่อและจำนวนที่นั่ง
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="bg-violet-50 border border-violet-300 rounded-lg p-4">
+                          <p className="text-red-700">⚠️ ไม่พบข้อมูลโต๊ะปาร์ตี้</p>
                         </div>
-                      </div>
+                      )}
                     </div>
                   ) : selectedTemplate === 'felix_registration_info' ? (
                     <div className="bg-purple-50 border border-purple-300 rounded-lg p-4">

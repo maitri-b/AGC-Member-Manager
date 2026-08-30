@@ -1176,35 +1176,24 @@ export default function EventDetailPage() {
 
     // Fetch party tables data for selected registrations
     try {
-      const partyTablesMap: Record<string, any[]> = {};
+      const regIds = Array.from(selectedRegistrationsForMessage);
 
-      // Fetch party tables for each selected registration
-      for (const regId of Array.from(selectedRegistrationsForMessage)) {
-        try {
-          const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/my-party-tables?registrationId=${regId}`);
-          if (response.ok) {
-            const data = await response.json();
-            const tables = data.tables || [];
+      if (regIds.length > 0) {
+        const response = await fetch(
+          `/api/events/${encodeURIComponent(eventId)}/party-table-assignments?registrationIds=${regIds.join(',')}`
+        );
 
-            // Only add if there are tables with assigned numbers
-            const tablesWithNumbers = tables.filter((table: any) => table.assignedTableNumber);
-
-            if (tablesWithNumbers.length > 0) {
-              partyTablesMap[regId] = tablesWithNumbers.map((table: any) => ({
-                tableNumber: table.assignedTableNumber,
-                members: table.members || []
-              }));
-            }
-          }
-        } catch (err) {
-          console.error(`Error fetching party tables for ${regId}:`, err);
-          // Continue with other registrations even if one fails
+        if (response.ok) {
+          const data = await response.json();
+          setPartyTablesDataForMessages(data.assignments || {});
+        } else {
+          console.error('Failed to fetch party table assignments:', response.statusText);
+          setPartyTablesDataForMessages({});
         }
       }
-
-      setPartyTablesDataForMessages(partyTablesMap);
     } catch (error) {
       console.error('Error fetching party tables:', error);
+      setPartyTablesDataForMessages({});
       // Continue opening modal even if party table fetch fails
     }
 

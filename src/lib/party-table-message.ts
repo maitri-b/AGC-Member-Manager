@@ -23,7 +23,8 @@ export function generatePartyTableAssignmentFlexMessage(
     }>;
   }>,
   registration: EventRegistration,
-  eventName: string
+  eventName: string,
+  seatingChartUrl?: string
 ): any {
   // Validate required data
   if (!tablesData || tablesData.length === 0) {
@@ -288,7 +289,7 @@ export function generatePartyTableAssignmentFlexMessage(
         ],
         paddingAll: '15px',
       },
-      footer: {
+      footer: seatingChartUrl ? {
         type: 'box',
         layout: 'vertical',
         contents: [
@@ -296,8 +297,8 @@ export function generatePartyTableAssignmentFlexMessage(
             type: 'button',
             action: {
               type: 'uri',
-              label: '📤 แชร์ข้อความนี้',
-              uri: `https://line.me/R/share?text=${encodeURIComponent(`🍽️ แจ้งเลขโต๊ะปาร์ตี้\nกิจกรรม: ${eventName}\nโต๊ะ: ${tablesData.map(t => `#${t.tableNumber}`).join(', ')}`)}`,
+              label: '🗺️ ดูผังโต๊ะ',
+              uri: seatingChartUrl,
             },
             style: 'primary',
             color: '#7c3aed',
@@ -306,7 +307,7 @@ export function generatePartyTableAssignmentFlexMessage(
         ],
         paddingAll: '12px',
         backgroundColor: '#f9fafb',
-      },
+      } : undefined,
     },
   };
 

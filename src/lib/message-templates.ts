@@ -161,6 +161,14 @@ export const DEFAULT_TEMPLATES: Record<MessageTemplateType, MessageTemplate> = {
     variables: ['eventName', 'companyName', 'registrationId', 'roomNumber', 'buildingName', 'memberNames'],
   },
 
+  party_table_assignment: {
+    id: 'party_table_assignment',
+    name: 'แจ้งเลขโต๊ะปาร์ตี้',
+    description: 'ส่งแจ้งเลขโต๊ะปาร์ตี้ที่ได้รับมอบหมายให้กับผู้ลงทะเบียน',
+    template: `FLEX_MESSAGE`, // Special marker for Flex message
+    variables: ['eventName', 'companyName', 'registrationId', 'tableNumbers', 'memberNames'],
+  },
+
   verification_reminder: {
     id: 'verification_reminder',
     name: 'แจ้งเตือนให้ยืนยันตัวตน',

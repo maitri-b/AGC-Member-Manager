@@ -273,11 +273,13 @@ export async function PUT(request: NextRequest) {
 
           // Send LINE notification if:
           // 1. sendLineNotification is true (default: true)
-          // 2. Role changed from guest to member or higher
+          // 2. MemberId is being linked (either new member or existing member)
           // 3. User has LINE User ID
+          const oldMemberId = userData?.memberId;
+          const isNewMemberLink = !oldMemberId && memberId; // First time linking memberId
+
           const shouldSendNotification = sendLineNotification !== false &&
-                                        (oldRole === 'guest' || oldRole === 'visitor') &&
-                                        (role === 'member' || role === 'committee' || role === 'admin') &&
+                                        isNewMemberLink &&
                                         lineUserId;
 
           if (shouldSendNotification) {

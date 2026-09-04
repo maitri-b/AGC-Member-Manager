@@ -65,6 +65,12 @@ export default function PromoteEventModal({
   const [showTemplates, setShowTemplates] = useState(false);
   const [attachImage, setAttachImage] = useState(false); // Checkbox for attaching main image
 
+  // Custom message image upload states
+  const [customImageFile, setCustomImageFile] = useState<File | null>(null);
+  const [customImagePreview, setCustomImagePreview] = useState<string | null>(null);
+  const [customImageUrl, setCustomImageUrl] = useState<string>('');
+  const [uploadingCustomImage, setUploadingCustomImage] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       fetchMembers();
@@ -79,6 +85,10 @@ export default function PromoteEventModal({
       setMessageSubject(''); // Clear subject
       setShowTemplates(false);
       setAttachImage(!!mainImageUrl); // Auto-check if image exists
+      // Reset custom image states
+      setCustomImageFile(null);
+      setCustomImagePreview(null);
+      setCustomImageUrl('');
     }
   }, [isOpen, eventId, mainImageUrl]);
 
@@ -249,6 +259,44 @@ export default function PromoteEventModal({
     }
   };
 
+  // Handle custom image file selection
+  const handleCustomImageSelect = (file: File | null) => {
+    if (!file) {
+      setCustomImageFile(null);
+      setCustomImagePreview(null);
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setMessage({ type: 'error', text: 'ประเภทไฟล์ไม่ถูกต้อง กรุณาเลือกไฟล์ภาพ (JPEG, PNG, หรือ WebP)' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setMessage({ type: 'error', text: 'ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 5MB)' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    // Set file and create preview
+    setCustomImageFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setCustomImagePreview(previewUrl);
+    setCustomImageUrl(''); // Clear URL input when file is selected
+  };
+
+  // Remove custom image
+  const handleRemoveCustomImage = () => {
+    setCustomImageFile(null);
+    setCustomImagePreview(null);
+    setCustomImageUrl('');
+  };
+
   // Insert personalization tag at cursor position
   const insertTag = (tag: string) => {
     if (!textareaRef) return;
@@ -284,8 +332,9 @@ export default function PromoteEventModal({
         setMessage({ type: 'error', text: 'กรุณากรอกหัวข้อข้อความ' });
         return;
       }
-      if (!customMessage.trim()) {
-        setMessage({ type: 'error', text: 'กรุณากรอกเนื้อหาข้อความ' });
+      // Allow sending image only (without text message)
+      if (!customMessage.trim() && !customImageFile && !customImageUrl) {
+        setMessage({ type: 'error', text: 'กรุณากรอกข้อความหรือแนบรูปภาพอย่างน้อย 1 อย่าง' });
         return;
       }
     }
@@ -295,6 +344,41 @@ export default function PromoteEventModal({
       setMessage(null);
 
       const memberIdsArray = Array.from(selectedMemberIds);
+
+      // Upload custom image if file is selected (for custom mode)
+      let uploadedCustomImageUrl = customImageUrl;
+      if (messageMode === 'custom' && customImageFile) {
+        try {
+          setUploadingCustomImage(true);
+          setMessage({ type: 'success', text: 'กำลังอัปโหลดรูปภาพ...' });
+
+          const uploadFormData = new FormData();
+          uploadFormData.append('image', customImageFile);
+
+          const uploadResponse = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: uploadFormData,
+          });
+
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            console.error('Upload error:', errorData);
+            throw new Error('ไม่สามารถอัปโหลดรูปภาพได้');
+          }
+
+          const uploadResult = await uploadResponse.json();
+          uploadedCustomImageUrl = uploadResult.url;
+          setMessage({ type: 'success', text: 'อัปโหลดรูปภาพสำเร็จ' });
+        } catch (uploadError) {
+          console.error('Upload error:', uploadError);
+          setMessage({ type: 'error', text: uploadError instanceof Error ? uploadError.message : 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ' });
+          setSending(false);
+          setUploadingCustomImage(false);
+          return;
+        } finally {
+          setUploadingCustomImage(false);
+        }
+      }
 
       let response;
 
@@ -330,6 +414,7 @@ export default function PromoteEventModal({
             eventId,
             eventName,
             enablePersonalization: true,
+            imageUrl: uploadedCustomImageUrl || undefined, // Include image URL if available
           }),
         });
       }
@@ -627,6 +712,82 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`;
                     <p className="text-xs text-gray-500 mt-1">
                       {customMessage.length}/1000 ตัวอักษร
                     </p>
+                  </div>
+
+                  {/* Image Upload Section */}
+                  <div className="pt-3 border-t border-gray-200">
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      แนบรูปภาพ (ไม่บังคับ)
+                    </label>
+
+                    {/* Image Preview */}
+                    {(customImagePreview || customImageUrl) && (
+                      <div className="mb-3 relative inline-block">
+                        <img
+                          src={customImagePreview || customImageUrl}
+                          alt="Custom message image"
+                          className="max-w-xs max-h-48 rounded border border-gray-300 shadow-sm"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveCustomImage}
+                          className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
+                          title="ลบรูปภาพ"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* File Input */}
+                    {!customImagePreview && !customImageUrl && (
+                      <div>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            handleCustomImageSelect(file);
+                          }}
+                          className="hidden"
+                          id="custom-image-upload"
+                          disabled={uploadingCustomImage}
+                        />
+                        <label
+                          htmlFor="custom-image-upload"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer text-sm font-medium border border-gray-300"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          เลือกรูปภาพ
+                        </label>
+                        <p className="text-xs text-gray-500 mt-2">
+                          รองรับ: JPEG, PNG, WebP (ไม่เกิน 5MB)
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Optional URL Input */}
+                    {!customImageFile && (
+                      <div className="mt-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          หรือใส่ URL รูปภาพ (HTTPS เท่านั้น)
+                        </label>
+                        <input
+                          type="url"
+                          value={customImageUrl}
+                          onChange={(e) => setCustomImageUrl(e.target.value)}
+                          placeholder="https://example.com/image.jpg"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Template Management */}

@@ -6,6 +6,7 @@ import { hasPermission } from '@/lib/permissions';
 import { getMemberById } from '@/lib/google-sheets';
 import { adminDb } from '@/lib/firebase-admin';
 import { getBaseUrl } from '@/lib/settings';
+import { generateSignedUrl } from '@/lib/firebase-storage';
 
 const LINE_API_URL = 'https://api.line.me/v2/bot/message/push';
 
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Build messages array (Flex first if provided, then text if provided, then image if provided)
+          // Build messages array (Flex first if provided, then image if provided, then text if provided)
           const messages: any[] = [];
 
           // Add Flex message if provided (takes priority)
@@ -135,20 +136,52 @@ export async function POST(request: NextRequest) {
             messages.push(flexMessage);
           }
 
-          // Add text message if provided
+          // Add image message first if imageUrl is provided (images appear before text in LINE)
+          if (imageUrl && imageUrl.trim()) {
+            // Validate that imageUrl is a valid HTTPS URL
+            try {
+              const url = new URL(imageUrl.trim());
+              if (url.protocol === 'https:') {
+                // If it's a storage.googleapis.com URL, generate signed URL for LINE to access
+                let finalImageUrl = imageUrl.trim();
+
+                if (imageUrl.includes('storage.googleapis.com')) {
+                  console.log('[LINE Send Notification] Detected Firebase Storage URL, generating signed URL');
+                  // Extract file path from URL
+                  const pathParts = url.pathname.split('/');
+                  pathParts.shift(); // Remove empty string from leading /
+                  pathParts.shift(); // Remove bucket name
+                  const filePath = pathParts.join('/');
+
+                  if (filePath) {
+                    try {
+                      finalImageUrl = await generateSignedUrl(filePath);
+                      console.log('[LINE Send Notification] Using signed URL for LINE');
+                    } catch (err) {
+                      console.warn('[LINE Send Notification] Error generating signed URL, using original:', err);
+                    }
+                  }
+                }
+
+                messages.push({
+                  type: 'image',
+                  originalContentUrl: finalImageUrl,
+                  previewImageUrl: finalImageUrl,
+                });
+                console.log('[LINE Send Notification] Adding image to message');
+              } else {
+                console.warn('[LINE Send Notification] Image URL is not HTTPS, skipping image:', imageUrl);
+              }
+            } catch (error) {
+              console.error('[LINE Send Notification] Invalid image URL, skipping image:', imageUrl, error);
+            }
+          }
+
+          // Add text message after image if provided
           if (personalizedMessage && personalizedMessage.trim()) {
             messages.push({
               type: 'text',
               text: personalizedMessage,
-            });
-          }
-
-          // Add image message if imageUrl is provided
-          if (imageUrl && imageUrl.trim()) {
-            messages.push({
-              type: 'image',
-              originalContentUrl: imageUrl.trim(),
-              previewImageUrl: imageUrl.trim(),
             });
           }
 

@@ -22,6 +22,14 @@ export async function POST(request: NextRequest) {
 
     const { memberIds, eventId, eventName, eventDescription, eventUrl, attachImage, imageUrl } = await request.json();
 
+    console.log('[LINE Promotion] Request payload:', {
+      memberCount: memberIds?.length,
+      eventId,
+      eventName,
+      attachImage,
+      imageUrl,
+    });
+
     if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
       return NextResponse.json({ error: 'Member IDs are required' }, { status: 400 });
     }
@@ -56,11 +64,22 @@ ${fullEventUrl}`;
 
     // Add image message first if attachImage is enabled and imageUrl exists
     if (attachImage && imageUrl) {
-      messages.push({
-        type: 'image',
-        originalContentUrl: imageUrl,
-        previewImageUrl: imageUrl,
-      });
+      // Validate that imageUrl is a valid HTTPS URL
+      try {
+        const url = new URL(imageUrl);
+        if (url.protocol === 'https:') {
+          messages.push({
+            type: 'image',
+            originalContentUrl: imageUrl,
+            previewImageUrl: imageUrl,
+          });
+          console.log('[LINE Promotion] Adding image to message:', imageUrl);
+        } else {
+          console.warn('[LINE Promotion] Image URL is not HTTPS, skipping image:', imageUrl);
+        }
+      } catch (error) {
+        console.error('[LINE Promotion] Invalid image URL, skipping image:', imageUrl, error);
+      }
     }
 
     // Add text message

@@ -137,12 +137,8 @@ export default function PromoteEventModal({
   const filteredMembers = useMemo(() => {
     let filtered = [...members];
 
-    // Filter by message mode
-    if (messageMode === 'custom') {
-      // Custom mode: Only show registered members
-      filtered = filtered.filter(member => registeredLineUserIds.has(member.lineUserId || ''));
-    }
-    // Promote mode: Show all club members (default behavior)
+    // Both modes show all verified members with LINE accounts
+    // No filtering by messageMode - show all members in both promote and custom modes
 
     // Search filter
     if (searchTerm) {
@@ -443,8 +439,8 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`;
               </div>
               <p className="text-xs text-gray-500 mt-2">
                 {messageMode === 'promote'
-                  ? '• ส่งข้อความโปรโมทกิจกรรม (เนื้อหาคงที่) ให้สมาชิกทั้งชมรม'
-                  : '• ส่งข้อความกำหนดเอง (แก้ไขได้) ให้สมาชิกที่ลงทะเบียน'}
+                  ? '• ส่งข้อความโปรโมทกิจกรรม (เนื้อหาคงที่) ให้สมาชิกที่เลือก'
+                  : '• ส่งข้อความกำหนดเอง (แก้ไขได้) พร้อม personalization ให้สมาชิกที่เลือก'}
               </p>
             </div>
           )}
@@ -815,18 +811,13 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`;
                     className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-sm font-medium text-gray-700">
-                    {messageMode === 'custom' ? 'ส่งทุกคน' : 'เลือกทั้งหมด'}
+                    เลือกทั้งหมด
                   </span>
                 </label>
                 <span className="text-sm text-gray-600">
                   เลือกแล้ว {selectedMemberIds.size} / {filteredMembers.length} คน
                 </span>
               </div>
-              {messageMode === 'custom' && (
-                <span className="text-xs text-blue-600 font-medium">
-                  📋 ผู้ลงทะเบียน {filteredMembers.length} คน
-                </span>
-              )}
             </div>
 
             {loading ? (

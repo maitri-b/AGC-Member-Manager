@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { hasPermission } from '@/lib/permissions';
 import { adminDb } from '@/lib/firebase-admin';
+import { generateSignedUrl } from '@/lib/firebase-storage';
 
 const LINE_API_URL = 'https://api.line.me/v2/bot/message/push';
 
@@ -68,12 +69,33 @@ ${fullEventUrl}`;
       try {
         const url = new URL(imageUrl);
         if (url.protocol === 'https:') {
+          // If it's a storage.googleapis.com URL, generate signed URL for LINE to access
+          let finalImageUrl = imageUrl;
+
+          if (imageUrl.includes('storage.googleapis.com')) {
+            console.log('[LINE Promotion] Detected Firebase Storage URL, generating signed URL');
+            // Extract file path from URL
+            const pathParts = url.pathname.split('/');
+            pathParts.shift(); // Remove empty string from leading /
+            pathParts.shift(); // Remove bucket name
+            const filePath = pathParts.join('/');
+
+            if (filePath) {
+              try {
+                finalImageUrl = await generateSignedUrl(filePath);
+                console.log('[LINE Promotion] Using signed URL for LINE');
+              } catch (err) {
+                console.warn('[LINE Promotion] Error generating signed URL, using original:', err);
+              }
+            }
+          }
+
           messages.push({
             type: 'image',
-            originalContentUrl: imageUrl,
-            previewImageUrl: imageUrl,
+            originalContentUrl: finalImageUrl,
+            previewImageUrl: finalImageUrl,
           });
-          console.log('[LINE Promotion] Adding image to message:', imageUrl);
+          console.log('[LINE Promotion] Adding image to message');
         } else {
           console.warn('[LINE Promotion] Image URL is not HTTPS, skipping image:', imageUrl);
         }

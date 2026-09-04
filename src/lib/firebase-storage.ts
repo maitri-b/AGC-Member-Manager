@@ -95,3 +95,35 @@ export async function deleteFileFromStorage(filePath: string): Promise<boolean> 
     return false;
   }
 }
+
+// Generate a signed URL for a file (for external access like LINE API)
+export async function generateSignedUrl(filePath: string): Promise<string> {
+  if (!BUCKET_NAME) {
+    throw new Error('Firebase Storage bucket name is not configured.');
+  }
+
+  try {
+    const storage = adminStorage();
+    const bucket = storage.bucket(BUCKET_NAME);
+    const file = bucket.file(filePath);
+
+    // Check if file exists
+    const [exists] = await file.exists();
+    if (!exists) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+
+    // Generate signed URL valid for 7 days
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    console.log(`[Firebase Storage] Generated signed URL for: ${filePath}`);
+    return url;
+  } catch (error) {
+    console.error('[Firebase Storage] Error generating signed URL:', error);
+    // Fallback to public URL
+    return `https://storage.googleapis.com/${BUCKET_NAME}/${filePath}`;
+  }
+}

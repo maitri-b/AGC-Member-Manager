@@ -9,6 +9,7 @@ interface PromoteEventModalProps {
   eventId: string;
   eventName: string;
   eventDescription?: string;
+  mainImageUrl?: string;
   registeredMembers?: Array<{
     lineUserId: string;
     contactName: string;
@@ -41,6 +42,7 @@ export default function PromoteEventModal({
   eventId,
   eventName,
   eventDescription = '',
+  mainImageUrl = '',
   registeredMembers = [],
 }: PromoteEventModalProps) {
   const [members, setMembers] = useState<Member[]>([]);
@@ -61,6 +63,7 @@ export default function PromoteEventModal({
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
   const [savedTemplates, setSavedTemplates] = useState<Array<{subject: string; message: string}>>([]);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [attachImage, setAttachImage] = useState(false); // Checkbox for attaching main image
 
   useEffect(() => {
     if (isOpen) {
@@ -75,8 +78,9 @@ export default function PromoteEventModal({
       setCustomMessage(''); // Clear custom message
       setMessageSubject(''); // Clear subject
       setShowTemplates(false);
+      setAttachImage(!!mainImageUrl); // Auto-check if image exists
     }
-  }, [isOpen, eventId]);
+  }, [isOpen, eventId, mainImageUrl]);
 
   const fetchMembers = async () => {
     try {
@@ -312,6 +316,8 @@ export default function PromoteEventModal({
             eventName,
             eventDescription,
             eventUrl,
+            attachImage: attachImage && mainImageUrl ? true : false,
+            imageUrl: attachImage && mainImageUrl ? mainImageUrl : undefined,
           }),
         });
       } else {
@@ -697,6 +703,43 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`;
                       ยังไม่มีเทมเพลตที่บันทึก
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Attach Image Checkbox (only for promote mode when mainImageUrl exists) */}
+              {messageMode === 'promote' && mainImageUrl && (
+                <div className="bg-white border border-gray-300 rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={attachImage}
+                      onChange={(e) => setAttachImage(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-semibold text-gray-900">แนบรูปภาพกิจกรรม</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                          แนะนำ
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">
+                        แนบรูป main image ของกิจกรรมไปกับข้อความประชาสัมพันธ์ เพื่อดึงดูดความสนใจและให้ข้อมูลมากขึ้น
+                      </p>
+                      {attachImage && (
+                        <div className="mt-2">
+                          <img
+                            src={mainImageUrl}
+                            alt="Event Main Image"
+                            className="max-w-xs max-h-32 rounded border border-gray-300 shadow-sm"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </label>
                 </div>
               )}
 

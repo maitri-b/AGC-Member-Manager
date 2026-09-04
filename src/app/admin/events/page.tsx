@@ -352,6 +352,10 @@ export default function AdminEventsPage() {
   // Lightbox state for viewing full-size images
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
+  // Main image upload state
+  const [uploadingMainImage, setUploadingMainImage] = useState(false);
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -649,6 +653,69 @@ export default function AdminEventsPage() {
     setShowModal(false);
     setEditingEvent(null);
     setFormData(initialFormData);
+    setMainImagePreview(null);
+  };
+
+  // Handle main image upload
+  const handleMainImageUpload = async (file: File) => {
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('ประเภทไฟล์ไม่ถูกต้อง กรุณาเลือกไฟล์ภาพ (JPEG, PNG, หรือ WebP)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 5MB)');
+      return;
+    }
+
+    try {
+      setUploadingMainImage(true);
+
+      // Create preview
+      const previewUrl = URL.createObjectURL(file);
+      setMainImagePreview(previewUrl);
+
+      // Prepare form data
+      const uploadFormData = new FormData();
+      uploadFormData.append('image', file);
+
+      // Use temporary eventId if creating new event
+      const eventId = editingEvent?.eventId || `temp-${Date.now()}`;
+      uploadFormData.append('eventId', eventId);
+
+      // Upload to Firebase Storage
+      const response = await fetch('/api/admin/events/upload-main-image', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload image');
+      }
+
+      const data = await response.json();
+
+      // Update form data with uploaded image URL
+      setFormData(prev => ({
+        ...prev,
+        mainImageUrl: data.imageUrl
+      }));
+
+      alert('อัปโหลดรูปภาพสำเร็จ');
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert(error instanceof Error ? error.message : 'ไม่สามารถอัปโหลดรูปภาพได้');
+      setMainImagePreview(null);
+    } finally {
+      setUploadingMainImage(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -3016,16 +3083,86 @@ export default function AdminEventsPage() {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Link รูป Main Image (ไม่บังคับ)
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        รูป Main Image (ไม่บังคับ)
                       </label>
-                      <input
-                        type="url"
-                        value={formData.mainImageUrl}
-                        onChange={(e) => setFormData({ ...formData, mainImageUrl: e.target.value })}
-                        placeholder="https://... (รูปที่แสดงบน header ในรายละเอียดกิจกรรม)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+
+                      {/* Image Preview */}
+                      {(mainImagePreview || formData.mainImageUrl) && (
+                        <div className="mb-3 relative inline-block">
+                          <img
+                            src={mainImagePreview || formData.mainImageUrl}
+                            alt="Main Image Preview"
+                            className="max-w-xs max-h-48 rounded-lg border border-gray-300 shadow-sm"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, mainImageUrl: '' });
+                              setMainImagePreview(null);
+                            }}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                            title="ลบรูปภาพ"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Upload Button */}
+                      <div className="flex gap-2 mb-2">
+                        <label className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          {uploadingMainImage ? 'กำลังอัปโหลด...' : 'เลือกรูปภาพ'}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleMainImageUpload(file);
+                              }
+                              // Reset input to allow re-uploading same file
+                              e.target.value = '';
+                            }}
+                            disabled={uploadingMainImage}
+                            className="hidden"
+                          />
+                        </label>
+                        {uploadingMainImage && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                            <span>กำลังอัปโหลด...</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* URL Input (for manual URL entry) */}
+                      <div className="relative">
+                        <label className="block text-xs text-gray-600 mb-1">
+                          หรือระบุ URL รูปภาพโดยตรง:
+                        </label>
+                        <input
+                          type="url"
+                          value={formData.mainImageUrl}
+                          onChange={(e) => {
+                            setFormData({ ...formData, mainImageUrl: e.target.value });
+                            setMainImagePreview(null);
+                          }}
+                          placeholder="https://... (รูปที่แสดงบน header ในรายละเอียดกิจกรรม)"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        รูปภาพนี้จะแสดงเป็น cover image ในหน้ารายละเอียดกิจกรรม และสามารถแนบไปกับข้อความประชาสัมพันธ์กิจกรรมทาง LINE ได้
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -3431,6 +3568,7 @@ export default function AdminEventsPage() {
           eventId={promotingEvent.eventId}
           eventName={promotingEvent.eventName}
           eventDescription={promotingEvent.description}
+          mainImageUrl={promotingEvent.mainImageUrl}
         />
       )}
 

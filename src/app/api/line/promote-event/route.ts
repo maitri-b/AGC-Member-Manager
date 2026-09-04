@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { memberIds, eventId, eventName, eventDescription, eventUrl } = await request.json();
+    const { memberIds, eventId, eventName, eventDescription, eventUrl, attachImage, imageUrl } = await request.json();
 
     if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
       return NextResponse.json({ error: 'Member IDs are required' }, { status: 400 });
@@ -51,6 +51,24 @@ ${fullEventUrl}`;
 
     const results: { lineUserId: string; success: boolean; error?: string }[] = [];
 
+    // Prepare messages array
+    const messages: any[] = [];
+
+    // Add image message first if attachImage is enabled and imageUrl exists
+    if (attachImage && imageUrl) {
+      messages.push({
+        type: 'image',
+        originalContentUrl: imageUrl,
+        previewImageUrl: imageUrl,
+      });
+    }
+
+    // Add text message
+    messages.push({
+      type: 'text',
+      text: message,
+    });
+
     // Send messages to all selected members
     for (const lineUserId of memberIds) {
       try {
@@ -62,12 +80,7 @@ ${fullEventUrl}`;
           },
           body: JSON.stringify({
             to: lineUserId,
-            messages: [
-              {
-                type: 'text',
-                text: message,
-              },
-            ],
+            messages: messages,
           }),
         });
 

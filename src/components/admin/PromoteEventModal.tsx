@@ -707,10 +707,10 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`;
                       onChange={(e) => setCustomMessage(e.target.value)}
                       placeholder="พิมพ์ข้อความที่ต้องการส่ง... (สามารถใช้ personalization tags ด้านบนได้)"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px] font-sans"
-                      maxLength={1000}
+                      maxLength={5000}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      {customMessage.length}/1000 ตัวอักษร
+                      {customMessage.length}/5000 ตัวอักษร
                     </p>
                   </div>
 

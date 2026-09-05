@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
 import { ROLE_PERMISSIONS } from '@/types/next-auth.d';
-import { updateMember, getMemberById } from '@/lib/google-sheets';
+import { updateMember, getMemberById, getAllMembers } from '@/lib/google-sheets';
 import { getSystemSettings } from '@/lib/settings';
 import { generateWelcomeMessage } from '@/lib/member-welcome-template';
 
@@ -23,6 +23,12 @@ export async function GET() {
 
     const db = adminDb();
     const usersSnapshot = await db.collection('users').get();
+
+    // Fetch all members from Google Sheets to get status and other fields
+    const googleSheetMembers = await getAllMembers();
+    const sheetMembersMap = new Map(
+      googleSheetMembers.map(m => [m.memberId, m])
+    );
 
     // NOTE: 'members' collection is deprecated - all member data should be in 'users' collection
     // Keeping this code commented for reference in case migration is needed
@@ -73,6 +79,9 @@ export async function GET() {
       const verificationData = verificationMap.get(doc.id);
       const memberData = userData.memberId ? membersMap.get(userData.memberId) : null;
 
+      // Get Google Sheets data for this member
+      const sheetData = userData.memberId ? sheetMembersMap.get(userData.memberId) : null;
+
       // Determine verification status:
       // 1. If user role is 'member' or higher, they are verified
       // 2. Otherwise use the highest priority status from verification requests
@@ -105,6 +114,9 @@ export async function GET() {
         nickname: memberData?.nickname || userData.nickname || '',
         companyNameTH: memberData?.companyNameTH || userData.companyNameTH || '',
         companyNameEN: memberData?.companyNameEN || userData.companyNameEN || '',
+        // Add Google Sheets data (Column R: สถานะ, Column U: สถานะไลน์กลุ่ม)
+        memberStatus: sheetData?.status || '', // Column R: 'สถานะ'
+        lineGroupStatus: sheetData?.lineGroupStatus || '', // Column U: 'สถานะไลน์กลุ่ม' (not validated)
       };
     });
 

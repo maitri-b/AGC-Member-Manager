@@ -102,14 +102,23 @@ export default function PromoteEventModal({
       }
       const data = await response.json();
 
-      // Filter: Only members with status === 'ปกติ' and lineUserId exists
+      // Filter members for LINE message sending with strict validation:
+      // 1. Must have lineUserId (connected to LINE)
+      // 2. Must have memberId (verified member)
+      // 3. Must be active in Firestore (isActive !== false)
+      // 4. Must have status 'ปกติ' in Google Sheets (Column R: สถานะ)
+      // Note: lineGroupStatus (Column U) is NOT validated - all values allowed
       const filteredMembers = (data.users || []).filter((user: any) => {
         const hasLineUserId = !!user.lineUserId;
-        const hasNormalStatus = user.memberId; // Has memberId means they are verified
-        return hasLineUserId && hasNormalStatus;
+        const hasMemberId = !!user.memberId;
+        const isActive = user.isActive !== false; // Default to true if not set
+        const hasNormalStatus = user.memberStatus === 'ปกติ'; // Column R from Google Sheets
+
+        return hasLineUserId && hasMemberId && isActive && hasNormalStatus;
       });
 
       console.log('Fetched members sample (first 3):', filteredMembers.slice(0, 3));
+      console.log(`Total members after filtering: ${filteredMembers.length}`);
       setMembers(filteredMembers);
     } catch (error) {
       console.error('Error fetching members:', error);

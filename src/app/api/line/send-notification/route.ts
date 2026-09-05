@@ -211,8 +211,8 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Save custom message history to Firestore (if eventId is provided)
-      if (eventId && results.successfulSends.length > 0) {
+      // Save custom message history to Firestore (always save, even without eventId)
+      if (results.successfulSends.length > 0) {
         try {
           const promotionHistoryRef = adminDb().collection('promotionHistory');
           const batch = adminDb().batch();
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
           for (const send of results.successfulSends) {
             const historyDoc = promotionHistoryRef.doc();
             batch.set(historyDoc, {
-              eventId,
+              eventId: eventId || null,
               eventName: eventName || '',
               lineUserId: send.lineUserId,
               sentAt,
@@ -229,11 +229,12 @@ export async function POST(request: NextRequest) {
               sentByName: session.user.name || 'Unknown',
               message: send.message,
               messageType: 'custom',
-              subject: subject || '',
+              subject: subject || 'ข้อความกำหนดเอง',
             });
           }
 
           await batch.commit();
+          console.log(`[Send Notification] Saved ${results.successfulSends.length} history records`);
         } catch (error) {
           console.error('Error saving custom message history:', error);
           // Don't fail the request if history save fails

@@ -55,6 +55,7 @@ export default function PromoteEventModal({
   const [history, setHistory] = useState<PromotionHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [sentLineUserIds, setSentLineUserIds] = useState<Set<string>>(new Set());
+  const [messageHistoryByUser, setMessageHistoryByUser] = useState<Map<string, string[]>>(new Map());
 
   // NEW: Message mode - 'promote' or 'custom'
   const [messageMode, setMessageMode] = useState<'promote' | 'custom'>('promote');
@@ -131,6 +132,16 @@ export default function PromoteEventModal({
       // Create set of line user IDs who have been sent messages
       const sentIds = new Set<string>(data.history.map((h: PromotionHistory) => h.lineUserId));
       setSentLineUserIds(sentIds);
+
+      // Create map of message history by user (lineUserId -> array of subjects)
+      const historyMap = new Map<string, string[]>();
+      data.history.forEach((h: PromotionHistory) => {
+        const subjects = historyMap.get(h.lineUserId) || [];
+        const subject = h.subject || (h.messageType === 'promote' ? '📢 โปรโมทกิจกรรม' : 'ข้อความกำหนดเอง');
+        subjects.push(subject);
+        historyMap.set(h.lineUserId, subjects);
+      });
+      setMessageHistoryByUser(historyMap);
     } catch (error) {
       console.error('Error fetching promotion history:', error);
     } finally {
@@ -1041,6 +1052,21 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`;
                             </span>
                           )}
                         </div>
+
+                        {/* Show message history for this user */}
+                        {messageHistoryByUser.has(member.lineUserId!) && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            <span className="font-medium">เคยส่ง: </span>
+                            {messageHistoryByUser.get(member.lineUserId!)!.map((subject, idx) => (
+                              <span key={idx}>
+                                {idx > 0 && ', '}
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
+                                  {subject}
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </label>
                   );

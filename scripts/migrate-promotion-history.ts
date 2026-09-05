@@ -43,7 +43,7 @@ async function migratePromotionHistory() {
       .where('eventId', '==', TARGET_EVENT_ID)
       .get();
 
-    console.log(`Found ${snapshot.size} records for event ${TARGET_EVENT_ID}`);
+    console.log(`Found ${snapshot.size} records for event ${TARGET_EVENT_ID}\n`);
 
     if (snapshot.empty) {
       console.log('No records found. Nothing to migrate.');
@@ -51,19 +51,24 @@ async function migratePromotionHistory() {
     }
 
     let updatedCount = 0;
+    let alreadyCorrectCount = 0;
     const batch = db.batch();
+    const updateDetails: Array<{ id: string; before: any; after: any }> = [];
 
     snapshot.forEach((doc) => {
       const data = doc.data();
       const updates: any = {};
+      const before: any = {};
 
       // Ensure messageType is set
       if (!data.messageType) {
+        before.messageType = '(ไม่มี)';
         updates.messageType = 'promote'; // Default to promote for old records
       }
 
       // Ensure subject is set
       if (!data.subject) {
+        before.subject = '(ไม่มี)';
         if (data.messageType === 'promote' || updates.messageType === 'promote') {
           updates.subject = '📢 โปรโมทกิจกรรม';
         } else {
@@ -75,18 +80,43 @@ async function migratePromotionHistory() {
       if (Object.keys(updates).length > 0) {
         batch.update(doc.ref, updates);
         updatedCount++;
-        console.log(`Updating record ${doc.id}:`, updates);
+        updateDetails.push({
+          id: doc.id,
+          before,
+          after: updates,
+        });
+      } else {
+        alreadyCorrectCount++;
       }
     });
 
+    // Display detailed report
+    console.log('📊 Migration Report');
+    console.log('-'.repeat(80));
+    console.log(`Total records found:        ${snapshot.size}`);
+    console.log(`Records to be updated:      ${updatedCount}`);
+    console.log(`Already correct:            ${alreadyCorrectCount}`);
+    console.log('-'.repeat(80));
+
     if (updatedCount > 0) {
+      console.log('\n📝 Update Details:');
+      updateDetails.forEach((detail, index) => {
+        console.log(`\n${index + 1}. Record ID: ${detail.id}`);
+        Object.keys(detail.before).forEach((key) => {
+          console.log(`   ${key}:`);
+          console.log(`     Before: ${detail.before[key]}`);
+          console.log(`     After:  ${detail.after[key]}`);
+        });
+      });
+
+      console.log('\n⏳ Committing changes to Firestore...');
       await batch.commit();
-      console.log(`\n✓ Successfully updated ${updatedCount} records`);
+      console.log(`✅ Successfully updated ${updatedCount} record(s)`);
     } else {
-      console.log('\n✓ All records are already up to date. No changes needed.');
+      console.log('\n✅ All records are already up to date. No changes needed.');
     }
 
-    console.log('='.repeat(80));
+    console.log('\n' + '='.repeat(80));
     console.log('Migration completed successfully!');
   } catch (error) {
     console.error('Error during migration:', error);

@@ -24,6 +24,12 @@ export interface SyncSummary {
   duration: number; // milliseconds
 }
 
+export interface SyncOptions {
+  startMemberId?: string; // Start from this memberId (inclusive)
+  endMemberId?: string;   // End at this memberId (inclusive)
+  skipExisting?: boolean; // Skip members that already exist in Firestore
+}
+
 /**
  * Sync a single member from Google Sheets to Firestore members collection
  * @param memberId - The member ID to sync
@@ -229,17 +235,45 @@ async function syncMemberDataToFirestore(member: Member): Promise<SyncResult> {
 /**
  * Sync all members from Google Sheets to Firestore members collection
  * Optimized to fetch from Google Sheets only ONCE, then sync all members to Firestore
+ * @param options - Optional sync options for filtering and resume
  * @returns SyncSummary with detailed results
  */
-export async function syncAllMembersToFirestore(): Promise<SyncSummary> {
+export async function syncAllMembersToFirestore(options?: SyncOptions): Promise<SyncSummary> {
   const startedAt = new Date();
   const results: SyncResult[] = [];
 
   try {
     // Fetch all members from Google Sheets ONCE (single API call)
     console.log('📥 Fetching all members from Google Sheets...');
-    const members = await getAllMembers();
-    console.log(`✅ Found ${members.length} members to sync`);
+    const allMembers = await getAllMembers();
+    console.log(`✅ Found ${allMembers.length} total members`);
+
+    // Filter members based on options
+    let members = allMembers;
+
+    // Apply memberId range filter
+    if (options?.startMemberId || options?.endMemberId) {
+      const startId = options.startMemberId ? parseInt(options.startMemberId) : 0;
+      const endId = options.endMemberId ? parseInt(options.endMemberId) : Number.MAX_SAFE_INTEGER;
+
+      members = members.filter((m) => {
+        if (!m.memberId) return false;
+        const memberId = parseInt(m.memberId);
+        return memberId >= startId && memberId <= endId;
+      });
+
+      console.log(`🔍 Filtered to ${members.length} members (Range: ${options.startMemberId || 'start'} - ${options.endMemberId || 'end'})`);
+    }
+
+    // Get existing member IDs from Firestore if skipExisting is enabled
+    let existingMemberIds = new Set<string>();
+    if (options?.skipExisting) {
+      console.log('🔍 Checking existing members in Firestore...');
+      const db = adminDb();
+      const existingSnapshot = await db.collection('members').select('memberId').get();
+      existingMemberIds = new Set(existingSnapshot.docs.map(doc => doc.id));
+      console.log(`✅ Found ${existingMemberIds.size} existing members in Firestore`);
+    }
 
     // Sync each member to Firestore (no additional Google Sheets API calls)
     console.log('🔄 Starting Firestore sync...');
@@ -250,6 +284,17 @@ export async function syncAllMembersToFirestore(): Promise<SyncSummary> {
           memberId: 'unknown',
           action: 'skipped',
           error: 'Missing memberId',
+        });
+        continue;
+      }
+
+      // Skip if member already exists and skipExisting is enabled
+      if (options?.skipExisting && existingMemberIds.has(member.memberId)) {
+        results.push({
+          success: true,
+          memberId: member.memberId,
+          action: 'skipped',
+          error: 'Already exists in Firestore',
         });
         continue;
       }

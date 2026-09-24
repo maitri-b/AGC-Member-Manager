@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { memberId } = body;
+    const { memberId, startMemberId, endMemberId, skipExisting } = body;
 
     // If memberId is provided, sync single member
-    // Otherwise, sync all members
+    // Otherwise, sync all members with optional filters
     if (memberId) {
       console.log(`[Manual Sync] Syncing single member: ${memberId}`);
       const result = await syncSingleMemberToFirestore(memberId);
@@ -38,8 +38,25 @@ export async function POST(request: NextRequest) {
         result,
       });
     } else {
-      console.log('[Manual Sync] Syncing all members from Google Sheets to Firestore');
-      const summary = await syncAllMembersToFirestore();
+      // Build sync options
+      const options = {
+        startMemberId,
+        endMemberId,
+        skipExisting: skipExisting === true,
+      };
+
+      // Log sync configuration
+      if (startMemberId || endMemberId) {
+        console.log(`[Manual Sync] Syncing members range: ${startMemberId || 'start'} - ${endMemberId || 'end'}`);
+      } else {
+        console.log('[Manual Sync] Syncing all members from Google Sheets to Firestore');
+      }
+
+      if (skipExisting) {
+        console.log('[Manual Sync] Skip existing members enabled');
+      }
+
+      const summary = await syncAllMembersToFirestore(options);
 
       return NextResponse.json({
         success: summary.failed === 0,

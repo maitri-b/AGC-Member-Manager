@@ -71,12 +71,14 @@ export default function PromoteEventModal({
   const [customImagePreview, setCustomImagePreview] = useState<string | null>(null);
   const [customImageUrl, setCustomImageUrl] = useState<string>('');
   const [uploadingCustomImage, setUploadingCustomImage] = useState(false);
+  const [baseUrl, setBaseUrl] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
       fetchMembers();
       fetchHistory();
       loadTemplates();
+      fetchSettings(); // Fetch settings to get baseUrl
       setSelectedMemberIds(new Set());
       setSearchTerm('');
       setMessage(null);
@@ -155,6 +157,21 @@ export default function PromoteEventModal({
       console.error('Error fetching promotion history:', error);
     } finally {
       setLoadingHistory(false);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/settings');
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings');
+      }
+      const data = await response.json();
+      setBaseUrl(data.baseUrl || window.location.origin);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      // Fallback to window.location.origin
+      setBaseUrl(window.location.origin);
     }
   };
 
@@ -485,8 +502,8 @@ ${shortDescription}${needsTruncation ? '\n\nอ่านเพิ่มเติ
 
 เชิญชวนให้เข้าร่วมกิจกรรม
 คลิกเพื่อดูรายละเอียดและลงทะเบียน:
-${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`;
-  }, [eventId, eventName, eventDescription]);
+${baseUrl}/events/${encodeURIComponent(eventId)}`;
+  }, [eventId, eventName, eventDescription, baseUrl]);
 
   if (!isOpen) return null;
 
@@ -945,7 +962,7 @@ ${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`;
                           .replace(/{LINE_NAME}/g, '[ชื่อ LINE ของสมาชิก]')
                           .replace(/{CONTACT_NAME}/g, '[ชื่อติดต่อ]')
                           .replace(/{COMPANY_NAME}/g, '[ชื่อบริษัท]')
-                          .replace(/{EVENT_URL}/g, `${process.env.NEXT_PUBLIC_BASE_URL}/events/${encodeURIComponent(eventId)}`)
+                          .replace(/{EVENT_URL}/g, `${baseUrl}/events/${encodeURIComponent(eventId)}`)
                           .replace(/{EVENT_NAME}/g, eventName)
                       : '(ยังไม่ได้กรอกข้อความ)')}
                 </pre>

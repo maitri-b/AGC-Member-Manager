@@ -905,12 +905,13 @@ export default function AdminEventsPage() {
 
     try {
       // ✅ Instead of deleting, set status to 'cancelled'
-      const response = await fetch(`/api/admin/events?eventId=${deletingEventId}`, {
+      const response = await fetch(`/api/admin/events`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          eventId: deletingEventId,
           status: 'cancelled',
         }),
       });

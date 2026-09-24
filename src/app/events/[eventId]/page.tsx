@@ -4302,6 +4302,15 @@ export default function EventDetailPage() {
                             </div>
                           </div>
                         )}
+
+                        {event.paymentInstructionText && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-blue-900 mb-2">คำแนะนำการลงทะเบียน</h4>
+                            <div className="text-xs text-blue-800 whitespace-pre-wrap">
+                              {event.paymentInstructionText}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

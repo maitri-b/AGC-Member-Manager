@@ -197,7 +197,13 @@ export default function PromoteEventModal({
 
   // Create set of registered member line user IDs for badge display
   const registeredLineUserIds = useMemo(() => {
-    return new Set(registeredMembers.map(m => m.lineUserId));
+    const lineUserIds = registeredMembers.map(m => m.lineUserId);
+    console.log('🔍 DEBUG: Registered members for this event:', {
+      total: registeredMembers.length,
+      sample: registeredMembers.slice(0, 3),
+      lineUserIds: lineUserIds.slice(0, 5),
+    });
+    return new Set(lineUserIds);
   }, [registeredMembers]);
 
   // Filter and sort members
@@ -229,8 +235,22 @@ export default function PromoteEventModal({
     if (filterRegistrationStatus !== 'all') {
       filtered = filtered.filter((member) => {
         const isRegistered = registeredLineUserIds.has(member.lineUserId!);
+
+        // Debug: log first 3 members when filtering
+        if (filtered.indexOf(member) < 3) {
+          console.log('🔍 DEBUG: Checking registration for member:', {
+            memberId: member.memberId,
+            lineUserId: member.lineUserId,
+            isRegistered,
+            filterMode: filterRegistrationStatus,
+            willShow: filterRegistrationStatus === 'registered' ? isRegistered : !isRegistered,
+          });
+        }
+
         return filterRegistrationStatus === 'registered' ? isRegistered : !isRegistered;
       });
+
+      console.log(`🔍 DEBUG: After registration filter (${filterRegistrationStatus}): ${filtered.length} members`);
     }
 
     // Filter by LINE Group status

@@ -110,11 +110,24 @@ export default function PromoteEventModal({
       // 3. Must be active in Firestore (isActive !== false)
       // 4. Must have status 'ปกติ' in Google Sheets (Column R: สถานะ)
       // Note: lineGroupStatus (Column U) is NOT validated - all values allowed
+
+      console.log('Total users from API:', data.users?.length || 0);
+      console.log('Sample user (first):', data.users?.[0]);
+
       const filteredMembers = (data.users || []).filter((user: any) => {
         const hasLineUserId = !!user.lineUserId;
         const hasMemberId = !!user.memberId;
         const isActive = user.isActive !== false; // Default to true if not set
         const hasNormalStatus = user.memberStatus === 'ปกติ'; // Column R from Google Sheets
+
+        // Debug: log why members are filtered out
+        if (hasLineUserId && hasMemberId && isActive && !hasNormalStatus) {
+          console.log('Member filtered out due to status:', {
+            memberId: user.memberId,
+            memberStatus: user.memberStatus,
+            lineDisplayName: user.lineDisplayName,
+          });
+        }
 
         return hasLineUserId && hasMemberId && isActive && hasNormalStatus;
       });

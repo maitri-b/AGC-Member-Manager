@@ -57,6 +57,7 @@ interface Event {
   paymentQrCodeUrl?: string;
   paymentTerms?: string;
   paymentSlipSubmissionUrl?: string;
+  paymentInstructionText?: string;
   // Payment configuration (New)
   paymentTiming?: 'deferred' | 'immediate';
   paymentMode?: 'full' | 'deposit';

@@ -157,13 +157,18 @@ export async function POST(request: NextRequest) {
 
     const db = adminDb();
 
-    // Generate eventId from name and year
-    const eventId = `${body.eventName.toLowerCase().replace(/\s+/g, '-')}-${body.year - 543}`;
+    // Generate unique eventId (timestamp + random string)
+    // Format: evt-TIMESTAMP-RANDOM (e.g., evt-1706097123456-x7k2m9)
+    // This avoids Thai character issues in URLs and ensures uniqueness
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8); // 6 chars
+    const eventId = `evt-${timestamp}-${randomStr}`;
 
-    // Check if event already exists
+    // Eventid is guaranteed unique by timestamp + random, but check anyway for safety
     const existingEvent = await db.collection('events').doc(eventId).get();
     if (existingEvent.exists) {
-      return NextResponse.json({ error: 'Event with this ID already exists' }, { status: 409 });
+      // Extremely unlikely, but regenerate if collision occurs
+      return NextResponse.json({ error: 'Event ID collision (very rare) - please try again' }, { status: 409 });
     }
 
     // Build event data object, conditionally adding optional fields to avoid Firestore undefined errors

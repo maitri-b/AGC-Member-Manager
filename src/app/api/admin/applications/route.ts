@@ -359,6 +359,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Application updated successfully',
+      memberId: updateData.memberId || null, // Include memberId if approval created a member
     });
   } catch (error) {
     console.error('Error updating application:', error);

@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Toast, useToast } from '@/components/Toast';
+import SyncMemberModal from '@/components/admin/SyncMemberModal';
 
 interface SearchLog {
   searchQuery: string;
@@ -81,6 +82,9 @@ export default function ApplicationsPage() {
   // ✅ NEW: Lightbox state for viewing documents
   const [lightboxImage, setLightboxImage] = useState('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  // Sync Modal state
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncMemberId, setSyncMemberId] = useState<string>('');
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -148,9 +152,17 @@ export default function ApplicationsPage() {
         throw new Error('Failed to update');
       }
 
+      const data = await response.json();
+
       toast.success(newStatus === 'approved' ? 'อนุมัติใบสมัครเรียบร้อย' : 'ปฏิเสธใบสมัครเรียบร้อย');
       setShowModal(false);
       fetchApplications();
+
+      // Show Sync Modal if approved and memberId is returned
+      if (newStatus === 'approved' && data.memberId) {
+        setSyncMemberId(data.memberId);
+        setShowSyncModal(true);
+      }
     } catch (error) {
       toast.error('เกิดข้อผิดพลาด');
     } finally {
@@ -741,6 +753,13 @@ export default function ApplicationsPage() {
           />
         </div>
       )}
+
+      {/* Sync Member Modal */}
+      <SyncMemberModal
+        isOpen={showSyncModal}
+        onClose={() => setShowSyncModal(false)}
+        initialMemberId={syncMemberId}
+      />
 
       <Toast toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>

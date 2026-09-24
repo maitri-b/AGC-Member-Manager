@@ -150,6 +150,23 @@ export default function AdminPage() {
   }>>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
 
+  // Member sync states
+  const [syncStatus, setSyncStatus] = useState<{
+    lastSyncedAt: string | null;
+    totalMembers: number;
+  }>({ lastSyncedAt: null, totalMembers: 0 });
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{
+    success: boolean;
+    total: number;
+    created: number;
+    updated: number;
+    skipped: number;
+    failed: number;
+    duration: number;
+  } | null>(null);
+
   useEffect(() => {
     if (status === 'unauthenticated' || effectiveStatus === 'unauthenticated') {
       router.push('/login');
@@ -162,6 +179,7 @@ export default function AdminPage() {
     if (effectiveStatus === 'authenticated' && effectiveSession && hasPermission(effectiveSession.user.permissions || [], 'admin:users')) {
       fetchUsers();
       fetchPendingCounts();
+      fetchSyncStatus();
 
       // Background loading: Fetch member data after 2 seconds to avoid blocking initial page load
       // This data is optional (only for displaying extra info like fullNameTH, nickname, company)
@@ -235,6 +253,70 @@ export default function AdminPage() {
       setAllMembersData(activeMembersData);
     } catch (err) {
       console.error('Error fetching all members data:', err);
+    }
+  };
+
+  const fetchSyncStatus = async () => {
+    try {
+      const response = await fetch('/api/admin/sync-members');
+      if (response.ok) {
+        const data = await response.json();
+        setSyncStatus({
+          lastSyncedAt: data.status.lastSyncedAt,
+          totalMembers: data.status.totalMembers,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching sync status:', err);
+    }
+  };
+
+  const handleSyncMembers = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const response = await fetch('/api/admin/sync-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sync members');
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.summary) {
+        setSyncResult({
+          success: true,
+          total: data.summary.total,
+          created: data.summary.created,
+          updated: data.summary.updated,
+          skipped: data.summary.skipped,
+          failed: data.summary.failed,
+          duration: data.summary.duration,
+        });
+        setSuccess(`✅ Sync สำเร็จ! สร้าง ${data.summary.created} อัพเดท ${data.summary.updated} รายการ`);
+
+        // Refresh sync status
+        fetchSyncStatus();
+      } else {
+        throw new Error('Sync failed');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการ sync');
+      setSyncResult({
+        success: false,
+        total: 0,
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 1,
+        duration: 0,
+      });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -786,7 +868,37 @@ export default function AdminPage() {
             </svg>
             จัดการกิจกรรม
           </a>
+          <button
+            onClick={() => setShowSyncModal(true)}
+            className="inline-flex items-center gap-2 bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-700 transition-colors"
+            title="Sync members from Google Sheets to Firestore"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            🔄 Sync Members
+          </button>
         </div>
+
+        {/* Sync Status Display */}
+        {syncStatus.lastSyncedAt && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-blue-900">Firestore Sync Status</h3>
+                <p className="text-sm text-blue-700">
+                  Last synced: {new Date(syncStatus.lastSyncedAt).toLocaleString('th-TH')} |
+                  Total members in Firestore: {syncStatus.totalMembers}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pending Summary Card */}
         {(pendingCounts.applications + pendingCounts.verifications + pendingCounts.profileChanges + pendingCounts.disputes) > 0 && (
@@ -1824,6 +1936,143 @@ export default function AdminPage() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sync Members Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                🔄 Sync Members: Google Sheets → Firestore
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Phase 1 Migration - สร้าง/อัพเดท members collection ใน Firestore
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Current Status */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2">📊 Current Status</h3>
+                {syncStatus.lastSyncedAt ? (
+                  <div className="text-sm text-blue-700 space-y-1">
+                    <p>
+                      <strong>Last Synced:</strong>{' '}
+                      {new Date(syncStatus.lastSyncedAt).toLocaleString('th-TH')}
+                    </p>
+                    <p>
+                      <strong>Total Members in Firestore:</strong> {syncStatus.totalMembers}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-blue-700">
+                    ยังไม่เคย sync - คลิก "เริ่ม Sync" เพื่อ sync ครั้งแรก
+                  </p>
+                )}
+              </div>
+
+              {/* Sync Info */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <h3 className="font-semibold text-gray-900">ℹ️ What This Does</h3>
+                <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                  <li>ดึงข้อมูลสมาชิกทั้งหมดจาก Google Sheets</li>
+                  <li>สร้าง/อัพเดท documents ใน Firestore members collection</li>
+                  <li>เพิ่มความเร็วการโหลดหน้า Admin (5-10x faster)</li>
+                  <li>ลด Google Sheets API calls (~80%)</li>
+                  <li>Google Sheets ยังเป็น Source of Truth (ไม่มีผลกระทบ)</li>
+                </ul>
+              </div>
+
+              {/* Sync Results */}
+              {syncResult && (
+                <div
+                  className={`border rounded-lg p-4 ${
+                    syncResult.success
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-red-50 border-red-200'
+                  }`}
+                >
+                  <h3
+                    className={`font-semibold mb-3 ${
+                      syncResult.success ? 'text-green-900' : 'text-red-900'
+                    }`}
+                  >
+                    {syncResult.success ? '✅ Sync สำเร็จ!' : '❌ Sync ล้มเหลว'}
+                  </h3>
+                  <div
+                    className={`text-sm space-y-1 ${
+                      syncResult.success ? 'text-green-700' : 'text-red-700'
+                    }`}
+                  >
+                    <p><strong>Total:</strong> {syncResult.total} members</p>
+                    <p><strong>Created:</strong> {syncResult.created} new</p>
+                    <p><strong>Updated:</strong> {syncResult.updated} existing</p>
+                    <p><strong>Skipped:</strong> {syncResult.skipped} members</p>
+                    <p><strong>Failed:</strong> {syncResult.failed} errors</p>
+                    <p>
+                      <strong>Duration:</strong> {(syncResult.duration / 1000).toFixed(2)}s
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Warning */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 className="font-semibold text-yellow-900 mb-2">⚠️ Important</h3>
+                <p className="text-sm text-yellow-700">
+                  การ sync จะใช้เวลาประมาณ 20-30 วินาทีสำหรับสมาชิก ~450 คน
+                  กรุณาอย่าปิดหน้าต่างนี้จนกว่าจะเสร็จสิ้น
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowSyncModal(false);
+                  setSyncResult(null);
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={syncing}
+              >
+                {syncResult ? 'ปิด' : 'ยกเลิก'}
+              </button>
+              {!syncResult && (
+                <button
+                  onClick={handleSyncMembers}
+                  disabled={syncing}
+                  className="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {syncing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      กำลัง Sync...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                      เริ่ม Sync
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

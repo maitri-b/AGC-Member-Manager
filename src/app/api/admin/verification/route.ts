@@ -8,6 +8,7 @@ import { updateMember, getAllMembers, getMemberById } from '@/lib/google-sheets'
 import { ROLE_PERMISSIONS } from '@/types/next-auth.d';
 import { getSystemSettings } from '@/lib/settings';
 import { generateWelcomeMessage, generateRejectionMessage } from '@/lib/member-welcome-template';
+import { syncSingleMemberToFirestore } from '@/lib/member-sync';
 
 // GET: List all verification requests
 export async function GET() {
@@ -222,6 +223,15 @@ export async function PUT(request: NextRequest) {
         lastUpdated: now.toISOString(),
         updatedBy: session.user.name || session.user.id,
       });
+
+      // Phase 1 Migration: Sync updated member to Firestore members collection
+      try {
+        await syncSingleMemberToFirestore(requestData.memberId);
+        console.log('✅ Member synced to Firestore members collection:', requestData.memberId);
+      } catch (error) {
+        console.error('⚠️ Error syncing member to Firestore (non-critical):', error);
+        // Don't fail approval if sync fails - Google Sheets is still source of truth
+      }
 
       // Send LINE notification to newly approved member
       try {

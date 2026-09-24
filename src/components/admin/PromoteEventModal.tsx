@@ -73,6 +73,11 @@ export default function PromoteEventModal({
   const [uploadingCustomImage, setUploadingCustomImage] = useState(false);
   const [baseUrl, setBaseUrl] = useState<string>('');
 
+  // Filter states
+  const [filterRegistrationStatus, setFilterRegistrationStatus] = useState<'all' | 'registered' | 'not-registered'>('all');
+  const [filterLineGroupStatus, setFilterLineGroupStatus] = useState<string>('all');
+  const [filterPromotionStatus, setFilterPromotionStatus] = useState<'all' | 'promoted' | 'not-promoted'>('all');
+
   useEffect(() => {
     if (isOpen) {
       fetchMembers();
@@ -220,6 +225,30 @@ export default function PromoteEventModal({
       });
     }
 
+    // Filter by registration status
+    if (filterRegistrationStatus !== 'all') {
+      filtered = filtered.filter((member) => {
+        const isRegistered = registeredLineUserIds.has(member.lineUserId!);
+        return filterRegistrationStatus === 'registered' ? isRegistered : !isRegistered;
+      });
+    }
+
+    // Filter by LINE Group status
+    if (filterLineGroupStatus !== 'all') {
+      filtered = filtered.filter((member) => {
+        const lineGroupStatus = member.lineGroupStatus || '';
+        return lineGroupStatus === filterLineGroupStatus;
+      });
+    }
+
+    // Filter by promotion status (has history for this event)
+    if (filterPromotionStatus !== 'all') {
+      filtered = filtered.filter((member) => {
+        const hasPromotionHistory = messageHistoryByUser.has(member.lineUserId!);
+        return filterPromotionStatus === 'promoted' ? hasPromotionHistory : !hasPromotionHistory;
+      });
+    }
+
     // Sort by Member ID descending
     filtered.sort((a, b) => {
       const idA = parseInt(a.memberId || '0', 10);
@@ -228,7 +257,7 @@ export default function PromoteEventModal({
     });
 
     return filtered;
-  }, [members, searchTerm, messageMode, registeredLineUserIds]);
+  }, [members, searchTerm, filterRegistrationStatus, filterLineGroupStatus, filterPromotionStatus, registeredLineUserIds, messageHistoryByUser]);
 
   const handleToggleSelect = (lineUserId: string) => {
     setSelectedMemberIds((prev) => {
@@ -1001,8 +1030,64 @@ ${baseUrl}/events/${encodeURIComponent(eventId)}`;
             </div>
           )}
 
-          {/* Search */}
-          <div>
+          {/* Filters */}
+          <div className="space-y-3">
+            {/* Filter Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Registration Status Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  สถานะการลงทะเบียน
+                </label>
+                <select
+                  value={filterRegistrationStatus}
+                  onChange={(e) => setFilterRegistrationStatus(e.target.value as any)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">ทั้งหมด</option>
+                  <option value="registered">ลงทะเบียนแล้ว</option>
+                  <option value="not-registered">ยังไม่ลงทะเบียน</option>
+                </select>
+              </div>
+
+              {/* LINE Group Status Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  สถานะไลน์กลุ่ม
+                </label>
+                <select
+                  value={filterLineGroupStatus}
+                  onChange={(e) => setFilterLineGroupStatus(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">ทั้งหมด</option>
+                  <option value="">ยังไม่มีสถานะ</option>
+                  <option value="รอนำเข้ากลุ่ม">รอนำเข้ากลุ่ม</option>
+                  <option value="อยู่ในกลุ่ม">อยู่ในกลุ่ม</option>
+                  <option value="ออกจากกลุ่ม">ออกจากกลุ่ม</option>
+                  <option value="รอผลการติดต่อ">รอผลการติดต่อ</option>
+                  <option value="ติดต่อไม่ได้">ติดต่อไม่ได้</option>
+                </select>
+              </div>
+
+              {/* Promotion Status Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  สถานะโปรโมทกิจกรรมนี้
+                </label>
+                <select
+                  value={filterPromotionStatus}
+                  onChange={(e) => setFilterPromotionStatus(e.target.value as any)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">ทั้งหมด</option>
+                  <option value="promoted">โปรโมทแล้ว</option>
+                  <option value="not-promoted">ยังไม่เคยโปรโมท</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Search */}
             <input
               type="text"
               placeholder="ค้นหาด้วยชื่อ, บริษัท, หรือ Member ID..."
@@ -1082,14 +1167,40 @@ ${baseUrl}/events/${encodeURIComponent(eventId)}`;
                           )}
 
                           {registeredLineUserIds.has(member.lineUserId!) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                              ✅ ลงทะเบียนแล้ว
+                            </span>
+                          )}
+
+                          {/* LINE Group Status Badge */}
+                          {member.lineGroupStatus && (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              member.lineGroupStatus === 'อยู่ในกลุ่ม' ? 'bg-blue-100 text-blue-800' :
+                              member.lineGroupStatus === 'รอนำเข้ากลุ่ม' ? 'bg-yellow-100 text-yellow-800' :
+                              member.lineGroupStatus === 'ออกจากกลุ่ม' ? 'bg-red-100 text-red-800' :
+                              member.lineGroupStatus === 'รอผลการติดต่อ' ? 'bg-orange-100 text-orange-800' :
+                              member.lineGroupStatus === 'ติดต่อไม่ได้' ? 'bg-gray-100 text-gray-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {member.lineGroupStatus === 'อยู่ในกลุ่ม' ? '👥' :
+                               member.lineGroupStatus === 'รอนำเข้ากลุ่ม' ? '⏳' :
+                               member.lineGroupStatus === 'ออกจากกลุ่ม' ? '👋' :
+                               member.lineGroupStatus === 'รอผลการติดต่อ' ? '📞' :
+                               member.lineGroupStatus === 'ติดต่อไม่ได้' ? '❌' :
+                               '📱'} {member.lineGroupStatus}
+                            </span>
+                          )}
+
+                          {/* Promotion History Badge */}
+                          {messageHistoryByUser.has(member.lineUserId!) && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                              📋 สมัครแล้ว
+                              📢 โปรโมทแล้ว ({messageHistoryByUser.get(member.lineUserId!)?.length || 0} ครั้ง)
                             </span>
                           )}
 
                           {sentLineUserIds.has(member.lineUserId!) && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                              ✓ ส่งแล้ว
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800">
+                              ✓ ส่งแล้วในเซสชั่นนี้
                             </span>
                           )}
                         </div>

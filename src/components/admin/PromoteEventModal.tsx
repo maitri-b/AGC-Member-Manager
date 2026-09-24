@@ -104,11 +104,13 @@ export default function PromoteEventModal({
       }
       const data = await response.json();
 
-      // Filter members for LINE message sending with validation:
+      // Filter members for LINE message sending with strict validation:
       // 1. Must have lineUserId (connected to LINE)
       // 2. Must have memberId (verified member)
       // 3. Must be active in Firestore (isActive !== false)
-      // 4. Must have status 'ปกติ' OR empty (empty means data not yet synced from Phase 1)
+      // 4. Must have status 'ปกติ' from Google Sheets (Column R: สถานะ)
+      // Note: If memberStatus is empty, member data hasn't been synced from Google Sheets yet
+      //       In this case, we need to sync members first via Admin Dashboard
       // Note: lineGroupStatus (Column U) is NOT validated - all values allowed
 
       console.log('Total users from API:', data.users?.length || 0);
@@ -118,20 +120,18 @@ export default function PromoteEventModal({
         const hasLineUserId = !!user.lineUserId;
         const hasMemberId = !!user.memberId;
         const isActive = user.isActive !== false; // Default to true if not set
-        // Allow empty status (means not yet synced) or 'ปกติ' status
-        // Exclude only explicit 'ไม่ปกติ' status
-        const hasValidStatus = !user.memberStatus || user.memberStatus === 'ปกติ';
+        const hasNormalStatus = user.memberStatus === 'ปกติ'; // Column R from Google Sheets
 
         // Debug: log why members are filtered out
-        if (hasLineUserId && hasMemberId && isActive && !hasValidStatus) {
-          console.log('Member filtered out due to invalid status:', {
+        if (hasLineUserId && hasMemberId && isActive && !hasNormalStatus) {
+          console.log('Member filtered out due to status:', {
             memberId: user.memberId,
             memberStatus: user.memberStatus,
             lineDisplayName: user.lineDisplayName,
           });
         }
 
-        return hasLineUserId && hasMemberId && isActive && hasValidStatus;
+        return hasLineUserId && hasMemberId && isActive && hasNormalStatus;
       });
 
       console.log('Fetched members sample (first 3):', filteredMembers.slice(0, 3));

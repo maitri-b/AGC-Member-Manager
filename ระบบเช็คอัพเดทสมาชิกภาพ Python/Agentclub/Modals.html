@@ -1,0 +1,720 @@
+<!-- ==================== MEMBER REGISTRATION MODAL ==================== -->
+<div class="modal fade" id="registrationModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-file-signature me-2"></i>แบบฟอร์มสมัครสมาชิกชมรม Agents Club
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="registrationForm">
+          <!-- Section 1: Company & Personal Info -->
+          <div class="registration-form-section">
+            <h6><i class="fas fa-building me-2"></i>ข้อมูลบริษัทและผู้ติดต่อ</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">บริษัท (ภาษาอังกฤษ) <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regCompanyEn" placeholder="Company Name (English)">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">ชื่อ-นามสกุล (ภาษาไทย) <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regFullName" placeholder="ชื่อ-นามสกุล">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">ชื่อเล่น <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regNickname" placeholder="ชื่อเล่น">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">ตำแหน่งในบริษัท <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regPosition" placeholder="ตำแหน่ง">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">ใบอนุญาตนำเที่ยวเลขที่ <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regLicenseNo" placeholder="xx/xxxxx">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Contact Info -->
+          <div class="registration-form-section">
+            <h6><i class="fas fa-address-book me-2"></i>ข้อมูลการติดต่อ</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">ไอดีไลน์ <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regLineId" placeholder="LINE ID">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">ชื่อไลน์ <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regLineName" placeholder="ชื่อที่แสดงใน LINE">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">อีเมล <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" id="regEmail" placeholder="email@example.com">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">เบอร์โทรศัพท์</label>
+                <input type="text" class="form-control" id="regPhone" placeholder="02-xxx-xxxx">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">เบอร์มือถือ <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regMobile" placeholder="08x-xxx-xxxx">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">เว็บไซต์</label>
+                <input type="text" class="form-control" id="regWebsite" placeholder="www.example.com">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Sponsors -->
+          <div class="registration-form-section">
+            <h6><i class="fas fa-user-check me-2"></i>ผู้รับรองสมาชิก</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">ผู้รับรองสมาชิก ท่านที่ 1 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regSponsor1" placeholder="ชื่อ-นามสกุล หรือ ชื่อเล่น ของผู้รับรอง">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">ผู้รับรองสมาชิก ท่านที่ 2 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="regSponsor2" placeholder="ชื่อ-นามสกุล หรือ ชื่อเล่น ของผู้รับรอง">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: Terms and Conditions -->
+          <div class="registration-form-section">
+            <h6><i class="fas fa-file-contract me-2"></i>เงื่อนไขและกฎกติกาของชมรม</h6>
+            <div class="terms-box">
+              <p class="mb-3">กรุณาอ่านเงื่อนไขและกฎกติกาของชมรมให้ครบถ้วน และกดยอมรับหากท่านเข้าใจและสามารถปฏิบัติตามเงื่อนไขของชมรมได้</p>
+
+              <h5>วัตถุประสงค์ของชมรม Agents Club</h5>
+              <p>ชมรม Agents Club ก่อตั้งขึ้นเพื่อส่งเสริมการช่วยเหลือและแบ่งปัน (Helping & Sharing) ระหว่างสมาชิก ทั้งในด้านข้อมูล ข่าวสาร ตลอดจนการพัฒนาความรู้ความสามารถด้านการดำเนินธุรกิจนำเที่ยว เพื่อให้องค์กรของสมาชิกเจริญเติบโตอย่างยั่งยืน รวมถึงการจัดกิจกรรมต่าง ๆ ของชมรมเพื่อส่งเสริมและพัฒนาวิชาชีพนำเที่ยวของสมาชิก</p>
+
+              <h6>คุณสมบัติและเงื่อนไขการเป็นสมาชิกประเภทสามัญ</h6>
+              <ul>
+                <li>เป็นบริษัททัวร์ที่ดำเนินธุรกิจในรูปแบบตัวแทนจำหน่าย (Agent) โดยส่งลูกค้าร่วมทัวร์ (Join Tour) เป็นหลัก หรืออาจดำเนินการหน้าร้านเองบ้าง แต่จะต้องมีการส่งลูกค้าร่วมทัวร์ให้กับบริษัทอื่นด้วย และต้องมีใบอนุญาตประกอบธุรกิจนำเที่ยวประเภททั่วไป (Outbound)</li>
+                <li>ผู้สมัครต้องมีแนวคิดที่สอดคล้องกับวัตถุประสงค์ของชมรม คือ การช่วยเหลือและแบ่งปัน (Helping & Sharing)</li>
+                <li>ผู้สมัครต้องมีสมาชิกชมรม Agents Club รับรองจำนวน 2 ท่าน</li>
+              </ul>
+              <p><strong>หมายเหตุ:</strong> สงวนสิทธิ์สำหรับบริษัทที่มีใบอนุญาตนำเที่ยวประเภททั่วไป (Outbound) และให้บริการในรูปแบบ Tour Distributor / Retail (ตัวแทนจำหน่ายทัวร์หรือส่งลูกค้าร่วมทัวร์) เท่านั้น</p>
+
+              <h6>กฎกติกาภายในกลุ่ม LINE ของชมรม</h6>
+              <ul>
+                <li>ห้ามโพสต์ขายทัวร์หรือโฆษณาในกลุ่ม</li>
+                <li>ห้ามเชิญสมาชิกใหม่เข้ากลุ่มด้วยตนเอง โดยสมาชิกใหม่จะต้องผ่านการลงทะเบียนและได้รับการอนุมัติจากชมรมเท่านั้น</li>
+                <li>ห้ามโพสต์ข้อความทักทาย เช่น สวัสดีตอนเช้า หรือข้อความที่ไม่เกี่ยวข้องกับวัตถุประสงค์ของชมรม</li>
+                <li>ห้ามโพสต์เนื้อหาเกี่ยวกับการเมืองโดยเด็ดขาด</li>
+              </ul>
+            </div>
+
+            <!-- Agreement Checkbox -->
+            <div class="terms-agreement">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="regAgreeTerms">
+                <label class="form-check-label" for="regAgreeTerms">
+                  ข้าพเจ้าได้อ่านและเข้าใจเงื่อนไขและกฎกติกาของชมรม Agents Club เป็นที่เรียบร้อยแล้ว และยินยอมปฏิบัติตามกฎกติกาของชมรมทุกประการ
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5: Required Documents -->
+          <div class="registration-form-section">
+            <h6><i class="fas fa-folder-open me-2"></i>เอกสารที่ต้องจัดส่งเพิ่มเติม</h6>
+            <div class="document-info">
+              <p class="mb-3">หลังจากส่งใบสมัครแล้ว กรุณาจัดส่งเอกสารดังต่อไปนี้ให้กับนายทะเบียนชมรม:</p>
+              <ol class="mb-3">
+                <li><strong>ใบอนุญาตประกอบธุรกิจนำเที่ยว</strong> ฉบับปัจจุบัน (ต้องไม่หมดอายุ)</li>
+                <li><strong>นามบัตร</strong> ของผู้สมัคร</li>
+              </ol>
+              <div class="alert alert-info mb-0">
+                <p class="mb-2"><strong>ช่องทางการส่งเอกสาร</strong></p>
+                <p class="mb-1">กรุณาส่งเอกสารผ่านทาง LINE ของนายทะเบียนชมรม</p>
+                <p class="mb-2">ติดต่อ: <strong>คุณไมตรี บุญกิจรุ่งไพศาล (ไมค์)</strong></p>
+                <a href="https://line.me/ti/p/zesdrUFHGO" target="_blank" class="btn btn-success">
+                  <i class="fab fa-line me-2"></i>เพิ่มเพื่อนทาง LINE
+                </a>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button type="button" class="btn btn-success" onclick="submitRegistration()" id="submitRegBtn">
+          <i class="fas fa-paper-plane me-1"></i>ส่งใบสมัคร
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== REGISTRATION VALIDATION MODAL ==================== -->
+<div class="modal fade" id="registrationValidationModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="fas fa-exclamation-triangle me-2"></i>กรุณากรอกข้อมูลให้ครบถ้วน
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">กรุณากรอกข้อมูลในช่องที่จำเป็นต่อไปนี้:</p>
+        <ul id="validationErrorList" class="text-danger mb-0">
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
+          <i class="fas fa-edit me-1"></i>กลับไปแก้ไข
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== REGISTRATION SUCCESS MODAL ==================== -->
+<div class="modal fade" id="registrationSuccessModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-check-circle me-2"></i>ส่งใบสมัครเรียบร้อยแล้ว
+        </h5>
+      </div>
+      <div class="modal-body py-4">
+        <div class="text-center mb-4">
+          <i class="fas fa-hands-helping fa-4x text-success mb-3"></i>
+          <h4 class="text-success">ยินดีต้อนรับสู่ครอบครัว Agents Club</h4>
+        </div>
+        <div class="card border-0 bg-light">
+          <div class="card-body">
+            <p class="mb-3">ขอบคุณที่สนใจสมัครเข้าร่วมเป็นสมาชิกของชมรม Agents Club ใบสมัครของท่านได้รับการบันทึกเรียบร้อยแล้ว</p>
+            <p class="mb-3"><strong>ขั้นตอนต่อไป:</strong></p>
+            <ol class="mb-3">
+              <li class="mb-2">ทีมนายทะเบียนจะทำการตรวจสอบข้อมูลและเอกสารของท่าน</li>
+              <li class="mb-2">หลังจากตรวจสอบเรียบร้อย เราจะติดต่อกลับทาง LINE ที่ท่านให้ไว้</li>
+              <li class="mb-2">ท่านจะได้รับการเชิญเข้าร่วมกลุ่ม LINE ของชมรม</li>
+            </ol>
+
+            <!-- Required Documents Section -->
+            <div class="alert alert-secondary mb-3">
+              <p class="mb-2"><i class="fas fa-folder-open me-2"></i><strong>เอกสารที่ต้องจัดส่งเพิ่มเติม</strong></p>
+              <ol class="mb-0 ps-3">
+                <li>ใบอนุญาตประกอบธุรกิจนำเที่ยว ฉบับปัจจุบัน (ต้องไม่หมดอายุ)</li>
+                <li>นามบัตรของผู้สมัคร</li>
+              </ol>
+            </div>
+
+            <!-- Contact Registrar Section -->
+            <div class="alert alert-info mb-0">
+              <p class="mb-2"><i class="fas fa-user-tie me-2"></i><strong>ช่องทางส่งเอกสาร</strong></p>
+              <p class="mb-2">กรุณาส่งเอกสารผ่านทาง LINE ของนายทะเบียนชมรม</p>
+              <p class="mb-3">ติดต่อ: <strong>คุณไมตรี บุญกิจรุ่งไพศาล (ไมค์)</strong></p>
+              <a href="https://line.me/ti/p/zesdrUFHGO" target="_blank" class="btn btn-success">
+                <i class="fab fa-line me-2"></i>เพิ่มเพื่อนทาง LINE
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="text-center mt-4">
+          <p class="text-muted mb-0"><strong>สถานะใบสมัคร:</strong> <span class="badge bg-info text-white fs-6">รอนำเข้ากลุ่ม</span></p>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-success btn-lg" data-bs-dismiss="modal">
+          <i class="fas fa-thumbs-up me-2"></i>รับทราบ
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== EDIT MEMBER MODAL ==================== -->
+<div class="modal fade" id="editMemberModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-edit me-2"></i>แก้ไขข้อมูลสมาชิก
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editMemberForm">
+          <input type="hidden" id="editRowIndex">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">ชื่อ-นามสกุล</label>
+              <input type="text" class="form-control" id="editName">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">ชื่อเล่น</label>
+              <input type="text" class="form-control" id="editNickname">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">บริษัท (อังกฤษ)</label>
+              <input type="text" class="form-control" id="editCompanyEn">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">ชื่อบริษัทจดทะเบียน</label>
+              <input type="text" class="form-control" id="editCompanyReg">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">LINE ID</label>
+              <input type="text" class="form-control" id="editLineId">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">ชื่อ LINE</label>
+              <input type="text" class="form-control" id="editLineName">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">เบอร์โทร</label>
+              <input type="text" class="form-control" id="editPhone">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">เบอร์มือถือ</label>
+              <input type="text" class="form-control" id="editMobile">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">เลขใบอนุญาต</label>
+              <input type="text" class="form-control" id="editLicenseNo">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">สถานะกลุ่ม LINE</label>
+              <select class="form-select" id="editLineGroupU">
+                <option value="">-- เลือก --</option>
+                <option value="ปกติ">ปกติ</option>
+                <option value="รอผลการติดต่อ">รอผลการติดต่อ</option>
+                <option value="รอนำเข้ากลุ่ม">รอนำเข้ากลุ่ม</option>
+                <option value="รอนำชื่อออกจากกลุ่ม">รอนำชื่อออกจากกลุ่ม</option>
+                <option value="ออกจากกลุ่มแล้ว">ออกจากกลุ่มแล้ว</option>
+              </select>
+            </div>
+            <!-- ข้อมูลจาก DOT (Read-only) -->
+            <div class="col-12"><hr><small class="text-muted">ข้อมูลจากกรมการท่องเที่ยว (อ่านอย่างเดียว)</small></div>
+            <div class="col-md-6">
+              <label class="form-label">ชื่อบริษัทตามที่จดทะเบียน (Q)</label>
+              <input type="text" class="form-control" id="editCompanyQ" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">สถานะใบอนุญาต (R)</label>
+              <input type="text" class="form-control" id="editStatusR" readonly style="background-color: #f8f9fa;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">วันหมดอายุ (S)</label>
+              <input type="text" class="form-control" id="editExpDateS" readonly style="background-color: #f8f9fa;">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button type="button" class="btn btn-primary" onclick="saveMember()">
+          <i class="fas fa-save me-1"></i>บันทึก
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ADD MEMBER MODAL ==================== -->
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user-plus me-2"></i>เพิ่มสมาชิกใหม่
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addMemberForm">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="addName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">ชื่อเล่น</label>
+              <input type="text" class="form-control" id="addNickname">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">บริษัท (อังกฤษ)</label>
+              <input type="text" class="form-control" id="addCompanyEn">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">ชื่อบริษัทจดทะเบียน</label>
+              <input type="text" class="form-control" id="addCompanyReg">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">LINE ID</label>
+              <input type="text" class="form-control" id="addLineId">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">ชื่อ LINE</label>
+              <input type="text" class="form-control" id="addLineName">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">เบอร์โทร</label>
+              <input type="text" class="form-control" id="addPhone">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">เบอร์มือถือ</label>
+              <input type="text" class="form-control" id="addMobile">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">เลขใบอนุญาต <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="addLicenseNo" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">สถานะกลุ่ม LINE</label>
+              <select class="form-select" id="addLineGroup">
+                <option value="ปกติ">ปกติ</option>
+                <option value="รอผลการติดต่อ">รอผลการติดต่อ</option>
+                <option value="รอนำเข้ากลุ่ม">รอนำเข้ากลุ่ม</option>
+                <option value="รอนำชื่อออกจากกลุ่ม">รอนำชื่อออกจากกลุ่ม</option>
+                <option value="ออกจากกลุ่มแล้ว">ออกจากกลุ่มแล้ว</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button type="button" class="btn btn-success" onclick="addNewMember()">
+          <i class="fas fa-plus me-1"></i>เพิ่มสมาชิก
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== VIEW MEMBER MODAL ==================== -->
+<div class="modal fade" id="viewMemberModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user me-2"></i>รายละเอียดสมาชิก
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="viewMemberContent">
+        <!-- Content loaded dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== NOTIFICATION MODAL ==================== -->
+<div class="modal fade" id="notificationModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title">
+          <i class="fas fa-bell me-2"></i>ข้อความแจ้งเตือนสมาชิก
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          คัดลอกข้อความด้านล่างเพื่อส่งแจ้งเตือนสมาชิก
+        </div>
+        <textarea class="form-control" id="notificationText" rows="15" readonly></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+        <button type="button" class="btn btn-primary" onclick="copyNotification()">
+          <i class="fas fa-copy me-1"></i>คัดลอกข้อความ
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DELETE CONFIRMATION MODAL ==================== -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-trash-alt me-2"></i>ยืนยันการลบ
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>คุณต้องการลบสมาชิก <strong id="deleteMemberName"></strong> ใช่หรือไม่?</p>
+        <p class="text-danger mb-0"><i class="fas fa-exclamation-triangle me-1"></i>การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+        <input type="hidden" id="deleteRowIndex">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+          <i class="fas fa-trash-alt me-1"></i>ลบ
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== REMOVE FROM GROUP MODAL ==================== -->
+<div class="modal fade" id="removeFromGroupModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-user-minus me-2"></i>นำชื่อออกจากกลุ่ม
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>คุณต้องการนำ <strong id="removeFromGroupCompanyName"></strong> ออกจากกลุ่ม LINE ใช่หรือไม่?</p>
+        <p class="text-muted mb-0"><i class="fas fa-info-circle me-1"></i>สถานะจะเปลี่ยนเป็น "ออกจากกลุ่มแล้ว" และจะบันทึกวันที่ออกจากกลุ่ม</p>
+        <input type="hidden" id="removeFromGroupRowIndex">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button type="button" class="btn btn-danger" onclick="confirmRemoveFromGroup()">
+          <i class="fas fa-user-minus me-1"></i>นำชื่อออก
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CONTACT MODAL (CRM) ==================== -->
+<div class="modal fade" id="contactModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-phone-alt me-2"></i>บันทึกการติดต่อสมาชิก
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Member Info Summary -->
+        <div class="alert alert-light border mb-4">
+          <div class="row">
+            <div class="col-md-6">
+              <strong>ชื่อ:</strong> <span id="contactMemberName">-</span>
+            </div>
+            <div class="col-md-6">
+              <strong>บริษัท:</strong> <span id="contactMemberCompany">-</span>
+            </div>
+          </div>
+        </div>
+
+        <form id="contactForm">
+          <input type="hidden" id="contactRowIndex">
+          <input type="hidden" id="contactMemberId">
+
+          <!-- Contact Date -->
+          <div class="mb-3">
+            <label class="form-label">วันที่ติดต่อ <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="contactDate" required>
+          </div>
+
+          <!-- Contact Reason -->
+          <div class="mb-3">
+            <label class="form-label">เหตุผลในการติดต่อ <span class="text-danger">*</span></label>
+            <select class="form-select" id="contactReason" required>
+              <option value="">-- เลือกเหตุผล --</option>
+              <option value="อัพเดทใบอนุญาตแทนใบเดิมที่หมดอายุ">อัพเดทใบอนุญาตแทนใบเดิมที่หมดอายุ</option>
+              <option value="แจ้งเปลี่ยน LINE ตัวแทนในบริษัท">แจ้งเปลี่ยน LINE ตัวแทนในบริษัท</option>
+              <option value="สถานะใบอนุญาตเดิมถูกเพิกถอน">สถานะใบอนุญาตเดิมถูกเพิกถอน</option>
+              <option value="สมาชิกขาดการติดต่อกับชมรม">สมาชิกขาดการติดต่อกับชมรม</option>
+            </select>
+          </div>
+
+          <!-- Contact Person (Responsible) -->
+          <div class="mb-3">
+            <label class="form-label">ผู้รับผิดชอบในการติดต่อ <span class="text-danger">*</span></label>
+            <select class="form-select" id="contactPerson" required>
+              <option value="">-- เลือกผู้รับผิดชอบ --</option>
+            </select>
+          </div>
+
+          <!-- Contact Result (Optional) -->
+          <div class="mb-3" id="contactResultSection">
+            <label class="form-label">ผลการติดต่อ <span class="text-muted">(ไม่บังคับ - สามารถบันทึกภายหลังได้)</span></label>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="contactResult" id="resultContacted" value="contacted" onchange="onContactResultChange()">
+              <label class="form-check-label" for="resultContacted">
+                <i class="fas fa-check-circle text-success me-1"></i>ติดต่อแล้ว
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="contactResult" id="resultNotContacted" value="not_contacted" onchange="onContactResultChange()">
+              <label class="form-check-label" for="resultNotContacted">
+                <i class="fas fa-times-circle text-danger me-1"></i>ติดต่อไม่ได้เกิน 3 วัน
+              </label>
+            </div>
+          </div>
+
+          <!-- Sub-result (shown when contacted) -->
+          <div class="mb-3" id="subResultSection" style="display:none;">
+            <label class="form-label">รายละเอียดผลการติดต่อ</label>
+            <select class="form-select" id="contactSubResult">
+              <option value="">-- เลือก --</option>
+              <option value="อัพเดทข้อมูลเรียบร้อย">อัพเดทข้อมูลเรียบร้อย</option>
+              <option value="สมาชิกไม่ต่ออายุ">สมาชิกไม่ต่ออายุ</option>
+              <option value="สมาชิกเลิกกิจการ">สมาชิกเลิกกิจการ</option>
+            </select>
+          </div>
+
+          <!-- Notes -->
+          <div class="mb-3">
+            <label class="form-label">หมายเหตุ</label>
+            <textarea class="form-control" id="contactNotes" rows="3" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button type="button" class="btn btn-info text-white" onclick="saveContact()">
+          <i class="fas fa-save me-1"></i>บันทึกการติดต่อ
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CONTACT HISTORY MODAL (CRM) ==================== -->
+<div class="modal fade" id="historyModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-secondary text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-history me-2"></i>ประวัติการติดต่อ
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Member Info Summary -->
+        <div class="alert alert-light border mb-4">
+          <div class="row">
+            <div class="col-md-6">
+              <strong>ชื่อ:</strong> <span id="historyMemberName">-</span>
+            </div>
+            <div class="col-md-6">
+              <strong>บริษัท:</strong> <span id="historyMemberCompany">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="historyTable">
+            <thead class="table-dark">
+              <tr>
+                <th>วันที่</th>
+                <th>เหตุผล</th>
+                <th>ผู้รับผิดชอบ</th>
+                <th>ผลการติดต่อ</th>
+                <th>รายละเอียด</th>
+                <th>หมายเหตุ</th>
+                <th>ผู้บันทึก</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr>
+                <td colspan="8" class="text-center py-4">
+                  <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                  <p class="text-muted mb-0">ไม่มีประวัติการติดต่อ</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <input type="hidden" id="historyRowIndex">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+        <button type="button" class="btn btn-info text-white" onclick="addContactFromHistory()">
+          <i class="fas fa-plus me-1"></i>เพิ่มการติดต่อ
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== UPDATE CONTACT RESULT MODAL ==================== -->
+<div class="modal fade" id="updateResultModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-edit me-2"></i>บันทึกผลการติดต่อ
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Previous Contact Info -->
+        <div class="alert alert-light border mb-4">
+          <div class="mb-2"><strong>วันที่ติดต่อ:</strong> <span id="updateContactDate">-</span></div>
+          <div><strong>เหตุผล:</strong> <span id="updateContactReason">-</span></div>
+        </div>
+
+        <input type="hidden" id="updateRecordId">
+        <input type="hidden" id="updateRowIndex">
+
+        <!-- Contact Person (Responsible) -->
+        <div class="mb-3">
+          <label class="form-label">ผู้รับผิดชอบในการติดต่อ <span class="text-danger">*</span></label>
+          <select class="form-select" id="updateContactPerson" required>
+            <option value="">-- เลือกผู้รับผิดชอบ --</option>
+          </select>
+        </div>
+
+        <!-- Contact Result -->
+        <div class="mb-3">
+          <label class="form-label">ผลการติดต่อ <span class="text-danger">*</span></label>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="updateResult" id="updateResultContacted" value="contacted" onchange="onUpdateResultChange()">
+            <label class="form-check-label" for="updateResultContacted">
+              <i class="fas fa-check-circle text-success me-1"></i>ติดต่อแล้ว
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="updateResult" id="updateResultNotContacted" value="not_contacted" onchange="onUpdateResultChange()">
+            <label class="form-check-label" for="updateResultNotContacted">
+              <i class="fas fa-times-circle text-danger me-1"></i>ติดต่อไม่ได้เกิน 3 วัน
+            </label>
+          </div>
+        </div>
+
+        <!-- Sub-result (shown when contacted) -->
+        <div class="mb-3" id="updateSubResultSection" style="display:none;">
+          <label class="form-label">รายละเอียดผลการติดต่อ</label>
+          <select class="form-select" id="updateSubResult">
+            <option value="">-- เลือก --</option>
+            <option value="อัพเดทข้อมูลเรียบร้อย">อัพเดทข้อมูลเรียบร้อย</option>
+            <option value="สมาชิกไม่ต่ออายุ">สมาชิกไม่ต่ออายุ</option>
+            <option value="สมาชิกเลิกกิจการ">สมาชิกเลิกกิจการ</option>
+          </select>
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-3">
+          <label class="form-label">หมายเหตุเพิ่มเติม</label>
+          <textarea class="form-control" id="updateNotes" rows="2" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button type="button" class="btn btn-success" onclick="saveUpdateResult()">
+          <i class="fas fa-save me-1"></i>บันทึกผล
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

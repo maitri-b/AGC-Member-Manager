@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agents Club - Dashboard</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- DataTables -->
+  <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">
+        <i class="fas fa-users me-2"></i>Agents Club
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="#" onclick="showSection('members')">
+              <i class="fas fa-id-card me-1"></i>สมาชิก
+            </a>
+          </li>
+        </ul>
+        <div class="d-flex align-items-center">
+          <span class="text-light me-3">
+            <i class="fas fa-user-circle me-1"></i>
+            <span id="userName">User</span>
+          </span>
+          <button class="btn btn-outline-light btn-sm" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt me-1"></i>ออกจากระบบ
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+      <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card">
+          <div class="stat-icon bg-primary-gradient">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-info">
+            <h3 id="statTotal">-</h3>
+            <p>สมาชิกทั้งหมด</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card">
+          <div class="stat-icon bg-success-gradient">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="stat-info">
+            <h3 id="statNormal">-</h3>
+            <p>สถานะปกติ</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card">
+          <div class="stat-icon bg-danger-gradient">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <div class="stat-info">
+            <h3 id="statAbnormal">-</h3>
+            <p>สถานะผิดปกติ</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card">
+          <div class="stat-icon bg-warning-gradient">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="stat-info">
+            <h3 id="statExpiring">-</h3>
+            <p>ใกล้หมดอายุ (3 เดือน)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section mb-4">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control" id="searchInput" placeholder="ค้นหา ชื่อ, บริษัท, เลขใบอนุญาต...">
+          </div>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" id="filterStatus">
+            <option value="">สถานะทั้งหมด</option>
+            <option value="normal">ปกติ</option>
+            <option value="abnormal">ไม่ปกติ</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" id="filterExpiry">
+            <option value="">วันหมดอายุ</option>
+            <option value="1">ภายใน 1 เดือน</option>
+            <option value="3">ภายใน 3 เดือน</option>
+            <option value="6">ภายใน 6 เดือน</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-primary w-100" onclick="applyFilters()">
+            <i class="fas fa-filter me-1"></i>กรอง
+          </button>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+            <i class="fas fa-redo me-1"></i>รีเซ็ต
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Members Table -->
+    <div class="card table-card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-list me-2"></i>รายชื่อสมาชิก
+        </h5>
+        <button class="btn btn-success btn-sm" onclick="showAddMemberModal()">
+          <i class="fas fa-plus me-1"></i>เพิ่มสมาชิก
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover" id="membersTable">
+            <thead>
+              <tr>
+                <th>สถานะ</th>
+                <th>บริษัท</th>
+                <th>ผู้ติดต่อ</th>
+                <th>ชื่อเล่น</th>
+                <th>LINE ID</th>
+                <th>มือถือ</th>
+                <th>เลขใบอนุญาต</th>
+                <th>วันหมดอายุ</th>
+                <th>สถานะกลุ่ม</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="membersTableBody">
+              <tr>
+                <td colspan="10" class="text-center py-5">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="mt-2 text-muted">กำลังโหลดข้อมูล...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Member Modal -->
+  <div class="modal fade" id="editMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-edit me-2"></i>แก้ไขข้อมูลสมาชิก
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editMemberForm">
+            <input type="hidden" id="editRowIndex">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">ชื่อ-นามสกุล</label>
+                <input type="text" class="form-control" id="editName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">ชื่อเล่น</label>
+                <input type="text" class="form-control" id="editNickname">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">บริษัท (อังกฤษ)</label>
+                <input type="text" class="form-control" id="editCompanyEn">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">ชื่อบริษัทจดทะเบียน</label>
+                <input type="text" class="form-control" id="editCompanyReg">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">LINE ID</label>
+                <input type="text" class="form-control" id="editLineId">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">ชื่อ LINE</label>
+                <input type="text" class="form-control" id="editLineName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">เบอร์โทร</label>
+                <input type="text" class="form-control" id="editPhone">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">เบอร์มือถือ</label>
+                <input type="text" class="form-control" id="editMobile">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">เลขใบอนุญาต</label>
+                <input type="text" class="form-control" id="editLicenseNo">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">สถานะไลน์กลุ่ม</label>
+                <select class="form-select" id="editLineGroupU">
+                  <option value="">-- เลือก --</option>
+                  <option value="อยู่ในกลุ่ม">อยู่ในกลุ่ม</option>
+                  <option value="ออกจากกลุ่ม">ออกจากกลุ่ม</option>
+                  <option value="รอตรวจสอบ">รอตรวจสอบ</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="button" class="btn btn-primary" onclick="saveMember()">
+            <i class="fas fa-save me-1"></i>บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Member Modal -->
+  <div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-user-plus me-2"></i>เพิ่มสมาชิกใหม่
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addMemberForm">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="addName" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">ชื่อเล่น</label>
+                <input type="text" class="form-control" id="addNickname">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">บริษัท (อังกฤษ)</label>
+                <input type="text" class="form-control" id="addCompanyEn">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">ชื่อบริษัทจดทะเบียน</label>
+                <input type="text" class="form-control" id="addCompanyReg">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">LINE ID</label>
+                <input type="text" class="form-control" id="addLineId">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">ชื่อ LINE</label>
+                <input type="text" class="form-control" id="addLineName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">เบอร์โทร</label>
+                <input type="text" class="form-control" id="addPhone">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">เบอร์มือถือ</label>
+                <input type="text" class="form-control" id="addMobile">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">เลขใบอนุญาต <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="addLicenseNo" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">สถานะไลน์กลุ่ม</label>
+                <select class="form-select" id="addLineGroup">
+                  <option value="อยู่ในกลุ่ม">อยู่ในกลุ่ม</option>
+                  <option value="รอตรวจสอบ">รอตรวจสอบ</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="button" class="btn btn-success" onclick="addNewMember()">
+            <i class="fas fa-plus me-1"></i>เพิ่มสมาชิก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Member Modal -->
+  <div class="modal fade" id="viewMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-user me-2"></i>รายละเอียดสมาชิก
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="viewMemberContent">
+          <!-- Content loaded dynamically -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Modal -->
+  <div class="modal fade" id="notificationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-warning">
+          <h5 class="modal-title">
+            <i class="fas fa-bell me-2"></i>ข้อความแจ้งเตือนสมาชิก
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            คัดลอกข้อความด้านล่างเพื่อส่งแจ้งเตือนสมาชิก
+          </div>
+          <textarea class="form-control" id="notificationText" rows="15" readonly></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+          <button type="button" class="btn btn-primary" onclick="copyNotification()">
+            <i class="fas fa-copy me-1"></i>คัดลอกข้อความ
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-trash-alt me-2"></i>ยืนยันการลบ
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>คุณต้องการลบสมาชิก <strong id="deleteMemberName"></strong> ใช่หรือไม่?</p>
+          <p class="text-danger mb-0"><i class="fas fa-exclamation-triangle me-1"></i>การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+          <input type="hidden" id="deleteRowIndex">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+            <i class="fas fa-trash-alt me-1"></i>ลบ
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast" role="alert">
+      <div class="toast-header">
+        <i class="fas fa-info-circle me-2" id="toastIcon"></i>
+        <strong class="me-auto" id="toastTitle">แจ้งเตือน</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+      </div>
+      <div class="toast-body" id="toastBody"></div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- DataTables -->
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+  <?!= include('JavaScript'); ?>
+</body>
+</html>

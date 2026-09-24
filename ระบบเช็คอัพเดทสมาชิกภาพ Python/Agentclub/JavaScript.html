@@ -1,0 +1,1870 @@
+<script>
+/**
+ * Agents Club - Single Page Application JavaScript
+ * CONSTITUTION.md Compliant: Law 2 (IIFE), Law 14 (SPA), Law 21 (Loading)
+ */
+(function() {
+  'use strict';
+
+  // ==================== APP STATE ====================
+  const AppState = {
+    currentToken: null,
+    currentUser: null,
+    allMembers: [],
+    dataTable: null,
+    isLoading: false
+  };
+
+  // ==================== INITIALIZATION ====================
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 [INIT] DOMContentLoaded - Agents Club SPA');
+    initializeApp();
+  });
+
+  function initializeApp() {
+    console.log('🔧 [INIT] Checking session...');
+
+    // Check for existing session in sessionStorage
+    const savedToken = sessionStorage.getItem('agentclub_token');
+    const savedUser = sessionStorage.getItem('agentclub_user');
+
+    if (savedToken && savedUser) {
+      console.log('🔑 [INIT] Found saved session, validating...');
+      AppState.currentToken = savedToken;
+      AppState.currentUser = savedUser;
+
+      // Validate token with server
+      showLoading('กำลังตรวจสอบเซสชัน...');
+      google.script.run
+        .withSuccessHandler(function(isValid) {
+          hideLoading();
+          if (isValid) {
+            console.log('✅ [INIT] Token valid, showing dashboard');
+            showDashboard();
+          } else {
+            console.log('❌ [INIT] Token invalid, showing login');
+            clearSession();
+            showLogin();
+          }
+        })
+        .withFailureHandler(function(error) {
+          hideLoading();
+          console.error('❌ [INIT] Token validation failed:', error);
+          clearSession();
+          showLogin();
+        })
+        .verifyToken(savedToken);
+    } else {
+      console.log('📝 [INIT] No session found, showing login');
+      showLogin();
+    }
+  }
+
+  // ==================== SECTION MANAGEMENT ====================
+  function showLogin() {
+    console.log('📄 [SECTION] Showing Login');
+    document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('dashboardSection').style.display = 'none';
+  }
+
+  function showDashboard() {
+    console.log('📄 [SECTION] Showing Dashboard');
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'block';
+
+    // Set user name
+    const userNameEl = document.getElementById('userName');
+    if (userNameEl && AppState.currentUser) {
+      userNameEl.textContent = AppState.currentUser;
+    }
+
+    // Setup search input
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          applyFilters();
+        }
+      });
+    }
+
+    // Load dashboard data
+    loadDashboardStats();
+    loadMembers();
+  }
+
+  function clearSession() {
+    console.log('🧹 [SESSION] Clearing session');
+    AppState.currentToken = null;
+    AppState.currentUser = null;
+    sessionStorage.removeItem('agentclub_token');
+    sessionStorage.removeItem('agentclub_user');
+  }
+
+  // ==================== LOADING OVERLAY ====================
+  function showLoading(message) {
+    console.log('⏳ [LOADING] Show:', message);
+    AppState.isLoading = true;
+
+    const overlay = document.getElementById('loadingOverlay');
+    const msgEl = document.getElementById('loadingMessage');
+
+    if (msgEl) msgEl.textContent = message || 'กำลังโหลด...';
+    if (overlay) overlay.style.display = 'block';
+  }
+
+  function hideLoading() {
+    console.log('✅ [LOADING] Hide');
+    AppState.isLoading = false;
+
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  // ==================== LOGIN ====================
+  function handleLogin(event) {
+    event.preventDefault();
+    console.log('🔐 [LOGIN] Attempting login...');
+
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    const loginBtn = document.getElementById('loginBtn');
+
+    // Clear error
+    errorDiv.classList.add('d-none');
+
+    // Disable button
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังเข้าสู่ระบบ...';
+
+    showLoading('กำลังเข้าสู่ระบบ...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('🔐 [LOGIN] Response:', JSON.stringify(result));
+        hideLoading();
+
+        // Reset button
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>เข้าสู่ระบบ';
+
+        if (result && result.success) {
+          console.log('✅ [LOGIN] Success, token received');
+
+          // Save session
+          AppState.currentToken = result.token;
+          AppState.currentUser = result.userName || 'User';
+          sessionStorage.setItem('agentclub_token', result.token);
+          sessionStorage.setItem('agentclub_user', AppState.currentUser);
+
+          // Show dashboard
+          showDashboard();
+        } else {
+          console.log('❌ [LOGIN] Failed:', result ? result.message : 'Unknown error');
+          errorDiv.textContent = result ? result.message : 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
+          errorDiv.classList.remove('d-none');
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('❌ [LOGIN] Error:', error);
+        hideLoading();
+
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>เข้าสู่ระบบ';
+
+        errorDiv.textContent = 'เกิดข้อผิดพลาด: ' + (error.message || error);
+        errorDiv.classList.remove('d-none');
+      })
+      .login(email, password);
+  }
+
+  // ==================== LOGOUT ====================
+  function handleLogout() {
+    console.log('🚪 [LOGOUT] Logging out...');
+    showLoading('กำลังออกจากระบบ...');
+
+    google.script.run
+      .withSuccessHandler(function() {
+        console.log('✅ [LOGOUT] Success');
+        hideLoading();
+        clearSession();
+        showLogin();
+
+        // Clear form
+        const emailInput = document.getElementById('loginEmail');
+        const passwordInput = document.getElementById('loginPassword');
+        if (emailInput) emailInput.value = '';
+        if (passwordInput) passwordInput.value = '';
+      })
+      .withFailureHandler(function(error) {
+        console.error('❌ [LOGOUT] Error:', error);
+        hideLoading();
+        clearSession();
+        showLogin();
+      })
+      .logout(AppState.currentToken);
+  }
+
+  // ==================== DASHBOARD STATS ====================
+  function loadDashboardStats() {
+    console.log('📈 [STATS] Loading dashboard stats...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('📈 [STATS] Response:', JSON.stringify(result));
+
+        if (result && result.success) {
+          const data = result.data || {};
+
+          setElementText('statTotal', (data.total || 0).toLocaleString());
+          setElementText('statNormal', (data.normal || 0).toLocaleString());
+          setElementText('statAbnormal', (data.abnormal || 0).toLocaleString());
+          setElementText('statExpiring', (data.expiringSoon || 0).toLocaleString());
+
+          console.log('📈 [STATS] Updated - Total:', data.total);
+        } else {
+          console.error('📈 [STATS] Failed:', result ? result.message : 'No result');
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('📈 [STATS] Error:', error);
+      })
+      .getDashboardStats(AppState.currentToken);
+  }
+
+  // ==================== LOAD MEMBERS ====================
+  function loadMembers(filters) {
+    filters = filters || {};
+    console.log('👥 [MEMBERS] Loading with filters:', JSON.stringify(filters));
+
+    showTableLoading();
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('👥 [MEMBERS] Response success:', result ? result.success : 'null');
+        console.log('👥 [MEMBERS] Data count:', result && result.data ? result.data.length : 0);
+
+        if (result && result.success) {
+          AppState.allMembers = result.data || [];
+          renderMembersTable(AppState.allMembers);
+        } else {
+          console.error('👥 [MEMBERS] Failed:', result ? result.message : 'No result');
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถโหลดข้อมูลได้');
+          renderEmptyTable();
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('👥 [MEMBERS] Error:', error);
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถโหลดข้อมูลได้');
+        renderEmptyTable();
+      })
+      .getMembers(AppState.currentToken, filters);
+  }
+
+  function showTableLoading() {
+    const tbody = document.getElementById('membersTableBody');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="11" class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 text-muted">กำลังโหลดข้อมูล...</p></td></tr>';
+    }
+  }
+
+  function renderEmptyTable() {
+    const tbody = document.getElementById('membersTableBody');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="11" class="text-center py-5"><i class="fas fa-inbox fa-3x text-muted mb-3"></i><p class="text-muted">ไม่พบข้อมูลสมาชิก</p></td></tr>';
+    }
+  }
+
+  function renderMembersTable(members) {
+    console.log('🎨 [RENDER] Rendering', members.length, 'members');
+
+    // IMPORTANT: Destroy existing DataTable FIRST before modifying tbody
+    if (AppState.dataTable) {
+      console.log('🎨 [RENDER] Destroying existing DataTable');
+      AppState.dataTable.destroy();
+      AppState.dataTable = null;
+    }
+
+    const tbody = document.getElementById('membersTableBody');
+    if (!tbody) {
+      console.error('🎨 [RENDER] tbody not found!');
+      return;
+    }
+
+    if (!members || members.length === 0) {
+      console.log('🎨 [RENDER] No members, showing empty table');
+      renderEmptyTable();
+      return;
+    }
+
+    // Sort members: "รอนำเข้ากลุ่ม" first, then others
+    members.sort(function(a, b) {
+      const statusA = a.lineGroupU || a.lineGroupStatus || '';
+      const statusB = b.lineGroupU || b.lineGroupStatus || '';
+
+      // "รอนำเข้ากลุ่ม" comes first
+      if (statusA === 'รอนำเข้ากลุ่ม' && statusB !== 'รอนำเข้ากลุ่ม') return -1;
+      if (statusA !== 'รอนำเข้ากลุ่ม' && statusB === 'รอนำเข้ากลุ่ม') return 1;
+
+      // For same status, maintain original order (by MemberID or rowIndex)
+      return 0;
+    });
+
+    // Clear tbody and rebuild
+    console.log('🎨 [RENDER] Building table HTML for', members.length, 'rows');
+    tbody.innerHTML = '';
+
+    const html = members.map(function(member, index) {
+      const statusR = member.statusR || member.status || '';
+      const statusBadge = getStatusBadge(statusR);
+      // Use lineGroupU from column U directly (already normalized in backend)
+      const lineGroupStatus = member.lineGroupU || member.lineGroupStatus || '';
+      const lineGroupBadge = getLineGroupBadgeWithDetails(lineGroupStatus, member.leaveDate, member.leaveRecordedBy);
+      const showNotifyBtn = statusR && statusR !== 'ปกติ';
+      const rowIndex = member.rowIndex || (index + 2);
+      const memberName = escapeHtml(member.name || '').replace(/'/g, "\\'");
+
+      // Company name: use companyQ first, fallback to companyReg (companyB)
+      const companyDisplay = member.companyQ || member.companyReg || '-';
+
+      const lineIdValue = member.lineId || '';
+      const lineIdEscaped = lineIdValue.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const lineIdDisplay = lineIdValue ?
+        '<span class="me-1">' + escapeHtml(lineIdValue) + '</span><button class="btn btn-outline-secondary btn-sm py-0 px-1" onclick="copyLineId(\'' + lineIdEscaped + '\')" title="คัดลอก LINE ID"><i class="fas fa-copy"></i></button>' :
+        '-';
+
+      return '<tr>' +
+        '<td>' + lineGroupBadge + '</td>' +
+        '<td><span class="badge badge-member-id">' + escapeHtml(member.memberId || '-') + '</span></td>' +
+        '<td><span class="company-name" title="' + escapeHtml(companyDisplay) + '">' + escapeHtml(companyDisplay) + '</span></td>' +
+        '<td>' + escapeHtml(member.name || '-') + '</td>' +
+        '<td>' + escapeHtml(member.nickname || '-') + '</td>' +
+        '<td>' + lineIdDisplay + '</td>' +
+        '<td>' + escapeHtml(member.mobile || '-') + '</td>' +
+        '<td>' + escapeHtml(member.licenseNo || '-') + '</td>' +
+        '<td class="text-nowrap">' + formatShortDate(member.expDate) + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td class="text-nowrap">' +
+          '<button class="btn btn-action btn-view" onclick="viewMember(' + rowIndex + ')" title="ดูรายละเอียด"><i class="fas fa-eye"></i></button>' +
+          '<button class="btn btn-action btn-edit" onclick="editMember(' + rowIndex + ')" title="แก้ไข"><i class="fas fa-edit"></i></button>' +
+          (showNotifyBtn ? '<button class="btn btn-action btn-notify" onclick="showNotification(' + rowIndex + ')" title="สร้างข้อความแจ้งเตือน"><i class="fas fa-bell"></i></button>' : '') +
+          '<div class="dropdown d-inline-block">' +
+            '<button class="btn btn-action btn-secondary dropdown-toggle-no-caret" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="จัดการ">' +
+              '<i class="fas fa-ellipsis-v"></i>' +
+            '</button>' +
+            '<ul class="dropdown-menu dropdown-menu-end">' +
+              '<li><a class="dropdown-item" href="javascript:void(0)" onclick="showHistoryModal(' + rowIndex + ')"><i class="fas fa-history me-2 text-secondary"></i>ประวัติการติดต่อ</a></li>' +
+              '<li><hr class="dropdown-divider"></li>' +
+              '<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteMember(' + rowIndex + ', \'' + memberName + '\')"><i class="fas fa-trash me-2"></i>ลบสมาชิก</a></li>' +
+            '</ul>' +
+          '</div>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+
+    tbody.innerHTML = html;
+    console.log('🎨 [RENDER] Table HTML inserted, tbody rows:', tbody.querySelectorAll('tr').length);
+
+    // Initialize DataTable on fresh table
+    try {
+      AppState.dataTable = $('#membersTable').DataTable({
+        language: {
+          search: "ค้นหา:",
+          lengthMenu: "แสดง _MENU_ รายการ",
+          info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ รายการ",
+          infoEmpty: "ไม่มีข้อมูล",
+          infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)",
+          paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" },
+          emptyTable: "ไม่มีข้อมูลในตาราง",
+          zeroRecords: "ไม่พบข้อมูลที่ค้นหา"
+        },
+        pageLength: 250,
+        lengthMenu: [[50, 100, 250, 500, -1], [50, 100, 250, 500, "ทั้งหมด"]],
+        order: [],  // No automatic sorting - preserve our custom sort (รอนำเข้ากลุ่ม first)
+        autoWidth: false,
+        columns: [
+          { width: '7%' },   // สถานะ LINE
+          { width: '5%' },   // ID
+          { width: '15%' },  // บริษัท
+          { width: '10%' },  // ผู้ติดต่อ
+          { width: '7%' },   // ชื่อเล่น
+          { width: '9%' },   // LINE ID
+          { width: '9%' },   // มือถือ
+          { width: '9%' },   // เลขใบอนุญาต
+          { width: '8%' },   // วันหมดอายุ
+          { width: '8%' },   // สถานะใบอนุญาต
+          { width: '13%', orderable: false }  // จัดการ
+        ],
+        destroy: true  // Allow reinitialize
+      });
+      console.log('🎨 [RENDER] DataTable initialized, info:', AppState.dataTable.page.info());
+    } catch (e) {
+      console.error('🎨 [RENDER] DataTable error:', e);
+    }
+  }
+
+  // ==================== UTILITY FUNCTIONS ====================
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Format date to short Thai format (e.g., "17 ก.พ. 68")
+  function formatShortDate(dateStr) {
+    if (!dateStr || dateStr === '-' || dateStr === '') return '-';
+
+    var thaiMonthsFull = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                          'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+    var thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                           'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+    try {
+      // Check if it's Thai format "17 กุมภาพันธ์ 2568"
+      if (typeof dateStr === 'string') {
+        for (var i = 0; i < thaiMonthsFull.length; i++) {
+          if (dateStr.indexOf(thaiMonthsFull[i]) !== -1) {
+            var parts = dateStr.split(' ');
+            if (parts.length >= 3) {
+              var day = parts[0];
+              var year = parseInt(parts[2]) % 100; // Last 2 digits of Buddhist year
+              return day + ' ' + thaiMonthsShort[i] + ' ' + year;
+            }
+          }
+        }
+
+        // Try to parse as Date object
+        var date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          var d = date.getDate();
+          var m = thaiMonthsShort[date.getMonth()];
+          var y = (date.getFullYear() + 543) % 100;
+          return d + ' ' + m + ' ' + y;
+        }
+      }
+
+      return dateStr;
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  function setElementText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function setValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+
+  function getValue(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+  }
+
+  function getStatusBadge(status) {
+    if (!status) return '<span class="badge badge-status-unknown">ไม่ทราบ</span>';
+    if (status === 'ปกติ') return '<span class="badge badge-status-normal"><i class="fas fa-check-circle me-1"></i>ปกติ</span>';
+    if (status === 'รอตรวจสอบ') return '<span class="badge badge-line-pending"><i class="fas fa-clock me-1"></i>รอตรวจสอบ</span>';
+    return '<span class="badge badge-status-abnormal"><i class="fas fa-exclamation-circle me-1"></i>' + escapeHtml(status) + '</span>';
+  }
+
+  function getLineGroupBadge(status) {
+    if (!status) return '<span class="badge badge-status-unknown">-</span>';
+    var s = String(status).trim();
+    if (s === 'ปกติ' || s === 'อยู่ในกลุ่ม') return '<span class="badge badge-line-active"><i class="fas fa-users me-1"></i>ปกติ</span>';
+    if (s === 'ยกเลิกแล้ว') return '<span class="badge badge-status-abnormal"><i class="fas fa-ban me-1"></i>ยกเลิกแล้ว</span>';
+    if (s.includes('รอผลการติดต่อ') || s.includes('รอตรวจสอบ')) return '<span class="badge badge-line-waiting-contact"><i class="fas fa-phone-alt me-1"></i>รอผลการติดต่อ</span>';
+    if (s.includes('รอนำ') && s.includes('ออก')) return '<span class="badge badge-line-removing"><i class="fas fa-user-times me-1"></i>รอนำออก</span>';
+    if (s.includes('รอนำเข้า')) return '<span class="badge badge-line-joining"><i class="fas fa-user-plus me-1"></i>รอนำเข้า</span>';
+    if (s === 'ออกจากกลุ่มแล้ว') return '<span class="badge badge-status-abnormal"><i class="fas fa-user-slash me-1"></i>ออกจากกลุ่ม</span>';
+    return '<span class="badge badge-line-inactive"><i class="fas fa-user-minus me-1"></i>' + escapeHtml(s) + '</span>';
+  }
+
+  // Extended version with leave date/recorder details for "ออกจากกลุ่มแล้ว" status
+  function getLineGroupBadgeWithDetails(status, leaveDate, leaveRecordedBy) {
+    if (!status) return '<span class="badge badge-status-unknown">-</span>';
+    var s = String(status).trim();
+
+    // Special handling for "ออกจากกลุ่มแล้ว" - show leave date and recorder
+    if (s === 'ออกจากกลุ่มแล้ว') {
+      var badge = '<span class="badge badge-status-abnormal"><i class="fas fa-user-slash me-1"></i>ออกจากกลุ่ม</span>';
+      if (leaveDate || leaveRecordedBy) {
+        var details = [];
+        if (leaveDate) details.push(escapeHtml(leaveDate));
+        if (leaveRecordedBy) details.push(escapeHtml(leaveRecordedBy));
+        badge += '<br><small class="text-muted" style="font-size: 0.75em;">' + details.join(' : ') + '</small>';
+      }
+      return badge;
+    }
+
+    // For other statuses, use the original function
+    return getLineGroupBadge(status);
+  }
+
+  // ==================== FILTERS ====================
+  function getCurrentFilters() {
+    const searchVal = getValue('searchInput').trim();
+    const statusVal = getValue('filterStatus');
+    const expiryVal = getValue('filterExpiry');
+    const lineStatusVal = getValue('filterLineStatus');
+    const verificationVal = getValue('filterVerification');
+
+    // If lineStatus filter is "ออกจากกลุ่มแล้ว", show left members
+    const showLeftMembers = lineStatusVal === 'ออกจากกลุ่มแล้ว';
+
+    return {
+      search: searchVal || '',
+      statusNotNormal: statusVal === 'abnormal',
+      expiryMonths: expiryVal || '',
+      lineStatus: lineStatusVal || '',
+      verification: verificationVal || '',
+      showLeftMembers: showLeftMembers
+    };
+  }
+
+  function applyFilters() {
+    console.log('🔍 [FILTER] Applying filters');
+
+    const filters = getCurrentFilters();
+
+    console.log('🔍 [FILTER] Filter values:', JSON.stringify(filters));
+    console.log('🔍 [FILTER] statusNotNormal:', filters.statusNotNormal, '(type:', typeof filters.statusNotNormal + ')');
+    console.log('🔍 [FILTER] expiryMonths:', filters.expiryMonths, '(type:', typeof filters.expiryMonths + ')');
+    console.log('🔍 [FILTER] lineStatus:', filters.lineStatus);
+    console.log('🔍 [FILTER] showLeftMembers:', filters.showLeftMembers);
+
+    // Show copy expiry button only when filter is "45" (within 45 days) AND filter button is clicked
+    if (filters.expiryMonths === '45') {
+      showCopyExpiryButton();
+    } else {
+      hideCopyExpiryButton();
+    }
+
+    loadMembers(filters);
+  }
+
+  function reloadWithCurrentFilters() {
+    console.log('🔄 [RELOAD] Reloading with current filters');
+    const filters = getCurrentFilters();
+    loadMembers(filters);
+  }
+
+  function resetFilters() {
+    console.log('🔄 [FILTER] Resetting');
+    setValue('searchInput', '');
+    setValue('filterStatus', '');
+    setValue('filterExpiry', '');
+    setValue('filterLineStatus', '');
+    setValue('filterVerification', '');
+    hideCopyExpiryButton();
+    loadMembers({});
+  }
+
+  // ==================== EXPIRY LIST COPY ====================
+  function onExpiryFilterChange() {
+    // Hide copy button when dropdown changes - only show after clicking filter button
+    hideCopyExpiryButton();
+  }
+
+  function showCopyExpiryButton() {
+    const row = document.getElementById('copyExpiryRow');
+    if (row) row.style.display = 'block';
+  }
+
+  function hideCopyExpiryButton() {
+    const row = document.getElementById('copyExpiryRow');
+    if (row) row.style.display = 'none';
+  }
+
+  function copyExpiryListMessage() {
+    console.log('📋 [COPY] Generating expiry list message');
+
+    const members = AppState.allMembers;
+
+    if (!members || members.length === 0) {
+      showToast('warning', 'ไม่มีข้อมูล', 'กรุณากดกรองก่อนคัดลอก');
+      return;
+    }
+
+    let message = 'เรียนสมาชิกชมรม Agents Club\n\n';
+    message += 'เรื่อง บริการแจ้งเตือนสมาชิก เพื่อต่ออายุใบอนุญาตกับกรมการท่องเที่ยว\n\n';
+    message += 'รายนามสมาชิกต่อไปนี้ ใบอนุญาตกำลังจะหมดอายุใน 45 วัน\n\n';
+
+    members.forEach(function(member, index) {
+      const companyName = member.companyQ || member.companyReg || '-';
+      const expDate = member.expDate || '-';
+      message += (index + 1) + '. ' + companyName + '\n';
+      message += 'Exp: ' + expDate + '\n\n';
+    });
+
+    message += 'ทั้งนี้หากท่านได้ดำเนินการต่ออายุใบอนุญาตเรียบร้อยแล้ว\n';
+    message += 'ขอให้ติดต่อส่งสำเนาใบอนุญาตให้กับนายทะเบียนของชมรม\n';
+    message += 'เพื่อทำการอัพเดทข้อมูลในระบบทะเบียนต่อไป\n\n';
+    message += 'ด้วยความนับถือ\n\n';
+    message += 'ทีมทะเบียนสมาชิกชมรม Agents Club';
+
+    // Copy to clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(message)
+        .then(function() {
+          showToast('success', 'คัดลอกแล้ว', 'คัดลอกรายการ ' + members.length + ' บริษัท');
+        })
+        .catch(function() {
+          fallbackCopy(message, members.length);
+        });
+    } else {
+      fallbackCopy(message, members.length);
+    }
+  }
+
+  function fallbackCopy(text, count) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    showToast('success', 'คัดลอกแล้ว', 'คัดลอกรายการ ' + count + ' บริษัท');
+  }
+
+  // ==================== VIEW MEMBER ====================
+  function viewMember(rowIndex) {
+    console.log('👁️ [VIEW] Row:', rowIndex);
+    showLoading('กำลังโหลดข้อมูล...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        if (result && result.success) {
+          const m = result.data || {};
+          document.getElementById('viewMemberContent').innerHTML =
+            '<div class="row">' +
+              '<div class="col-md-6">' +
+                '<div class="member-detail-row"><div class="member-detail-label">ชื่อ-นามสกุล</div><div class="member-detail-value">' + escapeHtml(m.name || '-') + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">ชื่อเล่น</div><div class="member-detail-value">' + escapeHtml(m.nickname || '-') + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">บริษัท (อังกฤษ)</div><div class="member-detail-value">' + escapeHtml(m.companyEn || '-') + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">ชื่อบริษัทจดทะเบียน (Q)</div><div class="member-detail-value">' + escapeHtml(m.companyQ || '-') + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">เลขใบอนุญาต</div><div class="member-detail-value">' + escapeHtml(m.licenseNo || '-') + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">สถานะ (R)</div><div class="member-detail-value">' + getStatusBadge(m.statusR) + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">วันหมดอายุ (S)</div><div class="member-detail-value">' + escapeHtml(m.expDateS || '-') + '</div></div>' +
+              '</div>' +
+              '<div class="col-md-6">' +
+                '<div class="member-detail-row"><div class="member-detail-label">LINE ID</div><div class="member-detail-value">' + escapeHtml(m.lineId || '-') + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">ชื่อ LINE</div><div class="member-detail-value">' + escapeHtml(m.lineName || '-') + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">เบอร์โทร</div><div class="member-detail-value">' + escapeHtml(m.phone || '-') + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">เบอร์มือถือ</div><div class="member-detail-value">' + escapeHtml(m.mobile || '-') + '</div></div>' +
+                '<div class="member-detail-row"><div class="member-detail-label">สถานะไลน์กลุ่ม</div><div class="member-detail-value">' + getLineGroupBadge(m.lineGroupU) + '</div></div>' +
+              '</div>' +
+            '</div>';
+          new bootstrap.Modal(document.getElementById('viewMemberModal')).show();
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถโหลดข้อมูลได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถโหลดข้อมูลได้');
+      })
+      .getMember(AppState.currentToken, rowIndex);
+  }
+
+  // ==================== EDIT MEMBER ====================
+  function editMember(rowIndex) {
+    console.log('✏️ [EDIT] Row:', rowIndex);
+    showLoading('กำลังโหลดข้อมูล...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        if (result && result.success) {
+          const m = result.data || {};
+          setValue('editRowIndex', m.rowIndex || rowIndex);
+          setValue('editName', m.name || '');
+          setValue('editNickname', m.nickname || '');
+          setValue('editCompanyEn', m.companyEn || '');
+          setValue('editCompanyReg', m.companyReg || '');
+          setValue('editLineId', m.lineId || '');
+          setValue('editLineName', m.lineName || '');
+          setValue('editPhone', m.phone || '');
+          setValue('editMobile', m.mobile || '');
+          setValue('editLicenseNo', m.licenseNo || '');
+          setValue('editLineGroupU', m.lineGroupU || m.lineGroup || '');
+          // DOT data (read-only)
+          setValue('editCompanyQ', m.companyQ || '');
+          setValue('editStatusR', m.statusR || '');
+          setValue('editExpDateS', m.expDateS || '');
+          new bootstrap.Modal(document.getElementById('editMemberModal')).show();
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถโหลดข้อมูลได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถโหลดข้อมูลได้');
+      })
+      .getMember(AppState.currentToken, rowIndex);
+  }
+
+  function saveMember() {
+    console.log('💾 [SAVE] Saving member');
+    const rowIndex = parseInt(getValue('editRowIndex'));
+    const memberData = {
+      name: getValue('editName'),
+      nickname: getValue('editNickname'),
+      companyEn: getValue('editCompanyEn'),
+      companyReg: getValue('editCompanyReg'),
+      lineId: getValue('editLineId'),
+      lineName: getValue('editLineName'),
+      phone: getValue('editPhone'),
+      mobile: getValue('editMobile'),
+      licenseNo: getValue('editLicenseNo'),
+      lineGroupU: getValue('editLineGroupU')
+    };
+
+    showLoading('กำลังบันทึกข้อมูล...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        if (result && result.success) {
+          bootstrap.Modal.getInstance(document.getElementById('editMemberModal')).hide();
+          showToast('success', 'สำเร็จ', result.message || 'บันทึกข้อมูลเรียบร้อย');
+          loadMembers();
+          loadDashboardStats();
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถบันทึกได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถบันทึกได้');
+      })
+      .updateMember(AppState.currentToken, rowIndex, memberData);
+  }
+
+  // ==================== ADD MEMBER ====================
+  function showAddMemberModal() {
+    console.log('➕ [ADD] Opening modal');
+    document.getElementById('addMemberForm').reset();
+    new bootstrap.Modal(document.getElementById('addMemberModal')).show();
+  }
+
+  function addNewMember() {
+    console.log('➕ [ADD] Adding member');
+    const memberData = {
+      name: getValue('addName'),
+      nickname: getValue('addNickname'),
+      companyEn: getValue('addCompanyEn'),
+      companyReg: getValue('addCompanyReg'),
+      lineId: getValue('addLineId'),
+      lineName: getValue('addLineName'),
+      phone: getValue('addPhone'),
+      mobile: getValue('addMobile'),
+      licenseNo: getValue('addLicenseNo'),
+      lineGroup: getValue('addLineGroup')
+    };
+
+    if (!memberData.name || !memberData.licenseNo) {
+      showToast('warning', 'ข้อมูลไม่ครบ', 'กรุณากรอกชื่อและเลขใบอนุญาต');
+      return;
+    }
+
+    showLoading('กำลังเพิ่มสมาชิก...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        if (result && result.success) {
+          bootstrap.Modal.getInstance(document.getElementById('addMemberModal')).hide();
+          showToast('success', 'สำเร็จ', result.message || 'เพิ่มสมาชิกเรียบร้อย');
+          loadMembers();
+          loadDashboardStats();
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถเพิ่มได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถเพิ่มได้');
+      })
+      .addMember(AppState.currentToken, memberData);
+  }
+
+  // ==================== DELETE MEMBER ====================
+  function deleteMember(rowIndex, name) {
+    console.log('🗑️ [DELETE] Row:', rowIndex, 'Name:', name);
+    setValue('deleteRowIndex', rowIndex);
+    document.getElementById('deleteMemberName').textContent = name;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+  }
+
+  function confirmDelete() {
+    console.log('🗑️ [DELETE] Confirming');
+    const rowIndex = parseInt(getValue('deleteRowIndex'));
+    showLoading('กำลังลบข้อมูล...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+        if (result && result.success) {
+          showToast('success', 'สำเร็จ', result.message || 'ลบข้อมูลเรียบร้อย');
+          loadMembers();
+          loadDashboardStats();
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถลบได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถลบได้');
+      })
+      .deleteMember(AppState.currentToken, rowIndex);
+  }
+
+  // ==================== NOTIFICATION ====================
+  function showNotification(rowIndex) {
+    console.log('🔔 [NOTIFY] Row:', rowIndex);
+    showLoading('กำลังสร้างข้อความ...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        if (result && result.success) {
+          document.getElementById('notificationText').value = result.message || '';
+          new bootstrap.Modal(document.getElementById('notificationModal')).show();
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถสร้างข้อความได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถสร้างข้อความได้');
+      })
+      .generateNotificationMessage(AppState.currentToken, rowIndex);
+  }
+
+  function copyNotification() {
+    console.log('📋 [COPY] Copying');
+    const textArea = document.getElementById('notificationText');
+    if (!textArea) return;
+
+    textArea.select();
+    textArea.setSelectionRange(0, 99999);
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(textArea.value)
+        .then(function() { showToast('success', 'คัดลอกแล้ว', 'ข้อความถูกคัดลอกไปยัง Clipboard'); })
+        .catch(function() { document.execCommand('copy'); showToast('success', 'คัดลอกแล้ว', 'ข้อความถูกคัดลอกไปยัง Clipboard'); });
+    } else {
+      document.execCommand('copy');
+      showToast('success', 'คัดลอกแล้ว', 'ข้อความถูกคัดลอกไปยัง Clipboard');
+    }
+  }
+
+  function copyLineId(lineId) {
+    console.log('📋 [COPY] Copying LINE ID:', lineId);
+    if (!lineId) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(lineId)
+        .then(function() { showToast('success', 'คัดลอกแล้ว', 'LINE ID: ' + lineId); })
+        .catch(function() { fallbackCopyText(lineId); });
+    } else {
+      fallbackCopyText(lineId);
+    }
+  }
+
+  function fallbackCopyText(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    showToast('success', 'คัดลอกแล้ว', 'LINE ID: ' + text);
+  }
+
+  // ==================== CRM - CONTACT MODAL ====================
+  // Load users for dropdown
+  function loadUsersDropdown(selectId, callback) {
+    console.log('👥 [USERS] Loading users for dropdown:', selectId);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) {
+          const select = document.getElementById(selectId);
+          // Clear existing options except first
+          select.innerHTML = '<option value="">-- เลือกผู้รับผิดชอบ --</option>';
+
+          result.data.forEach(function(user) {
+            const option = document.createElement('option');
+            option.value = user.nickname;
+            option.textContent = user.nickname;
+            select.appendChild(option);
+          });
+
+          console.log('👥 [USERS] Loaded', result.data.length, 'users');
+          if (callback) callback();
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('👥 [USERS] Error loading users:', error);
+      })
+      .getUsers(AppState.currentToken);
+  }
+
+  function showContactModal(rowIndex) {
+    console.log('📞 [CONTACT] Opening modal for row:', rowIndex);
+    showLoading('กำลังโหลดข้อมูล...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        if (result && result.success) {
+          const m = result.data || {};
+
+          // Set member info
+          document.getElementById('contactMemberName').textContent = m.name || '-';
+          document.getElementById('contactMemberCompany').textContent = m.companyQ || m.companyReg || '-';
+
+          // Set hidden values
+          setValue('contactRowIndex', m.rowIndex || rowIndex);
+          setValue('contactMemberId', m.licenseNo || '');
+
+          // Reset form
+          document.getElementById('contactForm').reset();
+
+          // Set today's date as default
+          const today = new Date().toISOString().split('T')[0];
+          setValue('contactDate', today);
+
+          // Hide sub-result section
+          document.getElementById('subResultSection').style.display = 'none';
+
+          // Load users dropdown
+          loadUsersDropdown('contactPerson', function() {
+            new bootstrap.Modal(document.getElementById('contactModal')).show();
+          });
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถโหลดข้อมูลได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถโหลดข้อมูลได้');
+      })
+      .getMember(AppState.currentToken, rowIndex);
+  }
+
+  function onContactResultChange() {
+    const contacted = document.getElementById('resultContacted').checked;
+    const subResultSection = document.getElementById('subResultSection');
+
+    if (contacted) {
+      subResultSection.style.display = 'block';
+    } else {
+      subResultSection.style.display = 'none';
+      setValue('contactSubResult', '');
+    }
+  }
+
+  function saveContact() {
+    console.log('💾 [CONTACT] Saving contact record');
+
+    const rowIndex = parseInt(getValue('contactRowIndex'));
+    const contactDate = getValue('contactDate');
+    const contactReason = getValue('contactReason');
+    const contactPerson = getValue('contactPerson');
+    const resultContacted = document.getElementById('resultContacted').checked;
+    const resultNotContacted = document.getElementById('resultNotContacted').checked;
+    const subResult = getValue('contactSubResult');
+    const notes = getValue('contactNotes');
+
+    // Validation - date, reason, and contact person are required
+    if (!contactDate) {
+      showToast('warning', 'ข้อมูลไม่ครบ', 'กรุณาเลือกวันที่ติดต่อ');
+      return;
+    }
+    if (!contactReason) {
+      showToast('warning', 'ข้อมูลไม่ครบ', 'กรุณาเลือกเหตุผลในการติดต่อ');
+      return;
+    }
+    if (!contactPerson) {
+      showToast('warning', 'ข้อมูลไม่ครบ', 'กรุณาเลือกผู้รับผิดชอบในการติดต่อ');
+      return;
+    }
+    // Contact result is now optional - can be added later
+
+    // Determine contact result (can be empty for first contact)
+    let contactResult = '';
+    if (resultContacted) contactResult = 'contacted';
+    else if (resultNotContacted) contactResult = 'not_contacted';
+
+    const contactData = {
+      rowIndex: rowIndex,
+      contactDate: contactDate,
+      contactReason: contactReason,
+      contactPerson: contactPerson,
+      contactResult: contactResult,
+      subResult: subResult,
+      notes: notes
+    };
+
+    showLoading('กำลังบันทึกการติดต่อ...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        if (result && result.success) {
+          bootstrap.Modal.getInstance(document.getElementById('contactModal')).hide();
+
+          let message = result.message || 'บันทึกสำเร็จ';
+          if (result.statusUpdated) {
+            message += '\nสถานะถูกอัพเดทเป็น: ' + result.newStatus;
+          }
+
+          showToast('success', 'สำเร็จ', message);
+          reloadWithCurrentFilters(); // Reload with current filter settings
+          loadDashboardStats();
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถบันทึกได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถบันทึกได้');
+      })
+      .saveContactRecord(AppState.currentToken, contactData);
+  }
+
+  // ==================== CRM - HISTORY MODAL ====================
+  function showHistoryModal(rowIndex) {
+    console.log('📜 [HISTORY] Opening modal for row:', rowIndex);
+    showLoading('กำลังโหลดประวัติ...');
+
+    // Store rowIndex for adding new contact
+    setValue('historyRowIndex', rowIndex);
+
+    // First get member info
+    google.script.run
+      .withSuccessHandler(function(memberResult) {
+        if (memberResult && memberResult.success) {
+          const m = memberResult.data || {};
+          document.getElementById('historyMemberName').textContent = m.name || '-';
+          document.getElementById('historyMemberCompany').textContent = m.companyQ || m.companyReg || '-';
+
+          // Then get history
+          google.script.run
+            .withSuccessHandler(function(historyResult) {
+              hideLoading();
+              if (historyResult && historyResult.success) {
+                renderHistoryTable(historyResult.data || [], rowIndex);
+                new bootstrap.Modal(document.getElementById('historyModal')).show();
+              } else {
+                showToast('error', 'เกิดข้อผิดพลาด', historyResult ? historyResult.message : 'ไม่สามารถโหลดประวัติได้');
+              }
+            })
+            .withFailureHandler(function(error) {
+              hideLoading();
+              showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถโหลดประวัติได้');
+            })
+            .getContactHistory(AppState.currentToken, rowIndex);
+        } else {
+          hideLoading();
+          showToast('error', 'เกิดข้อผิดพลาด', memberResult ? memberResult.message : 'ไม่สามารถโหลดข้อมูลได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถโหลดข้อมูลได้');
+      })
+      .getMember(AppState.currentToken, rowIndex);
+  }
+
+  // Add contact from History Modal
+  function addContactFromHistory() {
+    const rowIndex = parseInt(getValue('historyRowIndex'));
+    console.log('📞 [CONTACT] Adding contact from history for row:', rowIndex);
+
+    // Close history modal
+    const historyModal = bootstrap.Modal.getInstance(document.getElementById('historyModal'));
+    if (historyModal) historyModal.hide();
+
+    // Open contact modal
+    showContactModal(rowIndex);
+  }
+
+  function renderHistoryTable(history, rowIndex) {
+    const tbody = document.getElementById('historyTableBody');
+    if (!tbody) return;
+
+    if (!history || history.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fas fa-inbox fa-2x text-muted mb-2"></i><p class="text-muted mb-0">ไม่มีประวัติการติดต่อ</p></td></tr>';
+      return;
+    }
+
+    const html = history.map(function(record) {
+      // Check if result is empty (pending)
+      const isPending = !record.contactResult || record.contactResult === '' || record.contactResult === '-';
+
+      let resultBadge;
+      let actionBtn;
+
+      if (isPending) {
+        resultBadge = '<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>รอบันทึกผล</span>';
+        actionBtn = '<button class="btn btn-sm btn-success" onclick="showUpdateResultModal(' + record.id + ', ' + rowIndex + ', \'' + escapeHtml(record.contactDate || '') + '\', \'' + escapeHtml(record.contactReason || '') + '\')"><i class="fas fa-edit me-1"></i>บันทึกผล</button>';
+      } else if (record.contactResult === 'ติดต่อแล้ว') {
+        resultBadge = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>ติดต่อแล้ว</span>';
+        actionBtn = '<span class="text-muted">-</span>';
+      } else {
+        resultBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>ติดต่อไม่ได้</span>';
+        actionBtn = '<span class="text-muted">-</span>';
+      }
+
+      return '<tr>' +
+        '<td>' + escapeHtml(record.contactDate || '-') + '</td>' +
+        '<td>' + escapeHtml(record.contactReason || '-') + '</td>' +
+        '<td>' + escapeHtml(record.contactPerson || '-') + '</td>' +
+        '<td>' + resultBadge + '</td>' +
+        '<td>' + escapeHtml(record.subResult || '-') + '</td>' +
+        '<td>' + escapeHtml(record.notes || '-') + '</td>' +
+        '<td>' + escapeHtml(record.recordedBy || '-') + '</td>' +
+        '<td>' + actionBtn + '</td>' +
+        '</tr>';
+    }).join('');
+
+    tbody.innerHTML = html;
+  }
+
+  // Show Update Result Modal
+  function showUpdateResultModal(recordId, rowIndex, contactDate, contactReason) {
+    console.log('📝 [UPDATE] Opening update result modal for record:', recordId);
+
+    // Set values
+    setValue('updateRecordId', recordId);
+    setValue('updateRowIndex', rowIndex);
+    document.getElementById('updateContactDate').textContent = contactDate || '-';
+    document.getElementById('updateContactReason').textContent = contactReason || '-';
+
+    // Reset form
+    document.getElementById('updateResultContacted').checked = false;
+    document.getElementById('updateResultNotContacted').checked = false;
+    document.getElementById('updateSubResultSection').style.display = 'none';
+    setValue('updateSubResult', '');
+    setValue('updateNotes', '');
+
+    // Close history modal first
+    const historyModal = bootstrap.Modal.getInstance(document.getElementById('historyModal'));
+    if (historyModal) historyModal.hide();
+
+    // Load users dropdown and then open modal
+    loadUsersDropdown('updateContactPerson', function() {
+      new bootstrap.Modal(document.getElementById('updateResultModal')).show();
+    });
+  }
+
+  function onUpdateResultChange() {
+    const contacted = document.getElementById('updateResultContacted').checked;
+    const subResultSection = document.getElementById('updateSubResultSection');
+
+    if (contacted) {
+      subResultSection.style.display = 'block';
+    } else {
+      subResultSection.style.display = 'none';
+      setValue('updateSubResult', '');
+    }
+  }
+
+  function saveUpdateResult() {
+    console.log('💾 [UPDATE] Saving contact result');
+
+    const recordId = parseInt(getValue('updateRecordId'));
+    const rowIndex = parseInt(getValue('updateRowIndex'));
+    const contactPerson = getValue('updateContactPerson');
+    const resultContacted = document.getElementById('updateResultContacted').checked;
+    const resultNotContacted = document.getElementById('updateResultNotContacted').checked;
+    const subResult = getValue('updateSubResult');
+    const notes = getValue('updateNotes');
+
+    // Validation - contact person and result are required
+    if (!contactPerson) {
+      showToast('warning', 'ข้อมูลไม่ครบ', 'กรุณาเลือกผู้รับผิดชอบในการติดต่อ');
+      return;
+    }
+    if (!resultContacted && !resultNotContacted) {
+      showToast('warning', 'ข้อมูลไม่ครบ', 'กรุณาเลือกผลการติดต่อ');
+      return;
+    }
+
+    const updateData = {
+      recordId: recordId,
+      rowIndex: rowIndex,
+      contactPerson: contactPerson,
+      contactResult: resultContacted ? 'contacted' : 'not_contacted',
+      subResult: subResult,
+      notes: notes
+    };
+
+    showLoading('กำลังบันทึกผลการติดต่อ...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        if (result && result.success) {
+          bootstrap.Modal.getInstance(document.getElementById('updateResultModal')).hide();
+
+          let message = result.message || 'บันทึกผลสำเร็จ';
+          if (result.statusUpdated) {
+            message += '\nสถานะถูกอัพเดทเป็น: ' + result.newStatus;
+          }
+
+          showToast('success', 'สำเร็จ', message);
+          reloadWithCurrentFilters(); // Reload with current filter settings
+          loadDashboardStats();
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถบันทึกได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถบันทึกได้');
+      })
+      .updateContactResult(AppState.currentToken, updateData);
+  }
+
+  // ==================== COPY MEMBER IDS ====================
+  function copyMemberIds() {
+    console.log('📋 [COPY] Copying filtered MemberIDs');
+
+    const members = AppState.allMembers;
+
+    if (!members || members.length === 0) {
+      showToast('warning', 'ไม่มีข้อมูล', 'ไม่พบข้อมูลสมาชิกที่จะคัดลอก');
+      return;
+    }
+
+    // Extract all MemberIDs and join with comma
+    const memberIds = members
+      .map(function(member) { return member.memberId; })
+      .filter(function(id) { return id && id !== '-' && id !== ''; })
+      .join(',');
+
+    if (!memberIds) {
+      showToast('warning', 'ไม่มีข้อมูล', 'ไม่พบ MemberID ที่จะคัดลอก');
+      return;
+    }
+
+    // Copy to clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(memberIds)
+        .then(function() {
+          showToast('success', 'คัดลอกแล้ว', 'MemberID ' + members.length + ' รายการ');
+        })
+        .catch(function() {
+          fallbackCopyMemberIds(memberIds, members.length);
+        });
+    } else {
+      fallbackCopyMemberIds(memberIds, members.length);
+    }
+  }
+
+  function fallbackCopyMemberIds(text, count) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    showToast('success', 'คัดลอกแล้ว', 'MemberID ' + count + ' รายการ');
+  }
+
+  // ==================== EXPORT TO EXCEL ====================
+  function exportToExcel() {
+    console.log('📊 [EXPORT] Starting Excel export');
+
+    const members = AppState.allMembers;
+    if (!members || members.length === 0) {
+      showToast('warning', 'ไม่มีข้อมูล', 'ไม่พบข้อมูลสมาชิกที่จะ export');
+      return;
+    }
+
+    // Show confirmation
+    const confirmMsg = 'ต้องการสร้างไฟล์ Excel จากข้อมูลที่แสดงทั้งหมด (' + members.length + ' รายการ) หรือไม่?';
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    showLoading('กำลังสร้างไฟล์ Excel...');
+
+    try {
+      // Prepare data with headers matching table columns
+      const headers = ['สถานะใบอนุญาต', 'บริษัท', 'ผู้ติดต่อ', 'ชื่อเล่น', 'LINE ID', 'มือถือ', 'เลขใบอนุญาต', 'วันหมดอายุ', 'สถานะ LINE'];
+
+      const data = members.map(function(member) {
+        return [
+          member.statusR || member.status || '-',
+          member.companyReg || member.companyQ || '-',
+          member.name || '-',
+          member.nickname || '-',
+          member.lineId || '-',
+          member.mobile || '-',
+          member.licenseNo || '-',
+          member.expDate || '-',
+          member.lineGroupU || member.lineGroupStatus || '-'
+        ];
+      });
+
+      // Add headers as first row
+      data.unshift(headers);
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_array ? XLSX.utils.aoa_to_sheet(data) : XLSX.utils.aoa_to_sheet(data);
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 18 }, // สถานะใบอนุญาต
+        { wch: 35 }, // บริษัท
+        { wch: 25 }, // ผู้ติดต่อ
+        { wch: 12 }, // ชื่อเล่น
+        { wch: 15 }, // LINE ID
+        { wch: 15 }, // มือถือ
+        { wch: 15 }, // เลขใบอนุญาต
+        { wch: 15 }, // วันหมดอายุ
+        { wch: 18 }  // สถานะ LINE
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Members');
+
+      // Generate filename with date
+      const now = new Date();
+      const dateStr = now.getFullYear() + ('0' + (now.getMonth() + 1)).slice(-2) + ('0' + now.getDate()).slice(-2);
+      const filename = 'AgentClub_Members_' + dateStr + '.xlsx';
+
+      // Download file
+      XLSX.writeFile(wb, filename);
+
+      hideLoading();
+      showToast('success', 'สำเร็จ', 'สร้างไฟล์ ' + filename + ' เรียบร้อย');
+      console.log('📊 [EXPORT] Excel exported:', filename);
+
+    } catch (error) {
+      hideLoading();
+      console.error('📊 [EXPORT] Error:', error);
+      showToast('error', 'เกิดข้อผิดพลาด', 'ไม่สามารถสร้างไฟล์ Excel ได้: ' + error.message);
+    }
+  }
+
+  // ==================== TOAST ====================
+  function showToast(type, title, message) {
+    console.log('🔔 [TOAST]', type, title, message);
+    const toast = document.getElementById('toast');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastBody = document.getElementById('toastBody');
+    const toastIcon = document.getElementById('toastIcon');
+
+    if (!toast || !toastTitle || !toastBody) {
+      alert(title + ': ' + message);
+      return;
+    }
+
+    toastTitle.textContent = title;
+    toastBody.textContent = message;
+
+    if (toastIcon) {
+      toastIcon.className = 'fas me-2';
+      if (type === 'success') toastIcon.classList.add('fa-check-circle', 'text-success');
+      else if (type === 'error') toastIcon.classList.add('fa-times-circle', 'text-danger');
+      else if (type === 'warning') toastIcon.classList.add('fa-exclamation-triangle', 'text-warning');
+      else toastIcon.classList.add('fa-info-circle', 'text-info');
+    }
+
+    new bootstrap.Toast(toast).show();
+  }
+
+  // ==================== MEMBER REGISTRATION ====================
+  function showRegistrationModal() {
+    console.log('📝 [REGISTRATION] Opening modal');
+    document.getElementById('registrationForm').reset();
+    new bootstrap.Modal(document.getElementById('registrationModal')).show();
+  }
+
+  function validateRegistrationForm() {
+    const errors = [];
+
+    // Required fields definition with labels
+    const requiredFields = [
+      { id: 'regCompanyEn', label: 'บริษัท (ภาษาอังกฤษ)' },
+      { id: 'regFullName', label: 'ชื่อ-นามสกุล (ภาษาไทย)' },
+      { id: 'regNickname', label: 'ชื่อเล่น' },
+      { id: 'regPosition', label: 'ตำแหน่งในบริษัท' },
+      { id: 'regLicenseNo', label: 'ใบอนุญาตนำเที่ยวเลขที่' },
+      { id: 'regLineId', label: 'ไอดีไลน์' },
+      { id: 'regLineName', label: 'ชื่อไลน์' },
+      { id: 'regEmail', label: 'อีเมล' },
+      { id: 'regMobile', label: 'เบอร์มือถือ' },
+      { id: 'regSponsor1', label: 'ผู้รับรองสมาชิก ท่านที่ 1' },
+      { id: 'regSponsor2', label: 'ผู้รับรองสมาชิก ท่านที่ 2' }
+    ];
+
+    // Check each required field
+    requiredFields.forEach(function(field) {
+      const value = getValue(field.id).trim();
+      if (!value) {
+        errors.push(field.label);
+      }
+    });
+
+    // Check email format
+    const email = getValue('regEmail').trim();
+    if (email && !isValidEmail(email)) {
+      errors.push('อีเมล (รูปแบบไม่ถูกต้อง)');
+    }
+
+    // Check terms agreement
+    const agreeTerms = document.getElementById('regAgreeTerms').checked;
+    if (!agreeTerms) {
+      errors.push('ยอมรับเงื่อนไขและกฎกติกาของชมรม');
+    }
+
+    return errors;
+  }
+
+  function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  function showValidationModal(errors) {
+    const errorList = document.getElementById('validationErrorList');
+    errorList.innerHTML = errors.map(function(err) {
+      return '<li>' + escapeHtml(err) + '</li>';
+    }).join('');
+    new bootstrap.Modal(document.getElementById('registrationValidationModal')).show();
+  }
+
+  function submitRegistration() {
+    console.log('📝 [REGISTRATION] Submitting registration');
+
+    // Validate form with custom validation
+    const errors = validateRegistrationForm();
+    if (errors.length > 0) {
+      showValidationModal(errors);
+      return;
+    }
+
+    // Collect form data (excluding expDate as it's removed)
+    const registrationData = {
+      companyEn: getValue('regCompanyEn'),
+      fullName: getValue('regFullName'),
+      nickname: getValue('regNickname'),
+      lineId: getValue('regLineId'),
+      lineName: getValue('regLineName'),
+      phone: getValue('regPhone'),
+      mobile: getValue('regMobile'),
+      licenseNo: getValue('regLicenseNo'),
+      website: getValue('regWebsite'),
+      email: getValue('regEmail'),
+      position: getValue('regPosition'),
+      sponsor1: getValue('regSponsor1'),
+      sponsor2: getValue('regSponsor2'),
+      lineGroupStatus: 'รอนำเข้ากลุ่ม'
+    };
+
+    // Disable submit button
+    const submitBtn = document.getElementById('submitRegBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังส่งใบสมัคร...';
+
+    showLoading('กำลังส่งใบสมัคร...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>ส่งใบสมัคร';
+
+        if (result && result.success) {
+          // Close registration modal
+          bootstrap.Modal.getInstance(document.getElementById('registrationModal')).hide();
+
+          // Show success modal
+          new bootstrap.Modal(document.getElementById('registrationSuccessModal')).show();
+
+          console.log('✅ [REGISTRATION] Success');
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถส่งใบสมัครได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>ส่งใบสมัคร';
+
+        console.error('❌ [REGISTRATION] Error:', error);
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถส่งใบสมัครได้');
+      })
+      .submitMemberRegistration(registrationData);
+  }
+
+  // ==================== CONTACT MANAGEMENT PAGE ====================
+  let contactsDataTable = null;
+  let allContacts = [];
+
+  function showMembersPage() {
+    console.log('📄 [PAGE] Showing Members Page');
+    document.getElementById('contactsPage').style.display = 'none';
+
+    // Show stats cards and filter section and members table
+    document.querySelectorAll('.main-content > .row.mb-4').forEach(function(el) { el.style.display = ''; });
+    document.querySelectorAll('.main-content > .filter-section').forEach(function(el) { el.style.display = ''; });
+    document.querySelectorAll('.main-content > .card.table-card').forEach(function(el) { el.style.display = ''; });
+
+    // Update nav active state
+    document.getElementById('navMembers').classList.add('active');
+    document.getElementById('navContacts').classList.remove('active');
+  }
+
+  function showContactsPage() {
+    console.log('📄 [PAGE] Showing Contacts Page');
+
+    // Hide stats cards and filter section and members table
+    document.querySelectorAll('.main-content > .row.mb-4').forEach(function(el) { el.style.display = 'none'; });
+    document.querySelectorAll('.main-content > .filter-section').forEach(function(el) { el.style.display = 'none'; });
+    document.querySelectorAll('.main-content > .card.table-card').forEach(function(el) { el.style.display = 'none'; });
+
+    document.getElementById('contactsPage').style.display = 'block';
+
+    // Update nav active state
+    document.getElementById('navMembers').classList.remove('active');
+    document.getElementById('navContacts').classList.add('active');
+
+    // Load contacts
+    loadContacts();
+  }
+
+  function loadContacts(filters) {
+    filters = filters || {};
+    console.log('📞 [CONTACTS] Loading with filters:', JSON.stringify(filters));
+
+    showContactsTableLoading();
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('📞 [CONTACTS] Response success:', result ? result.success : 'null');
+        console.log('📞 [CONTACTS] Data count:', result && result.data ? result.data.length : 0);
+
+        if (result && result.success) {
+          allContacts = result.data || [];
+          renderContactsTable(allContacts);
+        } else {
+          console.error('📞 [CONTACTS] Failed:', result ? result.message : 'No result');
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถโหลดข้อมูลได้');
+          renderEmptyContactsTable();
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('📞 [CONTACTS] Error:', error);
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถโหลดข้อมูลได้');
+        renderEmptyContactsTable();
+      })
+      .getAllContacts(AppState.currentToken, filters);
+  }
+
+  function showContactsTableLoading() {
+    const tbody = document.getElementById('contactsTableBody');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 text-muted">กำลังโหลดข้อมูล...</p></td></tr>';
+    }
+  }
+
+  function renderEmptyContactsTable() {
+    const tbody = document.getElementById('contactsTableBody');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="10" class="text-center py-5"><i class="fas fa-inbox fa-3x text-muted mb-3"></i><p class="text-muted">ไม่พบรายการติดต่อ</p></td></tr>';
+    }
+  }
+
+  function renderContactsTable(contacts) {
+    console.log('🎨 [RENDER] Rendering', contacts.length, 'contacts');
+
+    // Destroy existing DataTable first
+    if (contactsDataTable) {
+      console.log('🎨 [RENDER] Destroying existing contacts DataTable');
+      contactsDataTable.destroy();
+      contactsDataTable = null;
+    }
+
+    const tbody = document.getElementById('contactsTableBody');
+    if (!tbody) {
+      console.error('🎨 [RENDER] contacts tbody not found!');
+      return;
+    }
+
+    if (!contacts || contacts.length === 0) {
+      console.log('🎨 [RENDER] No contacts, showing empty table');
+      renderEmptyContactsTable();
+      return;
+    }
+
+    // Sort contacts: pending first, then contacted (updated)
+    contacts.sort(function(a, b) {
+      var orderA = a.resultStatus === 'pending' ? 0 : (a.resultStatus === 'contacted' ? 1 : 2);
+      var orderB = b.resultStatus === 'pending' ? 0 : (b.resultStatus === 'contacted' ? 1 : 2);
+      return orderA - orderB;
+    });
+
+    const html = contacts.map(function(contact) {
+      const isPending = contact.resultStatus === 'pending';
+      const isUpdated = contact.resultStatus === 'contacted' && contact.subResult === 'อัพเดทข้อมูลเรียบร้อย';
+
+      let resultBadge;
+      if (isPending) {
+        resultBadge = '<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>รอบันทึกผล</span>';
+      } else if (isUpdated) {
+        resultBadge = '<span class="badge bg-info"><i class="fas fa-sync-alt me-1"></i>อัพเดทแล้ว</span>';
+      } else if (contact.resultStatus === 'contacted') {
+        resultBadge = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>ติดต่อแล้ว</span>';
+      } else {
+        resultBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>ติดต่อไม่ได้</span>';
+      }
+
+      // LINE ID with copy button
+      const lineIdValue = contact.lineId || '';
+      const lineIdEscaped = lineIdValue.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const lineIdDisplay = lineIdValue && lineIdValue !== '-' ?
+        '<span class="me-1">' + escapeHtml(lineIdValue) + '</span><button class="btn btn-outline-secondary btn-sm py-0 px-1" onclick="copyLineId(\'' + lineIdEscaped + '\')" title="คัดลอก LINE ID"><i class="fas fa-copy"></i></button>' :
+        '-';
+
+      // Action buttons - hide remove button if status is "อัพเดทแล้ว"
+      let actionBtns = '';
+      if (isPending && contact.rowIndex) {
+        actionBtns += '<button class="btn btn-success btn-sm me-1" onclick="showContactUpdateModal(' + contact.id + ', ' + contact.rowIndex + ', \'' + escapeHtml(contact.contactDate || '') + '\', \'' + escapeHtml(contact.contactReason || '') + '\')" title="บันทึกผล"><i class="fas fa-edit"></i></button>';
+      }
+      if (contact.rowIndex && contact.lineGroupU !== 'ออกจากกลุ่มแล้ว' && !isUpdated) {
+        actionBtns += '<button class="btn btn-danger btn-sm" onclick="showRemoveFromGroupModal(' + contact.rowIndex + ', \'' + escapeHtml(contact.companyQ || '').replace(/'/g, "\\'") + '\')" title="นำชื่อออกจากกลุ่ม"><i class="fas fa-user-minus"></i></button>';
+      }
+      if (!actionBtns) {
+        actionBtns = '<span class="text-muted">-</span>';
+      }
+
+      // Get LINE group badge
+      const lineGroupBadge = getLineGroupBadge(contact.lineGroupU);
+
+      // Show contactReason if pending, show subResult (detail) if contacted
+      const reasonOrResult = isPending ? (contact.contactReason || '-') : (contact.subResult || contact.contactResult || '-');
+
+      // Notes popover button (only show if notes exist)
+      const notesContent = contact.notes || '';
+      const notesBtn = notesContent ?
+        '<button type="button" class="btn btn-link btn-sm p-0 ms-1 notes-popover" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" data-bs-html="true" data-bs-content="' + escapeHtml(notesContent).replace(/"/g, '&quot;') + '" title="หมายเหตุ"><i class="fas fa-info-circle text-info"></i></button>' : '';
+
+      return '<tr>' +
+        '<td>' + lineGroupBadge + '</td>' +
+        '<td class="text-nowrap">' + formatShortDate(contact.contactDate) + '</td>' +
+        '<td><span class="company-name" title="' + escapeHtml(contact.companyQ) + '">' + escapeHtml(contact.companyQ || '-') + '</span></td>' +
+        '<td>' + escapeHtml(contact.licenseNo || '-') + '</td>' +
+        '<td>' + escapeHtml(contact.nickname || '-') + '</td>' +
+        '<td>' + lineIdDisplay + '</td>' +
+        '<td>' + escapeHtml(reasonOrResult) + notesBtn + '</td>' +
+        '<td>' + resultBadge + '</td>' +
+        '<td>' + escapeHtml(contact.contactPerson || '-') + '</td>' +
+        '<td class="text-nowrap">' + actionBtns + '</td>' +
+        '</tr>';
+    }).join('');
+
+    tbody.innerHTML = html;
+    console.log('🎨 [RENDER] Contacts table HTML inserted');
+
+    // Initialize DataTable
+    try {
+      contactsDataTable = $('#contactsTable').DataTable({
+        language: {
+          search: "ค้นหา:",
+          lengthMenu: "แสดง _MENU_ รายการ",
+          info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ รายการ",
+          infoEmpty: "ไม่มีข้อมูล",
+          infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)",
+          paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" },
+          emptyTable: "ไม่มีข้อมูลในตาราง",
+          zeroRecords: "ไม่พบข้อมูลที่ค้นหา"
+        },
+        pageLength: 50,
+        lengthMenu: [[25, 50, 100, -1], [25, 50, 100, "ทั้งหมด"]],
+        order: [], // Already sorted by JavaScript (pending first, then contacted)
+        autoWidth: false,
+        columns: [
+          { width: '9%' },   // สถานะ LINE
+          { width: '7%' },   // วันที่
+          { width: '16%' },  // บริษัท
+          { width: '8%' },   // เลขที่ใบอนุญาต
+          { width: '6%' },   // ชื่อเล่น
+          { width: '10%' },  // LINE ID
+          { width: '18%' },  // หัวข้อ/ผลการติดต่อ
+          { width: '9%' },   // สถานะ
+          { width: '6%' },   // ผู้ติดต่อ
+          { width: '11%', orderable: false }  // จัดการ
+        ],
+        destroy: true
+      });
+      console.log('🎨 [RENDER] Contacts DataTable initialized');
+
+      // Initialize Bootstrap popovers for notes
+      initNotesPopovers();
+    } catch (e) {
+      console.error('🎨 [RENDER] Contacts DataTable error:', e);
+    }
+  }
+
+  function applyContactFilters() {
+    console.log('🔍 [CONTACT FILTER] Applying filters');
+
+    const filters = {
+      search: getValue('contactSearchInput').trim(),
+      resultStatus: getValue('filterContactResult'),
+      contactReason: getValue('filterContactReason')
+    };
+
+    console.log('🔍 [CONTACT FILTER] Filter values:', JSON.stringify(filters));
+    loadContacts(filters);
+  }
+
+  function resetContactFilters() {
+    console.log('🔄 [CONTACT FILTER] Resetting');
+    setValue('contactSearchInput', '');
+    setValue('filterContactResult', '');
+    setValue('filterContactReason', '');
+    loadContacts({});
+  }
+
+  function refreshContactsList() {
+    console.log('🔄 [CONTACTS] Refreshing list');
+    const filters = {
+      search: getValue('contactSearchInput').trim(),
+      resultStatus: getValue('filterContactResult'),
+      contactReason: getValue('filterContactReason')
+    };
+    loadContacts(filters);
+  }
+
+  // Show modal for updating contact result from contacts page
+  function showContactUpdateModal(recordId, rowIndex, contactDate, contactReason) {
+    console.log('📝 [CONTACT UPDATE] Opening modal for record:', recordId);
+    showUpdateResultModal(recordId, rowIndex, contactDate, contactReason);
+  }
+
+  // Show modal for removing member from group
+  function showRemoveFromGroupModal(rowIndex, companyName) {
+    console.log('🚫 [REMOVE] Opening modal for row:', rowIndex, 'Company:', companyName);
+
+    setValue('removeFromGroupRowIndex', rowIndex);
+    document.getElementById('removeFromGroupCompanyName').textContent = companyName;
+
+    new bootstrap.Modal(document.getElementById('removeFromGroupModal')).show();
+  }
+
+  function confirmRemoveFromGroup() {
+    console.log('🚫 [REMOVE] Confirming removal from group');
+    const rowIndex = parseInt(getValue('removeFromGroupRowIndex'));
+
+    showLoading('กำลังนำชื่อออกจากกลุ่ม...');
+
+    // Update lineGroupU to "ออกจากกลุ่มแล้ว"
+    const memberData = {
+      lineGroupU: 'ออกจากกลุ่มแล้ว'
+    };
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        bootstrap.Modal.getInstance(document.getElementById('removeFromGroupModal')).hide();
+
+        if (result && result.success) {
+          showToast('success', 'สำเร็จ', 'นำชื่อออกจากกลุ่มแล้ว');
+          refreshContactsList();
+        } else {
+          showToast('error', 'เกิดข้อผิดพลาด', result ? result.message : 'ไม่สามารถดำเนินการได้');
+        }
+      })
+      .withFailureHandler(function(error) {
+        hideLoading();
+        showToast('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถดำเนินการได้');
+      })
+      .updateMember(AppState.currentToken, rowIndex, memberData);
+  }
+
+  // Initialize Bootstrap popovers for notes
+  function initNotesPopovers() {
+    // Dispose existing popovers first
+    document.querySelectorAll('.notes-popover').forEach(function(el) {
+      var existingPopover = bootstrap.Popover.getInstance(el);
+      if (existingPopover) {
+        existingPopover.dispose();
+      }
+    });
+
+    // Initialize new popovers
+    document.querySelectorAll('.notes-popover').forEach(function(el) {
+      new bootstrap.Popover(el, {
+        container: 'body',
+        trigger: 'focus',
+        placement: 'top',
+        html: true
+      });
+    });
+    console.log('📝 [POPOVER] Notes popovers initialized');
+  }
+
+  // ==================== EXPOSE TO GLOBAL ====================
+  window.showRegistrationModal = showRegistrationModal;
+  window.submitRegistration = submitRegistration;
+  window.handleLogin = handleLogin;
+  window.handleLogout = handleLogout;
+  window.applyFilters = applyFilters;
+  window.resetFilters = resetFilters;
+  window.onExpiryFilterChange = onExpiryFilterChange;
+  window.copyExpiryListMessage = copyExpiryListMessage;
+  window.viewMember = viewMember;
+  window.editMember = editMember;
+  window.saveMember = saveMember;
+  window.showAddMemberModal = showAddMemberModal;
+  window.addNewMember = addNewMember;
+  window.deleteMember = deleteMember;
+  window.confirmDelete = confirmDelete;
+  window.showNotification = showNotification;
+  window.copyNotification = copyNotification;
+  window.copyLineId = copyLineId;
+  window.showContactModal = showContactModal;
+  window.onContactResultChange = onContactResultChange;
+  window.saveContact = saveContact;
+  window.showHistoryModal = showHistoryModal;
+  window.addContactFromHistory = addContactFromHistory;
+  window.showUpdateResultModal = showUpdateResultModal;
+  window.onUpdateResultChange = onUpdateResultChange;
+  window.saveUpdateResult = saveUpdateResult;
+  window.exportToExcel = exportToExcel;
+  window.copyMemberIds = copyMemberIds;
+  window.showMembersPage = showMembersPage;
+  window.showContactsPage = showContactsPage;
+  window.applyContactFilters = applyContactFilters;
+  window.resetContactFilters = resetContactFilters;
+  window.refreshContactsList = refreshContactsList;
+  window.showContactUpdateModal = showContactUpdateModal;
+  window.showRemoveFromGroupModal = showRemoveFromGroupModal;
+  window.confirmRemoveFromGroup = confirmRemoveFromGroup;
+
+  console.log('✅ [INIT] JavaScript module loaded');
+
+})();
+</script>

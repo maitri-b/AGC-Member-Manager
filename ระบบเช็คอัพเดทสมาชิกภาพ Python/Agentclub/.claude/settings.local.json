@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pyinstaller:*)",
+      "Bash(clasp push:*)",
+      "Bash(pip show:*)"
+    ]
+  }
+}

@@ -141,8 +141,13 @@ export function formatEventDateRange(startDate: string, endDate?: string): strin
     'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
   ];
 
-  // Same month and year - show as "17-19 กรกฎาคม 2569"
+  // Same month and year
   if (startParsed.month === endParsed.month && startParsed.year === endParsed.year) {
+    // Same day - single day event, show as "7 ตุลาคม 2569"
+    if (startParsed.day === endParsed.day) {
+      return `${startParsed.day} ${thaiMonthsFull[startParsed.month]} ${startParsed.year + 543}`;
+    }
+    // Different days in same month - show as "17-19 กรกฎาคม 2569"
     return `${startParsed.day}-${endParsed.day} ${thaiMonthsFull[startParsed.month]} ${startParsed.year + 543}`;
   }
 

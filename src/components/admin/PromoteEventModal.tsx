@@ -104,11 +104,11 @@ export default function PromoteEventModal({
       }
       const data = await response.json();
 
-      // Filter members for LINE message sending with strict validation:
+      // Filter members for LINE message sending with validation:
       // 1. Must have lineUserId (connected to LINE)
       // 2. Must have memberId (verified member)
       // 3. Must be active in Firestore (isActive !== false)
-      // 4. Must have status 'ปกติ' in Google Sheets (Column R: สถานะ)
+      // 4. Must have status 'ปกติ' OR empty (empty means data not yet synced from Phase 1)
       // Note: lineGroupStatus (Column U) is NOT validated - all values allowed
 
       console.log('Total users from API:', data.users?.length || 0);
@@ -118,18 +118,20 @@ export default function PromoteEventModal({
         const hasLineUserId = !!user.lineUserId;
         const hasMemberId = !!user.memberId;
         const isActive = user.isActive !== false; // Default to true if not set
-        const hasNormalStatus = user.memberStatus === 'ปกติ'; // Column R from Google Sheets
+        // Allow empty status (means not yet synced) or 'ปกติ' status
+        // Exclude only explicit 'ไม่ปกติ' status
+        const hasValidStatus = !user.memberStatus || user.memberStatus === 'ปกติ';
 
         // Debug: log why members are filtered out
-        if (hasLineUserId && hasMemberId && isActive && !hasNormalStatus) {
-          console.log('Member filtered out due to status:', {
+        if (hasLineUserId && hasMemberId && isActive && !hasValidStatus) {
+          console.log('Member filtered out due to invalid status:', {
             memberId: user.memberId,
             memberStatus: user.memberStatus,
             lineDisplayName: user.lineDisplayName,
           });
         }
 
-        return hasLineUserId && hasMemberId && isActive && hasNormalStatus;
+        return hasLineUserId && hasMemberId && isActive && hasValidStatus;
       });
 
       console.log('Fetched members sample (first 3):', filteredMembers.slice(0, 3));

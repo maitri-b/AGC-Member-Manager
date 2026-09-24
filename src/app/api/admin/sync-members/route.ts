@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { memberId, startMemberId, endMemberId, skipExisting } = body;
+    const { memberId, startMemberId, endMemberId, skipExisting, customMemberIds } = body;
 
     // If memberId is provided, sync single member
     // Otherwise, sync all members with optional filters
@@ -43,10 +43,13 @@ export async function POST(request: NextRequest) {
         startMemberId,
         endMemberId,
         skipExisting: skipExisting === true,
+        customMemberIds: customMemberIds as string[] | undefined,
       };
 
       // Log sync configuration
-      if (startMemberId || endMemberId) {
+      if (customMemberIds && Array.isArray(customMemberIds) && customMemberIds.length > 0) {
+        console.log(`[Manual Sync] Syncing custom Member IDs: ${customMemberIds.join(', ')} (${customMemberIds.length} members)`);
+      } else if (startMemberId || endMemberId) {
         console.log(`[Manual Sync] Syncing members range: ${startMemberId || 'start'} - ${endMemberId || 'end'}`);
       } else {
         console.log('[Manual Sync] Syncing all members from Google Sheets to Firestore');

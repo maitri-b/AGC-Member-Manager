@@ -28,6 +28,7 @@ export interface SyncOptions {
   startMemberId?: string; // Start from this memberId (inclusive)
   endMemberId?: string;   // End at this memberId (inclusive)
   skipExisting?: boolean; // Skip members that already exist in Firestore
+  customMemberIds?: string[]; // Specific Member IDs to sync (e.g., ['726', '712', '705'])
 }
 
 /**
@@ -251,8 +252,26 @@ export async function syncAllMembersToFirestore(options?: SyncOptions): Promise<
     // Filter members based on options
     let members = allMembers;
 
-    // Apply memberId range filter
-    if (options?.startMemberId || options?.endMemberId) {
+    // Apply custom Member IDs filter (highest priority)
+    if (options?.customMemberIds && options.customMemberIds.length > 0) {
+      const customIdsSet = new Set(options.customMemberIds);
+
+      members = members.filter((m) => {
+        if (!m.memberId) return false;
+        return customIdsSet.has(m.memberId);
+      });
+
+      console.log(`🔍 Filtered to ${members.length} members from custom list (Requested: ${options.customMemberIds.length} IDs)`);
+
+      // Log which IDs were not found
+      const foundIds = new Set(members.map(m => m.memberId));
+      const notFoundIds = options.customMemberIds.filter(id => !foundIds.has(id));
+      if (notFoundIds.length > 0) {
+        console.log(`⚠️ Warning: ${notFoundIds.length} Member IDs not found in Google Sheets: ${notFoundIds.join(', ')}`);
+      }
+    }
+    // Apply memberId range filter (if custom IDs not specified)
+    else if (options?.startMemberId || options?.endMemberId) {
       const startId = options.startMemberId ? parseInt(options.startMemberId) : 0;
       const endId = options.endMemberId ? parseInt(options.endMemberId) : Number.MAX_SAFE_INTEGER;
 

@@ -39,10 +39,11 @@ export default function SyncMembersPage() {
   const [lastSyncSummary, setLastSyncSummary] = useState<SyncSummary | null>(null);
 
   // Sync options
-  const [syncMode, setSyncMode] = useState<'all' | 'range' | 'resume'>('all');
+  const [syncMode, setSyncMode] = useState<'all' | 'range' | 'resume' | 'custom'>('all');
   const [startMemberId, setStartMemberId] = useState('');
   const [endMemberId, setEndMemberId] = useState('');
   const [skipExisting, setSkipExisting] = useState(false);
+  const [customMemberIds, setCustomMemberIds] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -86,6 +87,7 @@ export default function SyncMembersPage() {
         startMemberId?: string;
         endMemberId?: string;
         skipExisting?: boolean;
+        customMemberIds?: string[];
       } = {};
 
       if (syncMode === 'range') {
@@ -93,6 +95,20 @@ export default function SyncMembersPage() {
         if (endMemberId) requestBody.endMemberId = endMemberId;
       } else if (syncMode === 'resume') {
         requestBody.skipExisting = true;
+      } else if (syncMode === 'custom') {
+        // Parse comma-separated Member IDs
+        const memberIdList = customMemberIds
+          .split(',')
+          .map(id => id.trim())
+          .filter(id => id.length > 0);
+
+        if (memberIdList.length === 0) {
+          alert('กรุณาใส่ Member ID อย่างน้อย 1 รายการ');
+          setSyncing(false);
+          return;
+        }
+
+        requestBody.customMemberIds = memberIdList;
       }
 
       if (skipExisting) {
@@ -194,7 +210,7 @@ export default function SyncMembersPage() {
                 type="radio"
                 value="all"
                 checked={syncMode === 'all'}
-                onChange={(e) => setSyncMode(e.target.value as 'all' | 'range' | 'resume')}
+                onChange={(e) => setSyncMode(e.target.value as 'all' | 'range' | 'resume' | 'custom')}
                 className="w-4 h-4"
               />
               <div>
@@ -210,7 +226,7 @@ export default function SyncMembersPage() {
                 type="radio"
                 value="resume"
                 checked={syncMode === 'resume'}
-                onChange={(e) => setSyncMode(e.target.value as 'all' | 'range' | 'resume')}
+                onChange={(e) => setSyncMode(e.target.value as 'all' | 'range' | 'resume' | 'custom')}
                 className="w-4 h-4"
               />
               <div>
@@ -226,7 +242,7 @@ export default function SyncMembersPage() {
                 type="radio"
                 value="range"
                 checked={syncMode === 'range'}
-                onChange={(e) => setSyncMode(e.target.value as 'all' | 'range' | 'resume')}
+                onChange={(e) => setSyncMode(e.target.value as 'all' | 'range' | 'resume' | 'custom')}
                 className="w-4 h-4"
               />
               <div>
@@ -236,7 +252,47 @@ export default function SyncMembersPage() {
                 </div>
               </div>
             </label>
+
+            <label className="flex items-center gap-3">
+              <input
+                type="radio"
+                value="custom"
+                checked={syncMode === 'custom'}
+                onChange={(e) => setSyncMode(e.target.value as 'all' | 'range' | 'resume' | 'custom')}
+                className="w-4 h-4"
+              />
+              <div>
+                <div className="font-medium">Custom Member IDs</div>
+                <div className="text-sm text-gray-600">
+                  ระบุรายการ Member ID ที่ต้องการ sync (คั่นด้วยเครื่องหมายจุลภาค)
+                </div>
+              </div>
+            </label>
           </div>
+
+          {/* Custom Member IDs input - show only when custom mode is selected */}
+          {syncMode === 'custom' && (
+            <div className="border-l-4 border-purple-400 pl-6 mb-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Member IDs (คั่นด้วยเครื่องหมายจุลภาค)
+                </label>
+                <textarea
+                  value={customMemberIds}
+                  onChange={(e) => setCustomMemberIds(e.target.value)}
+                  placeholder="เช่น 726,712,705,580,517,513,509,491,439,436"
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 ใส่ Member ID ที่ต้องการ sync คั่นด้วยเครื่องหมายจุลภาค (,) เช่น 726,712,705,580
+                </p>
+                <p className="text-xs text-purple-600 mt-1 font-medium">
+                  เหมาะสำหรับการอัปเดตสมาชิกที่มีการต่อใบอนุญาตใหม่หรือแก้ไขข้อมูล
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Range inputs - show only when range mode is selected */}
           {syncMode === 'range' && (

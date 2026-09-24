@@ -93,7 +93,7 @@ export async function GET(
       paymentAccountName: bankAccountData?.accountName || eventData?.paymentAccountName || '',
       paymentAccountNumber: bankAccountData?.accountNumber || eventData?.paymentAccountNumber || '',
       paymentQrCodeUrl: bankAccountData?.qrCodeUrl || eventData?.paymentQrCodeUrl || '',
-      paymentTerms: eventData?.paymentTerms || '',
+      paymentTerms: bankAccountData?.paymentTerms || eventData?.paymentTerms || '',
       paymentSlipSubmissionUrl: eventData?.paymentSlipSubmissionUrl || '',
       paymentSlipButtonText: eventData?.paymentSlipButtonText || '',
       paymentInstructionText: eventData?.paymentInstructionText || '',

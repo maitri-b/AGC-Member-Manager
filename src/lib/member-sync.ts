@@ -128,7 +128,107 @@ export async function syncSingleMemberToFirestore(memberId: string): Promise<Syn
 }
 
 /**
+ * Internal helper: Sync member data to Firestore (without fetching from Google Sheets)
+ * Used by syncAllMembersToFirestore() to avoid redundant API calls
+ */
+async function syncMemberDataToFirestore(member: Member): Promise<SyncResult> {
+  try {
+    if (!member || !member.memberId) {
+      return {
+        success: false,
+        memberId: member?.memberId || 'unknown',
+        action: 'skipped',
+        error: 'Invalid member data or missing memberId',
+      };
+    }
+
+    // Get Firestore reference
+    const db = adminDb();
+    const memberRef = db.collection('members').doc(member.memberId);
+
+    // Check if member already exists
+    const existingDoc = await memberRef.get();
+    const action: 'created' | 'updated' = existingDoc.exists ? 'updated' : 'created';
+
+    // Prepare member data with sync metadata
+    const memberData = {
+      // Core member data from Google Sheets
+      memberId: member.memberId,
+
+      // Company
+      companyNameEN: member.companyNameEN || '',
+      companyNameTH: member.companyNameTH || '',
+
+      // Personal
+      fullNameTH: member.fullNameTH || '',
+      nickname: member.nickname || '',
+
+      // LINE
+      lineId: member.lineId || '',
+      lineName: member.lineName || '',
+      lineUserId: member.lineUserId || '',
+      lineDisplayName: member.lineDisplayName || '',
+
+      // Contact
+      phone: member.phone || '',
+      mobile: member.mobile || '',
+      email: member.email || '',
+      website: member.website || '',
+
+      // License
+      licenseNumber: member.licenseNumber || '',
+      licenseExpiry: member.licenseExpiry || '',
+      licenseDocumentUrl: member.licenseDocumentUrl || '',
+
+      // Position
+      positionCompany: member.positionCompany || '',
+      positionClub: member.positionClub || '',
+
+      // Status
+      status: member.status || '',
+
+      // Sponsor
+      sponsor1: member.sponsor1 || '',
+      sponsor2: member.sponsor2 || '',
+
+      // LINE Group
+      lineGroupStatus: member.lineGroupStatus || '',
+      lineGroupJoinDate: member.lineGroupJoinDate || '',
+      lineGroupJoinBy: member.lineGroupJoinBy || '',
+      lineGroupLeaveDate: member.lineGroupLeaveDate || '',
+      lineGroupLeaveBy: member.lineGroupLeaveBy || '',
+
+      // System fields from Google Sheets
+      lastUpdated: member.lastUpdated || '',
+      updatedBy: member.updatedBy || '',
+
+      // Sync metadata
+      syncedAt: FieldValue.serverTimestamp(),
+      syncedFrom: 'google-sheets',
+    };
+
+    // Write to Firestore
+    await memberRef.set(memberData, { merge: true });
+
+    return {
+      success: true,
+      memberId: member.memberId,
+      action,
+    };
+  } catch (error) {
+    console.error(`Error syncing member ${member?.memberId}:`, error);
+    return {
+      success: false,
+      memberId: member?.memberId || 'unknown',
+      action: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
  * Sync all members from Google Sheets to Firestore members collection
+ * Optimized to fetch from Google Sheets only ONCE, then sync all members to Firestore
  * @returns SyncSummary with detailed results
  */
 export async function syncAllMembersToFirestore(): Promise<SyncSummary> {
@@ -136,12 +236,13 @@ export async function syncAllMembersToFirestore(): Promise<SyncSummary> {
   const results: SyncResult[] = [];
 
   try {
-    // Fetch all members from Google Sheets
-    console.log('Fetching all members from Google Sheets...');
+    // Fetch all members from Google Sheets ONCE (single API call)
+    console.log('📥 Fetching all members from Google Sheets...');
     const members = await getAllMembers();
-    console.log(`Found ${members.length} members to sync`);
+    console.log(`✅ Found ${members.length} members to sync`);
 
-    // Sync each member
+    // Sync each member to Firestore (no additional Google Sheets API calls)
+    console.log('🔄 Starting Firestore sync...');
     for (const member of members) {
       if (!member.memberId) {
         results.push({
@@ -153,12 +254,13 @@ export async function syncAllMembersToFirestore(): Promise<SyncSummary> {
         continue;
       }
 
-      const result = await syncSingleMemberToFirestore(member.memberId);
+      // Sync using data we already have (no API call to Google Sheets)
+      const result = await syncMemberDataToFirestore(member);
       results.push(result);
 
       // Log progress every 50 members
       if (results.length % 50 === 0) {
-        console.log(`Progress: ${results.length}/${members.length} members processed`);
+        console.log(`⏳ Progress: ${results.length}/${members.length} members processed`);
       }
     }
 
@@ -178,7 +280,7 @@ export async function syncAllMembersToFirestore(): Promise<SyncSummary> {
       duration,
     };
 
-    console.log('Sync completed:', {
+    console.log('✅ Sync completed:', {
       total: summary.total,
       created: summary.created,
       updated: summary.updated,
@@ -189,7 +291,7 @@ export async function syncAllMembersToFirestore(): Promise<SyncSummary> {
 
     return summary;
   } catch (error) {
-    console.error('Error in syncAllMembersToFirestore:', error);
+    console.error('❌ Error in syncAllMembersToFirestore:', error);
 
     const completedAt = new Date();
     const duration = completedAt.getTime() - startedAt.getTime();

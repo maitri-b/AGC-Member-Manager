@@ -333,6 +333,12 @@ export default function AdminEventsPage() {
   // Promote Event Modal state
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [promotingEvent, setPromotingEvent] = useState<Event | null>(null);
+  const [promotingEventRegistrations, setPromotingEventRegistrations] = useState<Array<{
+    lineUserId: string;
+    contactName: string;
+    companyName: string;
+    lineDisplayName?: string;
+  }>>([]);
   const [originalDeadlines, setOriginalDeadlines] = useState<{
     paymentDeadlineType: string;
     paymentDeadlineFixed: string;
@@ -1514,10 +1520,29 @@ export default function AdminEventsPage() {
 
                     {/* Promote Event Button */}
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
                         setPromotingEvent(event);
                         setShowPromoteModal(true);
+
+                        // Fetch registered members for this event
+                        try {
+                          const response = await fetch(`/api/admin/events/${event.eventId}/registrations`);
+                          if (response.ok) {
+                            const data = await response.json();
+                            // Map registrations to the format expected by PromoteEventModal
+                            const registeredMembers = data.registrations.map((r: any) => ({
+                              lineUserId: r.lineUserId,
+                              contactName: r.registration?.contactName || '',
+                              companyName: r.registration?.companyName || '',
+                              lineDisplayName: r.lineDisplayName || '',
+                            }));
+                            setPromotingEventRegistrations(registeredMembers);
+                          }
+                        } catch (error) {
+                          console.error('Error fetching registrations for promotion:', error);
+                          setPromotingEventRegistrations([]);
+                        }
                       }}
                       className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
                       title="ส่งข้อความประชาสัมพันธ์"
@@ -3565,11 +3590,13 @@ export default function AdminEventsPage() {
           onClose={() => {
             setShowPromoteModal(false);
             setPromotingEvent(null);
+            setPromotingEventRegistrations([]);
           }}
           eventId={promotingEvent.eventId}
           eventName={promotingEvent.eventName}
           eventDescription={promotingEvent.description}
           mainImageUrl={promotingEvent.mainImageUrl}
+          registeredMembers={promotingEventRegistrations}
         />
       )}
 

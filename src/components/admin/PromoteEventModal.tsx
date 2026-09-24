@@ -206,6 +206,14 @@ export default function PromoteEventModal({
     return new Set(lineUserIds);
   }, [registeredMembers]);
 
+  // Debug: Log unique LINE Group statuses
+  useEffect(() => {
+    if (members.length > 0) {
+      const uniqueStatuses = new Set(members.map(m => m.lineGroupStatus || '(empty)'));
+      console.log('🔍 DEBUG: Unique LINE Group Statuses found in members:', Array.from(uniqueStatuses).sort());
+    }
+  }, [members]);
+
   // Filter and sort members
   const filteredMembers = useMemo(() => {
     let filtered = [...members];
@@ -1082,11 +1090,10 @@ ${baseUrl}/events/${encodeURIComponent(eventId)}`;
                 >
                   <option value="all">ทั้งหมด</option>
                   <option value="">ยังไม่มีสถานะ</option>
+                  <option value="ปกติ">ปกติ</option>
                   <option value="รอนำเข้ากลุ่ม">รอนำเข้ากลุ่ม</option>
-                  <option value="อยู่ในกลุ่ม">อยู่ในกลุ่ม</option>
-                  <option value="ออกจากกลุ่ม">ออกจากกลุ่ม</option>
+                  <option value="ออกจากกลุ่มแล้ว">ออกจากกลุ่มแล้ว</option>
                   <option value="รอผลการติดต่อ">รอผลการติดต่อ</option>
-                  <option value="ติดต่อไม่ได้">ติดต่อไม่ได้</option>
                 </select>
               </div>
 
@@ -1195,18 +1202,16 @@ ${baseUrl}/events/${encodeURIComponent(eventId)}`;
                           {/* LINE Group Status Badge */}
                           {member.lineGroupStatus && (
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                              member.lineGroupStatus === 'อยู่ในกลุ่ม' ? 'bg-blue-100 text-blue-800' :
+                              member.lineGroupStatus === 'ปกติ' ? 'bg-green-100 text-green-800' :
                               member.lineGroupStatus === 'รอนำเข้ากลุ่ม' ? 'bg-yellow-100 text-yellow-800' :
-                              member.lineGroupStatus === 'ออกจากกลุ่ม' ? 'bg-red-100 text-red-800' :
+                              member.lineGroupStatus === 'ออกจากกลุ่มแล้ว' ? 'bg-red-100 text-red-800' :
                               member.lineGroupStatus === 'รอผลการติดต่อ' ? 'bg-orange-100 text-orange-800' :
-                              member.lineGroupStatus === 'ติดต่อไม่ได้' ? 'bg-gray-100 text-gray-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {member.lineGroupStatus === 'อยู่ในกลุ่ม' ? '👥' :
+                              {member.lineGroupStatus === 'ปกติ' ? '👥' :
                                member.lineGroupStatus === 'รอนำเข้ากลุ่ม' ? '⏳' :
-                               member.lineGroupStatus === 'ออกจากกลุ่ม' ? '👋' :
+                               member.lineGroupStatus === 'ออกจากกลุ่มแล้ว' ? '👋' :
                                member.lineGroupStatus === 'รอผลการติดต่อ' ? '📞' :
-                               member.lineGroupStatus === 'ติดต่อไม่ได้' ? '❌' :
                                '📱'} {member.lineGroupStatus}
                             </span>
                           )}

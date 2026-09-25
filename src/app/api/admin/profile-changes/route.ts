@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { adminDb } from '@/lib/firebase-admin';
 import { hasPermission } from '@/lib/permissions';
-import { getMemberById, updateMember } from '@/lib/google-sheets';
+import { updateMember } from '@/lib/google-sheets';
 
 // Get all pending change requests (Admin only)
 export async function GET(request: NextRequest) {
@@ -39,41 +39,12 @@ export async function GET(request: NextRequest) {
         createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
         processedAt: data.processedAt?.toDate?.()?.toISOString() || data.processedAt,
+        // Use snapshot data instead of fetching from Google Sheets
+        currentCompanyName: data.currentCompanyName || '',
+        currentLicenseNumber: data.currentLicenseNumber || '',
+        currentLicenseDocumentUrl: data.currentLicenseDocumentUrl || '',
       };
     });
-
-    // Fetch current member data for comparison
-    for (const request of requests) {
-      const memberId = (request as { memberId?: string }).memberId;
-      if (memberId) {
-        try {
-          const memberData = await getMemberById(memberId);
-
-          if (memberData) {
-            // Add current member data for comparison
-            (request as Record<string, string>).currentCompanyName = memberData.companyNameEN || '';
-            (request as Record<string, string>).currentLicenseNumber = memberData.licenseNumber || '';
-            (request as Record<string, string>).currentLicenseDocumentUrl = memberData.licenseDocumentUrl || '';
-          } else {
-            // Member not found, set empty strings
-            (request as Record<string, string>).currentCompanyName = '';
-            (request as Record<string, string>).currentLicenseNumber = '';
-            (request as Record<string, string>).currentLicenseDocumentUrl = '';
-          }
-        } catch (error) {
-          // Error fetching member data, set empty strings
-          console.error(`Error fetching member data for request ${(request as { id?: string }).id}:`, error);
-          (request as Record<string, string>).currentCompanyName = '';
-          (request as Record<string, string>).currentLicenseNumber = '';
-          (request as Record<string, string>).currentLicenseDocumentUrl = '';
-        }
-      } else {
-        // No memberId, set empty strings
-        (request as Record<string, string>).currentCompanyName = '';
-        (request as Record<string, string>).currentLicenseNumber = '';
-        (request as Record<string, string>).currentLicenseDocumentUrl = '';
-      }
-    }
 
     // Filter by status in JavaScript
     if (status !== 'all') {
@@ -137,11 +108,31 @@ export async function PUT(request: NextRequest) {
         updates['licenseDocumentUrl'] = changeRequest.newLicenseDocumentUrl;
       }
 
-      // Update Google Sheet
-      const updateSuccess = await updateMember(changeRequest.memberId, updates);
+      // Update Google Sheet with timeout and better error handling
+      let updateSuccess = false;
+      try {
+        console.log(`[Profile Change] Updating member ${changeRequest.memberId} in Google Sheets...`);
+
+        // Add timeout wrapper (30 seconds max for mobile)
+        updateSuccess = await Promise.race([
+          updateMember(changeRequest.memberId, updates),
+          new Promise<boolean>((_, reject) =>
+            setTimeout(() => reject(new Error('Update timeout after 30 seconds')), 30000)
+          )
+        ]);
+
+        console.log(`[Profile Change] Update result: ${updateSuccess}`);
+      } catch (error) {
+        console.error('[Profile Change] Error updating Google Sheets:', error);
+        return NextResponse.json({
+          error: 'ไม่สามารถอัพเดทข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
 
       if (!updateSuccess) {
-        return NextResponse.json({ error: 'Failed to update member data' }, { status: 500 });
+        console.error('[Profile Change] Update failed - updateMember returned false');
+        return NextResponse.json({ error: 'ไม่สามารถอัพเดทข้อมูลได้ กรุณาลองใหม่อีกครั้ง' }, { status: 500 });
       }
 
       // Log the change history

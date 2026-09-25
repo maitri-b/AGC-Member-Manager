@@ -151,6 +151,10 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       createdAt: new Date(),
       updatedAt: new Date(),
+      // ✅ Store current member data as snapshot (avoid N+1 query problem in admin panel)
+      currentCompanyName: currentMember.companyNameEN || '',
+      currentLicenseNumber: currentMember.licenseNumber || '',
+      currentLicenseDocumentUrl: currentMember.licenseDocumentUrl || '',
     };
 
     // ✅ NEW: Include license document URL if uploaded

@@ -1508,27 +1508,31 @@ export default function EventDetailPage() {
         totalAttendees += reg.attendeeCount || 0;
         totalAmount += reg.totalAmount || 0;
 
-        // Calculate approved amount using same logic as above
+        // Calculate approved amount using tracked amounts to avoid double-counting
         const isFullPaymentMode = eventData.event.paymentMode === 'full';
+        const fullPaymentAmountPaid = (reg as any).fullPaymentAmountPaid || 0;
+        const depositAmountPaid = (reg as any).depositAmountPaid || 0;
+        const remainingAmountPaid = (reg as any).remainingAmountPaid || 0;
         const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
+
         let approvedAmount = 0;
         if (isFullPaymentMode) {
           if ((reg as any).fullPaymentPaid === true) {
-            approvedAmount = reg.totalAmount || 0;
-            approvedAmount += additionalPaymentAmountPaid;
+            // ✅ Use tracked amounts to avoid double-counting
+            approvedAmount = fullPaymentAmountPaid + additionalPaymentAmountPaid;
           }
         } else {
           // Check if paid in full
           if ((reg as any).fullPaymentPaid === true) {
-            approvedAmount = reg.totalAmount || 0;
-            approvedAmount += additionalPaymentAmountPaid;
+            // ✅ Use tracked amounts to avoid double-counting
+            approvedAmount = fullPaymentAmountPaid + additionalPaymentAmountPaid;
           } else {
             // Pay in installments
             if (reg.depositPaid === true) {
-              approvedAmount += reg.depositAmount || 0;
+              approvedAmount += depositAmountPaid;
             }
             if ((reg as any).remainingPaid === true) {
-              approvedAmount += reg.remainingAmount || 0;
+              approvedAmount += remainingAmountPaid;
             }
             // Include additional payment if any
             if (additionalPaymentAmountPaid > 0) {
@@ -1867,28 +1871,32 @@ export default function EventDetailPage() {
           // Ignore parse errors
         }
 
-        // Calculate approved amount using same logic as other sections
+        // Calculate approved amount using tracked amounts to avoid double-counting
         const isFullPaymentMode = eventData.event.paymentMode === 'full';
+        const fullPaymentAmountPaid = (reg as any).fullPaymentAmountPaid || 0;
+        const depositAmountPaid = (reg as any).depositAmountPaid || 0;
+        const remainingAmountPaid = (reg as any).remainingAmountPaid || 0;
         const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
+
         let approvedAmount = 0;
 
         if (isFullPaymentMode) {
           if ((reg as any).fullPaymentPaid === true) {
-            approvedAmount = totalAmount;
-            approvedAmount += additionalPaymentAmountPaid;
+            // ✅ Use tracked amounts to avoid double-counting
+            approvedAmount = fullPaymentAmountPaid + additionalPaymentAmountPaid;
           }
         } else {
           // Check if paid in full
           if ((reg as any).fullPaymentPaid === true) {
-            approvedAmount = totalAmount;
-            approvedAmount += additionalPaymentAmountPaid;
+            // ✅ Use tracked amounts to avoid double-counting
+            approvedAmount = fullPaymentAmountPaid + additionalPaymentAmountPaid;
           } else {
             // Pay in installments
             if (reg.depositPaid === true) {
-              approvedAmount += reg.depositAmount || 0;
+              approvedAmount += depositAmountPaid;
             }
             if ((reg as any).remainingPaid === true) {
-              approvedAmount += reg.remainingAmount || 0;
+              approvedAmount += remainingAmountPaid;
             }
             // Include additional payment if any
             if (additionalPaymentAmountPaid > 0) {
@@ -3163,7 +3171,10 @@ export default function EventDetailPage() {
       const depositAmount = reg.depositAmount || 0;
       const remainingAmount = reg.remainingAmount || 0;
 
-      // ✅ Include additional payment amount paid (if any)
+      // Get tracked payment amounts (avoid double-counting with additionalPaymentAmountPaid)
+      const fullPaymentAmountPaid = (reg as any).fullPaymentAmountPaid || 0;
+      const depositAmountPaid = (reg as any).depositAmountPaid || 0;
+      const remainingAmountPaid = (reg as any).remainingAmountPaid || 0;
       const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
 
       // ✅ totalAmount already includes discounts and special charges from calculation
@@ -3174,8 +3185,8 @@ export default function EventDetailPage() {
         const hasSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
 
         if (isPaid) {
-          // ✅ Full payment approved + any additional payments
-          totalApproved += amount + additionalPaymentAmountPaid;
+          // ✅ Use tracked amounts to avoid double-counting
+          totalApproved += fullPaymentAmountPaid + additionalPaymentAmountPaid;
         } else if (hasSlip) {
           // Slip uploaded but not approved yet
           totalPending += amount;
@@ -3183,14 +3194,14 @@ export default function EventDetailPage() {
       } else {
         // Deposit payment
         if (reg.depositPaid === true) {
-          totalApproved += depositAmount;
+          totalApproved += depositAmountPaid;
         } else if (reg.depositSlipUrl && reg.depositSlipUrl.trim() !== '') {
           totalPending += depositAmount;
         }
 
         // Remaining payment
         if ((reg as any).remainingPaid === true) {
-          totalApproved += remainingAmount;
+          totalApproved += remainingAmountPaid;
         } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
           totalPending += remainingAmount;
         }
@@ -3883,6 +3894,11 @@ export default function EventDetailPage() {
               const totalAmount = reg.totalAmount || 0;
               const depositAmount = reg.depositAmount || 0;
               const remainingAmount = reg.remainingAmount || 0;
+
+              // Get tracked payment amounts (avoid double-counting with additionalPaymentAmountPaid)
+              const fullPaymentAmountPaid = (reg as any).fullPaymentAmountPaid || 0;
+              const depositAmountPaid = (reg as any).depositAmountPaid || 0;
+              const remainingAmountPaid = (reg as any).remainingAmountPaid || 0;
               const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
 
               if (isFullPaymentMode) {
@@ -3893,7 +3909,8 @@ export default function EventDetailPage() {
                 const hasSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
 
                 if (isPaid) {
-                  totalApproved += totalAmount + additionalPaymentAmountPaid;
+                  // ✅ Use tracked amounts to avoid double-counting
+                  totalApproved += fullPaymentAmountPaid + additionalPaymentAmountPaid;
                 } else if (hasSlip) {
                   totalPending += totalAmount;
                 }
@@ -3906,8 +3923,8 @@ export default function EventDetailPage() {
                 const hasFullPaymentSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
 
                 if (fullPaymentPaid) {
-                  // Paid full amount
-                  totalApproved += totalAmount + additionalPaymentAmountPaid;
+                  // ✅ Use tracked amounts to avoid double-counting
+                  totalApproved += fullPaymentAmountPaid + additionalPaymentAmountPaid;
                 } else if (hasFullPaymentSlip) {
                   // Full payment slip pending approval
                   totalPending += totalAmount;
@@ -3915,14 +3932,14 @@ export default function EventDetailPage() {
                   // Option 2: Pay in installments (deposit + remaining)
                   // Deposit payment
                   if (reg.depositPaid === true) {
-                    totalApproved += depositAmount;
+                    totalApproved += depositAmountPaid;
                   } else if (reg.depositSlipUrl && reg.depositSlipUrl.trim() !== '') {
                     totalPending += depositAmount;
                   }
 
                   // Remaining payment
                   if ((reg as any).remainingPaid === true) {
-                    totalApproved += remainingAmount;
+                    totalApproved += remainingAmountPaid;
                   } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
                     totalPending += remainingAmount;
                   }

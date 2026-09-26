@@ -1830,6 +1830,170 @@ export default function EventDetailPage() {
         // Continue with export even if carpool worksheet fails
       }
 
+      // === Payment Summary Worksheet ===
+      // One row per registration (no duplicates from attendee names)
+      const paymentSummaryData: Record<string, any>[] = [];
+      let summaryTotalAmount = 0;
+      let summaryTotalPeople = 0;
+      let summaryTotalSpecialCharges = 0;
+      let summaryTotalDiscount = 0;
+      let summaryTotalApproved = 0;
+
+      filteredAttendees.forEach((attendee) => {
+        const reg = attendee.registration;
+        const attendeeCount = reg.attendeeCount || 0;
+        const totalAmount = reg.totalAmount || 0;
+        const pricePerPerson = attendeeCount > 0 ? totalAmount / attendeeCount : 0;
+
+        // Parse special charges
+        let totalSpecialCharges = 0;
+        try {
+          const charges = JSON.parse(reg.specialCharges || '[]');
+          if (Array.isArray(charges)) {
+            totalSpecialCharges = charges.reduce((sum: number, charge: { amount: number }) => sum + (charge.amount || 0), 0);
+          }
+        } catch {
+          // Ignore parse errors
+        }
+
+        // Calculate discount from registration data
+        const discount = reg.discount || 0;
+
+        // Calculate approved amount using same logic as other sections
+        const isFullPaymentMode = eventData.event.paymentMode === 'full';
+        const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
+        let approvedAmount = 0;
+
+        if (isFullPaymentMode) {
+          if ((reg as any).fullPaymentPaid === true) {
+            approvedAmount = totalAmount;
+            approvedAmount += additionalPaymentAmountPaid;
+          }
+        } else {
+          // Check if paid in full
+          if ((reg as any).fullPaymentPaid === true) {
+            approvedAmount = totalAmount;
+            approvedAmount += additionalPaymentAmountPaid;
+          } else {
+            // Pay in installments
+            if (reg.depositPaid === true) {
+              approvedAmount += reg.depositAmount || 0;
+            }
+            if ((reg as any).remainingPaid === true) {
+              approvedAmount += reg.remainingAmount || 0;
+            }
+            // Include additional payment if any
+            if (additionalPaymentAmountPaid > 0) {
+              approvedAmount += additionalPaymentAmountPaid;
+            }
+          }
+        }
+
+        paymentSummaryData.push({
+          'รหัสลงทะเบียน': reg.registrationId,
+          'ชื่อบริษัท': reg.companyName || attendee.member?.companyNameTH || '',
+          'จำนวนคน': attendeeCount,
+          'ราคาต่อคน': pricePerPerson,
+          'ค่าใช้จ่ายพิเศษ': totalSpecialCharges,
+          'ส่วนลด': discount,
+          'ยอดรวม': totalAmount,
+          'ยอดอนุมัติแล้ว': approvedAmount,
+          'สถานะ': reg.status || '',
+          'สถานะการชำระ': reg.paymentStatus || '',
+        });
+
+        // Accumulate totals
+        summaryTotalPeople += attendeeCount;
+        summaryTotalAmount += totalAmount;
+        summaryTotalSpecialCharges += totalSpecialCharges;
+        summaryTotalDiscount += discount;
+        summaryTotalApproved += approvedAmount;
+      });
+
+      // Add summary row
+      paymentSummaryData.push({
+        'รหัสลงทะเบียน': 'สรุปรวม',
+        'ชื่อบริษัท': '',
+        'จำนวนคน': summaryTotalPeople,
+        'ราคาต่อคน': '',
+        'ค่าใช้จ่ายพิเศษ': summaryTotalSpecialCharges,
+        'ส่วนลด': summaryTotalDiscount,
+        'ยอดรวม': summaryTotalAmount,
+        'ยอดอนุมัติแล้ว': summaryTotalApproved,
+        'สถานะ': '',
+        'สถานะการชำระ': '',
+      });
+
+      // Create payment summary worksheet
+      const paymentSummaryWs = XLSX.utils.json_to_sheet(paymentSummaryData);
+
+      // Set column widths
+      paymentSummaryWs['!cols'] = [
+        { wch: 18 }, // รหัสลงทะเบียน
+        { wch: 35 }, // ชื่อบริษัท
+        { wch: 12 }, // จำนวนคน
+        { wch: 12 }, // ราคาต่อคน
+        { wch: 15 }, // ค่าใช้จ่ายพิเศษ
+        { wch: 12 }, // ส่วนลด
+        { wch: 12 }, // ยอดรวม
+        { wch: 15 }, // ยอดอนุมัติแล้ว
+        { wch: 15 }, // สถานะ
+        { wch: 20 }, // สถานะการชำระ
+      ];
+
+      // Style header row
+      const paymentHeaderRow = 0;
+      const paymentColumns = 10;
+      for (let col = 0; col < paymentColumns; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: paymentHeaderRow, c: col });
+        if (!paymentSummaryWs[cellAddress]) continue;
+
+        paymentSummaryWs[cellAddress].s = {
+          fill: { fgColor: { rgb: '8B5CF6' } }, // Purple background
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          border: {
+            top: { style: 'medium', color: { rgb: '6D28D9' } },
+            bottom: { style: 'medium', color: { rgb: '6D28D9' } },
+            left: { style: 'thin', color: { rgb: '8B5CF6' } },
+            right: { style: 'thin', color: { rgb: '8B5CF6' } },
+          },
+          alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+        };
+      }
+
+      // Style data rows
+      paymentSummaryData.forEach((_, rowIdx) => {
+        const dataRow = rowIdx + 1; // +1 because row 0 is header
+        const isLastRow = rowIdx === paymentSummaryData.length - 1;
+
+        // Different styling for summary row
+        const bgColor = isLastRow ? 'FEF3C7' : (rowIdx % 2 === 0 ? 'F8F9FA' : 'FFFFFF');
+        const isBold = isLastRow;
+
+        for (let col = 0; col < paymentColumns; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: dataRow, c: col });
+          if (!paymentSummaryWs[cellAddress]) paymentSummaryWs[cellAddress] = { t: 's', v: '' };
+
+          paymentSummaryWs[cellAddress].s = {
+            fill: { fgColor: { rgb: bgColor } },
+            font: isBold ? { bold: true, sz: 11 } : undefined,
+            border: {
+              top: isLastRow ? { style: 'medium', color: { rgb: 'D97706' } } : { style: 'thin', color: { rgb: 'D1D5DB' } },
+              bottom: isLastRow ? { style: 'medium', color: { rgb: 'D97706' } } : { style: 'thin', color: { rgb: 'D1D5DB' } },
+              left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+              right: { style: 'thin', color: { rgb: 'D1D5DB' } },
+            },
+            alignment: {
+              vertical: 'center',
+              horizontal: col >= 2 && col <= 7 ? 'right' : 'left', // Right align numbers
+              wrapText: true,
+            },
+          };
+        }
+      });
+
+      XLSX.utils.book_append_sheet(wb, paymentSummaryWs, 'สรุปรายการชำระเงิน');
+
       // Generate filename with Thai date format
       const filename = `${eventData.event.eventName}_${formatThaiDateTime(new Date())}.xlsx`;
 

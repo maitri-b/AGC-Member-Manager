@@ -1856,8 +1856,16 @@ export default function EventDetailPage() {
           // Ignore parse errors
         }
 
-        // Calculate discount from registration data
-        const discount = reg.discount || 0;
+        // Calculate total discount from registration data
+        let totalDiscount = 0;
+        try {
+          const discounts = JSON.parse(reg.discounts || '[]');
+          if (Array.isArray(discounts)) {
+            totalDiscount = discounts.reduce((sum: number, discount: { calculatedAmount: number }) => sum + (discount.calculatedAmount || 0), 0);
+          }
+        } catch {
+          // Ignore parse errors
+        }
 
         // Calculate approved amount using same logic as other sections
         const isFullPaymentMode = eventData.event.paymentMode === 'full';
@@ -1895,7 +1903,7 @@ export default function EventDetailPage() {
           'จำนวนคน': attendeeCount,
           'ราคาต่อคน': pricePerPerson,
           'ค่าใช้จ่ายพิเศษ': totalSpecialCharges,
-          'ส่วนลด': discount,
+          'ส่วนลด': totalDiscount,
           'ยอดรวม': totalAmount,
           'ยอดอนุมัติแล้ว': approvedAmount,
           'สถานะ': reg.status || '',
@@ -1906,7 +1914,7 @@ export default function EventDetailPage() {
         summaryTotalPeople += attendeeCount;
         summaryTotalAmount += totalAmount;
         summaryTotalSpecialCharges += totalSpecialCharges;
-        summaryTotalDiscount += discount;
+        summaryTotalDiscount += totalDiscount;
         summaryTotalApproved += approvedAmount;
       });
 

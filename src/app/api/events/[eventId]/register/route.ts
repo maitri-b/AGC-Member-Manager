@@ -514,7 +514,7 @@ export async function POST(
           memberName: member ? (member.fullNameTH || member.nickname || '') : (guestInfo?.contactName || session.user.name || ''),
           eventId,
           paymentMode: eventData.paymentMode || 'full',
-          paymentTiming: eventData.paymentTiming || 'later',
+          paymentTiming: eventData.paymentTiming || 'deferred',
           depositAmount,
           remainingAmount,
           depositDeadline,

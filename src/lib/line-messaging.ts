@@ -413,7 +413,7 @@ export async function sendEventRegistrationConfirmation(
     memberName: string;
     eventId: string;
     paymentMode?: string;
-    paymentTiming?: string; // 'immediate' or 'later'
+    paymentTiming?: string; // 'deferred' or 'immediate'
     depositAmount?: number;
     remainingAmount?: number;
     depositDeadline?: string;
@@ -799,7 +799,7 @@ export async function sendEventRegistrationConfirmationOnBehalf(
     memberName: string;
     eventId: string;
     paymentMode?: string;
-    paymentTiming?: string; // 'immediate' or 'later'
+    paymentTiming?: string; // 'deferred' or 'immediate'
     depositAmount?: number;
     remainingAmount?: number;
     depositDeadline?: string;

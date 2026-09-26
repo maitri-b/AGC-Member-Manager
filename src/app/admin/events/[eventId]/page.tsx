@@ -1510,17 +1510,30 @@ export default function EventDetailPage() {
 
         // Calculate approved amount using same logic as above
         const isFullPaymentMode = eventData.event.paymentMode === 'full';
+        const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
         let approvedAmount = 0;
         if (isFullPaymentMode) {
           if ((reg as any).fullPaymentPaid === true) {
             approvedAmount = reg.totalAmount || 0;
+            approvedAmount += additionalPaymentAmountPaid;
           }
         } else {
-          if (reg.depositPaid === true) {
-            approvedAmount += reg.depositAmount || 0;
-          }
-          if ((reg as any).remainingPaid === true) {
-            approvedAmount += reg.remainingAmount || 0;
+          // Check if paid in full
+          if ((reg as any).fullPaymentPaid === true) {
+            approvedAmount = reg.totalAmount || 0;
+            approvedAmount += additionalPaymentAmountPaid;
+          } else {
+            // Pay in installments
+            if (reg.depositPaid === true) {
+              approvedAmount += reg.depositAmount || 0;
+            }
+            if ((reg as any).remainingPaid === true) {
+              approvedAmount += reg.remainingAmount || 0;
+            }
+            // Include additional payment if any
+            if (additionalPaymentAmountPaid > 0) {
+              approvedAmount += additionalPaymentAmountPaid;
+            }
           }
         }
         totalApprovedAmount += approvedAmount;
@@ -2960,7 +2973,7 @@ export default function EventDetailPage() {
   const handleCopyQuickReport = () => {
     if (!eventData) return;
 
-    // Calculate payment totals
+    // Calculate payment totals (exclude cancelled registrations)
     let totalAmount = 0;
     let totalPending = 0;
     let totalApproved = 0;
@@ -2968,11 +2981,20 @@ export default function EventDetailPage() {
     const isFullPaymentMode = eventData.event.paymentMode === 'full';
 
     eventData.attendees.forEach(attendee => {
+      // ✅ Skip cancelled registrations
+      if (isCancelledRegistration(attendee)) {
+        return;
+      }
+
       const reg = attendee.registration;
       const amount = reg.totalAmount || 0;
       const depositAmount = reg.depositAmount || 0;
       const remainingAmount = reg.remainingAmount || 0;
 
+      // ✅ Include additional payment amount paid (if any)
+      const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
+
+      // ✅ totalAmount already includes discounts and special charges from calculation
       totalAmount += amount;
 
       if (isFullPaymentMode) {
@@ -2980,8 +3002,10 @@ export default function EventDetailPage() {
         const hasSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
 
         if (isPaid) {
-          totalApproved += amount;
+          // ✅ Full payment approved + any additional payments
+          totalApproved += amount + additionalPaymentAmountPaid;
         } else if (hasSlip) {
+          // Slip uploaded but not approved yet
           totalPending += amount;
         }
       } else {
@@ -2997,6 +3021,11 @@ export default function EventDetailPage() {
           totalApproved += remainingAmount;
         } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
           totalPending += remainingAmount;
+        }
+
+        // ✅ Additional payments (for deposit mode too)
+        if (additionalPaymentAmountPaid > 0) {
+          totalApproved += additionalPaymentAmountPaid;
         }
       }
     });
@@ -3682,6 +3711,7 @@ export default function EventDetailPage() {
               const totalAmount = reg.totalAmount || 0;
               const depositAmount = reg.depositAmount || 0;
               const remainingAmount = reg.remainingAmount || 0;
+              const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
 
               if (isFullPaymentMode) {
                 // Full Payment Mode
@@ -3691,7 +3721,7 @@ export default function EventDetailPage() {
                 const hasSlip = (reg as any).fullPaymentSlipUrl && (reg as any).fullPaymentSlipUrl.trim() !== '';
 
                 if (isPaid) {
-                  totalApproved += totalAmount;
+                  totalApproved += totalAmount + additionalPaymentAmountPaid;
                 } else if (hasSlip) {
                   totalPending += totalAmount;
                 }
@@ -3705,7 +3735,7 @@ export default function EventDetailPage() {
 
                 if (fullPaymentPaid) {
                   // Paid full amount
-                  totalApproved += totalAmount;
+                  totalApproved += totalAmount + additionalPaymentAmountPaid;
                 } else if (hasFullPaymentSlip) {
                   // Full payment slip pending approval
                   totalPending += totalAmount;
@@ -3723,6 +3753,11 @@ export default function EventDetailPage() {
                     totalApproved += remainingAmount;
                   } else if (reg.remainingSlipUrl && reg.remainingSlipUrl.trim() !== '') {
                     totalPending += remainingAmount;
+                  }
+
+                  // Additional payment (if any)
+                  if (additionalPaymentAmountPaid > 0) {
+                    totalApproved += additionalPaymentAmountPaid;
                   }
                 }
               }

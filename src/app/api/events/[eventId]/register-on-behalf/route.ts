@@ -398,6 +398,7 @@ export async function POST(
           memberName: targetUserData?.lineDisplayName || member?.fullNameTH || member?.nickname || 'ไม่ระบุชื่อ',
           eventId,
           paymentMode: eventData.paymentMode || 'full',
+          paymentTiming: eventData.paymentTiming || 'later',
           depositAmount,
           remainingAmount,
           depositDeadline,

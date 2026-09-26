@@ -413,6 +413,7 @@ export async function sendEventRegistrationConfirmation(
     memberName: string;
     eventId: string;
     paymentMode?: string;
+    paymentTiming?: string; // 'immediate' or 'later'
     depositAmount?: number;
     remainingAmount?: number;
     depositDeadline?: string;
@@ -421,6 +422,7 @@ export async function sendEventRegistrationConfirmation(
 ): Promise<boolean> {
   const hasPayment = eventData.registrationFee > 0;
   const isDepositMode = eventData.paymentMode === 'deposit' && hasPayment;
+  const isImmediatePayment = eventData.paymentTiming === 'immediate';
   const baseUrl = process.env.NEXTAUTH_URL || 'https://agentsclub.vercel.app';
   const eventDetailUrl = `${baseUrl}/events/${encodeURIComponent(eventData.eventId)}`;
 
@@ -499,19 +501,35 @@ ${eventDetailUrl}
     message += `
 💰 ค่าลงทะเบียน: ${eventData.registrationFee.toLocaleString()} บาท`;
 
-    if (eventData.depositDeadline) {
+    if (isImmediatePayment) {
+      // Immediate payment - slip already uploaded
       message += `
+
+🙏 ขอบคุณสำหรับการชำระเงิน
+
+ทีมงานกำลังตรวจสอบการชำระเงินของคุณ
+หากตรวจสอบเรียบร้อยแล้ว ระบบจะอัพเดทสถานะโดยอัตโนมัติ
+
+📱 ติดตามสถานะได้ที่:
+${eventDetailUrl}
+
+✅ สถานะการลงทะเบียน: รอตรวจสอบการชำระเงิน`;
+    } else {
+      // Later payment - need to upload slip
+      if (eventData.depositDeadline) {
+        message += `
 
 ⏰ กำหนดชำระเงิน
 กรุณาชำระภายในวันที่: ${formatThaiDateTime(eventData.depositDeadline)}`;
-    }
+      }
 
-    message += `
+      message += `
 
 📤 อัพโหลดสลิปการโอนได้ที่:
 ${eventDetailUrl}
 
 ⚠️ สถานะการลงทะเบียน: รอชำระเงิน`;
+    }
   }
 
   message += `
@@ -781,6 +799,7 @@ export async function sendEventRegistrationConfirmationOnBehalf(
     memberName: string;
     eventId: string;
     paymentMode?: string;
+    paymentTiming?: string; // 'immediate' or 'later'
     depositAmount?: number;
     remainingAmount?: number;
     depositDeadline?: string;
@@ -790,6 +809,7 @@ export async function sendEventRegistrationConfirmationOnBehalf(
 ): Promise<boolean> {
   const hasPayment = eventData.registrationFee > 0;
   const isDepositMode = eventData.paymentMode === 'deposit' && hasPayment;
+  const isImmediatePayment = eventData.paymentTiming === 'immediate';
   const baseUrl = process.env.NEXTAUTH_URL || 'https://agentsclub.vercel.app';
   const eventDetailUrl = `${baseUrl}/events/${encodeURIComponent(eventData.eventId)}`;
 
@@ -868,19 +888,35 @@ ${eventDetailUrl}
     message += `
 💰 ค่าลงทะเบียน: ${eventData.registrationFee.toLocaleString()} บาท`;
 
-    if (eventData.depositDeadline) {
+    if (isImmediatePayment) {
+      // Immediate payment - slip already uploaded
       message += `
+
+🙏 ขอบคุณสำหรับการชำระเงิน
+
+ทีมงานกำลังตรวจสอบการชำระเงินของคุณ
+หากตรวจสอบเรียบร้อยแล้ว ระบบจะอัพเดทสถานะโดยอัตโนมัติ
+
+📱 ติดตามสถานะได้ที่:
+${eventDetailUrl}
+
+✅ สถานะการลงทะเบียน: รอตรวจสอบการชำระเงิน`;
+    } else {
+      // Later payment - need to upload slip
+      if (eventData.depositDeadline) {
+        message += `
 
 ⏰ กำหนดชำระเงิน
 กรุณาชำระภายในวันที่: ${formatThaiDateTime(eventData.depositDeadline)}`;
-    }
+      }
 
-    message += `
+      message += `
 
 📤 อัพโหลดสลิปการโอนได้ที่:
 ${eventDetailUrl}
 
 ⚠️ สถานะการลงทะเบียน: รอชำระเงิน`;
+    }
   }
 
   message += `

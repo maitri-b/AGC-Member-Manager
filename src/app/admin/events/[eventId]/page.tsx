@@ -1506,11 +1506,13 @@ export default function EventDetailPage() {
       filteredAttendees.forEach((attendee) => {
         const reg = attendee.registration;
         totalAttendees += reg.attendeeCount || 0;
-        totalAmount += reg.totalAmount || 0;
 
         // Calculate approved amount using same logic as above
         const isFullPaymentMode = eventData.event.paymentMode === 'full';
         const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
+
+        // ✅ Total amount must include additional payments
+        totalAmount += (reg.totalAmount || 0) + additionalPaymentAmountPaid;
         let approvedAmount = 0;
         if (isFullPaymentMode) {
           if ((reg as any).fullPaymentPaid === true) {
@@ -1842,7 +1844,10 @@ export default function EventDetailPage() {
       filteredAttendees.forEach((attendee) => {
         const reg = attendee.registration;
         const attendeeCount = reg.attendeeCount || 0;
-        const totalAmount = reg.totalAmount || 0;
+        const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
+
+        // ✅ Total amount must include additional payments
+        const totalAmount = (reg.totalAmount || 0) + additionalPaymentAmountPaid;
         const pricePerPerson = attendeeCount > 0 ? totalAmount / attendeeCount : 0;
 
         // Parse special charges
@@ -1869,19 +1874,18 @@ export default function EventDetailPage() {
 
         // Calculate approved amount using same logic as other sections
         const isFullPaymentMode = eventData.event.paymentMode === 'full';
-        const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
         let approvedAmount = 0;
 
         if (isFullPaymentMode) {
           if ((reg as any).fullPaymentPaid === true) {
-            approvedAmount = totalAmount;
-            approvedAmount += additionalPaymentAmountPaid;
+            // Full payment approved includes base amount + additional
+            approvedAmount = (reg.totalAmount || 0) + additionalPaymentAmountPaid;
           }
         } else {
           // Check if paid in full
           if ((reg as any).fullPaymentPaid === true) {
-            approvedAmount = totalAmount;
-            approvedAmount += additionalPaymentAmountPaid;
+            // Full payment approved includes base amount + additional
+            approvedAmount = (reg.totalAmount || 0) + additionalPaymentAmountPaid;
           } else {
             // Pay in installments
             if (reg.depositPaid === true) {
@@ -3166,8 +3170,8 @@ export default function EventDetailPage() {
       // ✅ Include additional payment amount paid (if any)
       const additionalPaymentAmountPaid = (reg as any).additionalPaymentAmountPaid || 0;
 
-      // ✅ totalAmount already includes discounts and special charges from calculation
-      totalAmount += amount;
+      // ✅ totalAmount must include additional payments to ensure totalAmount >= totalApproved
+      totalAmount += amount + additionalPaymentAmountPaid;
 
       if (isFullPaymentMode) {
         const isPaid = (reg as any).fullPaymentPaid === true;

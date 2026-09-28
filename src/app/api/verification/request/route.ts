@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });
     }
 
-    // Check if already linked
+    // Check if already linked in Google Sheets
     if (member.lineUserId) {
       return NextResponse.json({
         error: 'This member is already linked to a LINE account',
@@ -35,6 +35,26 @@ export async function POST(request: NextRequest) {
     }
 
     const db = adminDb();
+
+    // ✅ CRITICAL: Check if any OTHER user already verified with this memberId in Firestore
+    // This prevents multiple LINE accounts from linking to the same member ID
+    const existingVerified = await db.collection('users')
+      .where('memberId', '==', memberId)
+      .where('verificationStatus', '==', 'verified')
+      .get();
+
+    if (!existingVerified.empty) {
+      // Check if it's not the current user (allow re-verification for same user)
+      const alreadyLinkedUser = existingVerified.docs[0];
+      if (alreadyLinkedUser.id !== session.user.id) {
+        const linkedUserData = alreadyLinkedUser.data();
+        return NextResponse.json({
+          error: `รหัสสมาชิกนี้ถูกเชื่อมกับบัญชี LINE อื่นแล้ว (${linkedUserData.lineDisplayName || 'ไม่ระบุชื่อ'})`,
+          alreadyLinked: true,
+          linkedTo: linkedUserData.lineDisplayName || 'Unknown'
+        }, { status: 400 });
+      }
+    }
 
     // Check if user already has a pending request
     const existingRequests = await db.collection('verificationRequests')

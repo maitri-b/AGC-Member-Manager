@@ -149,6 +149,31 @@ export async function PUT(request: NextRequest) {
     const now = new Date();
 
     if (action === 'approve') {
+      // ✅ CRITICAL: Check if another user already has this memberId verified
+      // This prevents approving duplicate verifications for the same member
+      const usersWithMemberId = await db.collection('users')
+        .where('memberId', '==', requestData.memberId)
+        .where('verificationStatus', '==', 'verified')
+        .get();
+
+      if (!usersWithMemberId.empty) {
+        const existingUser = usersWithMemberId.docs[0];
+        const existingUserData = existingUser.data();
+
+        // Only block if it's a DIFFERENT user
+        if (existingUser.id !== requestData.userId) {
+          return NextResponse.json({
+            error: `ไม่สามารถอนุมัติได้: รหัสสมาชิกนี้ถูกเชื่อมกับบัญชี LINE อื่นแล้ว`,
+            conflict: true,
+            existingUser: {
+              lineUserId: existingUser.id,
+              lineDisplayName: existingUserData.lineDisplayName || 'ไม่ระบุชื่อ',
+              verifiedAt: existingUserData.verifiedAt?.toDate?.()?.toISOString() || existingUserData.verifiedAt,
+            }
+          }, { status: 409 });
+        }
+      }
+
       // Update verification request
       await requestRef.update({
         status: 'approved',

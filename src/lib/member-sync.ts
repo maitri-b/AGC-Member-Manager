@@ -38,10 +38,12 @@ export interface SyncOptions {
  */
 export async function syncSingleMemberToFirestore(memberId: string): Promise<SyncResult> {
   try {
+    console.log(`[Sync] Fetching member ${memberId} from Google Sheets...`);
     // Fetch member data from Google Sheets
     const member = await getMemberById(memberId);
 
     if (!member || !member.memberId) {
+      console.error(`[Sync] Member ${memberId} not found in Google Sheets`);
       return {
         success: false,
         memberId,
@@ -49,6 +51,14 @@ export async function syncSingleMemberToFirestore(memberId: string): Promise<Syn
         error: 'Member not found in Google Sheets',
       };
     }
+
+    console.log(`[Sync] Fetched member data:`, {
+      memberId: member.memberId,
+      lineUserId: member.lineUserId,
+      lineDisplayName: member.lineDisplayName,
+      status: member.status,
+      lastUpdated: member.lastUpdated,
+    });
 
     // Get Firestore reference
     const db = adminDb();
@@ -118,13 +128,20 @@ export async function syncSingleMemberToFirestore(memberId: string): Promise<Syn
     // Write to Firestore
     await memberRef.set(memberData, { merge: true });
 
+    console.log(`[Sync] Successfully ${action} member in Firestore:`, {
+      memberId: member.memberId,
+      status: memberData.status,
+      lineUserId: memberData.lineUserId,
+      lineDisplayName: memberData.lineDisplayName,
+    });
+
     return {
       success: true,
       memberId: member.memberId,
       action,
     };
   } catch (error) {
-    console.error(`Error syncing member ${memberId}:`, error);
+    console.error(`[Sync] Error syncing member ${memberId}:`, error);
     return {
       success: false,
       memberId,

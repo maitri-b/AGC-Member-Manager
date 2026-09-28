@@ -554,11 +554,17 @@ export async function sendApplicationApprovedNotification(
     fullName: string;
     companyName: string;
     memberStatus: string;
+    licenseStatus?: string; // เพิ่มฟิลด์สถานะใบอนุญาต
   },
   customTemplate?: string
 ): Promise<boolean> {
   const baseUrl = process.env.NEXTAUTH_URL || 'https://agentsclub.vercel.app';
   const profileLink = `${baseUrl}/profile`;
+
+  // Build license status message conditionally
+  const licenseStatusMessage = applicationData.licenseStatus === 'รอตรวจสอบ'
+    ? '\n\n⚠️ สถานะใบอนุญาต: รอตรวจสอบข้อมูลใบอนุญาตธุรกิจนำเที่ยว'
+    : '';
 
   // Use custom template or default
   const template = customTemplate || `🎉 ยินดีต้อนรับสู่ Agents Club!
@@ -570,14 +576,13 @@ export async function sendApplicationApprovedNotification(
 👤 ข้อมูลสมาชิก
 • รหัสสมาชิก: {{memberId}}
 • ชื่อ: {{fullName}}
-• บริษัท: {{companyName}}
-
-✅ สถานะ: {{memberStatus}}
+• บริษัท: {{companyName}}{{licenseStatusMessage}}
 
 📱 ขั้นตอนถัดไป
-1. ตรวจสอบข้อมูลสมาชิกของคุณ
-2. เข้ากลุ่ม LINE Agents Club (รอคำเชิญ)
-3. เริ่มเข้าร่วมกิจกรรมได้ทันที!
+1. โปรดตรวจสอบข้อมูลสมาชิกของคุณ
+2. เริ่มเข้าร่วมกิจกรรมได้ทันที!
+3. รอคำเชิญเข้ากลุ่ม Line โดยปัจจุบันสมาชิกใน Line กลุ่มเต็ม 500 ท่านแล้ว
+อาจจะใช้เวลารอคิวเข้ากลุ่ม 1-2 เดือน นายทะเบียนของชมรมจะติดต่อคุณ เมื่อถึงคิวที่จะเชิญท่านเข้ากลุ่ม
 
 🔗 ดูข้อมูลสมาชิกของคุณ: {{profileLink}}
 
@@ -592,6 +597,7 @@ Helping & Sharing 💚`;
     fullName: applicationData.fullName,
     companyName: applicationData.companyName,
     memberStatus: applicationData.memberStatus,
+    licenseStatusMessage, // เพิ่ม variable สำหรับสถานะใบอนุญาต
     profileLink,
   };
 

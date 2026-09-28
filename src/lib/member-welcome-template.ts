@@ -10,6 +10,7 @@ export interface MemberWelcomeData {
   licenseNumber: string;
   status: string;
   baseUrl: string;
+  licenseStatus?: string; // สถานะใบอนุญาต
 }
 
 /**
@@ -23,33 +24,36 @@ export function generateWelcomeMessage(data: MemberWelcomeData): string {
     licenseNumber,
     status,
     baseUrl,
+    licenseStatus,
   } = data;
 
-  return `สวัสดีครับ คุณ${memberName}
+  // Build license status message conditionally
+  const licenseStatusMessage = licenseStatus === 'รอตรวจสอบ'
+    ? '\n\n⚠️ สถานะใบอนุญาต: รอตรวจสอบข้อมูลใบอนุญาตธุรกิจนำเที่ยว'
+    : '';
+
+  return `🎉 ยินดีต้อนรับสู่ Agents Club!
+
+สวัสดีครับ คุณ${memberName} 🙏
 บริษัท ${companyName}
 
-ยินดีต้อนรับสู่ Agents Club!
-คำขอสมัครสมาชิกของคุณได้รับการอนุมัติเรียบร้อยแล้ว
+ขอแสดงความยินดี! ใบสมัครสมาชิกของคุณได้รับการอนุมัติแล้ว
 
-📋 รายละเอียดสมาชิก:
+👤 ข้อมูลสมาชิก
 • หมายเลขสมาชิก: ${memberId}
 • บริษัท: ${companyName}
-• ใบอนุญาต: ${licenseNumber}
-• สถานะ: ${status}
+• ใบอนุญาต: ${licenseNumber}${licenseStatusMessage}
 
-คุณสามารถเข้าสู่ระบบเพื่อ:
-✓ ตรวจสอบกิจกรรมของชมรม
-✓ ลงทะเบียนเข้าร่วมกิจกรรมต่างๆ
-✓ อัพเดทข้อมูลส่วนตัว
+📱 ขั้นตอนถัดไป
+1. โปรดตรวจสอบข้อมูลสมาชิกของคุณ
+2. เริ่มเข้าร่วมกิจกรรมได้ทันที!
+3. รอคำเชิญเข้ากลุ่ม Line โดยปัจจุบันสมาชิกใน Line กลุ่มเต็ม 500 ท่านแล้ว
+อาจจะใช้เวลารอคิวเข้ากลุ่ม 1-2 เดือน นายทะเบียนของชมรมจะติดต่อคุณ เมื่อถึงคิวที่จะเชิญท่านเข้ากลุ่ม
 
 🔗 เข้าสู่ระบบ: ${baseUrl}
 
-📌 หมายเหตุ:
-LINE กลุ่ม Agents Club ปัจจุบันมีสมาชิกเต็มแล้ว
-ระบบจะเพิ่มคุณเข้ากลุ่มตาม Waiting List
-เมื่อมีที่ว่างจากสมาชิกเดิมออกจากห้อง
-
-ขอบคุณครับ`;
+ขอบคุณที่เป็นส่วนหนึ่งของครอบครัว Agents Club
+Helping & Sharing 💚`;
 }
 
 /**

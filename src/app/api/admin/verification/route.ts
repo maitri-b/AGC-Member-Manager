@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { requestId, action, rejectionReason } = await request.json();
+    const { requestId, action, rejectionReason, licenseStatus } = await request.json();
 
     if (!requestId || !action) {
       return NextResponse.json({ error: 'Request ID and action are required' }, { status: 400 });
@@ -259,23 +259,48 @@ export async function PUT(request: NextRequest) {
         memberId: requestData.memberId,
         lineUserId,
         lineDisplayName,
+        licenseStatus: licenseStatus || 'รอตรวจสอบ',
         source: requestData.lineDisplayName ? 'request' : (userData?.lineDisplayName ? 'user.lineDisplayName' : 'user.name'),
       });
 
-      // Update Google Sheet with LINE info
-      await updateMember(requestData.memberId, {
+      // Update Google Sheet with LINE info and license status
+      console.log('[Verification Approve] Updating Google Sheets for member:', requestData.memberId);
+      const updateSuccess = await updateMember(requestData.memberId, {
         lineUserId: lineUserId,
         lineDisplayName: lineDisplayName,
+        status: licenseStatus || 'รอตรวจสอบ', // สถานะใบอนุญาต
         lastUpdated: now.toISOString(),
         updatedBy: session.user.name || session.user.id,
       });
 
+      if (!updateSuccess) {
+        console.error('[Verification Approve] Failed to update Google Sheets for member:', requestData.memberId);
+      } else {
+        console.log('[Verification Approve] Google Sheets updated successfully');
+      }
+
       // Phase 1 Migration: Sync updated member to Firestore members collection
+      // Add small delay to ensure Google Sheets API propagation
       try {
-        await syncSingleMemberToFirestore(requestData.memberId);
-        console.log('✅ Member synced to Firestore members collection:', requestData.memberId);
+        console.log('[Verification Approve] Waiting 1 second for Google Sheets propagation...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        console.log('[Verification Approve] Starting sync to Firestore members collection...');
+        const syncResult = await syncSingleMemberToFirestore(requestData.memberId);
+
+        if (syncResult.success) {
+          console.log('✅ [Verification Approve] Member synced to Firestore:', {
+            memberId: requestData.memberId,
+            action: syncResult.action,
+          });
+        } else {
+          console.error('⚠️ [Verification Approve] Sync failed:', {
+            memberId: requestData.memberId,
+            error: syncResult.error,
+          });
+        }
       } catch (error) {
-        console.error('⚠️ Error syncing member to Firestore (non-critical):', error);
+        console.error('⚠️ [Verification Approve] Error syncing member to Firestore (non-critical):', error);
         // Don't fail approval if sync fails - Google Sheets is still source of truth
       }
 
@@ -289,6 +314,7 @@ export async function PUT(request: NextRequest) {
           licenseNumber: memberData?.licenseNumber || '',
           status: 'ปกติ',
           baseUrl: settings.baseUrl,
+          licenseStatus: licenseStatus || 'รอตรวจสอบ', // ส่งสถานะใบอนุญาตไปด้วย
         });
 
         // Send notification via LINE API

@@ -293,6 +293,7 @@ export async function PUT(request: NextRequest) {
                     fullName: applicationData.companyNameTH || '', // This is actually fullName
                     companyName: applicationData.companyNameEN || '',
                     memberStatus: newMember.status || 'รอตรวจสอบ',
+                    licenseStatus: newMember.status || 'รอตรวจสอบ', // เพิ่มสถานะใบอนุญาต
                   },
                   customTemplate
                 );

@@ -56,6 +56,7 @@ export default function AdminVerificationPage() {
   const [sendingLineId, setSendingLineId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sendLineOnAction, setSendLineOnAction] = useState<Record<string, boolean>>({});
+  const [licenseStatus, setLicenseStatus] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -108,6 +109,18 @@ export default function AdminVerificationPage() {
     }));
   };
 
+  // Get license status - default to 'รอตรวจสอบ' if not set
+  const getLicenseStatus = (id: string) => {
+    return licenseStatus[id] || 'รอตรวจสอบ';
+  };
+
+  const toggleLicenseStatus = (id: string) => {
+    setLicenseStatus(prev => ({
+      ...prev,
+      [id]: prev[id] === 'ปกติ' ? 'รอตรวจสอบ' : 'ปกติ',
+    }));
+  };
+
   const handleApprove = async (requestId: string) => {
     if (!confirm('ยืนยันการอนุมัติคำขอนี้?')) return;
 
@@ -116,7 +129,11 @@ export default function AdminVerificationPage() {
       const res = await fetch('/api/admin/verification', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, action: 'approve' }),
+        body: JSON.stringify({
+          requestId,
+          action: 'approve',
+          licenseStatus: getLicenseStatus(requestId),
+        }),
       });
 
       if (res.ok) {
@@ -583,6 +600,35 @@ Helping & Sharing`;
                                 ส่ง LINE แจ้งผล{request.status === 'approved' ? ' + Profile' : ''}
                               </>
                             )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* License Status Section - Only show for pending requests */}
+                    {request.status === 'pending' && (
+                      <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-sm font-semibold text-amber-800 mb-1 flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              สถานะใบอนุญาต
+                            </h4>
+                            <p className="text-xs text-amber-600">
+                              กำหนดสถานะใบอนุญาตที่จะบันทึกเมื่ออนุมัติคำขอ
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => toggleLicenseStatus(request.id)}
+                            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                              getLicenseStatus(request.id) === 'ปกติ'
+                                ? 'bg-green-600 text-white hover:bg-green-700'
+                                : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                            }`}
+                          >
+                            {getLicenseStatus(request.id)}
                           </button>
                         </div>
                       </div>

@@ -153,24 +153,45 @@ export async function PUT(request: NextRequest) {
       // This prevents approving duplicate verifications for the same member
       const usersWithMemberId = await db.collection('users')
         .where('memberId', '==', requestData.memberId)
-        .where('verificationStatus', '==', 'verified')
         .get();
 
-      if (!usersWithMemberId.empty) {
-        const existingUser = usersWithMemberId.docs[0];
-        const existingUserData = existingUser.data();
+      // Filter for verified users with this memberId
+      const verifiedUsers = usersWithMemberId.docs.filter(doc =>
+        doc.data().verificationStatus === 'verified'
+      );
 
-        // Only block if it's a DIFFERENT user
-        if (existingUser.id !== requestData.userId) {
-          return NextResponse.json({
-            error: `ไม่สามารถอนุมัติได้: รหัสสมาชิกนี้ถูกเชื่อมกับบัญชี LINE อื่นแล้ว`,
-            conflict: true,
-            existingUser: {
-              lineUserId: existingUser.id,
-              lineDisplayName: existingUserData.lineDisplayName || 'ไม่ระบุชื่อ',
-              verifiedAt: existingUserData.verifiedAt?.toDate?.()?.toISOString() || existingUserData.verifiedAt,
-            }
-          }, { status: 409 });
+      if (verifiedUsers.length > 0) {
+        // Check if any of them is a DIFFERENT user than the one being approved
+        const otherVerifiedUsers = verifiedUsers.filter(doc => doc.id !== requestData.userId);
+
+        if (otherVerifiedUsers.length > 0) {
+          // ✅ NEW: Deactivate old users instead of blocking approval
+          // This handles the case where sync created duplicate users
+          console.log(`[Verification Approve] Found ${otherVerifiedUsers.length} old user(s) with same memberId. Deactivating...`);
+
+          const deactivatePromises = otherVerifiedUsers.map(async (userDoc) => {
+            const userData = userDoc.data();
+            console.log(`[Verification Approve] Deactivating old user:`, {
+              lineUserId: userDoc.id,
+              lineDisplayName: userData.lineDisplayName,
+              memberId: requestData.memberId,
+            });
+
+            // Deactivate old user and remove memberId link
+            await userDoc.ref.update({
+              isActive: false,
+              memberId: null, // ✅ Clear memberId to prevent future conflicts
+              verificationStatus: 'unverified',
+              deactivatedAt: now,
+              deactivatedBy: session.user.id,
+              deactivatedReason: `รหัสสมาชิกถูกเชื่อมกับบัญชี LINE อื่นแล้ว (${requestData.lineDisplayName || 'ไม่ระบุชื่อ'})`,
+              updatedAt: now,
+            });
+          });
+
+          await Promise.all(deactivatePromises);
+
+          console.log(`[Verification Approve] Successfully deactivated ${otherVerifiedUsers.length} old user(s)`);
         }
       }
 

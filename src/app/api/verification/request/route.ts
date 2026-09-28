@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     const db = adminDb();
 
-    // ✅ CRITICAL: Check if any OTHER user already verified with this memberId in Firestore
+    // ✅ CRITICAL: Check if any OTHER ACTIVE user already verified with this memberId in Firestore
     // This prevents multiple LINE accounts from linking to the same member ID
     const existingVerified = await db.collection('users')
       .where('memberId', '==', memberId)
@@ -44,10 +44,17 @@ export async function POST(request: NextRequest) {
       .get();
 
     if (!existingVerified.empty) {
-      // Check if it's not the current user (allow re-verification for same user)
-      const alreadyLinkedUser = existingVerified.docs[0];
-      if (alreadyLinkedUser.id !== session.user.id) {
-        const linkedUserData = alreadyLinkedUser.data();
+      // Filter for active users only (ignore deactivated accounts)
+      const activeVerifiedUsers = existingVerified.docs.filter(doc => {
+        const data = doc.data();
+        return data.isActive !== false; // Consider missing isActive field as active (backward compatibility)
+      });
+
+      // Check if any active user is DIFFERENT from current user
+      const otherActiveUser = activeVerifiedUsers.find(doc => doc.id !== session.user.id);
+
+      if (otherActiveUser) {
+        const linkedUserData = otherActiveUser.data();
         return NextResponse.json({
           error: `รหัสสมาชิกนี้ถูกเชื่อมกับบัญชี LINE อื่นแล้ว (${linkedUserData.lineDisplayName || 'ไม่ระบุชื่อ'})`,
           alreadyLinked: true,

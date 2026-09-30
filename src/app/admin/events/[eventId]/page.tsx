@@ -2273,9 +2273,13 @@ export default function EventDetailPage() {
     setActionMessage(null);
 
     try {
+      // ✅ CRITICAL FIX: Trim attendeeNames to match attendeeCount
+      // This prevents showing hidden names (e.g., showing name C when count is reduced from 3 to 2)
+      const trimmedNames = editFormData.attendeeNames.slice(0, editFormData.attendeeCount);
+
       const updateData: any = {
         attendee_count: editFormData.attendeeCount,
-        attendee_names: editFormData.attendeeNames, // Send as array, not JSON string
+        attendee_names: trimmedNames, // Send trimmed array matching attendeeCount
         status: editFormData.status,
       };
 
@@ -5041,6 +5045,34 @@ export default function EventDetailPage() {
                             console.error('Error parsing attendee types:', e);
                           }
                           return null;
+                        })()}
+
+                        {/* Attendee Names Display - Show disabled inputs */}
+                        {attendee.registration.attendeeCount > 0 && (() => {
+                          const names = parseAttendeeNames(attendee.registration.attendeeNames);
+                          const attendeeCount = attendee.registration.attendeeCount;
+
+                          return (
+                            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                              <p className="text-xs font-semibold text-purple-900 mb-2">รายชื่อผู้เข้าร่วม:</p>
+                              <div className="space-y-2">
+                                {Array.from({ length: attendeeCount }).map((_, index) => (
+                                  <div key={index}>
+                                    <label className="block text-xs text-gray-600 mb-1">
+                                      {index + 1}. ชื่อผู้เข้าร่วม
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={names[index] || ''}
+                                      disabled
+                                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded bg-gray-100 text-gray-700 cursor-not-allowed"
+                                      placeholder="ไม่ระบุชื่อ"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
                         })()}
 
                         {/* Room Allocations Display */}

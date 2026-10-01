@@ -178,7 +178,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { applicationId, status, documentStatus, rejectionReason, notes } = body;
+    const { applicationId, status, documentStatus, rejectionReason, notes, licenseStatus } = body;
 
     if (!applicationId) {
       return NextResponse.json({ error: 'Application ID is required' }, { status: 400 });
@@ -233,7 +233,7 @@ export async function PUT(request: NextRequest) {
             licenseExpiry: '', // License expiry date - will be updated later by admin
             positionCompany: applicationData?.positionCompany || '',
             positionClub: '', // New member, no club position yet
-            status: 'รอตรวจสอบ', // Pending verification via skycrbber
+            status: licenseStatus || 'รอตรวจสอบ', // License status from toggle (default: รอตรวจสอบ)
             sponsor1: applicationData?.sponsor1 || '',
             sponsor2: applicationData?.sponsor2 || '',
             lineGroupStatus: 'รอนำเข้ากลุ่ม',
@@ -293,7 +293,7 @@ export async function PUT(request: NextRequest) {
                     fullName: applicationData.companyNameTH || '', // This is actually fullName
                     companyName: applicationData.companyNameEN || '',
                     memberStatus: newMember.status || 'รอตรวจสอบ',
-                    licenseStatus: newMember.status || 'รอตรวจสอบ', // เพิ่มสถานะใบอนุญาต
+                    licenseStatus: licenseStatus || 'รอตรวจสอบ', // สถานะใบอนุญาตจาก toggle
                   },
                   customTemplate
                 );

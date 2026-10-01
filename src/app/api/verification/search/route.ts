@@ -91,6 +91,14 @@ export async function POST(request: NextRequest) {
       return memberLicense === normalizedLicense;
     });
 
+    // ✅ DEBUG: Log matched members to identify duplicate data in Google Sheets
+    if (matchedMembers.length > 0) {
+      console.log(`[Verification Search] Found ${matchedMembers.length} member(s) with license: ${licenseNumber}`);
+      matchedMembers.forEach((m, index) => {
+        console.log(`  [${index + 1}] Member ID: ${m.memberId}, Company: ${m.companyNameEN || m.companyNameTH}, License: ${m.licenseNumber}`);
+      });
+    }
+
     // Calculate remaining attempts for response
     const remainingAttemptsForError = MAX_SEARCH_ATTEMPTS - (currentSearchCount + 1);
 
@@ -103,6 +111,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (matchedMembers.length > 1) {
+      // ⚠️ CRITICAL: Multiple members found - this indicates duplicate data in Google Sheets
+      console.warn(`[Verification Search] ⚠️ DUPLICATE DATA: Found ${matchedMembers.length} members with same license number!`);
+      console.warn(`  License Number: ${licenseNumber}`);
+      console.warn(`  Matched Member IDs: ${matchedMembers.map(m => m.memberId).join(', ')}`);
+      console.warn(`  User: ${session.user.name} (${userId})`);
+
       return NextResponse.json({
         found: false,
         multiple: true,

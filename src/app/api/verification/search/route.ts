@@ -80,15 +80,15 @@ export async function POST(request: NextRequest) {
     const members = await getAllMembers();
 
     // Search by license number only
-    const normalizedLicense = licenseNumber.trim().replace(/\s+/g, '');
+    // ✅ FIX: Use exact match only to prevent false positives
+    // Example issue: "11/00763" was matching "11/007631", "311/00763", etc.
+    const normalizedLicense = licenseNumber.trim().replace(/\s+/g, '').toLowerCase();
 
     const matchedMembers = members.filter(member => {
-      const memberLicense = (member.licenseNumber || '').trim().replace(/\s+/g, '');
+      const memberLicense = (member.licenseNumber || '').trim().replace(/\s+/g, '').toLowerCase();
 
-      // Check license number match (exact or partial)
-      return memberLicense === normalizedLicense ||
-             memberLicense.includes(normalizedLicense) ||
-             normalizedLicense.includes(memberLicense);
+      // Check license number match (EXACT match only)
+      return memberLicense === normalizedLicense;
     });
 
     // Calculate remaining attempts for response

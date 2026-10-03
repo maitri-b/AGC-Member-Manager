@@ -1444,7 +1444,7 @@ export default function EventDetailPage() {
         const baseData: Record<string, any> = {
           'รหัสลงทะเบียน': attendee.registration.registrationId,
           'ชื่อบริษัท': attendee.registration.companyName || attendee.member?.companyNameTH || '',
-          'ผู้ติดต่อ': attendee.registration.contactName || attendee.member?.fullNameTH || attendee.lineProfile?.lineDisplayName || '',
+          'ผู้ติดต่อ': attendee.member?.fullNameTH || attendee.registration.contactName || attendee.lineProfile?.lineDisplayName || '',
           'เบอร์โทร': attendee.registration.contactPhone || '',
           'ชื่อไลน์': attendee.lineProfile?.lineDisplayName || '',
           'จำนวนผู้เข้าร่วม': attendeeCount,
@@ -2051,7 +2051,7 @@ export default function EventDetailPage() {
       const listText = filteredAttendees.map((attendee, index) => {
         const companyName = attendee.registration.companyName || attendee.member?.companyNameTH || 'ไม่ระบุบริษัท';
         const attendeeCount = attendee.registration.attendeeCount || 1;
-        const contactName = attendee.registration.contactName || attendee.member?.fullNameTH || attendee.lineProfile?.lineDisplayName || '';
+        const contactName = attendee.member?.fullNameTH || attendee.registration.contactName || attendee.lineProfile?.lineDisplayName || '';
         const phone = attendee.registration.contactPhone || '';
 
         return `${index + 1}. ${companyName} (${attendeeCount} คน) ติดต่อ ${contactName}${phone ? ' โทร ' + phone : ''}`;
@@ -4576,16 +4576,16 @@ export default function EventDetailPage() {
                             className="font-medium text-blue-600 hover:text-blue-800 hover:underline break-words transition-colors"
                             title="จัดการชื่อ (เปิดในแท็บใหม่)"
                           >
-                            {attendee.lineProfile?.lineDisplayName ||
-                             attendee.member?.fullNameTH ||
+                            {attendee.member?.fullNameTH ||
                              attendee.registration.contactName ||
+                             attendee.lineProfile?.lineDisplayName ||
                              'ไม่ระบุชื่อ'}
                           </Link>
                         ) : (
                           <h3 className="font-medium text-gray-900 break-words">
-                            {attendee.lineProfile?.lineDisplayName ||
-                             attendee.member?.fullNameTH ||
+                            {attendee.member?.fullNameTH ||
                              attendee.registration.contactName ||
+                             attendee.lineProfile?.lineDisplayName ||
                              'ไม่ระบุชื่อ'}
                           </h3>
                         )}
@@ -4869,9 +4869,9 @@ export default function EventDetailPage() {
                           <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                             <p className="text-xs font-semibold text-gray-900 mb-2">ข้อมูลผู้ติดต่อ:</p>
                             <div className="space-y-1">
-                              {attendee.registration.contactName && (
+                              {(attendee.member?.fullNameTH || attendee.registration.contactName) && (
                                 <div className="text-xs text-gray-700">
-                                  <span className="font-medium">ชื่อ:</span> {attendee.registration.contactName}
+                                  <span className="font-medium">ชื่อ:</span> {attendee.member?.fullNameTH || attendee.registration.contactName}
                                 </div>
                               )}
                               {attendee.registration.contactPhone && (

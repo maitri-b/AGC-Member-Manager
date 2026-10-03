@@ -367,9 +367,6 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
   const eventsAttended: EventAttendanceRecord[] = [];
   let eventsThisYear = 0;
   let eventsLast12Months = 0;
-  let lastEventName = '';
-  let lastEventDate = '';
-  let lastEventParsedDate: Date | null = null;
 
   const events = await getTrackedEventsFromFirestore();
 
@@ -419,14 +416,6 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
       if (withinLast12) {
         eventsLast12Months++;
       }
-
-      // Track last event (find the most recent one by date)
-      const eventParsedDate = parseEventDate(event.eventDate);
-      if (eventParsedDate && (!lastEventParsedDate || eventParsedDate > lastEventParsedDate)) {
-        lastEventName = record.eventName;
-        lastEventDate = event.eventDate;
-        lastEventParsedDate = eventParsedDate;
-      }
     }
   }
 
@@ -442,6 +431,12 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
     return dateB.getTime() - dateA.getTime();
   });
 
+  // ✅ FIX: Get last attended event from sorted array (most recent event member actually attended)
+  // This is more accurate than tracking during loop, as it uses the confirmed registrations
+  const latestEvent = eventsAttended[0]; // First item after sorting by date (newest first)
+  const lastAttendedEvent = latestEvent?.eventName || '';
+  const lastAttendedDate = latestEvent?.eventDate || '';
+
   return {
     memberId: member.memberId,
     memberName: member.fullNameTH || member.nickname || '',
@@ -450,8 +445,8 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
     eventsAttended,
     totalEventsThisYear: eventsThisYear,
     eventsLast12Months,
-    lastAttendedEvent: lastEventName,
-    lastAttendedDate: lastEventDate,
+    lastAttendedEvent,
+    lastAttendedDate,
     noActivityWarning: eventsLast12Months === 0,
   };
 }

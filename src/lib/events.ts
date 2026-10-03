@@ -377,9 +377,21 @@ export async function getMemberAttendanceSummary(memberId: string): Promise<Memb
       continue;
     }
 
-    // Check if confirmed/attended - include Thai status values
+    // Check if registration is cancelled first (hide cancelled registrations)
     const status = record.registration.status || '';
     const statusLower = status.toLowerCase();
+    const isCancelled =
+      statusLower === 'cancelled' ||
+      statusLower === 'canceled' ||
+      status.includes('ยกเลิก');
+
+    // Skip cancelled registrations - don't show them in member event history
+    if (isCancelled) {
+      console.log(`getMemberAttendanceSummary: Event "${event.eventName}" - CANCELLED, skipping`);
+      continue;
+    }
+
+    // Check if confirmed/attended - include Thai status values
     const isConfirmed =
       statusLower === 'confirmed' ||
       statusLower === 'attended' ||

@@ -787,6 +787,10 @@ export default function EventDetailPage() {
   const [showPartyTableManagementModal, setShowPartyTableManagementModal] = useState(false);
   const [showEventSummaryQRModal, setShowEventSummaryQRModal] = useState(false);
   const [showCarNumberAssignmentModal, setShowCarNumberAssignmentModal] = useState(false);
+  // Sort modal for Excel export
+  const [showSortModal, setShowSortModal] = useState(false);
+  const [sortField, setSortField] = useState<'companyTH' | 'companyEN' | 'registrationId' | 'contactName'>('companyTH');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   // Carpool detail modal state
   const [showCarpoolDetailModal, setShowCarpoolDetailModal] = useState(false);
   const [selectedCarpoolRegistration, setSelectedCarpoolRegistration] = useState<{
@@ -1366,13 +1370,55 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleExportExcel = async () => {
+  const handleExportExcel = () => {
+    if (!eventData) return;
+    // Show sort modal first
+    setShowSortModal(true);
+  };
+
+  const handleConfirmExport = async () => {
     if (!eventData) return;
 
+    setShowSortModal(false);
     setExportLoading(true);
     setActionMessage(null);
 
     try {
+      // Sort filteredAttendees based on selected field and order
+      const sortedAttendees = [...filteredAttendees].sort((a, b) => {
+        let valueA: string | number = '';
+        let valueB: string | number = '';
+
+        switch (sortField) {
+          case 'companyTH':
+            valueA = a.registration.companyName || a.member?.companyNameTH || '';
+            valueB = b.registration.companyName || b.member?.companyNameTH || '';
+            break;
+          case 'companyEN':
+            valueA = a.member?.companyNameEN || '';
+            valueB = b.member?.companyNameEN || '';
+            break;
+          case 'registrationId':
+            valueA = a.registration.registrationId || '';
+            valueB = b.registration.registrationId || '';
+            break;
+          case 'contactName':
+            valueA = a.member?.fullNameTH || a.registration.contactName || a.lineProfile?.lineDisplayName || '';
+            valueB = b.member?.fullNameTH || b.registration.contactName || b.lineProfile?.lineDisplayName || '';
+            break;
+        }
+
+        // Handle string comparison
+        if (typeof valueA === 'string' && typeof valueB === 'string') {
+          const comparison = valueA.localeCompare(valueB, 'th');
+          return sortOrder === 'asc' ? comparison : -comparison;
+        }
+
+        // Handle numeric comparison (shouldn't happen with current fields but keep for safety)
+        return sortOrder === 'asc' ? (valueA > valueB ? 1 : -1) : (valueA < valueB ? 1 : -1);
+      });
+
+      // Use sortedAttendees instead of filteredAttendees for all export operations
       // Get all room types from event configuration
       const roomTypes = eventData.event.roomTypes || [];
       const sortedRoomTypes = [...roomTypes].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
@@ -1380,7 +1426,7 @@ export default function EventDetailPage() {
       // Prepare data for export - separate row per attendee
       const exportData: Record<string, any>[] = [];
 
-      filteredAttendees.forEach((attendee) => {
+      sortedAttendees.forEach((attendee) => {
         // Parse attendee names
         let attendeeNamesList = parseAttendeeNames(attendee.registration.attendeeNames);
 
@@ -1506,7 +1552,7 @@ export default function EventDetailPage() {
       let totalAmount = 0;
       let totalApprovedAmount = 0;
 
-      filteredAttendees.forEach((attendee) => {
+      sortedAttendees.forEach((attendee) => {
         const reg = attendee.registration;
         totalAttendees += reg.attendeeCount || 0;
         totalAmount += reg.totalAmount || 0;
@@ -1596,7 +1642,7 @@ export default function EventDetailPage() {
       const totalMergeColumns = baseColumns + roomColumns + otherColumns;
       const totalColumns = totalMergeColumns + 2; // +2 for ลำดับ and ชื่อ
 
-      filteredAttendees.forEach((attendee) => {
+      sortedAttendees.forEach((attendee) => {
         let attendeeNamesList = parseAttendeeNames(attendee.registration.attendeeNames);
 
         const attendeeCount = attendee.registration.attendeeCount || 1;
@@ -1847,7 +1893,7 @@ export default function EventDetailPage() {
       let summaryTotalDiscount = 0;
       let summaryTotalApproved = 0;
 
-      filteredAttendees.forEach((attendee) => {
+      sortedAttendees.forEach((attendee) => {
         const reg = attendee.registration;
         const attendeeCount = reg.attendeeCount || 0;
         const totalAmount = reg.totalAmount || 0;
@@ -2018,7 +2064,7 @@ export default function EventDetailPage() {
       // Create Lucky Draw data - one row per attendee (no merging)
       const luckyDrawData: Record<string, any>[] = [];
 
-      filteredAttendees.forEach((attendee) => {
+      sortedAttendees.forEach((attendee) => {
         // Parse attendee names
         let attendeeNamesList = parseAttendeeNames(attendee.registration.attendeeNames);
 
@@ -7253,6 +7299,117 @@ export default function EventDetailPage() {
         eventId={eventId as string}
         eventName={eventData?.event?.eventName || ''}
       />
+
+      {/* Export Sort Order Modal */}
+      {showSortModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4">เรียงลำดับข้อมูลในไฟล์ Excel</h3>
+
+              {/* Sort Field Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  เรียงตาม:
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="sortField"
+                      value="companyTH"
+                      checked={sortField === 'companyTH'}
+                      onChange={(e) => setSortField(e.target.value as 'companyTH' | 'companyEN' | 'registrationId' | 'contactName')}
+                      className="mr-2"
+                    />
+                    <span>ชื่อบริษัทภาษาไทย</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="sortField"
+                      value="companyEN"
+                      checked={sortField === 'companyEN'}
+                      onChange={(e) => setSortField(e.target.value as 'companyTH' | 'companyEN' | 'registrationId' | 'contactName')}
+                      className="mr-2"
+                    />
+                    <span>ชื่อบริษัทภาษาอังกฤษ</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="sortField"
+                      value="registrationId"
+                      checked={sortField === 'registrationId'}
+                      onChange={(e) => setSortField(e.target.value as 'companyTH' | 'companyEN' | 'registrationId' | 'contactName')}
+                      className="mr-2"
+                    />
+                    <span>รหัสการลงทะเบียน</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="sortField"
+                      value="contactName"
+                      checked={sortField === 'contactName'}
+                      onChange={(e) => setSortField(e.target.value as 'companyTH' | 'companyEN' | 'registrationId' | 'contactName')}
+                      className="mr-2"
+                    />
+                    <span>ชื่อผู้ติดต่อ</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Sort Order Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  ลำดับ:
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="sortOrder"
+                      value="asc"
+                      checked={sortOrder === 'asc'}
+                      onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                      className="mr-2"
+                    />
+                    <span>น้อยไปมาก (A-Z)</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="sortOrder"
+                      value="desc"
+                      checked={sortOrder === 'desc'}
+                      onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                      className="mr-2"
+                    />
+                    <span>มากไปน้อย (Z-A)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowSortModal(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  onClick={handleConfirmExport}
+                  className="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700"
+                >
+                  Export Excel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin Cancellation Modal (NEW) */}
       {showAdminCancellationModal && selectedRegistrationForCancellation && selectedEventForCancellation && (

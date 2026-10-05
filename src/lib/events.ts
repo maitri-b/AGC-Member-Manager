@@ -504,6 +504,7 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
       memberId: string;
       fullNameTH: string;
       companyNameTH: string;
+      companyNameEN?: string;
     } | null;
   }[];
 }> {
@@ -568,6 +569,7 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
       memberId: string;
       fullNameTH: string;
       companyNameTH: string;
+      companyNameEN?: string;
     } | null;
   }[] = [];
 
@@ -587,6 +589,7 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
         memberId: member.memberId,
         fullNameTH: member.fullNameTH,
         companyNameTH: member.companyNameTH,
+        companyNameEN: member.companyNameEN,
       } : null,
     });
 
@@ -610,6 +613,7 @@ export async function getEventAttendanceSummary(eventId: string): Promise<{
         memberId: member.memberId,
         fullNameTH: member.fullNameTH,
         companyNameTH: member.companyNameTH,
+        companyNameEN: member.companyNameEN,
       } : null,
     });
   }

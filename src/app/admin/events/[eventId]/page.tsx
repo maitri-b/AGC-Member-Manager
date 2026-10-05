@@ -135,6 +135,7 @@ interface Attendee {
     memberId: string;
     fullNameTH: string;
     companyNameTH: string;
+    companyNameEN?: string;
   } | null;
   lineProfile: {
     lineDisplayName: string;

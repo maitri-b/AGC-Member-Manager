@@ -2014,6 +2014,95 @@ export default function EventDetailPage() {
 
       XLSX.utils.book_append_sheet(wb, paymentSummaryWs, 'สรุปรายการชำระเงิน');
 
+      // === Lucky Draw Worksheet ===
+      // Create Lucky Draw data - one row per attendee (no merging)
+      const luckyDrawData: Record<string, any>[] = [];
+
+      filteredAttendees.forEach((attendee) => {
+        // Parse attendee names
+        let attendeeNamesList = parseAttendeeNames(attendee.registration.attendeeNames);
+
+        // If no names, create empty slots based on attendeeCount
+        const attendeeCount = attendee.registration.attendeeCount || 1;
+        if (attendeeNamesList.length === 0) {
+          attendeeNamesList = Array(attendeeCount).fill('ไม่ระบุชื่อ');
+        }
+
+        // Create one row per attendee name
+        attendeeNamesList.forEach((attendeeName) => {
+          luckyDrawData.push({
+            'รหัสลงทะเบียน': attendee.registration.registrationId,
+            'ชื่อบริษัท (EN)': attendee.member?.companyNameEN || '',
+            'ชื่อบริษัท (TH)': attendee.registration.companyName || attendee.member?.companyNameTH || '',
+            'ผู้ติดต่อ': attendee.member?.fullNameTH || attendee.registration.contactName || attendee.lineProfile?.lineDisplayName || '',
+            'เบอร์โทร': attendee.registration.contactPhone || '',
+            'ชื่อผู้เข้าร่วม': attendeeName || 'ไม่ระบุชื่อ',
+          });
+        });
+      });
+
+      // Create Lucky Draw worksheet
+      const luckyDrawWs = XLSX.utils.json_to_sheet(luckyDrawData);
+
+      // Set column widths for Lucky Draw worksheet
+      luckyDrawWs['!cols'] = [
+        { wch: 18 }, // รหัสลงทะเบียน
+        { wch: 35 }, // ชื่อบริษัท (EN)
+        { wch: 35 }, // ชื่อบริษัท (TH)
+        { wch: 25 }, // ผู้ติดต่อ
+        { wch: 15 }, // เบอร์โทร
+        { wch: 30 }, // ชื่อผู้เข้าร่วม
+      ];
+
+      // Style header row for Lucky Draw worksheet
+      const luckyDrawHeaderRow = 0;
+      const luckyDrawColumns = 6; // Number of columns
+      for (let col = 0; col < luckyDrawColumns; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: luckyDrawHeaderRow, c: col });
+        if (!luckyDrawWs[cellAddress]) continue;
+
+        luckyDrawWs[cellAddress].s = {
+          fill: { fgColor: { rgb: 'F59E0B' } }, // Amber/Gold background for lucky draw
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          border: {
+            top: { style: 'medium', color: { rgb: 'D97706' } },
+            bottom: { style: 'medium', color: { rgb: 'D97706' } },
+            left: { style: 'thin', color: { rgb: 'F59E0B' } },
+            right: { style: 'thin', color: { rgb: 'F59E0B' } },
+          },
+          alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+        };
+      }
+
+      // Style data rows - alternating colors for better readability
+      luckyDrawData.forEach((_, rowIdx) => {
+        const dataRow = rowIdx + 1; // +1 because row 0 is header
+        const isEven = rowIdx % 2 === 0;
+        const bgColor = isEven ? 'FEF3C7' : 'FFFBEB'; // Light amber alternating
+
+        for (let col = 0; col < luckyDrawColumns; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: dataRow, c: col });
+          if (!luckyDrawWs[cellAddress]) luckyDrawWs[cellAddress] = { t: 's', v: '' };
+
+          luckyDrawWs[cellAddress].s = {
+            fill: { fgColor: { rgb: bgColor } },
+            border: {
+              top: { style: 'thin', color: { rgb: 'E5E7EB' } },
+              bottom: { style: 'thin', color: { rgb: 'E5E7EB' } },
+              left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+              right: { style: 'thin', color: { rgb: 'D1D5DB' } },
+            },
+            alignment: {
+              vertical: 'center',
+              horizontal: 'left',
+              wrapText: true,
+            },
+          };
+        }
+      });
+
+      XLSX.utils.book_append_sheet(wb, luckyDrawWs, 'Lucky Draw');
+
       // Generate filename with Thai date format
       const filename = `${eventData.event.eventName}_${formatThaiDateTime(new Date())}.xlsx`;
 

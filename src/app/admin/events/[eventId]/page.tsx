@@ -1444,6 +1444,7 @@ export default function EventDetailPage() {
         const baseData: Record<string, any> = {
           'รหัสลงทะเบียน': attendee.registration.registrationId,
           'ชื่อบริษัท': attendee.registration.companyName || attendee.member?.companyNameTH || '',
+          'ชื่อบริษัท (EN)': attendee.member?.companyNameEN || '',
           'ผู้ติดต่อ': attendee.member?.fullNameTH || attendee.registration.contactName || attendee.lineProfile?.lineDisplayName || '',
           'เบอร์โทร': attendee.registration.contactPhone || '',
           'ชื่อไลน์': attendee.lineProfile?.lineDisplayName || '',
@@ -1486,6 +1487,7 @@ export default function EventDetailPage() {
       const summaryTotals: Record<string, any> = {
         'รหัสลงทะเบียน': 'สรุปรวม',
         'ชื่อบริษัท': '',
+        'ชื่อบริษัท (EN)': '',
         'ผู้ติดต่อ': '',
         'เบอร์โทร': '',
         'ชื่อไลน์': '',
@@ -1587,7 +1589,7 @@ export default function EventDetailPage() {
       let registrationIndex = 0;
 
       // Calculate total columns
-      const baseColumns = 6; // รหัส, บริษัท, ผู้ติดต่อ, เบอร์, ไลน์, จำนวน
+      const baseColumns = 7; // รหัส, บริษัท, บริษัท(EN), ผู้ติดต่อ, เบอร์, ไลน์, จำนวน
       const roomColumns = sortedRoomTypes.length;
       const otherColumns = 7; // ค่าห้อง, สถานะ, สถานะชำระ, ยอดรวม, อนุมัติ, ความต้องการ, ค่าเสริม
       const totalMergeColumns = baseColumns + roomColumns + otherColumns;
@@ -1691,6 +1693,7 @@ export default function EventDetailPage() {
       const colWidths = [
         { wch: 18 }, // รหัสลงทะเบียน
         { wch: 35 }, // ชื่อบริษัท
+        { wch: 35 }, // ชื่อบริษัท (EN)
         { wch: 25 }, // ผู้ติดต่อ
         { wch: 15 }, // เบอร์โทร
         { wch: 20 }, // ชื่อไลน์

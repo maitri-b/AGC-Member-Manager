@@ -4719,6 +4719,9 @@ export default function EventDetailPage() {
                              attendee.registration.contactName ||
                              attendee.lineProfile?.lineDisplayName ||
                              'ไม่ระบุชื่อ'}
+                            {attendee.lineProfile?.lineDisplayName && (attendee.member?.fullNameTH || attendee.registration.contactName) && (
+                              <span className="text-gray-500 font-normal"> ({attendee.lineProfile.lineDisplayName})</span>
+                            )}
                           </Link>
                         ) : (
                           <h3 className="font-medium text-gray-900 break-words">
@@ -4726,6 +4729,9 @@ export default function EventDetailPage() {
                              attendee.registration.contactName ||
                              attendee.lineProfile?.lineDisplayName ||
                              'ไม่ระบุชื่อ'}
+                            {attendee.lineProfile?.lineDisplayName && (attendee.member?.fullNameTH || attendee.registration.contactName) && (
+                              <span className="text-gray-500 font-normal"> ({attendee.lineProfile.lineDisplayName})</span>
+                            )}
                           </h3>
                         )}
 
@@ -5011,6 +5017,9 @@ export default function EventDetailPage() {
                               {(attendee.member?.fullNameTH || attendee.registration.contactName) && (
                                 <div className="text-xs text-gray-700">
                                   <span className="font-medium">ชื่อ:</span> {attendee.member?.fullNameTH || attendee.registration.contactName}
+                                  {attendee.lineProfile?.lineDisplayName && (attendee.member?.fullNameTH || attendee.registration.contactName) && (
+                                    <span className="text-gray-500"> ({attendee.lineProfile.lineDisplayName})</span>
+                                  )}
                                 </div>
                               )}
                               {attendee.registration.contactPhone && (

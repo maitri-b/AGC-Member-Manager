@@ -2,6 +2,7 @@
 import { Member, formatThaiDate as formatMemberThaiDate } from '@/types/member';
 
 const LINE_MESSAGING_API = 'https://api.line.me/v2/bot/message/push';
+// Use existing LINE_CHANNEL_ACCESS_TOKEN (already configured for Messaging API)
 const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
 interface FlexMessage {

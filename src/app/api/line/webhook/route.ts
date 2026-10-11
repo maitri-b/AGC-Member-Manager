@@ -10,9 +10,10 @@ import { adminDb } from '@/lib/firebase-admin';
 
 // Verify LINE signature
 function verifySignature(body: string, signature: string): boolean {
-  const channelSecret = process.env.LINE_CHANNEL_SECRET;
+  // Use LINE Messaging API Channel Secret (not LINE Login)
+  const channelSecret = process.env.LINE_MESSAGING_CHANNEL_SECRET || process.env.LINE_CHANNEL_SECRET;
   if (!channelSecret) {
-    console.error('LINE_CHANNEL_SECRET not configured');
+    console.error('LINE_MESSAGING_CHANNEL_SECRET not configured');
     return false;
   }
 

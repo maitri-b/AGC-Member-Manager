@@ -158,10 +158,25 @@ https://your-domain.com/api/line/webhook
 ### 3. Environment Variables
 ตั้งค่าใน `.env.local`:
 
+**สำคัญ**: ถ้าคุณมี LINE Login และ LINE Messaging API แยกเป็น 2 Channels
+
+#### ตัวแปรที่ต้องมี:
 ```bash
-LINE_CHANNEL_SECRET=your_channel_secret_here
-LINE_CHANNEL_ACCESS_TOKEN=your_access_token_here
+# LINE Messaging API - Channel Secret (สำหรับ verify webhook signature)
+LINE_MESSAGING_CHANNEL_SECRET=your_messaging_channel_secret
+
+# LINE Messaging API - Access Token (สำหรับส่งข้อความ)
+LINE_CHANNEL_ACCESS_TOKEN=your_messaging_access_token
+
+# LINE Login - Channel ID & Secret (สำหรับ login)
+LINE_CHANNEL_ID=your_login_channel_id
+LINE_CHANNEL_SECRET=your_login_channel_secret
 ```
+
+**หมายเหตุ**:
+- `LINE_MESSAGING_CHANNEL_SECRET` ใช้สำหรับ verify webhook signature (ต้องเป็นของ Messaging API Channel)
+- `LINE_CHANNEL_SECRET` ใช้สำหรับ LINE Login (อาจเป็นค่าคนละอันกับ Messaging)
+- `LINE_CHANNEL_ACCESS_TOKEN` ใช้สำหรับส่งข้อความ (Messaging API)
 
 ## วิธีหา Group ID
 
@@ -246,10 +261,12 @@ await sendLineNotification(groupId, {
 3. ลองส่งข้อความในกลุ่มอีกครั้ง
 4. ตรวจสอบ logs ที่ Vercel/Server
 
-### Webhook Signature Invalid
-1. ตรวจสอบว่า `LINE_CHANNEL_SECRET` ถูกต้อง
-2. ตรวจสอบว่า environment variable ตั้งค่าครบ
-3. ทดสอบด้วย LINE Webhook Tester
+### Webhook Signature Invalid (401 Unauthorized)
+1. ตรวจสอบว่าใช้ `LINE_MESSAGING_CHANNEL_SECRET` จาก **Messaging API Channel** (ไม่ใช่ LINE Login Channel)
+2. ตรวจสอบว่า environment variable ตั้งค่าครบใน Vercel/Server
+3. ถ้ามี 2 Channels แยกกัน (Login + Messaging) ต้องใช้ Secret ของ Messaging API Channel
+4. Redeploy หลังจากเปลี่ยน environment variables
+5. ทดสอบด้วย LINE Webhook Tester
 
 ### Bot ไม่ส่งข้อความได้
 1. ตรวจสอบว่า Group ID ถูกต้อง (ขึ้นต้นด้วย 'C')

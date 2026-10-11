@@ -6,7 +6,7 @@ import { adminDb, adminStorage } from '@/lib/firebase-admin';
 import { getMemberById } from '@/lib/google-sheets';
 import { getEventRegistrationsByEventId, addEventRegistrationToFirestore } from '@/lib/events';
 import { EventRegistration, calculateRegistrationFee, Event } from '@/types/event';
-import { sendEventRegistrationConfirmation } from '@/lib/line-messaging';
+import { sendEventRegistrationConfirmation, sendRegistrationNotificationToGroups } from '@/lib/line-messaging';
 import { calculatePaymentSplit, calculateDepositDeadline, calculateRemainingDeadline, calculateFullPaymentDeadline } from '@/lib/payment-deadlines';
 import { sheetsCache, CacheKeys } from '@/lib/cache/google-sheets-cache';
 import { isGuestEligibleForEventRegistration } from '@/lib/permissions';
@@ -523,6 +523,27 @@ export async function POST(
       } catch (lineError) {
         console.error('Failed to send LINE confirmation:', lineError);
         // Don't fail the registration if LINE message fails
+      }
+    }
+
+    // Send notification to LINE groups (if configured)
+    const lineNotificationGroups = (eventData as any).lineNotificationGroups || [];
+    if (lineNotificationGroups.length > 0) {
+      try {
+        const displayName = member?.lineDisplayName || guestInfo?.lineDisplayName || '';
+        const result = await sendRegistrationNotificationToGroups(lineNotificationGroups, {
+          eventName: eventData.eventName || '',
+          eventNameEN: eventData.eventNameEN || '',
+          eventId,
+          companyName: member?.companyNameTH || guestInfo?.companyName || '',
+          contactName: member?.fullNameTH || member?.nickname || guestInfo?.contactName || session.user.name || '',
+          lineDisplayName: displayName,
+          attendeeCount,
+        });
+        console.log(`✅ Sent registration notifications to LINE groups: ${result.success} succeeded, ${result.failed} failed`);
+      } catch (groupNotifyError) {
+        console.error('Failed to send LINE group notifications:', groupNotifyError);
+        // Don't fail the registration if group notifications fail
       }
     }
 

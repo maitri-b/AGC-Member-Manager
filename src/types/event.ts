@@ -207,6 +207,7 @@ export interface Event {
 
   // LINE Notification Control
   sendLineNotification?: boolean;    // ส่งการแจ้งเตือนผ่าน LINE ให้สมาชิกที่ลงทะเบียน (Default: true)
+  lineNotificationGroups?: string[]; // Array of LINE Group IDs to send registration notifications to
 
   // Attendee Type Pricing (New - for events with accommodation or different attendee categories)
   useAttendeeTypePricing?: boolean; // ใช้ระบบราคาตามประเภทผู้เข้าร่วม (Default: false)
@@ -302,6 +303,7 @@ export interface EventInput {
 
   // LINE Notification Control
   sendLineNotification?: boolean;    // ส่งการแจ้งเตือนผ่าน LINE ให้สมาชิกที่ลงทะเบียน (Default: true)
+  lineNotificationGroups?: string[]; // Array of LINE Group IDs to send registration notifications to
 
   // Attendee Type Pricing (New - for events with accommodation or different attendee categories)
   useAttendeeTypePricing?: boolean; // ใช้ระบบราคาตามประเภทผู้เข้าร่วม (Default: false)

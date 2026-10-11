@@ -155,6 +155,7 @@ interface EventFormData {
   requireAttendeeNames: boolean;
   // LINE notification control
   sendLineNotification: boolean;
+  lineNotificationGroups: string[];
   // Attendee type pricing (New)
   useAttendeeTypePricing: boolean;
   attendeeTypes: AttendeeType[];
@@ -227,6 +228,7 @@ const initialFormData: EventFormData = {
   requireAttendeeNames: true,
   // LINE notification control
   sendLineNotification: true, // Default: checked (send notifications)
+  lineNotificationGroups: [],
   // Attendee type pricing (New)
   useAttendeeTypePricing: false,
   attendeeTypes: [],
@@ -362,6 +364,10 @@ export default function AdminEventsPage() {
   const [uploadingMainImage, setUploadingMainImage] = useState(false);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
 
+  // LINE Groups state
+  const [lineGroups, setLineGroups] = useState<Array<{ id: string; groupName?: string; active?: boolean }>>([]);
+  const [loadingLineGroups, setLoadingLineGroups] = useState(false);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -401,6 +407,7 @@ export default function AdminEventsPage() {
     fetchEvents();
     fetchSummaries();
     fetchBankAccounts();
+    fetchLineGroups();
   }, []);
 
   const fetchEvents = async () => {
@@ -440,6 +447,23 @@ export default function AdminEventsPage() {
       console.error('Error fetching bank accounts:', err);
     } finally {
       setLoadingBankAccounts(false);
+    }
+  };
+
+  const fetchLineGroups = async () => {
+    setLoadingLineGroups(true);
+    try {
+      const response = await fetch('/api/line/groups');
+      if (response.ok) {
+        const data = await response.json();
+        // Filter only active groups (where active is not false)
+        const activeGroups = (data.groups || []).filter((g: any) => g.active !== false);
+        setLineGroups(activeGroups);
+      }
+    } catch (err) {
+      console.error('Error fetching LINE groups:', err);
+    } finally {
+      setLoadingLineGroups(false);
     }
   };
 
@@ -590,6 +614,7 @@ export default function AdminEventsPage() {
         requireAttendeeNames: (event as any).requireAttendeeNames ?? true,
         // LINE notification control
         sendLineNotification: (event as any).sendLineNotification ?? true, // Default: true if not set
+        lineNotificationGroups: (event as any).lineNotificationGroups ?? [],
         // Attendee type pricing (New)
         useAttendeeTypePricing: (event as any).useAttendeeTypePricing ?? false,
         attendeeTypes: (event as any).attendeeTypes ?? [],
@@ -3364,6 +3389,65 @@ export default function AdminEventsPage() {
                       />
                       <span className="text-sm text-gray-700">ส่งการแจ้งเตือนผ่าน LINE ให้สมาชิกที่ลงทะเบียน</span>
                     </label>
+
+                    {/* LINE Notification Groups Selector */}
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-sm font-medium text-gray-700">
+                          ส่งการแจ้งเตือนไปยัง LINE Groups
+                        </label>
+                        {loadingLineGroups && (
+                          <span className="text-xs text-gray-500">กำลังโหลด...</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mb-3">
+                        เลือก LINE Groups ที่ต้องการรับการแจ้งเตือนเมื่อมีการลงทะเบียนใหม่
+                      </p>
+
+                      {lineGroups.length === 0 && !loadingLineGroups ? (
+                        <p className="text-sm text-gray-400 italic">ไม่มี LINE Groups ที่ใช้งานได้</p>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {lineGroups.map((group) => (
+                            <label key={group.id} className="flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded">
+                              <input
+                                type="checkbox"
+                                checked={formData.lineNotificationGroups?.includes(group.id) ?? false}
+                                onChange={(e) => {
+                                  const currentGroups = formData.lineNotificationGroups || [];
+                                  if (e.target.checked) {
+                                    setFormData({
+                                      ...formData,
+                                      lineNotificationGroups: [...currentGroups, group.id]
+                                    });
+                                  } else {
+                                    setFormData({
+                                      ...formData,
+                                      lineNotificationGroups: currentGroups.filter(id => id !== group.id)
+                                    });
+                                  }
+                                }}
+                                className="mt-0.5 w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                              />
+                              <div className="flex-1">
+                                <span className="text-sm text-gray-700 font-medium">
+                                  {group.groupName || group.id}
+                                </span>
+                                {group.groupName && (
+                                  <p className="text-xs text-gray-400 font-mono">{group.id}</p>
+                                )}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+
+                      {formData.lineNotificationGroups && formData.lineNotificationGroups.length > 0 && (
+                        <p className="mt-3 text-xs text-green-600">
+                          ✓ เลือกแล้ว {formData.lineNotificationGroups.length} กลุ่ม
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

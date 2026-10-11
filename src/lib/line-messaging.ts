@@ -940,3 +940,179 @@ Helping & Sharing`;
     },
   ]);
 }
+
+// Send Event Registration Notification to LINE Groups
+export async function sendRegistrationNotificationToGroups(
+  groupIds: string[],
+  registrationData: {
+    eventName: string;
+    eventNameEN?: string;
+    eventId: string;
+    companyName: string;
+    contactName: string;
+    lineDisplayName?: string;
+    attendeeCount: number;
+  }
+): Promise<{ success: number; failed: number }> {
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://agc-member-manager.vercel.app';
+  const eventManageUrl = `${baseUrl}/admin/events/${encodeURIComponent(registrationData.eventId)}`;
+
+  let successCount = 0;
+  let failedCount = 0;
+
+  // Create Flex Message
+  const flexMessage: FlexMessage = {
+    type: 'flex',
+    altText: `🎉 มีผู้ลงทะเบียนใหม่: ${registrationData.eventName}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#10B981',
+        paddingAll: '20px',
+        contents: [
+          {
+            type: 'text',
+            text: '🎉 ลงทะเบียนใหม่',
+            weight: 'bold',
+            size: 'xl',
+            color: '#FFFFFF',
+          },
+          {
+            type: 'text',
+            text: registrationData.eventName,
+            weight: 'bold',
+            size: 'md',
+            color: '#FFFFFF',
+            margin: 'md',
+            wrap: true,
+          },
+        ],
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        paddingAll: '20px',
+        contents: [
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              {
+                type: 'text',
+                text: '🏢 บริษัท:',
+                size: 'sm',
+                color: '#666666',
+                flex: 2,
+              },
+              {
+                type: 'text',
+                text: registrationData.companyName,
+                size: 'sm',
+                flex: 5,
+                wrap: true,
+                weight: 'bold',
+              },
+            ],
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            margin: 'md',
+            contents: [
+              {
+                type: 'text',
+                text: '👤 ผู้ติดต่อ:',
+                size: 'sm',
+                color: '#666666',
+                flex: 2,
+              },
+              {
+                type: 'text',
+                text: registrationData.contactName,
+                size: 'sm',
+                flex: 5,
+                wrap: true,
+              },
+            ],
+          },
+          ...(registrationData.lineDisplayName ? [{
+            type: 'box' as const,
+            layout: 'horizontal' as const,
+            margin: 'md' as const,
+            contents: [
+              {
+                type: 'text' as const,
+                text: '💬 LINE:',
+                size: 'sm' as const,
+                color: '#666666',
+                flex: 2,
+              },
+              {
+                type: 'text' as const,
+                text: registrationData.lineDisplayName,
+                size: 'sm' as const,
+                flex: 5,
+                wrap: true,
+              },
+            ],
+          }] : []),
+          {
+            type: 'box',
+            layout: 'horizontal',
+            margin: 'md',
+            contents: [
+              {
+                type: 'text',
+                text: '👥 จำนวน:',
+                size: 'sm',
+                color: '#666666',
+                flex: 2,
+              },
+              {
+                type: 'text',
+                text: `${registrationData.attendeeCount} คน`,
+                size: 'sm',
+                flex: 5,
+                weight: 'bold',
+                color: '#10B981',
+              },
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        paddingAll: '15px',
+        contents: [
+          {
+            type: 'button',
+            action: {
+              type: 'uri',
+              label: 'จัดการกิจกรรม',
+              uri: eventManageUrl,
+            },
+            style: 'primary',
+            color: '#10B981',
+          },
+        ],
+      },
+    },
+  };
+
+  // Send to each group
+  for (const groupId of groupIds) {
+    try {
+      await sendPushMessage(groupId, [flexMessage]);
+      successCount++;
+      console.log(`✅ Sent registration notification to group ${groupId}`);
+    } catch (error) {
+      failedCount++;
+      console.error(`❌ Failed to send notification to group ${groupId}:`, error);
+    }
+  }
+
+  return { success: successCount, failed: failedCount };
+}

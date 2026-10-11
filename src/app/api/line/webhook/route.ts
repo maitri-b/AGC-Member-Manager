@@ -27,12 +27,19 @@ function verifySignature(body: string, signature: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('🔵 Webhook received at:', new Date().toISOString());
+
     const body = await req.text();
     const signature = req.headers.get('x-line-signature');
+
+    console.log('🔑 Signature present:', !!signature);
+    console.log('🔑 Channel Secret configured:', !!process.env.LINE_MESSAGING_CHANNEL_SECRET || !!process.env.LINE_CHANNEL_SECRET);
 
     // Verify signature
     if (!signature || !verifySignature(body, signature)) {
       console.error('❌ Invalid LINE signature');
+      console.error('Body length:', body.length);
+      console.error('Signature:', signature);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
@@ -41,7 +48,8 @@ export async function POST(req: NextRequest) {
 
     console.log('📨 Received LINE webhook:', {
       eventsCount: events.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      rawData: JSON.stringify(data, null, 2)
     });
 
     // Process each event
@@ -88,6 +96,8 @@ export async function POST(req: NextRequest) {
  * Handle when bot joins a group/room
  */
 async function handleJoinEvent(event: any) {
+  console.log('🔵 handleJoinEvent called, source type:', event.source?.type);
+
   if (event.source.type === 'group') {
     const groupId = event.source.groupId;
 
@@ -96,17 +106,28 @@ async function handleJoinEvent(event: any) {
 
     // Save to Firestore for future reference
     try {
-      await adminDb().collection('lineGroups').doc(groupId).set({
+      const db = adminDb();
+      console.log('🔵 Firestore instance created');
+
+      const docData = {
         groupId: groupId,
         joinedAt: new Date(),
         source: 'webhook_join',
         eventType: 'join',
         lastActivity: new Date()
-      });
-      console.log('✅ Group ID saved to Firestore');
+      };
+
+      console.log('🔵 Attempting to save to Firestore:', docData);
+
+      await db.collection('lineGroups').doc(groupId).set(docData);
+
+      console.log('✅ Group ID saved to Firestore successfully!');
     } catch (error) {
       console.error('❌ Error saving group ID:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
     }
+  } else {
+    console.log('⚠️ Event source is not a group:', event.source);
   }
 }
 
@@ -114,6 +135,8 @@ async function handleJoinEvent(event: any) {
  * Handle message events
  */
 async function handleMessageEvent(event: any) {
+  console.log('🔵 handleMessageEvent called, source type:', event.source?.type);
+
   if (event.source.type === 'group') {
     const groupId = event.source.groupId;
     const userId = event.source.userId;
@@ -124,14 +147,26 @@ async function handleMessageEvent(event: any) {
 
     // Update last activity
     try {
-      await adminDb().collection('lineGroups').doc(groupId).set({
+      const db = adminDb();
+      console.log('🔵 Firestore instance created for message event');
+
+      const docData = {
         groupId: groupId,
         lastActivity: new Date(),
         lastMessageAt: new Date()
-      }, { merge: true });
+      };
+
+      console.log('🔵 Attempting to update Firestore:', docData);
+
+      await db.collection('lineGroups').doc(groupId).set(docData, { merge: true });
+
+      console.log('✅ Group activity updated in Firestore!');
     } catch (error) {
       console.error('❌ Error updating group activity:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
     }
+  } else {
+    console.log('⚠️ Message source is not a group:', event.source);
   }
 }
 

@@ -11,9 +11,9 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    // Check admin permission
-    if (!session?.user?.permissions?.includes('admin')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    // Check if user is admin
+    if (!session?.user || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 });
     }
 
     // Get all groups from Firestore

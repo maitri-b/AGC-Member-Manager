@@ -27,19 +27,12 @@ function verifySignature(body: string, signature: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('🔵 Webhook received at:', new Date().toISOString());
-
     const body = await req.text();
     const signature = req.headers.get('x-line-signature');
-
-    console.log('🔑 Signature present:', !!signature);
-    console.log('🔑 Channel Secret configured:', !!process.env.LINE_MESSAGING_CHANNEL_SECRET || !!process.env.LINE_CHANNEL_SECRET);
 
     // Verify signature
     if (!signature || !verifySignature(body, signature)) {
       console.error('❌ Invalid LINE signature');
-      console.error('Body length:', body.length);
-      console.error('Signature:', signature);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
@@ -48,8 +41,7 @@ export async function POST(req: NextRequest) {
 
     console.log('📨 Received LINE webhook:', {
       eventsCount: events.length,
-      timestamp: new Date().toISOString(),
-      rawData: JSON.stringify(data, null, 2)
+      timestamp: new Date().toISOString()
     });
 
     // Process each event
@@ -96,8 +88,6 @@ export async function POST(req: NextRequest) {
  * Handle when bot joins a group/room
  */
 async function handleJoinEvent(event: any) {
-  console.log('🔵 handleJoinEvent called, source type:', event.source?.type);
-
   if (event.source.type === 'group') {
     const groupId = event.source.groupId;
 
@@ -107,27 +97,37 @@ async function handleJoinEvent(event: any) {
     // Save to Firestore for future reference
     try {
       const db = adminDb();
-      console.log('🔵 Firestore instance created');
 
-      const docData = {
+      // Check if group already exists
+      const existingDoc = await db.collection('lineGroups').doc(groupId).get();
+      const existingData = existingDoc.exists ? existingDoc.data() : null;
+
+      // Prepare data to update
+      const docData: any = {
         groupId: groupId,
-        joinedAt: new Date(),
+        lastActivity: new Date(),
+        active: true, // Set active back to true when rejoining
         source: 'webhook_join',
         eventType: 'join',
-        lastActivity: new Date()
       };
 
-      console.log('🔵 Attempting to save to Firestore:', docData);
+      // Only set joinedAt if this is a new group (never joined before)
+      if (!existingData || !existingData.joinedAt) {
+        docData.joinedAt = new Date();
+      }
 
-      await db.collection('lineGroups').doc(groupId).set(docData);
+      // Remove leftAt since bot is back in the group
+      if (existingData?.leftAt) {
+        docData.leftAt = null;
+      }
 
-      console.log('✅ Group ID saved to Firestore successfully!');
+      // Use merge to preserve groupName and other custom fields
+      await db.collection('lineGroups').doc(groupId).set(docData, { merge: true });
+
+      console.log('✅ Group ID saved:', groupId, existingData?.groupName ? `(preserved: ${existingData.groupName})` : '(new group)');
     } catch (error) {
       console.error('❌ Error saving group ID:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
     }
-  } else {
-    console.log('⚠️ Event source is not a group:', event.source);
   }
 }
 
@@ -135,20 +135,15 @@ async function handleJoinEvent(event: any) {
  * Handle message events
  */
 async function handleMessageEvent(event: any) {
-  console.log('🔵 handleMessageEvent called, source type:', event.source?.type);
-
   if (event.source.type === 'group') {
     const groupId = event.source.groupId;
     const userId = event.source.userId;
 
-    console.log('💬 Message in group:', groupId);
-    console.log('From user:', userId);
-    console.log('Message:', event.message);
+    console.log('💬 Message in group:', groupId, 'from user:', userId);
 
     // Update last activity
     try {
       const db = adminDb();
-      console.log('🔵 Firestore instance created for message event');
 
       const docData = {
         groupId: groupId,
@@ -156,17 +151,10 @@ async function handleMessageEvent(event: any) {
         lastMessageAt: new Date()
       };
 
-      console.log('🔵 Attempting to update Firestore:', docData);
-
       await db.collection('lineGroups').doc(groupId).set(docData, { merge: true });
-
-      console.log('✅ Group activity updated in Firestore!');
     } catch (error) {
       console.error('❌ Error updating group activity:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
     }
-  } else {
-    console.log('⚠️ Message source is not a group:', event.source);
   }
 }
 

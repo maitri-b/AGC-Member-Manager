@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Toast, useToast } from '@/components/Toast';
@@ -296,6 +296,9 @@ export default function EventDetailPage() {
 
   // Registration form visibility state
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+
+  // Ref for registration form to scroll to it
+  const registrationFormRef = useRef<HTMLDivElement>(null);
 
   // TEMP: Hidden until PDF generation is fixed on Vercel
   // Receipt certificate modal state
@@ -1563,27 +1566,26 @@ export default function EventDetailPage() {
                       </Link>
                     </div>
                   ) : (
-                    // Non-visitor can register normally
-                    <button
-                      onClick={() => setShowRegistrationForm(!showRegistrationForm)}
-                      className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-lg rounded-lg transition-all shadow-lg hover:shadow-xl"
-                    >
-                      {showRegistrationForm ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                          </svg>
-                          ซ่อนแบบฟอร์มลงทะเบียน
-                        </span>
-                      ) : (
+                    // Non-visitor can register normally - button hidden once form is shown
+                    !showRegistrationForm && (
+                      <button
+                        onClick={() => {
+                          setShowRegistrationForm(true);
+                          // Scroll to form after a short delay to ensure it's rendered
+                          setTimeout(() => {
+                            registrationFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 100);
+                        }}
+                        className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-lg rounded-lg transition-all shadow-lg hover:shadow-xl"
+                      >
                         <span className="flex items-center justify-center gap-2">
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                           ลงทะเบียนเข้าร่วมกิจกรรมนี้
                         </span>
-                      )}
-                    </button>
+                      </button>
+                    )
                   )}
                 </div>
               )}
@@ -3695,7 +3697,7 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               ) : showRegistrationForm ? (
-                <div className="bg-white rounded-lg shadow p-6 space-y-4">
+                <div ref={registrationFormRef} className="bg-white rounded-lg shadow p-6 space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900">ลงทะเบียนเข้าร่วมกิจกรรม</h3>
 
                   {/* Guest Information Form for Event-Co without memberId */}

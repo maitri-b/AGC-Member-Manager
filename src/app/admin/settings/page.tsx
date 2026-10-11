@@ -31,6 +31,13 @@ export default function SettingsPage() {
     enableSmsNotifications: false,
   });
 
+  // LINE Groups state
+  const [lineGroups, setLineGroups] = useState<any[]>([]);
+  const [lineGroupsLoading, setLineGroupsLoading] = useState(false);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editingGroupName, setEditingGroupName] = useState('');
+  const [savingGroupName, setSavingGroupName] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/');
@@ -47,6 +54,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (session?.user?.role === 'admin' && hasPermission(session?.user?.permissions || [], 'admin:access') && !settings) {
       fetchSettings();
+      fetchLineGroups();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.role]);
@@ -78,6 +86,58 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchLineGroups = async () => {
+    try {
+      setLineGroupsLoading(true);
+      const response = await fetch('/api/line/groups');
+      if (!response.ok) throw new Error('Failed to fetch LINE groups');
+      const data = await response.json();
+      setLineGroups(data.groups || []);
+    } catch (error) {
+      console.error('Error fetching LINE groups:', error);
+      toast.error('ไม่สามารถโหลดข้อมูล LINE Groups ได้');
+    } finally {
+      setLineGroupsLoading(false);
+    }
+  };
+
+  const handleEditGroupName = (groupId: string, currentName: string) => {
+    setEditingGroupId(groupId);
+    setEditingGroupName(currentName || '');
+  };
+
+  const handleSaveGroupName = async (groupId: string) => {
+    try {
+      setSavingGroupName(true);
+      const response = await fetch(`/api/line/groups/${groupId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName: editingGroupName }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update group name');
+
+      toast.success('บันทึกชื่อกลุ่มสำเร็จ');
+      setEditingGroupId(null);
+      fetchLineGroups();
+    } catch (error) {
+      console.error('Error updating group name:', error);
+      toast.error('ไม่สามารถบันทึกชื่อกลุ่มได้');
+    } finally {
+      setSavingGroupName(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingGroupId(null);
+    setEditingGroupName('');
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('คัดลอก Group ID แล้ว');
   };
 
   const handleRebuildCache = async () => {
@@ -423,7 +483,7 @@ export default function SettingsPage() {
             {/* Message Templates Link */}
             <Link
               href="/admin/settings/message-templates"
-              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group"
+              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group mb-4"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -440,6 +500,164 @@ export default function SettingsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
+
+            {/* Bank Accounts Link */}
+            <Link
+              href="/admin/settings/bank-accounts"
+              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">จัดการบัญชีธนาคาร</h3>
+                  <p className="text-sm text-gray-500">ตั้งค่าบัญชีธนาคารสำหรับรับชำระเงิน</p>
+                </div>
+              </div>
+              <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+
+          {/* LINE Groups Management */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">LINE Groups</h2>
+                <p className="text-sm text-gray-500 mt-1">จัดการ LINE Groups ที่ใช้ส่งการแจ้งเตือน</p>
+              </div>
+              <button
+                onClick={fetchLineGroups}
+                disabled={lineGroupsLoading}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <svg className={`w-4 h-4 ${lineGroupsLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+
+            {lineGroupsLoading && lineGroups.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600 mx-auto"></div>
+                <p className="text-gray-500 mt-2">กำลังโหลด...</p>
+              </div>
+            ) : lineGroups.length === 0 ? (
+              <div className="text-center py-8 border border-gray-200 rounded-lg">
+                <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <h3 className="text-sm font-medium text-gray-900 mb-1">ยังไม่มี LINE Groups</h3>
+                <p className="text-sm text-gray-500">เชิญ Official Account เข้ากลุ่มแล้วส่งข้อความเพื่อบันทึก Group ID</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {lineGroups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        {/* Group Name */}
+                        {editingGroupId === group.id ? (
+                          <div className="mb-2">
+                            <input
+                              type="text"
+                              value={editingGroupName}
+                              onChange={(e) => setEditingGroupName(e.target.value)}
+                              placeholder="ชื่อกลุ่ม (เช่น กลุ่มหลัก, กลุ่มคณะกรรมการ)"
+                              className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              autoFocus
+                            />
+                          </div>
+                        ) : (
+                          <div className="mb-2">
+                            {group.groupName ? (
+                              <h3 className="font-semibold text-gray-900">{group.groupName}</h3>
+                            ) : (
+                              <h3 className="font-medium text-gray-500 italic">ไม่มีชื่อกลุ่ม</h3>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Group ID */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <code className="text-xs font-mono text-gray-700 bg-gray-100 px-2 py-1 rounded">
+                            {group.groupId}
+                          </code>
+                          <button
+                            onClick={() => copyToClipboard(group.groupId)}
+                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                            title="Copy Group ID"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        {/* Metadata */}
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          {group.joinedAt && (
+                            <span>เข้าร่วม: {new Date(group.joinedAt).toLocaleDateString('th-TH')}</span>
+                          )}
+                          {group.lastActivity && (
+                            <span>กิจกรรมล่าสุด: {new Date(group.lastActivity).toLocaleDateString('th-TH')}</span>
+                          )}
+                          {group.leftAt ? (
+                            <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded-full">ออกจากกลุ่ม</span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full">Active</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
+                        {editingGroupId === group.id ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveGroupName(group.id)}
+                              disabled={savingGroupName}
+                              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                              {savingGroupName ? 'กำลังบันทึก...' : 'บันทึก'}
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              disabled={savingGroupName}
+                              className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                              ยกเลิก
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => handleEditGroupName(group.id, group.groupName)}
+                            className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            แก้ไขชื่อ
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Help Text */}
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>💡 วิธีเพิ่ม LINE Group:</strong> เชิญ LINE Official Account เข้ากลุ่ม แล้วส่งข้อความอะไรก็ได้ในกลุ่ม ระบบจะบันทึก Group ID อัตโนมัติ
+              </p>
+            </div>
           </div>
 
           {/* Action Buttons */}

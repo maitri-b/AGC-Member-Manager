@@ -10,7 +10,7 @@ import { getAllMembersFromFirestore } from '@/lib/members-firestore';
 import { getSystemSettings } from '@/lib/settings';
 import { generateWelcomeMessage } from '@/lib/member-welcome-template';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -22,8 +22,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const roleFilter = searchParams.get('role');
+
     const db = adminDb();
-    const usersSnapshot = await db.collection('users').get();
+
+    // Fetch users with optional role filter
+    let usersQuery: any = db.collection('users');
+    if (roleFilter) {
+      usersQuery = usersQuery.where('role', '==', roleFilter);
+    }
+    const usersSnapshot = await usersQuery.get();
 
     // Phase 1 Migration: Fetch members from Firestore members collection
     // This is significantly faster than Google Sheets API (5-10x improvement)

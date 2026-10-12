@@ -74,6 +74,55 @@ export interface SystemSettingsInput {
   }>;
 }
 
+/**
+ * Notification Settings
+ * Configure where system notifications should be sent
+ */
+export interface NotificationTarget {
+  type: 'admin_users' | 'line_group' | 'specific_user';
+  targetId?: string;  // Group ID or User ID (not needed for admin_users)
+  targetName?: string; // Display name for the target
+  enabled: boolean;
+}
+
+export interface NotificationSettings {
+  // Membership Application Notifications
+  membershipApplication?: {
+    enabled: boolean;
+    targets: NotificationTarget[];
+  };
+
+  // Event Registration Notifications (future)
+  eventRegistration?: {
+    enabled: boolean;
+    targets: NotificationTarget[];
+  };
+
+  // Payment Notifications (future)
+  paymentReceived?: {
+    enabled: boolean;
+    targets: NotificationTarget[];
+  };
+
+  // Metadata
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+// Default notification settings
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  membershipApplication: {
+    enabled: true,
+    targets: [
+      {
+        type: 'admin_users',
+        enabled: true,
+        targetName: 'ผู้ดูแลระบบทั้งหมด (Admin Users)',
+      }
+    ],
+  },
+};
+
 // Default settings
 export const DEFAULT_SETTINGS: Partial<SystemSettings> = {
   baseUrl: 'https://agc-member-manager.vercel.app',

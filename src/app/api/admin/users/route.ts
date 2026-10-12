@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const users = usersSnapshot.docs.map(doc => {
+    const users = usersSnapshot.docs.map((doc: any) => {
       const userData = doc.data();
       const verificationData = verificationMap.get(doc.id);
       const memberData = userData.memberId ? membersMap.get(userData.memberId) : null;

@@ -52,6 +52,45 @@ async function getTargetUserIds(targets: NotificationTarget[]): Promise<string[]
         }
         break;
 
+      case 'committee_users':
+        // Get all committee users with LINE
+        try {
+          const usersSnapshot = await db.collection('users').where('role', '==', 'committee').get();
+          const committeeLineIds = usersSnapshot.docs
+            .map(doc => doc.data().lineUserId)
+            .filter(id => id);
+          userIds.push(...committeeLineIds);
+        } catch (error) {
+          console.error('Error fetching committee users:', error);
+        }
+        break;
+
+      case 'event_co_users':
+        // Get all event-co users with LINE
+        try {
+          const usersSnapshot = await db.collection('users').where('role', '==', 'event-co').get();
+          const eventCoLineIds = usersSnapshot.docs
+            .map(doc => doc.data().lineUserId)
+            .filter(id => id);
+          userIds.push(...eventCoLineIds);
+        } catch (error) {
+          console.error('Error fetching event-co users:', error);
+        }
+        break;
+
+      case 'event_staff_users':
+        // Get all event-staff users with LINE
+        try {
+          const usersSnapshot = await db.collection('users').where('role', '==', 'event-staff').get();
+          const eventStaffLineIds = usersSnapshot.docs
+            .map(doc => doc.data().lineUserId)
+            .filter(id => id);
+          userIds.push(...eventStaffLineIds);
+        } catch (error) {
+          console.error('Error fetching event-staff users:', error);
+        }
+        break;
+
       case 'line_group':
         // Add LINE group ID
         if (target.targetId) {

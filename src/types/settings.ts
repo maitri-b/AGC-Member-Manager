@@ -79,8 +79,8 @@ export interface SystemSettingsInput {
  * Configure where system notifications should be sent
  */
 export interface NotificationTarget {
-  type: 'admin_users' | 'line_group' | 'specific_user';
-  targetId?: string;  // Group ID or User ID (not needed for admin_users)
+  type: 'admin_users' | 'committee_users' | 'event_co_users' | 'event_staff_users' | 'line_group' | 'specific_user';
+  targetId?: string;  // Group ID or User ID (not needed for role-based targets)
   targetName?: string; // Display name for the target
   enabled: boolean;
 }

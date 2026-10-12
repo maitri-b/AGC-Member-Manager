@@ -138,7 +138,7 @@ export default function NotificationSettingsPage() {
     });
   };
 
-  const addTarget = (notificationType: keyof NotificationSettings, targetType: 'line_group' | 'specific_user', targetId: string, targetName: string) => {
+  const addTarget = (notificationType: keyof NotificationSettings, targetType: NotificationTarget['type'], targetId: string | undefined, targetName: string) => {
     setSettings(prev => {
       const notificationConfig = prev[notificationType];
       if (!notificationConfig || typeof notificationConfig !== 'object' || !('targets' in notificationConfig)) {
@@ -146,7 +146,10 @@ export default function NotificationSettingsPage() {
       }
 
       // Check if target already exists
-      const exists = notificationConfig.targets.some(t => t.targetId === targetId);
+      // For role-based targets, check by type; for others, check by targetId
+      const exists = notificationConfig.targets.some(t =>
+        targetId ? t.targetId === targetId : t.type === targetType
+      );
       if (exists) {
         toast.error('เป้าหมายนี้ถูกเพิ่มไว้แล้ว');
         return prev;
@@ -258,13 +261,16 @@ export default function NotificationSettingsPage() {
                         <div>
                           <div className="font-medium text-gray-900">{target.targetName}</div>
                           <div className="text-xs text-gray-500">
-                            {target.type === 'admin_users' && 'ส่งให้ผู้ดูแลระบบทั้งหมด'}
+                            {target.type === 'admin_users' && 'ส่งให้ผู้ดูแลระบบทั้งหมด (Admin)'}
+                            {target.type === 'committee_users' && 'ส่งให้กรรมการทั้งหมด (Committee)'}
+                            {target.type === 'event_co_users' && 'ส่งให้ผู้ร่วมจัดงานทั้งหมด (Event Co-organizer)'}
+                            {target.type === 'event_staff_users' && 'ส่งให้พนักงานจัดงานทั้งหมด (Event Staff)'}
                             {target.type === 'line_group' && `LINE Group ID: ${target.targetId}`}
                             {target.type === 'specific_user' && `User ID: ${target.targetId}`}
                           </div>
                         </div>
                       </div>
-                      {target.type !== 'admin_users' && (
+                      {!['admin_users', 'committee_users', 'event_co_users', 'event_staff_users'].includes(target.type) && (
                         <button
                           onClick={() => removeTarget('membershipApplication', index)}
                           className="text-red-600 hover:text-red-700 text-sm font-medium"
@@ -276,8 +282,42 @@ export default function NotificationSettingsPage() {
                   ))}
                 </div>
 
-                {/* Add LINE Group */}
+                {/* Add User Roles */}
                 <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">เพิ่มกลุ่มผู้ใช้ตาม Role</h4>
+                  <div className="space-y-2">
+                    {[
+                      { type: 'committee_users' as const, name: 'กรรมการทั้งหมด (Committee)', description: 'ส่งให้ทุกคนที่มี role เป็น committee' },
+                      { type: 'event_co_users' as const, name: 'ผู้ร่วมจัดงานทั้งหมด (Event Co-organizer)', description: 'ส่งให้ทุกคนที่มี role เป็น event-co' },
+                      { type: 'event_staff_users' as const, name: 'พนักงานจัดงานทั้งหมด (Event Staff)', description: 'ส่งให้ทุกคนที่มี role เป็น event-staff' },
+                    ].map((role) => {
+                      const alreadyAdded = settings.membershipApplication?.targets.some(
+                        t => t.type === role.type
+                      );
+                      return (
+                        <button
+                          key={role.type}
+                          onClick={() => !alreadyAdded && addTarget('membershipApplication', role.type, undefined, role.name)}
+                          disabled={alreadyAdded}
+                          className={`w-full text-left p-3 rounded border ${
+                            alreadyAdded
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                              : 'bg-white hover:bg-green-50 border-gray-300 hover:border-green-400'
+                          }`}
+                        >
+                          <div className="font-medium text-sm">
+                            {role.name}
+                            {alreadyAdded && ' (เพิ่มแล้ว)'}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">{role.description}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Add LINE Group */}
+                <div className="border-t pt-4 mt-4">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">เพิ่ม LINE Group</h4>
                   {lineGroupsLoading ? (
                     <p className="text-sm text-gray-500">กำลังโหลด...</p>

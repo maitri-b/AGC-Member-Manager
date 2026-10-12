@@ -262,31 +262,6 @@ export default function SettingsPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        {/* Quick Links to Other Settings Pages */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <Link
-            href="/admin/settings/notifications"
-            className="block p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow border-l-4 border-blue-500"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0">
-                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">การตั้งค่าการแจ้งเตือน</h3>
-                <p className="text-sm text-gray-500">กำหนดว่าระบบจะส่งการแจ้งเตือนไปที่ไหนบ้าง</p>
-              </div>
-              <div className="flex-shrink-0">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-          </Link>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Website Configuration */}
           <div className="bg-white rounded-lg shadow p-6">

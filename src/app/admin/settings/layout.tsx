@@ -11,6 +11,12 @@ const settingsNav = [
     href: '/admin/settings',
   },
   {
+    id: 'notifications',
+    name: 'การแจ้งเตือน',
+    icon: '🔔',
+    href: '/admin/settings/notifications',
+  },
+  {
     id: 'bank-accounts',
     name: 'บัญชีธนาคาร',
     icon: '🏦',

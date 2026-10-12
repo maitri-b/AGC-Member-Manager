@@ -203,18 +203,14 @@ export default function NotificationSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-6">
-          <Link href="/admin/settings" className="text-blue-600 hover:text-blue-700 flex items-center gap-2 mb-4">
-            <span>←</span> กลับไปหน้าการตั้งค่า
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">การตั้งค่าการแจ้งเตือน</h1>
-          <p className="mt-2 text-gray-600">
-            กำหนดว่าระบบจะส่งการแจ้งเตือนไปที่ไหนบ้างสำหรับแต่ละประเภท
-          </p>
-        </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">การตั้งค่าการแจ้งเตือน</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          กำหนดว่าระบบจะส่งการแจ้งเตือนไปที่ไหนบ้างสำหรับแต่ละประเภท
+        </p>
+      </div>
 
         {/* Membership Application Notifications */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
@@ -401,22 +397,15 @@ export default function NotificationSettingsPage() {
           </p>
         </div>
 
-        {/* Save Button */}
-        <div className="flex justify-end gap-3">
-          <Link
-            href="/admin/settings"
-            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            ยกเลิก
-          </Link>
-          <button
-            onClick={handleSaveSettings}
-            disabled={saving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}
-          </button>
-        </div>
+      {/* Save Button */}
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={handleSaveSettings}
+          disabled={saving}
+          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+        >
+          {saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}
+        </button>
       </div>
     </div>
   );

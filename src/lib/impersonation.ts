@@ -77,6 +77,10 @@ export async function getEffectiveSession(): Promise<ImpersonatedSession | null>
         permissions: targetUserData?.permissions || [],
         memberId: targetUserData?.memberId || null,
         assignedEventIds: targetUserData?.assignedEventIds || [],
+        isBanned: targetUserData?.isBanned || false,
+        bannedAt: targetUserData?.bannedAt || null,
+        bannedBy: targetUserData?.bannedBy || null,
+        bannedReason: targetUserData?.bannedReason || null,
       },
       isImpersonating: true,
       originalAdmin: {

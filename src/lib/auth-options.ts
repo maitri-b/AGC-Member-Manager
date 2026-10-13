@@ -293,6 +293,12 @@ export const authOptions: NextAuthOptions = {
             token.memberId = memberId;
             token.assignedEventIds = assignedEventIds;
 
+            // Include banned status in token
+            token.isBanned = userData?.isBanned || false;
+            token.bannedAt = userData?.bannedAt || null;
+            token.bannedBy = userData?.bannedBy || null;
+            token.bannedReason = userData?.bannedReason || null;
+
             // Fetch member status from Google Sheets if memberId exists
             let memberStatus: string | undefined;
             let lineGroupStatus: string | undefined;
@@ -346,6 +352,12 @@ export const authOptions: NextAuthOptions = {
         session.user.permissions = token.permissions;
         session.user.assignedEventIds = token.assignedEventIds;
         session.accessToken = token.accessToken;
+
+        // Include banned status in session
+        session.user.isBanned = token.isBanned || false;
+        session.user.bannedAt = token.bannedAt || null;
+        session.user.bannedBy = token.bannedBy || null;
+        session.user.bannedReason = token.bannedReason || null;
 
         // Include updated profile data from token
         if (token.lineDisplayName) {

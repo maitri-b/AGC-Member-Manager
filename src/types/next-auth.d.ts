@@ -13,6 +13,10 @@ declare module 'next-auth' {
       memberId?: string;
       permissions: string[];
       assignedEventIds?: string[];
+      isBanned?: boolean;
+      bannedAt?: string | null;
+      bannedBy?: string | null;
+      bannedReason?: string | null;
     };
     accessToken?: string;
     error?: string; // Error state for token refresh failures
@@ -28,6 +32,10 @@ declare module 'next-auth' {
     memberId?: string;
     permissions: string[];
     assignedEventIds?: string[];
+    isBanned?: boolean;
+    bannedAt?: string | null;
+    bannedBy?: string | null;
+    bannedReason?: string | null;
   }
 }
 
@@ -44,6 +52,10 @@ declare module 'next-auth/jwt' {
     lineDisplayName?: string;
     lineProfilePicture?: string | null;
     error?: string;
+    isBanned?: boolean;
+    bannedAt?: string | null;
+    bannedBy?: string | null;
+    bannedReason?: string | null;
   }
 }
 

@@ -735,6 +735,9 @@ export default function AdminPage() {
       if (statusFilter === 'inactive' && user.isActive !== false) {
         return false;
       }
+      if (statusFilter === 'banned' && !user.isBanned) {
+        return false;
+      }
 
       // Search filter
       if (userSearchQuery) {
@@ -991,6 +994,7 @@ export default function AdminPage() {
                     <option value="pending">รอยืนยันตัวตน</option>
                     <option value="locked">ถูกล็อค</option>
                     <option value="inactive">ไม่ใช้งาน</option>
+                    <option value="banned">ถูกแบน</option>
                   </select>
                 </div>
               </div>
@@ -1147,6 +1151,14 @@ export default function AdminPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             ถูกปฏิเสธ
+                          </span>
+                        )}
+                        {user.isBanned && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                            ถูกแบน
                           </span>
                         )}
                         {user.isSearchLocked && (

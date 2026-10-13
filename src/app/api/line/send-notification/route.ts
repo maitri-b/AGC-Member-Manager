@@ -79,7 +79,34 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Message, image, or Flex message is required' }, { status: 400 });
       }
 
-      // Send custom message to multiple users
+      // Filter out banned members first
+      const db = adminDb();
+      const activeMemberIds: string[] = [];
+      let bannedCount = 0;
+
+      for (const lineUserId of lineUserIds) {
+        const userDoc = await db.collection('users').doc(lineUserId).get();
+        const userData = userDoc.data();
+
+        if (userData?.isBanned) {
+          bannedCount++;
+          console.log(`[LINE Notification] Skipping banned user: ${lineUserId}`);
+        } else {
+          activeMemberIds.push(lineUserId);
+        }
+      }
+
+      if (activeMemberIds.length === 0) {
+        return NextResponse.json({
+          success: true,
+          message: `ไม่มีสมาชิกที่สามารถส่งข้อความได้ (สมาชิกทั้งหมดถูกแบน ${bannedCount} คน)`,
+          results: { success: 0, failed: 0, errors: [], successfulSends: [] }
+        });
+      }
+
+      console.log(`[LINE Notification] Filtered ${lineUserIds.length} members -> ${activeMemberIds.length} active (${bannedCount} banned)`);
+
+      // Send custom message to multiple users (excluding banned)
       const results = {
         success: 0,
         failed: 0,
@@ -90,7 +117,7 @@ export async function POST(request: NextRequest) {
       // Fetch base URL from settings once before the loop
       const baseUrl = await getBaseUrl();
 
-      for (const lineUserId of lineUserIds) {
+      for (const lineUserId of activeMemberIds) {
         try {
           let personalizedMessage = customMessage;
 

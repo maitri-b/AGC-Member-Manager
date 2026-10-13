@@ -28,6 +28,13 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check if user is banned - banned users cannot see event details
+    if (session.user.isBanned) {
+      return NextResponse.json({
+        error: 'บัญชีของคุณถูกจำกัดสิทธิ์ ไม่สามารถเข้าถึงกิจกรรมได้'
+      }, { status: 403 });
+    }
+
     const { eventId } = await params;
 
     const db = adminDb();

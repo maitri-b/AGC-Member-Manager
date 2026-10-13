@@ -40,10 +40,11 @@ async function getTargetUserIds(targets: NotificationTarget[]): Promise<string[]
 
     switch (target.type) {
       case 'admin_users':
-        // Get all admin users with LINE
+        // Get all admin users with LINE (excluding banned)
         try {
           const usersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
           const adminLineIds = usersSnapshot.docs
+            .filter(doc => !doc.data().isBanned) // Exclude banned users
             .map(doc => doc.data().lineUserId)
             .filter(id => id); // Only users with LINE ID
           userIds.push(...adminLineIds);
@@ -53,10 +54,11 @@ async function getTargetUserIds(targets: NotificationTarget[]): Promise<string[]
         break;
 
       case 'committee_users':
-        // Get all committee users with LINE
+        // Get all committee users with LINE (excluding banned)
         try {
           const usersSnapshot = await db.collection('users').where('role', '==', 'committee').get();
           const committeeLineIds = usersSnapshot.docs
+            .filter(doc => !doc.data().isBanned) // Exclude banned users
             .map(doc => doc.data().lineUserId)
             .filter(id => id);
           userIds.push(...committeeLineIds);
@@ -66,10 +68,11 @@ async function getTargetUserIds(targets: NotificationTarget[]): Promise<string[]
         break;
 
       case 'event_co_users':
-        // Get all event-co users with LINE
+        // Get all event-co users with LINE (excluding banned)
         try {
           const usersSnapshot = await db.collection('users').where('role', '==', 'event-co').get();
           const eventCoLineIds = usersSnapshot.docs
+            .filter(doc => !doc.data().isBanned) // Exclude banned users
             .map(doc => doc.data().lineUserId)
             .filter(id => id);
           userIds.push(...eventCoLineIds);
@@ -79,10 +82,11 @@ async function getTargetUserIds(targets: NotificationTarget[]): Promise<string[]
         break;
 
       case 'event_staff_users':
-        // Get all event-staff users with LINE
+        // Get all event-staff users with LINE (excluding banned)
         try {
           const usersSnapshot = await db.collection('users').where('role', '==', 'event-staff').get();
           const eventStaffLineIds = usersSnapshot.docs
+            .filter(doc => !doc.data().isBanned) // Exclude banned users
             .map(doc => doc.data().lineUserId)
             .filter(id => id);
           userIds.push(...eventStaffLineIds);

@@ -34,6 +34,10 @@ export interface Member {
 
   // Status
   status: MemberStatus; // สถานะ
+  isBanned?: boolean; // ถูกจำกัดสิทธิ์ (ไม่สามารถลงทะเบียนกิจกรรม ไม่เห็นกิจกรรม ไม่ได้รับข้อความ LINE)
+  bannedAt?: string; // วันที่ถูกแบน
+  bannedBy?: string; // ผู้ที่แบน
+  bannedReason?: string; // เหตุผลที่ถูกแบน
 
   // Sponsor
   sponsor1: string; // ผู้รับรองสมาชิก ท่านที่ 1

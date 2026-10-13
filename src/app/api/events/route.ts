@@ -21,6 +21,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check if user is banned - banned users cannot see any events
+    if (session.user.isBanned) {
+      return NextResponse.json({
+        events: [],
+        message: 'บัญชีของคุณถูกจำกัดสิทธิ์ ไม่สามารถเข้าถึงกิจกรรมได้'
+      });
+    }
+
     // Check if caller wants only published events (from query params)
     const { searchParams } = new URL(request.url);
     const onlyPublished = searchParams.get('published') === 'true';

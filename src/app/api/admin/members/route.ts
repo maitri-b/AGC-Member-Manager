@@ -41,6 +41,10 @@ export async function GET() {
         role: data.role || 'member',
         testAccount: data.testAccount || false,
         pictureUrl: data.pictureUrl || data.lineProfilePicture || '',
+        isBanned: data.isBanned || false,
+        bannedAt: data.bannedAt || null,
+        bannedBy: data.bannedBy || null,
+        bannedReason: data.bannedReason || null,
       };
     });
 

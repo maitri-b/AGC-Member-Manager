@@ -39,6 +39,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event details are required' }, { status: 400 });
     }
 
+    // Filter out banned members - they should not receive any messages
+    const db = adminDb();
+    const activeMemberIds: string[] = [];
+    const bannedCount = { count: 0 };
+
+    for (const lineUserId of memberIds) {
+      const userDoc = await db.collection('users').doc(lineUserId).get();
+      const userData = userDoc.data();
+
+      if (userData?.isBanned) {
+        bannedCount.count++;
+        console.log(`[LINE Promotion] Skipping banned user: ${lineUserId}`);
+      } else {
+        activeMemberIds.push(lineUserId);
+      }
+    }
+
+    if (activeMemberIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: `ไม่มีสมาชิกที่สามารถส่งข้อความได้ (สมาชิกทั้งหมดถูกแบน ${bannedCount.count} คน)`,
+        results: []
+      });
+    }
+
+    console.log(`[LINE Promotion] Filtered ${memberIds.length} members -> ${activeMemberIds.length} active (${bannedCount.count} banned)`);
+
+    // Use activeMemberIds instead of memberIds from here on
+
     // Truncate description to 600 characters
     let shortDescription = eventDescription || '';
     if (shortDescription.length > 600) {
@@ -110,8 +139,8 @@ ${fullEventUrl}`;
       text: message,
     });
 
-    // Send messages to all selected members
-    for (const lineUserId of memberIds) {
+    // Send messages to all selected members (excluding banned members)
+    for (const lineUserId of activeMemberIds) {
       try {
         const response = await fetch(LINE_API_URL, {
           method: 'POST',

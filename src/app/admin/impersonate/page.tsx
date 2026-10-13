@@ -15,6 +15,10 @@ interface Member {
   membershipStatus?: string;
   role?: string;
   testAccount?: boolean;
+  isBanned?: boolean;
+  bannedAt?: string | null;
+  bannedBy?: string | null;
+  bannedReason?: string | null;
 }
 
 export default function ImpersonatePage() {
@@ -131,6 +135,15 @@ export default function ImpersonatePage() {
 
   const getStatusBadge = (member: Member) => {
     const badges = [];
+
+    // Banned Badge (show first if banned)
+    if (member.isBanned) {
+      badges.push(
+        <span key="banned" className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800 font-semibold">
+          🚫 BANNED
+        </span>
+      );
+    }
 
     // Test Account Badge
     if (member.testAccount) {

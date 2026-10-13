@@ -101,6 +101,17 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check if user is banned
+    const db = adminDb();
+    const userDoc = await db.collection('users').doc(session.user.id).get();
+    const userData = userDoc.data();
+
+    if (userData?.isBanned) {
+      return NextResponse.json({
+        error: 'ไม่สามารถลงทะเบียนได้ เนื่องจากบัญชีของคุณถูกจำกัดสิทธิ์\nกรุณาติดต่อเจ้าหน้าที่'
+      }, { status: 403 });
+    }
+
     const { eventId } = await params;
 
     // Check if request is multipart/form-data (for file upload) or JSON
@@ -169,8 +180,6 @@ export async function POST(
         return NextResponse.json({ error: 'กรุณากรอกข้อมูลผู้ลงทะเบียนให้ครบถ้วน' }, { status: 400 });
       }
     }
-
-    const db = adminDb();
 
     // Get event details
     const eventDoc = await db.collection('events').doc(eventId).get();

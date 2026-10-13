@@ -111,6 +111,7 @@ export function parseMemberId(memberId: string): { year: number; runningNumber: 
 
 // Google Sheet column mapping (Check_Member_List2023)
 // Note: licenseExpiry maps to Column S (วันหมดอายุ) in mm/dd/yyyy format (Gregorian year)
+// Note: Banned fields are stored in Firestore only, not synced to Google Sheets
 export const SHEET_COLUMN_MAP: Record<keyof Member, string> = {
   memberId: 'MemberID',
   companyNameEN: 'บริษัท (ภาษาอังกฤษ)',
@@ -140,6 +141,11 @@ export const SHEET_COLUMN_MAP: Record<keyof Member, string> = {
   lastUpdated: 'LastUpdated',
   updatedBy: 'UpdatedBy',
   lineDisplayName: 'lineDisplayName',
+  // Banned fields - Firestore only (not synced to Google Sheets)
+  isBanned: '_FIRESTORE_ONLY_isBanned',
+  bannedAt: '_FIRESTORE_ONLY_bannedAt',
+  bannedBy: '_FIRESTORE_ONLY_bannedBy',
+  bannedReason: '_FIRESTORE_ONLY_bannedReason',
 };
 
 // Reverse mapping for sheet to member conversion

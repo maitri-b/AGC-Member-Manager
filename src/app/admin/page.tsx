@@ -43,6 +43,10 @@ interface User {
   adminNoteUpdatedAt?: { _seconds: number } | string;
   adminNoteUpdatedBy?: string;
   adminNoteUpdatedByName?: string;
+  isBanned?: boolean;
+  bannedAt?: string;
+  bannedBy?: string;
+  bannedReason?: string;
 }
 
 interface SearchLog {

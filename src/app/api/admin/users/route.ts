@@ -139,7 +139,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    const { userId, role, memberId, isActive, assignedEventIds, unlockSearch, resetLineConnection, resetReason, sendLineNotification } = await request.json();
+    const { userId, role, memberId, isActive, assignedEventIds, unlockSearch, resetLineConnection, resetReason, sendLineNotification, isBanned, bannedReason } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -177,6 +177,26 @@ export async function PUT(request: NextRequest) {
 
     if (assignedEventIds !== undefined) {
       updates.assignedEventIds = assignedEventIds;
+    }
+
+    // Handle banned status
+    if (isBanned !== undefined) {
+      updates.isBanned = isBanned;
+
+      if (isBanned) {
+        // When banning, require reason and set metadata
+        if (!bannedReason || !bannedReason.trim()) {
+          return NextResponse.json({ error: 'Banned reason is required when banning a user' }, { status: 400 });
+        }
+        updates.bannedReason = bannedReason.trim();
+        updates.bannedAt = new Date().toISOString();
+        updates.bannedBy = session.user.name || session.user.id;
+      } else {
+        // When unbanning, clear all banned fields
+        updates.bannedReason = null;
+        updates.bannedAt = null;
+        updates.bannedBy = null;
+      }
     }
 
     // Handle unlock search

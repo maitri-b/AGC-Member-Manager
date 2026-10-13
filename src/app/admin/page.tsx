@@ -74,6 +74,8 @@ export default function AdminPage() {
     memberId: '',
     isActive: true,
     assignedEventIds: [] as string[],
+    isBanned: false,
+    bannedReason: '',
   });
   const [searchLogs, setSearchLogs] = useState<SearchLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -327,6 +329,8 @@ export default function AdminPage() {
       memberId: user.memberId || '',
       isActive: user.isActive,
       assignedEventIds: user.assignedEventIds || [],
+      isBanned: user.isBanned || false,
+      bannedReason: user.bannedReason || '',
     });
     setSearchLogs([]);
     setMemberSearchQuery('');
@@ -631,6 +635,12 @@ export default function AdminPage() {
   const handleSaveUser = async () => {
     if (!editingUser) return;
 
+    // Validate banned reason if banning
+    if (editForm.isBanned && !editForm.bannedReason.trim()) {
+      setError('กรุณาระบุเหตุผลในการแบนสมาชิก');
+      return;
+    }
+
     try {
       // Build update payload - only include role if user has admin:roles permission
       const payload: Record<string, unknown> = {
@@ -639,6 +649,8 @@ export default function AdminPage() {
         isActive: editForm.isActive,
         assignedEventIds: editForm.assignedEventIds || [],
         sendLineNotification: sendLineNotification, // Include notification preference
+        isBanned: editForm.isBanned,
+        bannedReason: editForm.isBanned ? editForm.bannedReason : null,
       };
 
       // Only include role if user has permission to change roles
@@ -877,16 +889,6 @@ export default function AdminPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             🔄 Sync Members
-          </Link>
-          <Link
-            href="/admin/manage-users"
-            className="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-            title="จัดการสมาชิก - แบน/ยกเลิกการแบน"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-            </svg>
-            👥 จัดการสมาชิก
           </Link>
         </div>
 
@@ -1457,6 +1459,83 @@ export default function AdminPage() {
                     />
                     <span className="text-sm font-medium text-gray-700">เปิดใช้งาน (Active)</span>
                   </label>
+                </div>
+
+                {/* Banned Management Section */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    จัดการการแบนสมาชิก
+                  </h4>
+
+                  {/* Current Banned Status Display */}
+                  {editingUser.isBanned && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-800 mb-1">สมาชิกถูกแบนอยู่</p>
+                          <div className="text-xs text-red-700 space-y-1">
+                            {editingUser.bannedAt && (
+                              <p>⏰ เวลาที่แบน: {new Date(editingUser.bannedAt).toLocaleString('th-TH', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}</p>
+                            )}
+                            {editingUser.bannedBy && (
+                              <p>👤 แบนโดย: {editingUser.bannedBy}</p>
+                            )}
+                            {editingUser.bannedReason && (
+                              <p>📝 เหตุผล: {editingUser.bannedReason}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ban Toggle */}
+                  <div className="mb-3">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={editForm.isBanned}
+                        onChange={(e) => setEditForm({ ...editForm, isBanned: e.target.checked, bannedReason: e.target.checked ? editForm.bannedReason : '' })}
+                        className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">แบนสมาชิก</span>
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1 ml-6">
+                      เมื่อแบน สมาชิกจะไม่สามารถล็อกอินเข้าระบบได้ และจะไม่ได้รับการส่งข้อความโปรโมชั่นใดๆ
+                    </p>
+                  </div>
+
+                  {/* Ban Reason Input - Only shown when banned */}
+                  {editForm.isBanned && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        เหตุผลในการแบน <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={editForm.bannedReason}
+                        onChange={(e) => setEditForm({ ...editForm, bannedReason: e.target.value })}
+                        placeholder="ระบุเหตุผลในการแบนสมาชิก เช่น ละเมิดกฎกติกา, พฤติกรรมไม่เหมาะสม"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                        rows={3}
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        เหตุผลนี้จะถูกบันทึกในระบบเพื่อการตรวจสอบ
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Event Assignment Section - Only for event-staff and event-co */}

@@ -151,17 +151,23 @@ export async function POST(request: NextRequest) {
 
     // Check if license number already exists in member database
     try {
+      console.log('[Apply API] === MEMBER DATABASE CHECK START ===');
       const allMembers = await getAllMembers();
+      console.log('[Apply API] Fetched', allMembers.length, 'members from Google Sheets');
+
       const existingMember = allMembers.find(member => member.licenseNumber === applicationData.licenseNumber);
 
       if (existingMember) {
+        console.log('[Apply API] ❌ Found existing member with same license:', existingMember.memberId, existingMember.fullNameTH);
         return NextResponse.json({
           error: 'มีข้อมูลเลขที่ใบอนุญาตนี้ในฐานข้อมูลสมาชิกแล้ว ไม่สามารถลงทะเบียนซ้ำได้ กรุณาติดต่อทีมนายทะเบียน'
         }, { status: 400 });
       }
+
+      console.log('[Apply API] ✅ No existing member with this license number');
     } catch (sheetsError) {
-      console.error('Error checking member database:', sheetsError);
-      // Continue even if sheets check fails
+      console.error('[Apply API] ⚠️ Error checking member database (continuing anyway):', sheetsError);
+      // Continue even if sheets check fails - this is not critical for application submission
     }
 
     // Generate application ID
@@ -187,7 +193,10 @@ export async function POST(request: NextRequest) {
     let businessCardUrl = '';
 
     try {
+      console.log('[Apply] === FILE UPLOAD START ===');
+
       // Upload license document
+      console.log('[Apply] Uploading license document...');
       const licenseExtension = licenseDocumentName.split('.').pop();
       const licensePath = `apply-applications/${applicationId}/license.${licenseExtension}`;
       const licenseFile = bucket.file(licensePath);
@@ -205,9 +214,10 @@ export async function POST(request: NextRequest) {
       });
 
       licenseDocumentUrl = `https://storage.googleapis.com/${bucket.name}/${licensePath}`;
-      console.log('[Apply] License document uploaded:', licenseDocumentUrl);
+      console.log('[Apply] ✅ License document uploaded:', licenseDocumentUrl);
 
       // Upload business card
+      console.log('[Apply] Uploading business card...');
       const businessCardExtension = businessCardName.split('.').pop();
       const businessCardPath = `apply-applications/${applicationId}/business-card.${businessCardExtension}`;
       const businessCardFile = bucket.file(businessCardPath);
@@ -225,9 +235,11 @@ export async function POST(request: NextRequest) {
       });
 
       businessCardUrl = `https://storage.googleapis.com/${bucket.name}/${businessCardPath}`;
-      console.log('[Apply] Business card uploaded:', businessCardUrl);
+      console.log('[Apply] ✅ Business card uploaded:', businessCardUrl);
     } catch (uploadError) {
-      console.error('[Apply] File upload error:', uploadError);
+      console.error('[Apply] ❌ File upload error:', uploadError);
+      const errorMessage = uploadError instanceof Error ? uploadError.message : 'Unknown error';
+      console.error('[Apply] Error details:', errorMessage);
       return NextResponse.json(
         { error: 'ไม่สามารถอัพโหลดไฟล์ได้ กรุณาลองใหม่อีกครั้ง' },
         { status: 500 }
@@ -251,14 +263,25 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     };
 
+    // Save to Firestore
+    console.log('[Apply] === SAVING TO FIRESTORE ===');
     await db.collection('membershipApplications').doc(applicationId).set(applicationDoc);
+    console.log('[Apply] ✅ Application saved to Firestore:', applicationId);
 
-    console.log(`New membership application: ${applicationId} from ${applicationData.nickname} (${applicationData.companyNameEN})`);
-    console.log(`Documents uploaded: license=${licenseDocumentUrl}, businessCard=${businessCardUrl}`);
+    console.log(`[Apply] New membership application: ${applicationId} from ${applicationData.nickname} (${applicationData.companyNameEN})`);
+    console.log(`[Apply] Documents: license=${licenseDocumentUrl}, businessCard=${businessCardUrl}`);
 
     // Send LINE notification based on notification settings
-    await sendMembershipApplicationNotification(applicationData);
+    console.log('[Apply] === SENDING NOTIFICATION ===');
+    try {
+      await sendMembershipApplicationNotification(applicationData);
+      console.log('[Apply] ✅ Notification sent successfully');
+    } catch (notificationError) {
+      // Log but don't fail the request if notification fails
+      console.error('[Apply] ⚠️ Notification failed (non-critical):', notificationError);
+    }
 
+    console.log('[Apply] === APPLICATION COMPLETE ===');
     return NextResponse.json({
       success: true,
       applicationId,
@@ -267,8 +290,14 @@ export async function POST(request: NextRequest) {
       businessCardUrl,
     });
   } catch (error) {
-    console.error('Error processing application:', error);
-    return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการส่งใบสมัคร' }, { status: 500 });
+    console.error('[Apply] ❌ FATAL ERROR:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('[Apply] Error message:', errorMessage);
+    console.error('[Apply] Error stack:', errorStack);
+    return NextResponse.json({
+      error: 'เกิดข้อผิดพลาดในการส่งใบสมัคร กรุณาลองใหม่อีกครั้ง หรือติดต่อผู้ดูแลระบบ'
+    }, { status: 500 });
   }
 }
 

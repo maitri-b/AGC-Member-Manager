@@ -41,7 +41,21 @@ export async function POST(request: NextRequest) {
       businessCardData,
       businessCardName,
       businessCardType,
+      applyOnBehalfOf, // Admin can apply on behalf of another user
     } = body;
+
+    // Determine which user's LINE data to use
+    // If admin is applying on behalf of someone, use that user's LINE data
+    const targetUser = applyOnBehalfOf || {
+      lineUserId: session.user.id,
+      lineDisplayName: session.user.name || '',
+      lineProfilePicture: session.user.image || '',
+    };
+
+    console.log('[Apply API] Target user:', targetUser);
+    if (applyOnBehalfOf) {
+      console.log('[Apply API] Admin', session.user.name, 'is applying on behalf of', targetUser.lineDisplayName);
+    }
 
     // Validate required fields
     const requiredFields = [
@@ -87,14 +101,16 @@ export async function POST(request: NextRequest) {
 
     console.log('[Apply API] User role:', userRole, '| Exempt from duplicate check:', isExempt);
 
-    // Check if user has already applied (skip for exempt roles)
-    if (!isExempt) {
+    // Check if target user has already applied (skip for exempt roles when applying for themselves)
+    const checkDuplicateFor = applyOnBehalfOf ? targetUser.lineUserId : session.user.id;
+    const skipDuplicateCheck = !applyOnBehalfOf && isExempt;
+
+    if (!skipDuplicateCheck) {
       console.log('[Apply API] === DUPLICATE CHECK START ===');
-      console.log('[Apply API] Session user ID:', session.user.id);
-      console.log('[Apply API] Session user object:', JSON.stringify(session.user, null, 2));
+      console.log('[Apply API] Checking duplicate for user ID:', checkDuplicateFor);
 
       const existingApplication = await db.collection('membershipApplications')
-        .where('lineUserId', '==', session.user.id)
+        .where('lineUserId', '==', checkDuplicateFor)
         .where('status', 'in', ['pending', 'approved'])
         .limit(1)
         .get();
@@ -247,13 +263,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create application document in Firestore
-    // ✅ NEW: Include document URLs
+    // ✅ NEW: Include document URLs and target user data
     const applicationDoc = {
       applicationId,
       ...applicationData,
-      lineUserId: session.user.id,
-      lineDisplayName: session.user.name || '',
-      lineProfilePicture: session.user.image || '',
+      lineUserId: targetUser.lineUserId,
+      lineDisplayName: targetUser.lineDisplayName,
+      lineProfilePicture: targetUser.lineProfilePicture || '',
       licenseDocumentUrl, // ✅ NEW: License document URL
       businessCardUrl, // ✅ NEW: Business card URL
       documentStatus: 'uploaded', // ✅ CHANGED: Documents are now uploaded directly
@@ -261,6 +277,12 @@ export async function POST(request: NextRequest) {
       lineGroupStatus: 'รอนำเข้ากลุ่ม', // Default status
       createdAt: new Date(),
       updatedAt: new Date(),
+      // ✅ Track if this was submitted by admin on behalf of another user
+      submittedBy: applyOnBehalfOf ? {
+        adminId: session.user.id,
+        adminName: session.user.name || '',
+        submittedAt: new Date(),
+      } : null,
     };
 
     // Save to Firestore

@@ -100,6 +100,21 @@ export default function ApplyPage() {
   const [checkingApplication, setCheckingApplication] = useState(true);
   const [hasExistingApplication, setHasExistingApplication] = useState(false);
 
+  // Admin apply on behalf of another user
+  const [applyOnBehalfOf, setApplyOnBehalfOf] = useState<{
+    id: string;
+    name: string;
+    image?: string;
+  } | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<Array<{
+    id: string;
+    lineDisplayName: string;
+    lineProfilePicture?: string;
+    role: string;
+  }>>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [showUserSelector, setShowUserSelector] = useState(false);
+
   // Check for existing application
   useEffect(() => {
     const checkExistingApplication = async () => {
@@ -125,15 +140,48 @@ export default function ApplyPage() {
     checkExistingApplication();
   }, [session]);
 
-  // Pre-fill LINE name from session
+  // Fetch users for admin to apply on behalf
   useEffect(() => {
-    if (session?.user) {
+    const fetchUsers = async () => {
+      if (!session?.user) return;
+
+      // Only fetch if user is admin, committee, or event team
+      const adminRoles = ['admin', 'committee', 'event-co', 'event-staff'];
+      if (!adminRoles.includes(session.user.role || '')) return;
+
+      setLoadingUsers(true);
+      try {
+        const response = await fetch('/api/admin/users');
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableUsers(data.users || []);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, [session]);
+
+  // Pre-fill LINE name from session or selected user
+  useEffect(() => {
+    if (applyOnBehalfOf) {
+      // Use selected user's name
+      setFormData(prev => ({
+        ...prev,
+        lineName: applyOnBehalfOf.name || '',
+      }));
+    } else if (session?.user) {
+      // Use session user's name
       setFormData(prev => ({
         ...prev,
         lineName: session.user.name || '',
       }));
     }
-  }, [session]);
+  }, [session, applyOnBehalfOf]);
 
   // Check if license number already exists
   const checkLicenseNumber = async (licenseNumber: string) => {
@@ -358,6 +406,12 @@ export default function ApplyPage() {
           businessCardData: businessCardBase64,
           businessCardName: businessCard!.name,
           businessCardType: businessCard!.type,
+          // ✅ Admin: Apply on behalf of another user
+          applyOnBehalfOf: applyOnBehalfOf ? {
+            lineUserId: applyOnBehalfOf.id,
+            lineDisplayName: applyOnBehalfOf.name,
+            lineProfilePicture: applyOnBehalfOf.image,
+          } : undefined,
         }),
       });
 
@@ -531,30 +585,115 @@ export default function ApplyPage() {
         </div>
 
         {/* User Info Banner */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {session.user.image && (
-              <img
-                src={session.user.image}
-                alt=""
-                className="w-12 h-12 rounded-full"
-              />
-            )}
-            <div>
-              <p className="text-sm text-green-600">ล็อกอินด้วย LINE แล้ว</p>
-              <p className="font-medium text-green-800">{session.user.name}</p>
+        <div className="space-y-3 mb-6">
+          {/* Current User/Selected User Display */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {(applyOnBehalfOf?.image || session.user.image) && (
+                <img
+                  src={applyOnBehalfOf?.image || session.user.image || ''}
+                  alt=""
+                  className="w-12 h-12 rounded-full"
+                />
+              )}
+              <div>
+                <p className="text-sm text-green-600">
+                  {applyOnBehalfOf ? 'กำลังสมัครแทน:' : 'ล็อกอินด้วย LINE แล้ว'}
+                </p>
+                <p className="font-medium text-green-800">
+                  {applyOnBehalfOf?.name || session.user.name}
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: '/apply' })}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              เปลี่ยน LINE
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => signOut({ callbackUrl: '/apply' })}
-            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            เปลี่ยน LINE
-          </button>
+
+          {/* Admin: Apply on behalf selector */}
+          {['admin', 'committee', 'event-co', 'event-staff'].includes(session.user.role || '') && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-900 mb-2">
+                    👤 สมัครแทนผู้อื่น (Admin)
+                  </p>
+                  <p className="text-xs text-blue-700 mb-3">
+                    คุณสามารถเลือกผู้ใช้งานจากระบบเพื่อทำการสมัครแทนได้
+                  </p>
+
+                  {!showUserSelector ? (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowUserSelector(true)}
+                        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                      >
+                        เลือกผู้ใช้งาน
+                      </button>
+                      {applyOnBehalfOf && (
+                        <button
+                          type="button"
+                          onClick={() => setApplyOnBehalfOf(null)}
+                          className="px-3 py-1.5 text-sm bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                        >
+                          ยกเลิก - สมัครด้วยบัญชีตัวเอง
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-medium text-blue-900 mb-1">
+                        เลือกผู้ใช้งาน:
+                      </label>
+                      <select
+                        value={applyOnBehalfOf?.id || ''}
+                        onChange={(e) => {
+                          const userId = e.target.value;
+                          if (!userId) {
+                            setApplyOnBehalfOf(null);
+                          } else {
+                            const user = availableUsers.find(u => u.id === userId);
+                            if (user) {
+                              setApplyOnBehalfOf({
+                                id: user.id,
+                                name: user.lineDisplayName,
+                                image: user.lineProfilePicture,
+                              });
+                            }
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-sm border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                      >
+                        <option value="">-- เลือกผู้ใช้งาน --</option>
+                        {availableUsers
+                          .filter(user => user.role === 'guest' || user.role === 'visitor')
+                          .map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.lineDisplayName} ({user.role})
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowUserSelector(false)}
+                        className="px-3 py-1.5 text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        ซ่อน
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Application Form */}
